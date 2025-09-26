@@ -1,5 +1,5 @@
-#ifndef APPLICATION_HPP
-#define APPLICATION_HPP
+#ifndef APPLICATION_H
+#define APPLICATION_H
 
 #include <memory>
 
@@ -18,4 +18,4 @@ private:
   std::unique_ptr<Application_Impl> impl;
 };
 
-#endif // APPLICATION_HPP
+#endif // APPLICATION_H
