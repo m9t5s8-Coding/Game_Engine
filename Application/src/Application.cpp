@@ -1,104 +1,62 @@
-#include <Application.h>
-
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-
+#include <Application.hpp>
 #include <iostream>
 
-struct Application::Application_Impl
-{
-  GLFWwindow *window;
 
-  static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+
+namespace aero
+{
+
+#define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+  Application::Application()
   {
-    glViewport(0, 0, width, height);
-  }
-};
-
-Application::Application()
-{
-  impl = std::make_unique<Application_Impl>();
-}
-
-Application::~Application()
-{
-
-}
-
-void Application::Init(int width, int height, const char *title)
-{
-
-
-  glfwInit();
-
-
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-  impl->window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-
-  if (nullptr == impl->window)
-  {
-    glfwTerminate();
-    std::cout << "Failed to create Window!" << std::endl;
-    return;
+    m_Window = std::unique_ptr<Window>(Window::create());
+    m_Window->set_event_callback(BIND_EVENT_FN(on_event));
   }
 
-  glfwMakeContextCurrent(impl->window);
-  glfwSetFramebufferSizeCallback(impl->window, Application_Impl::framebuffer_size_callback);
+  Application::~Application() = default;
 
- 
-
-  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+  void Application::on_event(Event &e)
   {
-    std::cout << "Failed to initialize GLAD!" << std::endl;
-    return;
+    EventDispatcher dispatcher(e);
+    dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(on_window_close));
+
+    for( auto it = m_layerstack.end(); it != m_layerstack.begin(); )
+    {
+      (*--it)->on_event(e);
+      if(e.Handled)
+        break;
+    }
   }
 
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplGlfw_InitForOpenGL(impl->window, true);
-  ImGui_ImplOpenGL3_Init("#version 330");
-}
-
-void Application::Run()
-{
-  while (!glfwWindowShouldClose(impl->window))
+  void Application::run()
   {
-    glfwPollEvents();
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    //update and draw here
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(impl->window);
+    while (m_Running)
+    {
+      m_Window->process_events();
+      m_Window->clear_window();
+      for(Layer* layer: m_layerstack)
+      {
+        layer->on_update();
+      }
+      m_Window->display_window();
+    }
   }
-}
 
-void Application::ShutDown()
-{
-  if (impl->window)
+  bool Application::on_window_close(WindowCloseEvent& e)
   {
-    glfwDestroyWindow(impl->window);
+    m_Running = false;
+    return true;
   }
-  glfwTerminate();
 
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
+
+  void Application::push_layer(Layer* layer)
+  {
+    m_layerstack.push_layer(layer);
+  }
+
+  void Application::push_overlay(Layer* overlay)
+  {
+    m_layerstack.push_overlay(overlay);
+  }
+
 }

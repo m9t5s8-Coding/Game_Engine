@@ -1,5 +1,10 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
+
 project(GameEngine)
+
+
+
+
 
 # --- C++ standard ---
 set(CMAKE_CXX_STANDARD 20)
@@ -9,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB APP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # --- GLAD ---
-set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.c")
+set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.cpp")
 
 # --- ImGui ---
 set(IMGUI_SRC
@@ -38,9 +43,11 @@ message(STATUS "SRC = ${SRC}")
 # --- Add Application library ---
 add_library(Application STATIC ${SRC})
 
+
+
 # --- Include directories ---
 target_include_directories(Application
-    PRIVATE
+    PUBLIC
         ${CMAKE_SOURCE_DIR}/External/glfw/include
         ${CMAKE_SOURCE_DIR}/External/glad/include
         ${CMAKE_SOURCE_DIR}/External/glm
@@ -51,14 +58,21 @@ target_include_directories(Application
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_precompile_headers(Application PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/Apch.hpp"
+)
+
+
 
 
 # Link GLFW to Application
-target_link_libraries(Application PRIVATE glfw)
+target_link_libraries(Application PUBLIC glfw)
+
+target_link_libraries(Application PUBLIC Graphics)
 
 # --- System libraries (Windows) ---
 if(WIN32)
-    target_link_libraries(Application PRIVATE 
+    target_link_libraries(Application PRIVATE
         opengl32.lib
         user32.lib
         gdi32.lib

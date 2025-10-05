@@ -1,7 +1,11 @@
 .vs
+.vscode
+.idea
 
 
-/out/build/
+/out/
+cmake-build-debug
+
 
 CMakePresets.json
 

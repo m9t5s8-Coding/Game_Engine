@@ -1,5 +1,6 @@
 ﻿
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
+
 
 
 if (POLICY CMP0141)
@@ -7,22 +8,27 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-
+add_compile_options(/utf-8)
 
 project ("Game_Engine")
 
-add_subdirectory("Core")
-
-add_subdirectory("Engine")
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)  # static
+set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)  # top-level
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)
 
 add_subdirectory("Application")
+add_subdirectory("Graphics")
+add_subdirectory("System")
+add_subdirectory("Sandbox")
 
 
+
+
+set_property(TARGET Sandbox PROPERTY CXX_STANDARD 20)
+set_property(TARGET Sandbox PROPERTY CXX_STANDARD_REQUIRED ON)
