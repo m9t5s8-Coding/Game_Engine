@@ -7,7 +7,7 @@ namespace aero
 {
   using MouseCode = uint16_t;
 
-  namespace Mouse
+  namespace Button
   {
     enum : MouseCode
     {

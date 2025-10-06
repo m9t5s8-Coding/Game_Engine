@@ -1,26 +1,37 @@
 #include <Aero.hpp>
 #include <iostream>
 
-class ExampleLayer final : public aero::Layer
+class ExampleLayer : public aero::Layer
 {
-  public:
+public:
   ExampleLayer()
-  :Layer("Example") {}
+      : Layer("ExampleLayer") {}
 
   void on_update() override
   {
-    AERO_INFO("ExampleLayer::Update");
+    if (aero::Keyboard::is_key_pressed(aero::Key::A))
+    {
+      AERO_TRACE("A Key is Pressed");
+    }
   }
-  void on_event(aero::Event& event) override
+  void on_event(aero::Event &event) override
   {
-    AERO_TRACE("{0}",event.to_string());
+    if (event.get_event_type() == aero::Event_Type::Key_Pressed)
+    {
+      aero::KeyPressedEvent &e = (aero::KeyPressedEvent &)event;
+      if (e.get_key_code() == aero::Key::A)
+        AERO_TRACE("A Key is Pressed from event");
+    }
   }
 };
 
 class Sandbox final : public aero::Application
 {
 public:
-  Sandbox() { push_layer(new ExampleLayer()); }
+  Sandbox()
+  {
+    push_overlay(new ExampleLayer());
+  }
   ~Sandbox() override {};
 };
 
@@ -28,8 +39,3 @@ aero::Application *aero::create_application()
 {
   return new Sandbox();
 }
-
-
-
-
-

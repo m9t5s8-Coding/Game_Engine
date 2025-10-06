@@ -27,6 +27,8 @@ namespace aero
     void set_vsync(bool enabled) override;
     [[nodiscard]] bool is_vsync() const override;
 
+    virtual void* get_native_window() const { return m_Window; }
+
   private:
     virtual void init(const WindowProps &props);
 

@@ -19,6 +19,7 @@ set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.cpp")
 # --- ImGui ---
 set(IMGUI_SRC
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui.cpp"
+    "${CMAKE_SOURCE_DIR}/External/imgui/imgui_demo.cpp"
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui_draw.cpp"
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui_widgets.cpp"
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui_tables.cpp"
