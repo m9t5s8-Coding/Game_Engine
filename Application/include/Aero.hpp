@@ -1,12 +1,12 @@
 #pragma once
 
 
-#include <Application.hpp>
+#include <Core/Application.hpp>
 #include <Layers/Layer.hpp>
 #include <ImGui/ImGuiLayer.hpp>
-#include <Log.hpp>
-#include <EntryPoint.hpp>
-#include <Input.hpp>
+#include <Core/Log.hpp>
+#include <Core/EntryPoint.hpp>
+#include <Core/Input.hpp>
 
 
 

@@ -1,6 +1,8 @@
 #include <Aero.hpp>
 #include <iostream>
 
+#include <imgui.h>
+
 class ExampleLayer : public aero::Layer
 {
 public:
@@ -14,6 +16,14 @@ public:
       AERO_TRACE("A Key is Pressed");
     }
   }
+
+  void on_imgui_render() override
+  {
+    ImGui::Begin("Hello world");
+    ImGui::Text("This is imgui window from example layer");
+    ImGui::End();
+  }
+
   void on_event(aero::Event &event) override
   {
     if (event.get_event_type() == aero::Event_Type::Key_Pressed)

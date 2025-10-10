@@ -23,8 +23,6 @@ set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)
 
 add_subdirectory("Application")
-add_subdirectory("Graphics")
-add_subdirectory("System")
 add_subdirectory("Sandbox")
 
 

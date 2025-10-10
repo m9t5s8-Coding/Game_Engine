@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Windows.hpp>
-#include <glad/glad.h>
+#include <Core/Windows.hpp>
 #include <GLFW/glfw3.h>
+#include <Renderer/GraphicsContext.hpp>
 
 namespace aero
 {
@@ -12,15 +12,13 @@ namespace aero
     explicit WindowsWindow(const WindowProps &props);
     ~WindowsWindow() override;
 
-    void on_update() override;
 
     [[nodiscard]] inline unsigned int get_width() const override { return m_Data.width; }
     [[nodiscard]] inline unsigned int get_height() const override { return m_Data.height; }
 
-    [[nodiscard]] bool is_open() const override;
+
     void clear_window(const aero::Color &color = aero::Color::Black) override;
-    void display_window() override;
-    void process_events() override;
+    void on_update() override;
     void close_window() override;
 
     inline void set_event_callback(const EventCallbackFunc &callback) override { m_Data.event_callback = callback; }
@@ -33,7 +31,9 @@ namespace aero
     virtual void init(const WindowProps &props);
 
   private:
-    GLFWwindow *m_Window{};
+    GLFWwindow *m_Window;
+
+    GraphicsContext* m_context;
 
     struct WindowData
     {

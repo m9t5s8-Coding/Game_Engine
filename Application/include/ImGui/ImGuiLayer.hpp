@@ -11,11 +11,9 @@ namespace aero
     ImGuiLayer();
     ~ImGuiLayer();
 
-    void on_attach() override;
-    void on_detach() override;
-
-    void on_update();
-    void on_event(Event& event);
+    virtual void on_attach() override;
+    virtual void on_detach() override;
+    virtual void on_event(Event& event) override;
 
     void begin();
     void end();

@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Application sources ---
-file(GLOB APP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE APP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # --- GLAD ---
 set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.cpp")
@@ -33,13 +33,6 @@ set(SRC
     ${GLAD_SRC}
     ${IMGUI_SRC}
 )
-
-
-message(STATUS "APP_SRC = ${APP_SRC}")
-message(STATUS "GLAD_SRC = ${GLAD_SRC}")
-message(STATUS "IMGUI_SRC = ${IMGUI_SRC}")
-message(STATUS "SRC = ${SRC}")
-
 
 # --- Add Application library ---
 add_library(Application STATIC ${SRC})
@@ -69,7 +62,6 @@ target_precompile_headers(Application PUBLIC
 # Link GLFW to Application
 target_link_libraries(Application PUBLIC glfw)
 
-target_link_libraries(Application PUBLIC Graphics)
 
 # --- System libraries (Windows) ---
 if(WIN32)
