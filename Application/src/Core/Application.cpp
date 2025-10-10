@@ -2,11 +2,33 @@
 #include <iostream>
 #include <glad/glad.h>
 
+#include <Renderer/BufferLayout.hpp>
+
 namespace aero
 {
+  #define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+
   Application *Application::s_Instance = nullptr;
 
-#define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+  static GLenum shader_dt_to_openGL_type(ShaderDataType type)
+  {
+    switch (type)
+    {
+      case ShaderDataType::Float:   return GL_FLOAT;
+      case ShaderDataType::Float2:  return GL_FLOAT;
+      case ShaderDataType::Float3:  return GL_FLOAT;
+      case ShaderDataType::Float4:  return GL_FLOAT;
+      case ShaderDataType::Mat3:    return GL_FLOAT;
+      case ShaderDataType::Mat4:    return GL_FLOAT;
+      case ShaderDataType::Int:     return GL_INT;
+      case ShaderDataType::Int2:    return GL_INT;
+      case ShaderDataType::Int3:    return GL_INT;
+      case ShaderDataType::Int4:    return GL_INT;
+      case ShaderDataType::Bool:    return GL_BOOL;
+    }
+    AERO_CORE_ASSERT(false, "Unknown Shader Data Type!");
+    return 0;
+  }
 
   Application::Application()
   {
@@ -21,17 +43,33 @@ namespace aero
     glBindVertexArray(m_vertexarray);
 
     float vertices[] = {
-        0.0f, 0.5f,
-        0.0f, 0.0f,
-        0.5f, 0.0f};
-
+        0.0f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+        0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
 
 
     m_vertexbuffer.reset(VertexBuffer::create(vertices, sizeof(vertices)));
 
+    {
+      BufferLayout layout = {
+          {ShaderDataType::Float2, "a_Position" },
+          {ShaderDataType::Float4, "a_Color"} };
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+      m_vertexbuffer->set_layout(layout);
+    }
+
+    uint32_t index = 0;
+    const auto& layout = m_vertexbuffer->get_layout();
+    for (const auto &element : layout)
+    {
+      glEnableVertexAttribArray(index);
+      glVertexAttribPointer(index, element.get_component_count(),
+        shader_dt_to_openGL_type(element.type),
+        element.normalized ? GL_TRUE : GL_FALSE,
+        layout.get_stride(),
+        reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
+      index++;
+    }
 
     unsigned int indices[] = {0, 1, 2};
     m_indexbuffer.reset(IndexBuffer::create(indices, sizeof(indices)));
