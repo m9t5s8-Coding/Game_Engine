@@ -14,7 +14,12 @@
 
 #include <Renderer/IndexBuffer.hpp>
 #include <Renderer/VertexBuffer.hpp>
+#include <Renderer/VertexArray.hpp>
 #include <Renderer/Shader.hpp>
+
+#include <Renderer/OrthographicCamera.hpp>
+
+#include <Core/TimeStamp.hpp>
 
 namespace aero
 {
@@ -24,8 +29,10 @@ namespace aero
     Application();
     virtual ~Application();
 
+    // main loop
     void run();
 
+    //
     void on_event(Event &e);
     void push_layer(Layer *layer);
     void push_overlay(Layer *overlay);
@@ -36,20 +43,17 @@ namespace aero
     ImGuiLayer *get_imgui_layer() { return m_imgui_layer; }
 
   private:
-    std::unique_ptr<VertexBuffer> m_vertexbuffer;
-    std::unique_ptr<IndexBuffer> m_indexbuffer;
-    std::unique_ptr<Shader> m_shader;
-
-    unsigned int m_vertexarray;
-
     bool on_window_close(WindowCloseEvent &e);
+    bool on_window_resize(WindowResizeEvent &e);
 
     std::unique_ptr<Window> m_Window;
     bool m_running = true;
+    bool m_minimized = false;
 
     ImGuiLayer *m_imgui_layer;
-
     LayerStack m_layerstack;
+
+    float m_last_frametime = 0.0f;
 
   private:
     static Application *s_Instance;

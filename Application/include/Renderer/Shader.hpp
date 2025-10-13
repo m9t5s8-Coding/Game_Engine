@@ -1,30 +1,37 @@
 #pragma once
 
-#include <fstream>
-#include <sstream>
 #include <memory>
-#include <Renderer/Color.hpp>
-#include <Math/Vector2.hpp>
-#include <Math/Rect.hpp>
+#include <unordered_map>
+
 namespace aero
 {
   class Shader
   {
-
   public:
-    Shader(const std::string &vertexPath, const std::string &fragmentPath);
-    void use_shader() const;
+    virtual ~Shader() = default;
+    virtual void bind() const = 0;
+    virtual void unbind() const = 0;
 
-    void set_bool(const std::string &name, bool value) const;
-    void set_int(const std::string &name, int value) const;
-    void set_float(const std::string &name, float value) const;
-    void set_vector_2f(const std::string &name, const aero::vector_2f &value) const;
-    void set_color(const std::string &name, const aero::Color &color) const;
-    void set_float_rect(const std::string &name, const aero::FloatRect &rect) const;
+    virtual const std::string& get_name() const = 0;
+
+
+    static std::shared_ptr<Shader> create(const std::string &p_shader_path);
+    static std::shared_ptr<Shader> create(const std::string& p_name, const std::string &p_shader_path);
+    static std::shared_ptr<Shader> create(const std::string& p_name, const std::string &p_vertex_path, const std::string &p_fragment_path);
+  };
+
+  class ShaderLibrary
+  {
+  public:
+    void add(const std::shared_ptr<Shader>& p_shader);
+
+    std::shared_ptr<Shader> load(const std::string& p_filepath);
+    std::shared_ptr<Shader> load(const std::string& p_name, const std::string& p_filepath);
+    std::shared_ptr<Shader> load(const std::string& p_name, const std::string& p_vertex_path, const std::string& p_fragment_path);
+
+    std::shared_ptr<Shader> get(const std::string& p_name);
 
   private:
-    void check_compile_errors(unsigned int shader, const std::string &type) const;
-    std::string read_file(const std::string &filePath) const;
-    unsigned int m_ID;
+    std::unordered_map<std::string, std::shared_ptr<Shader>> m_shader;
   };
 }

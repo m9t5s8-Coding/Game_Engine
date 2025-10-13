@@ -1,114 +1,78 @@
+#include <Apch.hpp>
 #include <Renderer/Shader.hpp>
-#include <glad/glad.h>
-#include <iostream>
+#include <Platform/OpenGL/OpenGLShader.hpp>
+#include <Renderer/Renderer.hpp>
 
 namespace aero
 {
-  Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath)
+  // Combined Shader
+  std::shared_ptr<Shader> Shader::create(const std::string& p_shader_path)
   {
-    
-
-    std::string vertexCode = read_file(vertexPath);
-    std::string fragmentCode = read_file(fragmentPath);
-
-    const char *vertexSrc = vertexCode.c_str();
-    const char *fragmentSrc = fragmentCode.c_str();
-
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSrc, nullptr);
-    glCompileShader(vertexShader);
-    check_compile_errors(vertexShader, "VERTEX");
-
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSrc, nullptr);
-    glCompileShader(fragmentShader);
-    check_compile_errors(fragmentShader, "FRAGMENT");
-
-    m_ID = glCreateProgram();
-    glAttachShader(m_ID, vertexShader);
-    glAttachShader(m_ID, fragmentShader);
-    glLinkProgram(m_ID);
-    check_compile_errors(m_ID, "PROGRAM");
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-
-  }
-
-  std::string Shader::read_file(const std::string &filePath) const
-  {
-    std::ifstream file(filePath);
-    if (!file.is_open())
+    switch (Renderer::get_API())
     {
-      std::cerr << "ERROR::FILE_NOT_SUCCESFULLY_READ: " << filePath << std::endl;
-      return "";
+      case RendererAPI::API::None: AERO_CORE_ASSERT(false, "RendererAPI::None is not supported!"); return nullptr;
+      case RendererAPI::API::OpenGL: return std::make_shared<OpenGLShader>(p_shader_path);
     }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    AERO_CORE_ASSERT(false, "Unknown RendererAPI");
+    return nullptr;
   }
 
-  void Shader::use_shader() const
+  // Name with Combined Shader
+  std::shared_ptr<Shader> Shader::create(const std::string& p_name, const std::string &p_shader_path)
   {
-    glUseProgram(m_ID);
-  }
-
-  void Shader::check_compile_errors(unsigned int shader, const std::string &type) const
-  {
-    int success;
-    char infoLog[1024];
-    if (type != "PROGRAM")
+    switch (Renderer::get_API())
     {
-      glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-      if (!success)
-      {
-        glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-        std::cerr << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n"
-                  << infoLog << "\n";
-      }
+      case RendererAPI::API::None: AERO_CORE_ASSERT(false, "RendererAPI::None is not supported!"); return nullptr;
+      case RendererAPI::API::OpenGL: return std::make_shared<OpenGLShader>(p_name, p_shader_path);
     }
-    else
+    AERO_CORE_ASSERT(false, "Unknown RendererAPI");
+    return nullptr;
+  }
+
+  //Name and Seperate Shader
+  std::shared_ptr<Shader> Shader::create(const std::string& p_name, const std::string &p_vertex_path, const std::string &p_fragment_path)
+  {
+    switch (Renderer::get_API())
     {
-      glGetProgramiv(shader, GL_LINK_STATUS, &success);
-      if (!success)
-      {
-        glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-        std::cerr << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n"
-                  << infoLog << "\n";
-      }
+      case RendererAPI::API::None: AERO_CORE_ASSERT(false, "RendererAPI::None is not supported!"); return nullptr;
+      case RendererAPI::API::OpenGL: return std::make_shared<OpenGLShader>(p_name, p_vertex_path, p_fragment_path);
     }
+    AERO_CORE_ASSERT(false, "Unknown RendererAPI");
+    return nullptr;
   }
 
-  void Shader::set_bool(const std::string &name, bool value) const
-  {
-    glUniform1i(glGetUniformLocation(m_ID, name.c_str()), (int)value);
+
+  void ShaderLibrary::add(const std::shared_ptr<Shader>& p_shader)
+  { // adding the shader based on the name or become easy to retrive
+    auto& name = p_shader->get_name();
+    AERO_CORE_ASSERT((m_shader.find(name) == m_shader.end()), "Shader Name already exists!");
+    m_shader[name] = p_shader;
   }
 
-  void Shader::set_int(const std::string &name, int value) const
+  std::shared_ptr<Shader> ShaderLibrary::load(const std::string& p_filepath)
   {
-    glUniform1i(glGetUniformLocation(m_ID, name.c_str()), value);
+    auto shader = Shader::create(p_filepath);
+    add(shader);
+    return shader;
   }
 
-  void Shader::set_float(const std::string &name, float value) const
+  std::shared_ptr<Shader> ShaderLibrary::load(const std::string& p_name, const std::string& p_filepath)
   {
-    glUniform1f(glGetUniformLocation(m_ID, name.c_str()), value);
+    auto shader = Shader::create(p_name, p_filepath);
+    add(shader);
+    return shader;
   }
 
-  void Shader::set_vector_2f(const std::string &name, const aero::vector_2f &value) const
+  std::shared_ptr<Shader> ShaderLibrary::load(const std::string& p_name, const std::string& p_vertex_path, const std::string& p_fragment_path)
   {
-    glUniform2f(glGetUniformLocation(m_ID, name.c_str()), value.x, value.y);
+    auto shader = Shader::create(p_name, p_vertex_path, p_fragment_path);
+    add(shader);
+    return shader;
   }
 
-  void Shader::set_color(const std::string &name, const aero::Color &color) const
+  std::shared_ptr<Shader> ShaderLibrary::get(const std::string& p_name)
   {
-    float r, g, b, a;
-    color.NormalizedColor(r, g, b, a);
-    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), r, g, b, a);
-  }
-  void Shader::set_float_rect(const std::string &name, const aero::FloatRect &rect) const
-  {
-    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), rect.x, rect.y, rect.width, rect.height);
+    AERO_CORE_ASSERT((m_shader.find(p_name) != m_shader.end()), "Shader donot exists!");
+    return m_shader[p_name];
   }
 }

@@ -2,6 +2,7 @@
 
 #include <Apch.hpp>
 #include <Events/Event.hpp>
+#include <Core/TimeStamp.hpp>
 
 namespace aero
 {
@@ -13,7 +14,7 @@ namespace aero
 
     virtual void on_attach() {}
     virtual void on_detach() {}
-    virtual void on_update() {}
+    virtual void on_update(TimeStamp ts) {}
     virtual void on_event(Event& event)  {}
     virtual void on_imgui_render() {}
 

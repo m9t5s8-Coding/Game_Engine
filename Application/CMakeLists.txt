@@ -48,6 +48,7 @@ target_include_directories(Application
         ${CMAKE_SOURCE_DIR}/External/spdlog/include
         ${CMAKE_SOURCE_DIR}/External/imgui
         ${CMAKE_SOURCE_DIR}/External/imgui/backends
+        ${CMAKE_SOURCE_DIR}/External/stb_image
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -82,4 +83,4 @@ endif()
 
 # --- Compile definitions ---
 target_compile_definitions(Application PRIVATE GLFW_STATIC)
-# target_compile_definitions(Application PRIVATE STB_IMAGE_IMPLEMENTATION)
+target_compile_definitions(Application PRIVATE STB_IMAGE_IMPLEMENTATION)

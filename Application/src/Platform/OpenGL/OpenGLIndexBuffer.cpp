@@ -5,11 +5,12 @@
 
 namespace aero
 {
-  OpenGLIndexBuffer::OpenGLIndexBuffer(unsigned int *indices, size_t size)
+  OpenGLIndexBuffer::OpenGLIndexBuffer(unsigned int *indices, uint32_t count)
+  :m_count(count)
   {
     glGenBuffers(1, &m_ID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(uint32_t), indices, GL_STATIC_DRAW);
   }
   OpenGLIndexBuffer::~OpenGLIndexBuffer()
   {

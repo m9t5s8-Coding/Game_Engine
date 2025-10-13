@@ -1,17 +1,16 @@
 #include <Apch.hpp>
-#include <Renderer/VertexBuffer.hpp>
-#include <glad/glad.h>
+#include <Renderer/VertexArray.hpp>
 #include <Renderer/Renderer.hpp>
-#include <Platform/OpenGL/OpenGLVertexBuffer.hpp>
+#include <Platform/OpenGL/OpenGLVertexArray.hpp>
 
 namespace aero
 {
-  VertexBuffer *VertexBuffer::create(float *vertices, size_t size)
+  VertexArray *VertexArray::create()
   {
     switch (Renderer::get_API())
     {
       case RendererAPI::API::None: AERO_CORE_ASSERT(false, "RendererAPI::None is not supported!"); return nullptr;
-      case RendererAPI::API::OpenGL: return new OpenGLVertexBuffer(vertices, size);
+      case RendererAPI::API::OpenGL: return new OpenGLVertexArray();
     }
     AERO_CORE_ASSERT(false, "Unknown RendererAPI");
     return nullptr;

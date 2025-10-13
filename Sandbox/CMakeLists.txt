@@ -19,6 +19,12 @@ add_custom_command(TARGET Sandbox POST_BUILD
   "$<TARGET_FILE_DIR:Sandbox>/shaders"
 )
 
+add_custom_command(TARGET Sandbox POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  "${CMAKE_SOURCE_DIR}/Application/assets"
+  "$<TARGET_FILE_DIR:Sandbox>/assets"
+)
+
 
 set_property(TARGET Sandbox PROPERTY CXX_STANDARD 20)
 set_property(TARGET Sandbox PROPERTY CXX_STANDARD_REQUIRED ON)
