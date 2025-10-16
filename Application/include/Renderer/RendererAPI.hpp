@@ -4,7 +4,7 @@
 #include <Renderer/Color.hpp>
 #include <memory>
 
-namespace aero
+namespace ag
 {
   class RendererAPI
   {

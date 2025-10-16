@@ -3,7 +3,7 @@
 
 #include <glad/glad.h>
 
-namespace aero
+namespace ag
 {
   void OpenGLRendererAPI::set_clear_color(const Color &p_clear_color)
   {

@@ -17,11 +17,11 @@
 #include <Renderer/VertexArray.hpp>
 #include <Renderer/Shader.hpp>
 
-#include <Renderer/OrthographicCamera.hpp>
+#include <Renderer/View.hpp>
 
 #include <Core/TimeStamp.hpp>
 
-namespace aero
+namespace ag
 {
   class Application
   {
@@ -32,7 +32,6 @@ namespace aero
     // main loop
     void run();
 
-    //
     void on_event(Event &e);
     void push_layer(Layer *layer);
     void push_overlay(Layer *overlay);

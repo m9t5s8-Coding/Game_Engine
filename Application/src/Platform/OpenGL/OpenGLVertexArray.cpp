@@ -2,7 +2,7 @@
 #include <Apch.hpp>
 #include <glad/glad.h>
 
-namespace aero
+namespace ag
 {
   static GLenum shader_dt_to_openGL_type(ShaderDataType type)
   {
@@ -40,7 +40,7 @@ namespace aero
     glBindVertexArray(0);
   }
 
-  void OpenGLVertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer> &p_vertexbuffer)
+  void OpenGLVertexArray::add_vertex_buffer(const AG_ref<VertexBuffer> &p_vertexbuffer)
   {
     // AERO_CORE_ASSERT(p_vertexbuffer->get_layout().get_element().size(),"Vertex buffer has no layout!");
     glBindVertexArray(m_ID);
@@ -59,9 +59,10 @@ namespace aero
         reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
       index++;
     }
-    m_vertexbuffers.push_back(p_vertexbuffer);
+    m_vertexbuffer = p_vertexbuffer;
+    // m_vertexbuffers.push_back(p_vertexbuffer);
   }
-  void OpenGLVertexArray::set_index_buffer(const std::shared_ptr<IndexBuffer> &p_indexbuffer)
+  void OpenGLVertexArray::set_index_buffer(const AG_ref<IndexBuffer> &p_indexbuffer)
   {
     glBindVertexArray(m_ID);
     p_indexbuffer->bind();

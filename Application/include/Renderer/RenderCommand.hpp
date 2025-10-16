@@ -3,7 +3,7 @@
 #include <Renderer/RendererAPI.hpp>
 #include <cstdint>
 
-namespace aero
+namespace ag
 {
   class RenderCommand
   {

@@ -3,7 +3,7 @@
 #include <Platform/OpenGL/OpenGLShader.hpp>
 #include <Renderer/Renderer.hpp>
 
-namespace aero
+namespace ag
 {
   // Combined Shader
   std::shared_ptr<Shader> Shader::create(const std::string& p_shader_path)

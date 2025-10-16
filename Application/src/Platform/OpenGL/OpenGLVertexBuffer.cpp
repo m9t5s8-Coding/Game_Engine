@@ -1,8 +1,14 @@
 #include <Platform/OpenGL/OpenGLVertexBuffer.hpp>
 #include <glad/glad.h>
 
-namespace aero
+namespace ag
 {
+  struct Vertex_Data
+  {
+    float x, y;
+    float r, g, b, a;
+    float u, v;
+  };
   OpenGLVertexBuffer::OpenGLVertexBuffer(float *vertices, size_t size)
   {
     glGenBuffers(1, &m_ID);
@@ -18,6 +24,12 @@ namespace aero
   void OpenGLVertexBuffer::bind() const
   {
     glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+  }
+
+  void OpenGLVertexBuffer::set_data(const void *vertices, size_t size)
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, size, vertices);
   }
 
   void OpenGLVertexBuffer::unbind() const

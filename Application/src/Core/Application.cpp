@@ -4,10 +4,11 @@
 #include <Core/Core.hpp>
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Renderer.hpp>
+#include <Renderer/Renderer2D.hpp>
 
 #include <GLFW/glfw3.h>
 
-namespace aero
+namespace ag
 {
 
   Application *Application::s_Instance = nullptr;
@@ -19,6 +20,7 @@ namespace aero
     m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
 
     Renderer::init();
+    Renderer2D::init();
     m_imgui_layer = new ImGuiLayer();
     push_overlay(m_imgui_layer);
   }
@@ -32,6 +34,8 @@ namespace aero
       float time = static_cast<float>(glfwGetTime());
       TimeStamp timestamp = time - m_last_frametime;
       m_last_frametime = time;
+
+      // AERO_CORE_INFO("FPS: {0}", 1 / timestamp.get_seconds());
 
       if (!m_minimized)
       {
@@ -47,6 +51,8 @@ namespace aero
 
       m_Window->on_update();
     }
+
+    Renderer2D::shut_down();
   }
 
   void Application::on_event(Event &e)
@@ -80,7 +86,7 @@ namespace aero
       return false;
     }
     m_minimized = false;
-    Renderer::on_window_resize(e.get_width(), e.get_height());
+    Renderer::on_window_resize(e.get_size());
     return false;
   }
 

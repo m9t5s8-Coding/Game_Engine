@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <Renderer/GraphicsContext.hpp>
 
-namespace aero
+namespace ag
 {
   class WindowsWindow final : public Window
   {
@@ -12,16 +12,16 @@ namespace aero
     explicit WindowsWindow(const WindowProps &props);
     ~WindowsWindow() override;
 
+    virtual AG_uint get_width() const override { return m_win_data.size.x; }
+    virtual AG_uint get_height() const override { return m_win_data.size.y; }
+    virtual vec2u get_size() const override { return m_win_data.size; }
 
-    [[nodiscard]] inline unsigned int get_width() const override { return m_Data.width; }
-    [[nodiscard]] inline unsigned int get_height() const override { return m_Data.height; }
 
-
-    void clear_window(const aero::Color &color = aero::Color::Black) override;
+    void clear_window(const ag::Color &color = ag::Color::Black) override;
     void on_update() override;
     void close_window() override;
 
-    inline void set_event_callback(const EventCallbackFunc &callback) override { m_Data.event_callback = callback; }
+    inline void set_event_callback(const EventCallbackFunc &callback) override { m_win_data.event_callback = callback; }
     void set_vsync(bool enabled) override;
     [[nodiscard]] bool is_vsync() const override;
 
@@ -38,13 +38,13 @@ namespace aero
     struct WindowData
     {
       std::string title;
-      unsigned int width, height;
+      vec2u size;
 
       bool vsync;
 
       EventCallbackFunc event_callback;
     };
 
-    WindowData m_Data;
+    WindowData m_win_data;
   };
 }

@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-namespace aero
+namespace ag
 {
   enum class ShaderDataType
   {

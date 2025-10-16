@@ -3,19 +3,19 @@
 #include <Apch.hpp>
 #include <Events/Event.hpp>
 #include <Renderer/Color.hpp>
+#include <Math/Math.hpp>
+#include <Core/Core.hpp>
 
-namespace aero
+namespace ag
 {
   struct WindowProps
   {
     std::string Title;
-    unsigned int Width;
-    unsigned int Height;
+    vec2u Size;
 
     explicit WindowProps(std::string p_title = "Aero Engine",
-                         const unsigned int p_width = 1280,
-                         const unsigned int p_height = 720)
-        : Title(std::move(p_title)), Width(p_width), Height(p_height) {}
+                         const vec2u p_size = vec2u(1280, 720))
+        : Title(std::move(p_title)), Size(p_size) {}
   };
 
   class Window
@@ -26,10 +26,11 @@ namespace aero
     virtual ~Window() = default;
 
 
-    [[nodiscard]] virtual unsigned int get_width() const = 0;
-    [[nodiscard]] virtual unsigned int get_height() const = 0;
+    virtual AG_uint get_width() const = 0;
+    virtual AG_uint get_height() const = 0;
+    virtual vec2u get_size() const = 0;
 
-    virtual void clear_window(const aero::Color &color = aero::Color::Black) = 0;
+    virtual void clear_window(const ag::Color &color = ag::Color::Black) = 0;
     virtual void on_update() = 0;
     virtual void close_window() = 0;
 

@@ -4,7 +4,7 @@
 #include <Events/KeyCodes.hpp>
 
 
-namespace aero
+namespace ag
 {
   class KeyEvent : public Event
   {

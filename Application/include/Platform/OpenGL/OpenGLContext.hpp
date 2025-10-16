@@ -1,17 +1,19 @@
 #pragma once
 #include <Renderer/GraphicsContext.hpp>
 
+
+
 struct GLFWwindow;
 
-namespace aero
+namespace ag
 {
   class OpenGLContext : public GraphicsContext
   {
   public:
     OpenGLContext(GLFWwindow *window_handle);
 
-    virtual void init() override;
-    virtual void swap_buffers() override;
+    void init() override;
+    void swap_buffers() override;
 
   private:
     GLFWwindow *m_window_handle;

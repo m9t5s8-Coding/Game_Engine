@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace aero
+namespace ag
 {
     struct Color
     {

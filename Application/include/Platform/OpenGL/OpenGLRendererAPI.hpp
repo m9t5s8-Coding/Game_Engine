@@ -2,7 +2,7 @@
 
 #include <Renderer/RendererAPI.hpp>
 
-namespace aero
+namespace ag
 {
   class OpenGLRendererAPI : public RendererAPI
   {

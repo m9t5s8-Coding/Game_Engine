@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <stb_image.h>
 
-namespace aero
+namespace ag
 {
   OpenGLTexture2D::OpenGLTexture2D(const std::string &p_path)
       : m_path(p_path)
@@ -13,8 +13,7 @@ namespace aero
     stbi_set_flip_vertically_on_load(true);
     stbi_uc *data = stbi_load(p_path.c_str(), &width, &height, &channels, 4);
     AERO_CORE_ASSERT(data, "Failed to load Image!");
-    m_width = width;
-    m_height = height;
+    m_size = vec2u(width, height);
 
     // Create and Bind the texture
     glGenTextures(1, &m_ID);
@@ -30,7 +29,7 @@ namespace aero
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // Upload the Image Data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
     // Generate MipMaps
     glGenerateMipmap(GL_TEXTURE_2D);

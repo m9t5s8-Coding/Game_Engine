@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-namespace aero
+namespace ag
 {
   class OpenGLVertexArray : public VertexArray
   {
@@ -16,14 +16,16 @@ namespace aero
     virtual void bind() const override;
     virtual void unbind() const override;
 
-    virtual void add_vertex_buffer(const std::shared_ptr<VertexBuffer>& p_vertexbuffer) override;
-    virtual void set_index_buffer(const std::shared_ptr<IndexBuffer>& p_indexbuffer) override;
+    virtual void add_vertex_buffer(const AG_ref<VertexBuffer>& p_vertexbuffer) override;
+    virtual void set_index_buffer(const AG_ref<IndexBuffer>& p_indexbuffer) override;
 
-    virtual std::shared_ptr<IndexBuffer> get_index_buffer() const { return m_indexbuffer; }
+    virtual AG_ref<IndexBuffer> get_index_buffer() const override { return m_indexbuffer; }
+    virtual AG_ref<VertexBuffer> get_vertex_buffer() const override { return m_vertexbuffer; };
 
     private:
-      std::vector<std::shared_ptr<VertexBuffer>> m_vertexbuffers;
-      std::shared_ptr<IndexBuffer> m_indexbuffer;
+      // std::vector<std::shared_ptr<VertexBuffer>> m_vertexbuffers;
+      AG_ref<VertexBuffer> m_vertexbuffer;
+      AG_ref<IndexBuffer> m_indexbuffer;
       unsigned int m_ID;
   };
 

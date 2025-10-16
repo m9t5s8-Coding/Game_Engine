@@ -1,20 +1,21 @@
 #pragma once
 
 #include <Renderer/RenderCommand.hpp>
-#include <Renderer/OrthographicCamera.hpp>
+#include <Renderer/View.hpp>
 #include <Renderer/Shader.hpp>
+#include <Math/Math.hpp>
 
-namespace aero
+namespace ag
 {
   class Renderer
   {
   public:
-    static void begin_scene(OrthographicCamera p_camera);
+    static void begin_scene(const View &view);
     static void end_scene();
 
-    static void on_window_resize(uint32_t width, uint32_t height);
+    static void on_window_resize(const vec2u& p_size);
 
-    static void submit(const std::shared_ptr<Shader>& p_shader, const std::shared_ptr<VertexArray>& p_vertexarray, const glm::mat4& p_transform = glm::mat4(1.0f));
+    static void submit(const std::shared_ptr<Shader>& p_shader, const std::shared_ptr<VertexArray>& p_vertexarray);
 
     static void init();
 

@@ -4,14 +4,14 @@
 #include <Renderer/Renderer.hpp>
 #include <Platform/OpenGL/OpenGLIndexBuffer.hpp>
 
-namespace aero
+namespace ag
 {
-  IndexBuffer* IndexBuffer::create(unsigned int *indices, size_t size)
+  AG_ref<IndexBuffer> IndexBuffer::create(unsigned int *indices, uint32_t count)
   {
     switch (Renderer::get_API())
     {
       case RendererAPI::API::None: AERO_CORE_ASSERT(false, "RendererAPI::None is not supported!"); return nullptr;
-      case RendererAPI::API::OpenGL: return new OpenGLIndexBuffer(indices, size);
+      case RendererAPI::API::OpenGL: return AG_cref<OpenGLIndexBuffer>(indices, count);
     }
     AERO_CORE_ASSERT(false, "Unknown RendererAPI");
     return nullptr;

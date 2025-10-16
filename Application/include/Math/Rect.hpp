@@ -1,41 +1,41 @@
 #ifndef RECT_HPP
 #define RECT_HPP
 
-#include <Math/Vector2.hpp>
+#include <Math/vec2.hpp>
 
-namespace aero
+namespace ag
 {
     template <typename T>
-    struct Rect
+    struct rect
     {
         T x, y;
         T width, height;
 
-        Rect(T x_ = T(), T y_ = T(), T width_ = T(), T height_ = T())
+        rect(T x_ = T(), T y_ = T(), T width_ = T(), T height_ = T())
             : x(x_), y(y_), width(width_), height(height_) {}
 
-        Rect(const vector_2<T> &pos, const vector_2<T> &size)
+        rect(const vec2<T> &pos, const vec2<T> &size)
             : x(pos.x), y(pos.y), width(size.x), height(size.y) {}
 
-        Rect(const vector_2<T> &pos, T width_, T height_)
+        rect(const vec2<T> &pos, T width_, T height_)
             : x(pos.x), y(pos.y), width(width_), height(height_) {}
 
-        Rect(T x_, T y_, const vector_2<T> &size)
+        rect(T x_, T y_, const vec2<T> &size)
             : x(x_), y(y_), width(size.x), height(size.y) {}
 
 
 
-        bool operator == (const Rect& other) const
+        bool operator == (const rect& other) const
         {
             return x == other.x && y == other.y && width == other.width && height == other.height;
         }
-        bool operator != (const Rect& other) const
+        bool operator != (const rect& other) const
         {
             return !(*this == other);
         }
     };
 
-    using IntRect = Rect<int>;
-    using FloatRect = Rect<float>;
+    using recti = rect<int>;
+    using rectf = rect<float>;
 }
 #endif

@@ -2,7 +2,7 @@
 #include <Apch.hpp>
 #include <Platform/OpenGL/OpenGLRendererAPI.hpp>
 
-namespace aero
+namespace ag
 {
   RendererAPI* RenderCommand::s_renderAPI = new OpenGLRendererAPI();
 }

@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-namespace aero
+namespace ag
 {
   using KeyCode = uint16_t;
 

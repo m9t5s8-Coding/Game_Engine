@@ -2,31 +2,35 @@
 
 #include <Apch.hpp>
 #include <Events/Event.hpp>
+#include <Math/Math.hpp>
+#include <Core/Core.hpp>
 
 
-namespace aero
+namespace ag
 {
 
   class WindowResizeEvent final : public Event
   {
   public:
-    WindowResizeEvent(const unsigned int width, const unsigned int height)
-        : m_Width(width), m_Height(height) {}
+    WindowResizeEvent(const vec2u& p_size)
+        : m_size(p_size) {}
 
-    unsigned int get_width() const { return m_Width; }
-    unsigned int get_height() const { return m_Height; }
+    AG_uint get_width() const { return m_size.x; }
+    AG_uint get_height() const { return m_size.y; }
+
+    vec2u get_size() const { return m_size; }
 
     std::string to_string() const override
     {
       std::stringstream ss;
-      ss << "WindowResizeEvent: " << m_Width << ", " << m_Height;
+      ss << "WindowResizeEvent: " << m_size.x << ", " << m_size.y;
       return ss.str();
     }
 
     EVENT_CLASS_TYPE(Window_Resize)
     EVENT_CLASS_CATEGORY(Event_Category_Application)
   private:
-    unsigned int m_Width, m_Height;
+    vec2u m_size;
   };
 
   class WindowCloseEvent final : public Event

@@ -3,7 +3,7 @@
 #include <Layers/Layer.hpp>
 
 
-namespace aero
+namespace ag
 {
   class ImGuiLayer : public Layer
   {

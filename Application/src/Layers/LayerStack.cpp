@@ -1,21 +1,20 @@
 #include <Layers/LayerStack.hpp>
 
-namespace aero
+namespace ag
 {
-  LayerStack::LayerStack()
-  {
-    m_layer_insert = m_layers.begin();
-  }
-
   LayerStack::~LayerStack()
   {
-    for (const Layer *layer : m_layers)
+    for (Layer *layer : m_layers)
+    {
+      layer->on_detach();
       delete layer;
+    }
   }
 
   void LayerStack::push_layer(Layer *layer)
   {
-    m_layer_insert = m_layers.emplace(m_layer_insert, layer);
+    m_layers.emplace(m_layers.begin() + m_layer_insert_index, layer);
+		m_layer_insert_index++;
   }
 
   void LayerStack::push_overlay(Layer *overlay)
@@ -25,19 +24,21 @@ namespace aero
 
   void LayerStack::pop_layer(Layer *layer)
   {
-    auto it = std::find(m_layers.begin(), m_layers.end(), layer);
-    if (it != m_layers.end())
+    auto it = std::find(m_layers.begin(), m_layers.begin() + m_layer_insert_index, layer);
+    if (it != m_layers.begin() + m_layer_insert_index)
     {
+      layer->on_detach();
       m_layers.erase(it);
-      --m_layer_insert;
+      m_layer_insert_index--;
     }
   }
 
   void LayerStack::pop_overlay(Layer *overlay)
   {
-    auto it = std::find(m_layers.begin(), m_layers.end(), overlay);
+    auto it = std::find(m_layers.begin() + m_layer_insert_index, m_layers.end(), overlay);
     if (it != m_layers.end())
     {
+      overlay->on_detach();
       m_layers.erase(it);
     }
   }

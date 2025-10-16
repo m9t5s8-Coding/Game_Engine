@@ -4,7 +4,7 @@
 #include <Platform/OpenGL/OpenGLTexture.hpp>
 
 
-namespace aero
+namespace ag
 {
   std::shared_ptr<Texture2D> Texture2D::create(const std::string& p_path)
   {

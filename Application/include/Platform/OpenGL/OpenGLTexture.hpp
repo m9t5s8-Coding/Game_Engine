@@ -2,7 +2,7 @@
 
 #include <Renderer/Texture.hpp>
 
-namespace aero
+namespace ag
 {
   class OpenGLTexture2D : public Texture2D
   {
@@ -10,14 +10,15 @@ namespace aero
     OpenGLTexture2D(const std::string& p_path);
     virtual ~OpenGLTexture2D();
 
-    virtual uint32_t get_width() const override { return m_width; };
-    virtual uint32_t get_height() const override { return m_height; };
+    virtual AG_uint get_width() const override { return m_size.x; };
+    virtual AG_uint get_height() const override { return m_size.y; };
+    virtual vec2u get_size() const override { return m_size; }
 
     virtual void bind(uint32_t p_slot = 0) const override;
 
   private:
     std::string m_path;
-    uint32_t m_width, m_height;
+    vec2u m_size;
     uint32_t m_ID;
   };
 }

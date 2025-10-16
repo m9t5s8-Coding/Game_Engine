@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Layers/Layer.hpp>
+#include <Core/Core.hpp>
 
-namespace aero
+namespace ag
 {
   class LayerStack
   {
   public:
-    LayerStack();
+    LayerStack() = default;
     ~LayerStack();
 
     void push_layer(Layer* layer);
@@ -21,6 +22,6 @@ namespace aero
 
   private:
     std::vector<Layer*> m_layers;
-    std::vector<Layer*>::iterator m_layer_insert;
+    AG_uint m_layer_insert_index = 0;
   };
 }

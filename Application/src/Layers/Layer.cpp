@@ -1,6 +1,6 @@
 #include <Layers/Layer.hpp>
 
-namespace aero
+namespace ag
 {
   Layer::Layer(const std::string &name)
       : m_debug_name(name) {}

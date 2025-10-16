@@ -11,7 +11,7 @@
 
 #include <Core/Application.hpp>
 
-namespace aero
+namespace ag
 {
   ImGuiLayer::ImGuiLayer()
       : Layer("ImGui Layer")

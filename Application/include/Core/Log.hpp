@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include <memory>
 
-namespace aero
+namespace ag
 {
   class Log
   {
@@ -21,20 +21,20 @@ namespace aero
 }
 
 //Core log macro
-#define AERO_CORE_ERROR(...) ::aero::Log::get_core_logger()->error(__VA_ARGS__)
-#define AERO_CORE_WARN(...) ::aero::Log::get_core_logger()->warn(__VA_ARGS__)
-#define AERO_CORE_INFO(...) ::aero::Log::get_core_logger()->info(__VA_ARGS__)
-#define AERO_CORE_TRACE(...) ::aero::Log::get_core_logger()->trace(__VA_ARGS__)
-#define AERO_CORE_FATAL(...) ::aero::Log::get_core_logger()->fatal(__VA_ARGS__)
-#define AERO_CORE_ASSERT(x,...) if(!x) ::aero::Log::get_core_logger()->info(__VA_ARGS__)
+#define AERO_CORE_ERROR(...) ::ag::Log::get_core_logger()->error(__VA_ARGS__)
+#define AERO_CORE_WARN(...) ::ag::Log::get_core_logger()->warn(__VA_ARGS__)
+#define AERO_CORE_INFO(...) ::ag::Log::get_core_logger()->info(__VA_ARGS__)
+#define AERO_CORE_TRACE(...) ::ag::Log::get_core_logger()->trace(__VA_ARGS__)
+#define AERO_CORE_FATAL(...) ::ag::Log::get_core_logger()->fatal(__VA_ARGS__)
+#define AERO_CORE_ASSERT(x,...) if(!x) ::ag::Log::get_core_logger()->info(__VA_ARGS__)
 
 // Client log macro
-#define AERO_ERROR(...) ::aero::Log::get_client_logger()->error(__VA_ARGS__)
-#define AERO_WARN(...) ::aero::Log::get_client_logger()->warn(__VA_ARGS__)
-#define AERO_INFO(...) ::aero::Log::get_client_logger()->info(__VA_ARGS__)
-#define AERO_TRACE(...) ::aero::Log::get_client_logger()->trace(__VA_ARGS__)
-#define AERO_FATAL(...) ::aero::Log::get_client_logger()->fatal(__VA_ARGS__)
-#define AERO_ASSERT(x,...) if(!x) ::aero::Log::get_client_logger()->info(__VA_ARGS__)
+#define AERO_ERROR(...) ::ag::Log::get_client_logger()->error(__VA_ARGS__)
+#define AERO_WARN(...) ::ag::Log::get_client_logger()->warn(__VA_ARGS__)
+#define AERO_INFO(...) ::ag::Log::get_client_logger()->info(__VA_ARGS__)
+#define AERO_TRACE(...) ::ag::Log::get_client_logger()->trace(__VA_ARGS__)
+#define AERO_FATAL(...) ::ag::Log::get_client_logger()->fatal(__VA_ARGS__)
+#define AERO_ASSERT(x,...) if(!x) ::ag::Log::get_client_logger()->info(__VA_ARGS__)
 
 
 

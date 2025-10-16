@@ -4,7 +4,7 @@
 #include <Events/Event.hpp>
 #include <Core/TimeStamp.hpp>
 
-namespace aero
+namespace ag
 {
   class Layer
   {

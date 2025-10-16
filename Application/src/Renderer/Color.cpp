@@ -1,6 +1,6 @@
 #include <Renderer/Color.hpp>
 
-namespace aero
+namespace ag
 {
     const Color Color::Transparent = Color(0, 0, 0, 0);
     const Color Color::White = Color(255, 255, 255, 255);

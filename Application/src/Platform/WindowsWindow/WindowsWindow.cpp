@@ -7,7 +7,7 @@
 
 #include <Platform/OpenGL/OpenGLContext.hpp>
 
-namespace aero
+namespace ag
 {
   static bool s_glfw_initialized = false;
 
@@ -34,11 +34,10 @@ namespace aero
   void WindowsWindow::init(const WindowProps &props)
   {
 
-    m_Data.title = props.Title;
-    m_Data.width = props.Width;
-    m_Data.height = props.Height;
+    m_win_data.title = props.Title;
+    m_win_data.size= props.Size;
 
-    AERO_CORE_INFO("Creating Window {0} ({1}, {2})", props.Title, props.Width, props.Height);
+    AERO_CORE_INFO("Creating Window {0} ({1}, {2})", props.Title, props.Size.x, props.Size.y);
 
     if (!s_glfw_initialized)
     {
@@ -52,14 +51,13 @@ namespace aero
       s_glfw_initialized = true;
     }
 
-    m_Window = glfwCreateWindow(static_cast<int>(props.Width), static_cast<int>(props.Height), props.Title.c_str(), nullptr, nullptr);
+    m_Window = glfwCreateWindow(static_cast<int>(props.Size.x), static_cast<int>(props.Size.y), props.Title.c_str(), nullptr, nullptr);
 
     m_context = new OpenGLContext(m_Window);
     m_context->init();
 
-    glViewport(0, 0, m_Data.width, m_Data.height);
-
-    glfwSetWindowUserPointer(m_Window, &m_Data);
+    glfwSetWindowUserPointer(m_Window, &m_win_data);
+    glViewport(0, 0, props.Size.x, props.Size.y);
 
     set_vsync(true);
 
@@ -67,10 +65,10 @@ namespace aero
     glfwSetWindowSizeCallback(m_Window, [](GLFWwindow *window, const int width, const int height)
     {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
-      data.width = width;
-      data.height = height;
+      data.size.x = width;
+      data.size.y = height;
 
-      WindowResizeEvent event(width, height);
+      WindowResizeEvent event(data.size);
       data.event_callback(event); });
 
     glfwSetWindowCloseCallback(m_Window, [](GLFWwindow *window)
@@ -152,15 +150,15 @@ namespace aero
     else
       glfwSwapInterval(0);
 
-    m_Data.vsync = enabled;
+      m_win_data.vsync = enabled;
   }
 
   bool WindowsWindow::is_vsync() const
   {
-    return m_Data.vsync;
+    return m_win_data.vsync;
   }
 
-  void WindowsWindow::clear_window(const aero::Color &color)
+  void WindowsWindow::clear_window(const ag::Color &color)
   {
     float r, g, b, a;
     color.NormalizedColor(r, g, b, a);

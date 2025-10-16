@@ -5,12 +5,12 @@
 #include <sstream>
 #include <unordered_map>
 #include <Renderer/Color.hpp>
-#include <Math/Vector2.hpp>
-#include <Math/Rect.hpp>
+#include <Core/Core.hpp>
+#include <Math/Math.hpp>
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
-namespace aero
+namespace ag
 {
   class OpenGLShader : public Shader
   {
@@ -28,9 +28,9 @@ namespace aero
     void set_bool(const std::string &name, bool value) const;
     void set_int(const std::string &name, int value) const;
     void set_float(const std::string &name, float value) const;
-    void set_vector_2f(const std::string &name, const aero::vector_2f &value) const;
-    void set_color(const std::string &name, const aero::Color &color) const;
-    void set_float_rect(const std::string &name, const aero::FloatRect &rect) const;
+    void set_vec2f(const std::string &name, const ag::vec2f &value) const;
+    void set_color(const std::string &name, const ag::Color &color) const;
+    void set_float_rect(const std::string &name, const ag::rectf &rect) const;
 
     void set_mat4(const std::string &name, const glm::mat4 &p_mat) const;
 
@@ -39,7 +39,7 @@ namespace aero
     std::unordered_map<GLenum, std::string> process_shader_src(const std::string &p_shader_src);
     void compile_shaders(const std::unordered_map<GLenum, std::string>& p_shader_src);
     bool check_compile_errors(GLuint shader, const GLenum type);
-    unsigned int m_ID;
+    AG_uint m_ID;
     std::string m_name;
   };
 }

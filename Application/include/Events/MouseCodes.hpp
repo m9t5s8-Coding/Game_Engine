@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-namespace aero
+namespace ag
 {
   using MouseCode = uint16_t;
 

@@ -3,7 +3,7 @@
 #include <Apch.hpp>
 #include <Events/MouseCodes.hpp>
 
-namespace aero
+namespace ag
 {
 
   class MouseMovedEvent final : public Event
@@ -53,7 +53,7 @@ namespace aero
   class MouseButtonEvent : public Event
   {
   public:
-    MouseCode GetMouseButton() const { return m_Button; }
+    MouseCode get_mouse_button() const { return m_Button; }
 
     EVENT_CLASS_CATEGORY(Event_Category_Mouse | Event_Category_Input | Event_Category_Mouse_Button)
   protected:

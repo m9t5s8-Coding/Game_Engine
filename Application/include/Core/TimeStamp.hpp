@@ -1,6 +1,6 @@
 #pragma once
 
-namespace aero
+namespace ag
 {
   class TimeStamp
   {

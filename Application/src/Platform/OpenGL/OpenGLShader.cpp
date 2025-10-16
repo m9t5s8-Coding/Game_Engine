@@ -4,7 +4,7 @@
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace aero
+namespace ag
 {
   static GLenum string_to_shadertype(const std::string &p_type)
   {
@@ -205,18 +205,18 @@ namespace aero
     glUniform1f(glGetUniformLocation(m_ID, name.c_str()), value);
   }
 
-  void OpenGLShader::set_vector_2f(const std::string &name, const aero::vector_2f &value) const
+  void OpenGLShader::set_vec2f(const std::string &name, const ag::vec2f &value) const
   {
     glUniform2f(glGetUniformLocation(m_ID, name.c_str()), value.x, value.y);
   }
 
-  void OpenGLShader::set_color(const std::string &name, const aero::Color &color) const
+  void OpenGLShader::set_color(const std::string &name, const ag::Color &color) const
   {
     float r, g, b, a;
     color.NormalizedColor(r, g, b, a);
     glUniform4f(glGetUniformLocation(m_ID, name.c_str()), r, g, b, a);
   }
-  void OpenGLShader::set_float_rect(const std::string &name, const aero::FloatRect &rect) const
+  void OpenGLShader::set_float_rect(const std::string &name, const ag::rectf &rect) const
   {
     glUniform4f(glGetUniformLocation(m_ID, name.c_str()), rect.x, rect.y, rect.width, rect.height);
   }

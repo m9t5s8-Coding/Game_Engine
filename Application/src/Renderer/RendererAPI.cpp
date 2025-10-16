@@ -1,6 +1,6 @@
 #include <Renderer/RendererAPI.hpp>
 
-namespace aero
+namespace ag
 {
   RendererAPI::API RendererAPI::s_API = RendererAPI::API::OpenGL;
 }

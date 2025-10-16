@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-namespace aero
+namespace ag
 {
  OpenGLContext::OpenGLContext(GLFWwindow *window_handle)
      : m_window_handle(window_handle)

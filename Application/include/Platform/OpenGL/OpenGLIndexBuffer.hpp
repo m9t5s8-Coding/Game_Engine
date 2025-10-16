@@ -2,7 +2,7 @@
 
 #include <Renderer/IndexBuffer.hpp>
 
-namespace aero
+namespace ag
 {
   class OpenGLIndexBuffer : public IndexBuffer
   {
@@ -12,6 +12,8 @@ namespace aero
 
     virtual void bind() const override;
     virtual void unbind() const override;
+
+    virtual void set_count(uint32_t count) override;
 
     virtual uint32_t get_count() const override { return m_count; }
   private:
