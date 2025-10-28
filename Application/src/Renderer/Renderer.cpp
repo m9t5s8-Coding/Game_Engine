@@ -1,12 +1,13 @@
 #include <Renderer/Renderer.hpp>
 #include <Platform/OpenGL/OpenGLShader.hpp>
+#include <Renderer/Renderer2D.hpp>
 
 namespace ag
 {
   Renderer::SceneData* Renderer::s_scenedata = new Renderer::SceneData;
-  void Renderer::begin_scene(const View& view)
+  void Renderer::begin_scene(const View &view)
   {
-
+    s_scenedata->view_matrix = view.get_view_matrix();
   }
 
   void Renderer::end_scene()
@@ -16,6 +17,7 @@ namespace ag
 
   void Renderer::init()
   {
+    Renderer2D::init();
     RenderCommand::init();
   }
 
@@ -27,6 +29,7 @@ namespace ag
   void Renderer::submit(const std::shared_ptr<Shader>& p_shader, const std::shared_ptr<VertexArray>& p_vertexarray)
   {
     p_shader->bind();
+    p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
     p_vertexarray->bind();
     RenderCommand::draw_indexed(p_vertexarray);
   }

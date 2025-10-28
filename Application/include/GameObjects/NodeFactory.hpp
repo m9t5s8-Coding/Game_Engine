@@ -1,0 +1,21 @@
+#pragma once
+
+
+#include <unordered_map>
+#include <functional>
+#include <Scene/Entity.hpp>
+#include <string>
+
+namespace ag
+{
+	class NodeFactory
+	{
+	public:
+		static std::unordered_map<NodeType, std::function<void(Entity)>> create_map;
+		static std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> draw_map;
+		static std::unordered_map<NodeType, std::function<void(Entity)>> properties_map;
+		static std::unordered_map<NodeType, std::string> nodes;
+
+		static void init();
+	};
+}

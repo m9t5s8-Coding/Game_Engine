@@ -23,8 +23,10 @@ namespace ag
 
     static void set_mouse_position(const vec2f& position);
     static vec2f get_mouse_position();
+    static vec2f get_mouse_screen_position();
     static vec2f get_mouse_world_position(const View& view);
     static vec2f get_mouse_world_position(const vec2f& mouse_position, const View& view);
+    static vec2f get_mouse_world_position(const vec2f& mouse_position, const View& view, const vec2f& viewport_size);
 
   };
 

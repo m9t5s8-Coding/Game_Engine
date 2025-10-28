@@ -24,6 +24,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)
 
 add_subdirectory("Application")
 add_subdirectory("Sandbox")
+add_subdirectory("AeroEditor")
 
 
 

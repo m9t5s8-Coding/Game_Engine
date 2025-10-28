@@ -7,9 +7,9 @@ namespace ag
 {
   void OpenGLRendererAPI::set_clear_color(const Color &p_clear_color)
   {
-    float r, g, b, a;
-    p_clear_color.NormalizedColor(r, g, b, a);
-    glClearColor(r, g, b, a);
+    vec4f color;
+    p_clear_color.normalize_color(color);
+    glClearColor(color.x, color.y, color.z, color.w);
   }
   void OpenGLRendererAPI::clear()
   {

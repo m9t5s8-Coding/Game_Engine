@@ -4,6 +4,7 @@
 #include <cmath>
 #include <type_traits>
 #include <glm/glm.hpp>
+#include <imgui.h>
 
 namespace ag
 {
@@ -21,6 +22,8 @@ namespace ag
           return glm::vec2(x, y);
         }
 
+
+
         vec2 round() const
         {
             return {std::round(x), std::round(y)};
@@ -29,6 +32,7 @@ namespace ag
         template <typename U>
         vec2(const vec2<U> &v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) {}
 
+        // Addition
         vec2 operator+(const vec2 &other) const
         {
             return vec2(x + other.x, y + other.y);
@@ -50,6 +54,7 @@ namespace ag
             return vec2(x + scalar, y + scalar);
         }
 
+        // Subtraction
         vec2 operator-(const vec2 &other) const
         {
             return vec2(x - other.x, y - other.y);
@@ -71,6 +76,7 @@ namespace ag
             return vec2(x - scalar, y - scalar);
         }
 
+        // Multiply
         vec2 operator*(const vec2 &other) const
         {
             return vec2(x * other.x, y * other.y);
@@ -81,7 +87,7 @@ namespace ag
             y *= other.y;
             return *this;
         }
-        vec2 operator *=(T scalar)
+        vec2 operator*=(T scalar)
         {
           x *= scalar;
           y*= scalar;
@@ -92,6 +98,7 @@ namespace ag
             return vec2(x * scalar, y * scalar);
         }
 
+        // Division
         vec2 operator/(const vec2 &other) const
         {
             return vec2(x / other.x, y / other.y);
@@ -107,6 +114,7 @@ namespace ag
             return vec2(x / scalar, y / scalar);
         }
 
+
         bool operator==(const vec2<T> &other) const
         {
             constexpr T epsilon = static_cast<T>(1.0E-4);
@@ -119,12 +127,33 @@ namespace ag
                 return x == other.x && y == other.y;
             }
         }
+        bool operator==(T scalar) const
+        {
+          return x == scalar || y == scalar;
+        }
 
         bool operator!=(const vec2<T> &other) const
         {
             return !(*this == other);
         }
-    };
+
+
+        bool operator<(const vec2<T> &other) const
+        {
+          if( x < other.x ) return true;
+          if( x > other.x) return false;
+          return y < other.y;
+        }
+
+        bool operator!=(const ImVec2& other) const
+        {
+          return !(x == static_cast<T>(other.x) && static_cast<int>(y == other.y));
+        }
+        vec2 operator=(const ImVec2& other)
+        {
+          return vec2(x = other.x, y = other.y);
+        }
+      };
 
     using vec2i = vec2<int>;
     using vec2f = vec2<float>;

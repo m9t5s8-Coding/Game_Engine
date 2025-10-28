@@ -51,6 +51,17 @@ namespace ag
     return {static_cast<float>(xpos), static_cast<float>(ypos)};
   }
 
+  vec2f Mouse::get_mouse_screen_position()
+  {
+    auto* window = static_cast<GLFWwindow*>(Application::get().get_window().get_native_window());
+
+    vec2f mouse_pos = get_mouse_position();
+    vec2i window_pos;
+    glfwGetWindowPos(window, &window_pos.x, &window_pos.y);
+
+    return window_pos + mouse_pos;
+  }
+
   vec2f Mouse::get_mouse_world_position(const View& view)
   {
     vec2f mouse_position = get_mouse_position();
@@ -61,12 +72,17 @@ namespace ag
   {
     auto &window = Application::get().get_window();
     vec2u window_size = window.get_size();
+    return get_mouse_world_position(mouse_position, view, window_size);
+  }
+
+  vec2f Mouse::get_mouse_world_position(const vec2f& mouse_position, const View& view, const vec2f& viewport_size)
+  {
     vec2f view_size = view.get_size();
     vec2f view_center = view.get_center();
 
     vec2f ndc;
-    ndc.x = (mouse_position.x / window_size.x) * 2.0f - 1.0f;
-    ndc.y = (mouse_position.y / window_size.y) * 2.0f - 1.0f;
+    ndc.x = (mouse_position.x / viewport_size.x) * 2.0f - 1.0f;
+    ndc.y = (mouse_position.y / viewport_size.y) * 2.0f - 1.0f;
 
     vec2f world;
     world.x = ndc.x * (view_size.x / 2.0f) + view_center.x;

@@ -42,6 +42,7 @@ add_library(Application STATIC ${SRC})
 # --- Include directories ---
 target_include_directories(Application
     PUBLIC
+        ${CMAKE_SOURCE_DIR}/External/entt/include
         ${CMAKE_SOURCE_DIR}/External/glfw/include
         ${CMAKE_SOURCE_DIR}/External/glad/include
         ${CMAKE_SOURCE_DIR}/External/glm

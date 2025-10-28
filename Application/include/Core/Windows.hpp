@@ -30,9 +30,10 @@ namespace ag
     virtual AG_uint get_height() const = 0;
     virtual vec2u get_size() const = 0;
 
-    virtual void clear_window(const ag::Color &color = ag::Color::Black) = 0;
     virtual void on_update() = 0;
     virtual void close_window() = 0;
+
+    virtual void set_full_screen() = 0;
 
     virtual void set_event_callback(const EventCallbackFunc &callback) = 0;
     virtual void set_vsync(bool enabled) = 0;

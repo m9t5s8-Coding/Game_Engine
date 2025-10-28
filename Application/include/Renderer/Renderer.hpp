@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Renderer/RenderCommand.hpp>
-#include <Renderer/View.hpp>
+#include <Renderer/ViewController.hpp>
 #include <Renderer/Shader.hpp>
 #include <Math/Math.hpp>
 
@@ -24,7 +24,7 @@ namespace ag
   private:
     struct SceneData
     {
-      glm::mat4 view_projection_mat;
+      glm::mat3 view_matrix;
     };
     static SceneData* s_scenedata;
   };

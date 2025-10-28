@@ -23,6 +23,11 @@ namespace ag
     View &get_view() { return m_view; };
     const View &get_view() const { return m_view; };
 
+    void set_viewport_mouse(const vec2f mouse_pos) { m_mouse_in_viewport = mouse_pos; }
+    void set_viewport_size(const vec2f& viewport_size) { m_viewport_size = viewport_size; }
+
+    void on_resize(const vec2f &size);
+
   private:
     bool on_mouse_scroll(MouseScrolledEvent &e);
     bool on_window_resize(WindowResizeEvent &e);
@@ -35,7 +40,13 @@ namespace ag
     View m_view;
 
     bool m_middle_pressed = false;
+    bool m_view_ismax = false;
+    bool m_view_ismin = false;
+
     vec2f m_last_mouse_pos;
-    float m_view_speed = 1000.0f;
+    vec2f m_last_size;
+
+    vec2f m_mouse_in_viewport;
+    vec2f m_viewport_size;
   };
 }

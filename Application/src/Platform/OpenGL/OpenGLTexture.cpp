@@ -10,7 +10,7 @@ namespace ag
   {
     // Load the image from the file
     int width, height, channels;
-    stbi_set_flip_vertically_on_load(true);
+
     stbi_uc *data = stbi_load(p_path.c_str(), &width, &height, &channels, 4);
     AERO_CORE_ASSERT(data, "Failed to load Image!");
     m_size = vec2u(width, height);

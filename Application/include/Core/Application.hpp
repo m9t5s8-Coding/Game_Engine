@@ -44,6 +44,7 @@ namespace ag
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);
+    bool on_key_pressed(KeyPressedEvent &e);
 
     std::unique_ptr<Window> m_Window;
     bool m_running = true;

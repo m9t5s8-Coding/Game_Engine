@@ -35,7 +35,7 @@ namespace ag
   {
 
     m_win_data.title = props.Title;
-    m_win_data.size= props.Size;
+    m_win_data.size = props.Size;
 
     AERO_CORE_INFO("Creating Window {0} ({1}, {2})", props.Title, props.Size.x, props.Size.y);
 
@@ -44,8 +44,8 @@ namespace ag
       int success = glfwInit();
       AERO_CORE_ASSERT(success, "Could not initialize GLFW!");
 
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+      glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
       glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
       glfwSetErrorCallback(glfw_error_callback);
       s_glfw_initialized = true;
@@ -63,7 +63,7 @@ namespace ag
 
     // Window size event
     glfwSetWindowSizeCallback(m_Window, [](GLFWwindow *window, const int width, const int height)
-    {
+                              {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
       data.size.x = width;
       data.size.y = height;
@@ -72,14 +72,14 @@ namespace ag
       data.event_callback(event); });
 
     glfwSetWindowCloseCallback(m_Window, [](GLFWwindow *window)
-    {
+                               {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       WindowCloseEvent event;
       data.event_callback(event); });
 
     glfwSetKeyCallback(m_Window, [](GLFWwindow *window, const int key, const int scancode, const int action, const int mode)
-    {
+                       {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       switch(action)
@@ -107,7 +107,7 @@ namespace ag
       } });
 
     glfwSetMouseButtonCallback(m_Window, [](GLFWwindow *window, int button, int action, int mode)
-    {
+                               {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       switch(action)
@@ -129,14 +129,14 @@ namespace ag
       } });
 
     glfwSetScrollCallback(m_Window, [](GLFWwindow *window, double offset_X, double offset_Y)
-    {
+                          {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       MouseScrolledEvent event(static_cast<float>(offset_X), static_cast<float>(offset_Y));
       data.event_callback(event); });
 
     glfwSetCursorPosCallback(m_Window, [](GLFWwindow *window, double pos_x, double pos_y)
-    {
+                             {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       MouseMovedEvent event(static_cast<float>(pos_x), static_cast<float>(pos_y));
@@ -150,20 +150,35 @@ namespace ag
     else
       glfwSwapInterval(0);
 
-      m_win_data.vsync = enabled;
+    m_win_data.vsync = enabled;
+  }
+
+  void WindowsWindow::set_full_screen()
+  {
+    GLFWmonitor *primary_monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode *p_mode = glfwGetVideoMode(primary_monitor);
+    if (!m_win_data.is_fullscreen)
+    {
+      glfwGetWindowPos(m_Window, &m_win_data.old_pos.x, &m_win_data.old_pos.y);
+      glfwGetWindowSize(m_Window, &m_win_data.old_size.x, &m_win_data.old_size.y);
+
+      glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_FALSE);
+
+      glfwSetWindowMonitor(m_Window, nullptr, 0, 0, p_mode->width, p_mode->height, 0);
+
+      m_win_data.is_fullscreen = true;
+    }
+    else
+    {
+      glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_TRUE);
+      glfwSetWindowMonitor(m_Window, nullptr, m_win_data.old_pos.x, m_win_data.old_pos.y, m_win_data.old_size.x, m_win_data.old_size.y, 0);
+      m_win_data.is_fullscreen = false;
+    }
   }
 
   bool WindowsWindow::is_vsync() const
   {
     return m_win_data.vsync;
-  }
-
-  void WindowsWindow::clear_window(const ag::Color &color)
-  {
-    float r, g, b, a;
-    color.NormalizedColor(r, g, b, a);
-    glClearColor(r, g, b, a);
-    glClear(GL_COLOR_BUFFER_BIT);
   }
 
   void WindowsWindow::on_update()

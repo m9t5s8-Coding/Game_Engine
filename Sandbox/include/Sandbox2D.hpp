@@ -21,7 +21,8 @@ public:
   virtual void on_event(ag::Event &e) override;
 
 private:
-  ag::ViewController m_view_controller;
+  ag::AG_ref<ag::ViewController> m_view_controller;
+  ag::AG_ref<ag::Texture> m_texture;
 
   ag::vec3f m_triangle_pos;
   ag::Color m_color;

@@ -2,7 +2,6 @@
 
 #include <Layers/Layer.hpp>
 
-
 namespace ag
 {
   class ImGuiLayer : public Layer
@@ -19,6 +18,8 @@ namespace ag
     void end();
 
     void on_imgui_render() override;
+
+    void block_events(bool block) { m_block_events = block; }
   private:
     float m_time = 0.0f;
     bool m_block_events = true;

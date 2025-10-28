@@ -5,6 +5,7 @@
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Renderer.hpp>
 #include <Renderer/Renderer2D.hpp>
+#include <GameObjects/NodeFactory.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -20,7 +21,7 @@ namespace ag
     m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
 
     Renderer::init();
-    Renderer2D::init();
+    NodeFactory::init();
     m_imgui_layer = new ImGuiLayer();
     push_overlay(m_imgui_layer);
   }
@@ -35,7 +36,8 @@ namespace ag
       TimeStamp timestamp = time - m_last_frametime;
       m_last_frametime = time;
 
-      // AERO_CORE_INFO("FPS: {0}", 1 / timestamp.get_seconds());
+      //AERO_CORE_INFO("FPS:{0}", (int)(1/timestamp.get_seconds()));
+
 
       if (!m_minimized)
       {
@@ -55,11 +57,24 @@ namespace ag
     Renderer2D::shut_down();
   }
 
+  void Application::push_layer(Layer *layer)
+  {
+    m_layerstack.push_layer(layer);
+    layer->on_attach();
+  }
+
+  void Application::push_overlay(Layer *overlay)
+  {
+    m_layerstack.push_overlay(overlay);
+    overlay->on_attach();
+  }
+
   void Application::on_event(Event &e)
   {
     EventDispatcher dispatcher(e);
     dispatcher.Dispatch<WindowCloseEvent>(AERO_BIND_EVENT_FN(Application::on_window_close));
     dispatcher.Dispatch<WindowResizeEvent>(AERO_BIND_EVENT_FN(Application::on_window_resize));
+    dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(Application::on_key_pressed));
 
     if (m_imgui_layer)
       m_imgui_layer->on_event(e);
@@ -89,17 +104,14 @@ namespace ag
     Renderer::on_window_resize(e.get_size());
     return false;
   }
-
-  void Application::push_layer(Layer *layer)
+  bool Application::on_key_pressed(KeyPressedEvent &e)
   {
-    m_layerstack.push_layer(layer);
-    layer->on_attach();
+    if(e.get_key_code() == Key::F11)
+    {
+      m_Window->set_full_screen();
+    }
+    return false;
   }
 
-  void Application::push_overlay(Layer *overlay)
-  {
-    m_layerstack.push_overlay(overlay);
-    overlay->on_attach();
-  }
 
 }

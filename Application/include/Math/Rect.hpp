@@ -8,26 +8,34 @@ namespace ag
     template <typename T>
     struct rect
     {
-        T x, y;
-        T width, height;
+        vec2<T> position;
+        vec2<T> size;
 
         rect(T x_ = T(), T y_ = T(), T width_ = T(), T height_ = T())
-            : x(x_), y(y_), width(width_), height(height_) {}
+            : position(x_, x_), size(width_, height_) {}
 
         rect(const vec2<T> &pos, const vec2<T> &size)
-            : x(pos.x), y(pos.y), width(size.x), height(size.y) {}
+            : position(pos), size(size) {}
 
         rect(const vec2<T> &pos, T width_, T height_)
-            : x(pos.x), y(pos.y), width(width_), height(height_) {}
+            : position(pos), size(width_, height_) {}
 
         rect(T x_, T y_, const vec2<T> &size)
-            : x(x_), y(y_), width(size.x), height(size.y) {}
+            : position(x_, y_), size(size) {}
 
+
+        bool intersects(const  rect& other) const
+        {
+          return  (position.x < other.position.x + other.size.x ) &&
+                  (position.x + size.x > other.position.x) &&
+                  (position.y < other.position.y + other.size.y) &&
+                  (position.y + size.y > other.position.y);
+        }
 
 
         bool operator == (const rect& other) const
         {
-            return x == other.x && y == other.y && width == other.width && height == other.height;
+            return position = other.position && size = other.size;
         }
         bool operator != (const rect& other) const
         {
@@ -35,7 +43,8 @@ namespace ag
         }
     };
 
-    using recti = rect<int>;
-    using rectf = rect<float>;
+    using int_rect = rect<int>;
+    using float_rect = rect<float>;
+    using uint_rect = rect<unsigned int>;
 }
 #endif

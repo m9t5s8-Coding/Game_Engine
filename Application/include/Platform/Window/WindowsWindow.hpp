@@ -3,6 +3,7 @@
 #include <Core/Windows.hpp>
 #include <GLFW/glfw3.h>
 #include <Renderer/GraphicsContext.hpp>
+#include <Math/Math.hpp>
 
 namespace ag
 {
@@ -16,8 +17,8 @@ namespace ag
     virtual AG_uint get_height() const override { return m_win_data.size.y; }
     virtual vec2u get_size() const override { return m_win_data.size; }
 
+    virtual void set_full_screen() override;
 
-    void clear_window(const ag::Color &color = ag::Color::Black) override;
     void on_update() override;
     void close_window() override;
 
@@ -39,8 +40,12 @@ namespace ag
     {
       std::string title;
       vec2u size;
+      vec2i old_size;
+      vec2i old_pos;
 
       bool vsync;
+      bool is_fullscreen = false;
+
 
       EventCallbackFunc event_callback;
     };

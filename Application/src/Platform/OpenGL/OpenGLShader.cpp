@@ -212,17 +212,21 @@ namespace ag
 
   void OpenGLShader::set_color(const std::string &name, const ag::Color &color) const
   {
-    float r, g, b, a;
-    color.NormalizedColor(r, g, b, a);
-    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), r, g, b, a);
+    vec4f v_color;
+    color.normalize_color(v_color);
+    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), v_color.x, v_color.y, v_color.z, v_color.w);
   }
-  void OpenGLShader::set_float_rect(const std::string &name, const ag::rectf &rect) const
+  void OpenGLShader::set_float_rect(const std::string &name, const float_rect &rect) const
   {
-    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), rect.x, rect.y, rect.width, rect.height);
+    glUniform4f(glGetUniformLocation(m_ID, name.c_str()), rect.position.x, rect.position.y, rect.size.x, rect.size.y);
   }
 
   void OpenGLShader::set_mat4(const std::string &name, const glm::mat4 &p_mat) const
   {
     glUniformMatrix4fv(glGetUniformLocation(m_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(p_mat));
+  }
+  void OpenGLShader::set_mat3(const std::string& name, const glm::mat3& p_mat) const
+  {
+    glUniformMatrix3fv(glGetUniformLocation(m_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(p_mat));
   }
 }

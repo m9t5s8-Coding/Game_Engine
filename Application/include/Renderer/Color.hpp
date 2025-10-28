@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <Math/vec4.hpp>
 
 namespace ag
 {
@@ -14,12 +15,13 @@ namespace ag
         {
         }
 
-        void NormalizedColor(float &rn, float &gn, float &bn, float &an) const
+
+        void normalize_color(vec4f &color) const
         {
-            rn = r / 255.0f;
-            gn = g / 255.0f;
-            bn = b / 255.0f;
-            an = a / 255.0f;
+          color.x = r / 255.0f;
+          color.y = g / 255.0f;
+          color.z = b / 255.0f;
+          color.w = a / 255.0f;
         }
 
         bool operator == (const Color& other) const

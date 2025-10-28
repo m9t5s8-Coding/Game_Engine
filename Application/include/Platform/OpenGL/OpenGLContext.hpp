@@ -10,7 +10,7 @@ namespace ag
   class OpenGLContext : public GraphicsContext
   {
   public:
-    OpenGLContext(GLFWwindow *window_handle);
+    OpenGLContext(GLFWwindow* window_handle);
 
     void init() override;
     void swap_buffers() override;

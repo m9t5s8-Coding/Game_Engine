@@ -33,6 +33,8 @@ namespace ag
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+    io.Fonts->AddFontFromFileTTF("assets/fonts/font.ttf", 20.0f);
+
     ImGui::StyleColorsDark();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -46,7 +48,7 @@ namespace ag
     GLFWwindow *window = static_cast<GLFWwindow *>(app.get_window().get_native_window());
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplOpenGL3_Init("#version 450");
   }
 
   void ImGuiLayer::on_detach()
@@ -88,8 +90,6 @@ namespace ag
 
   void ImGuiLayer::on_imgui_render()
   {
-    // static bool show = true;
-    // ImGui::ShowDemoWindow(&show);
   }
 
   void ImGuiLayer::on_event(Event &event)
