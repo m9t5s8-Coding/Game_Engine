@@ -46,7 +46,7 @@ namespace ag
 	{
 		vec2f position;
 		vec2f scale = { 1, 1 };
-		vec2u origin;
+		//vec2u origin;
 		float rotation = 0.0f;
 
 		static void show_properties(Entity entity)
@@ -56,26 +56,46 @@ namespace ag
 			uint32_t id = entity.get_id();
 			UI::draw_vec2("Position", transform.position, { 0, 0 });
 			UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
-			UI::draw_vec2("Origin", transform.origin, { 0, 0 });
+			//UI::draw_vec2("Origin", transform.origin, { 0, 0 });
 			UI::draw_value("Rotation", transform.rotation);
+		}
+
+		static json save(Entity entity)
+		{
+			json j;
+			const auto& transform = entity.get_component<Transform>();
+			j["Position"] = transform.position.save();
+			j["Scale"] = transform.scale.save();
+			j["Rotation"] = transform.rotation;
+
+			return j;
+		}
+
+		static void load(Entity entity,const json& j)
+		{
+			auto& transform = entity.get_component<Transform>();
+
+			transform.position.load(j["Position"]);
+			transform.scale.load(j["Scale"]);
+			transform.rotation = j["Rotation"].get<float>();
 		}
 	};
 
 	struct Rectangle
 	{
-		vec2u size;
+		vec2f size;
 		Color fill_color;
 	};
 
 	struct Circle
 	{
-		vec2u size;
+		vec2f size;
 		Color fill_color;
 	};
 
 	struct Sprite
 	{
-		vec2u size;
+		vec2f size;
 		uint_rect texture_rect;
 	};
 

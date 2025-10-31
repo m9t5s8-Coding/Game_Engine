@@ -36,3 +36,9 @@
 #include <GameObjects/GameObjects.hpp>
 #include <GameObjects/Node.hpp>
 #include <GameObjects/NodeFactory.hpp>
+
+#include <Project/Project.hpp>
+#include <Project/FileDialogs.hpp>
+#include <Project/SaveScene.hpp>
+
+#include <Helper.hpp>

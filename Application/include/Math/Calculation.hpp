@@ -37,6 +37,17 @@ namespace ag::Math
     return to_degree(radians);
   }
 
+  inline float angle_betn_3points(const vec2f& a, const vec2f& b, const vec2f& c)
+  {
+    vec2f ba = { a.x - b.x, a.y - b.y };
+    vec2f bc = { c.x - b.x, c.y - b.y };
+
+    float dot = ba.x * bc.x + ba.y * bc.y;
+    float det = ba.x * bc.y - ba.y * bc.x;
+
+    return to_degree(std::atan2(det, dot));
+  }
+
   // Converting the screen position to the world position
   inline vec2f screen_to_world(const vec2f& screen, const float_rect& window_rect, const vec2f &size)
   {

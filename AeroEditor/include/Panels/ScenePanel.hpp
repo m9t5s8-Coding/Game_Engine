@@ -43,6 +43,7 @@ namespace ag
     void move_transform_setting();
     void rotate_transform_setting();
     void scale_transform_setting();
+    void reset_transform_setting();
 
     bool on_key_pressed(KeyPressedEvent& e);
 
@@ -55,6 +56,11 @@ namespace ag
     vec2f m_current_mouse_position;
     bool m_mouse_inside_window;
 
+    bool m_move_flag = false;
+    bool m_scale_flag = false;
+    bool m_rotate_flag = false;
+
+    Transform m_initial_transform;
     TransformSetting m_current_transform_setting = TransformSetting::None;
     TransformAxix m_current_transform_axix = TransformAxix::None;
   };

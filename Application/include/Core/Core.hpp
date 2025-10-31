@@ -1,6 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 #define AERO_BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
 
@@ -25,5 +28,4 @@ namespace ag
   {
     return std::make_unique<T>(std::forward<Args>(args)...);
   }
-
 }

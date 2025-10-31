@@ -23,6 +23,19 @@ namespace ag
         rect(T x_, T y_, const vec2<T> &size)
             : position(x_, y_), size(size) {}
 
+        json save() const
+        {
+          return { position.x, position.y, size.x, size.y };
+        }
+
+        void load(const json& j)
+        {
+          position.x = j[0].get<T>();
+          position.y = j[1].get<T>();
+          size.x = j[2].get<T>();
+          size.y = j[3].get<T>();
+        }
+
 
         bool intersects(const  rect& other) const
         {

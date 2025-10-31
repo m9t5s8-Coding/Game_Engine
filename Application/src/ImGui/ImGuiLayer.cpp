@@ -34,6 +34,7 @@ namespace ag
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     io.Fonts->AddFontFromFileTTF("assets/fonts/font.ttf", 20.0f);
+    io.Fonts->AddFontFromFileTTF("assets/fonts/font.ttf", 28.0f);
 
     ImGui::StyleColorsDark();
 

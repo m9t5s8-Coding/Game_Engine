@@ -1,9 +1,6 @@
 #pragma once
 
-#include <utility>
-#include <cmath>
-#include <type_traits>
-#include <glm/glm.hpp>
+#include <Apch.hpp>
 #include <imgui.h>
 
 namespace ag
@@ -17,12 +14,21 @@ namespace ag
         vec2(T x_ = T(), T y_ = T()) : x(x_), y(y_) {}
         vec2(T s_) : x(s_), y(s_) {}
 
-        glm::vec2 to_glm() const
+        float length() const
         {
-          return glm::vec2(x, y);
+          return std::sqrt(x * x + y * y);
         }
 
+        json save() const
+        {
+          return { x, y };
+        }
 
+        void load(const json& j)
+        {
+          x = j[0].get<T>();
+          y = j[1].get<T>();
+        }
 
         vec2 round() const
         {

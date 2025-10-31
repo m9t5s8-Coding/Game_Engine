@@ -16,7 +16,26 @@ namespace ag
 			vec2u size;
 			uint_rect texture_rect;
 
-			Sprite sprite;
+			static json save(Entity entity)
+			{
+				json j;
+				const auto& props = entity.get_component<SpriteProp>();
+
+				j["Texture Path"] = props.texture_path;
+				j["Size"] = props.size.save();
+				j["Texture Rect"] = props.texture_rect.save();
+
+				return j;
+			}
+
+			static void load(Entity entity,const json& j)
+			{
+				auto& props = entity.get_component<SpriteProp>();
+				props.texture_path = j["Texture Path"].get<std::string>();
+				props.size.load(j["Size"]);
+				props.texture_rect.load(j["Texture Rect"]);
+			}
+
 		};
 
 		static void create_node(Entity entity)
@@ -34,6 +53,26 @@ namespace ag
 			entity.delete_entity();
 		}
 
+		static void clone_node(Entity original, Entity clone)
+		{
+			clone.add_component<Transform>(original.get_component<Transform>());
+			clone.add_component<SpriteProp>(original.get_component<SpriteProp>());
+		}
+
+		static json save(Entity entity)
+		{
+			json j;
+			j["SpriteProp"] = SpriteProp::save(entity);
+			j["Transform"] = Transform::save(entity);
+			return j;
+		}
+
+		static void load(Entity entity, const json& j)
+		{
+			SpriteProp::load(entity, j["SpriteProp"]);
+			Transform::load(entity, j["Transform"]);
+		}
+
 		static void show_properties(Entity entity)
 		{
 			auto& sprite = entity.get_component<SpriteProp>();
@@ -46,8 +85,6 @@ namespace ag
 						sprite.texture = Texture2D::create(default_path + sprite.texture_path);
 						sprite.size = sprite.texture->get_size();
 						sprite.texture_rect = uint_rect(0, 0, sprite.size);
-						sprite.sprite.size = sprite.size;
-						sprite.sprite.texture_rect = sprite.texture_rect;
 					}
 				}
 				{
@@ -66,13 +103,13 @@ namespace ag
 		{
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<SpriteProp>();
+			Sprite sprite;
+			sprite.size = s.size;
 
-			s.sprite.size = s.size;
-
-			s.sprite.texture_rect = s.texture_rect;
+			sprite.texture_rect = s.texture_rect;
 
 			Renderer2D::set_texture(s.texture);
-			Renderer2D::draw_sprite(s.sprite, transform);
+			Renderer2D::draw_sprite(sprite, transform);
 		}
 	};	
 }

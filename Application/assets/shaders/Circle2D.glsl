@@ -4,7 +4,8 @@
 layout(location = 0) in vec2 a_pos;
 layout(location = 1) in vec2 a_center;
 layout(location = 2) in vec2 a_radius;
-layout(location = 3) in vec4 a_fill_color;
+layout(location = 3) in float a_rotation;
+layout(location = 4) in vec4 a_fill_color;
 
 uniform mat3 u_view_matrix;
 
@@ -12,16 +13,26 @@ out vec4 vertex_color;
 out vec2 circle_center;
 out vec2 frag_pos;
 out vec2 circle_radius;
+flat out float rotation;
 
 void main()
 {
   vertex_color = a_fill_color;
   circle_center = a_center;
   circle_radius = a_radius;
+  rotation = a_rotation;
 
-  frag_pos = a_pos;
+  float cosA = cos(a_rotation);
+  float sinA = sin(a_rotation);
+  vec2 rotated;
+  rotated.x = a_pos.x * cosA - a_pos.y * sinA;
+  rotated.y = a_pos.x * sinA + a_pos.y * cosA;
+
+  rotated += circle_center;
+
+  frag_pos = rotated;
   
-  vec3 pos = vec3(a_pos, 1.0);
+  vec3 pos = vec3(rotated, 1.0);
   vec3 ndc = u_view_matrix * pos;
   gl_Position = vec4(ndc.xy, 0.0, 1.0);
 }
@@ -35,15 +46,23 @@ in vec4 vertex_color;
 in vec2 circle_center;
 in vec2 frag_pos;
 in vec2 circle_radius;
+flat in float rotation;
 
 void main()
 {
   vec2 offset = frag_pos - circle_center;
-  float eq = (offset.x * offset.x) / (circle_radius.x * circle_radius.x)
-             + (offset.y * offset.y) / (circle_radius.y * circle_radius.y);
 
-  if( eq <= 1)
-    FragColor = vertex_color;
-  else
-    discard;
+    float cosA = cos(-rotation);
+    float sinA = sin(-rotation);
+    vec2 rotatedOffset;
+    rotatedOffset.x = offset.x * cosA - offset.y * sinA;
+    rotatedOffset.y = offset.x * sinA + offset.y * cosA;
+
+    float eq = (rotatedOffset.x * rotatedOffset.x) / (circle_radius.x * circle_radius.x)
+             + (rotatedOffset.y * rotatedOffset.y) / (circle_radius.y * circle_radius.y);
+
+    if (eq <= 1.0)
+        FragColor = vertex_color;
+    else
+        discard;
 }

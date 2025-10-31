@@ -31,6 +31,7 @@ namespace ag
     vec2f position;
     vec2f center;
     vec2f radius;
+    float rotation;
     vec4f fill_color;
   };
 
@@ -124,6 +125,7 @@ namespace ag
           {ShaderDataType::Float2, "a_Position"},
           {ShaderDataType::Float2, "a_Center"},
           {ShaderDataType::Float2, "a_Radius"},
+          {ShaderDataType::Float, "a_Rotation"},
           {ShaderDataType::Float4, "a_Fill_Color"}};
 
       s_data->circle_vb_base = new Circle_Data[s_data->max_vertices];
@@ -237,7 +239,7 @@ namespace ag
     }
 
     vec2f size = rect.size * transform.scale;
-    vec2f origin = transform.origin * transform.scale;
+    vec2f origin = size / 2;
 
     vec4f fill_color;
     rect.fill_color.normalize_color(fill_color);
@@ -271,25 +273,26 @@ namespace ag
     circle.fill_color.normalize_color(color);
 
     vec2f size = circle.size * transform.scale;
-    vec2f origin = transform.origin * transform.scale;
+    vec2f origin = size / 2;
 
-    vec2f center = transform.position - transform.origin + size / 2;
 
     float rotation = glm::radians(transform.rotation);
-    float cosA = cos(rotation);
-    float sinA = sin(rotation);
+    /*float cosA = cos(rotation);
+    float sinA = sin(rotation);*/
 
     for (int i = 0; i < 4; i++)
     {
         vec2f local_pos = s_quad_vertex[i] * size - origin;
-        vec2f rotated;
+        //local_pos += transform.position;
+        /*vec2f rotated;
         rotated.x = local_pos.x * cosA - local_pos.y * sinA;
         rotated.y = local_pos.x * sinA + local_pos.y * cosA;
-        rotated += transform.position;
+        rotated += transform.position;*/
 
-      s_data->circle_vb_ptr->position = rotated;
-      s_data->circle_vb_ptr->center = center;
+      s_data->circle_vb_ptr->position = local_pos;
+      s_data->circle_vb_ptr->center = transform.position;
       s_data->circle_vb_ptr->radius = size / 2;
+      s_data->circle_vb_ptr->rotation = rotation;
       s_data->circle_vb_ptr->fill_color = color;
       ++s_data->circle_vb_ptr;
     }
@@ -305,7 +308,7 @@ namespace ag
 
     vec2u tex_size = s_data->texture->get_size();
     vec2u tex_pos = sprite.texture_rect.position;
-    vec2u tex_dim = sprite.texture_rect.size;
+    vec2f tex_dim = sprite.texture_rect.size;
 
     auto u0 = float(tex_pos.x) / tex_size.x;
     auto v0 = float(tex_pos.y) / tex_size.y;
@@ -314,14 +317,17 @@ namespace ag
     std::array<vec2f, 4> t = {vec2f(u0, v0), vec2f(u0, v1), vec2f(u1, v1), vec2f(u1, v0)};
 
     vec2f size = (sprite.size == 0) ? tex_dim : sprite.size;
+    
 
     size *= transform.scale;
+    vec2f origin = (size / 2);
+
     float rotation = glm::radians(transform.rotation);
     float cosA = cos(rotation);
     float sinA = sin(rotation);
     for (int i = 0; i < 4; i++)
     {
-      vec2f local_pos = s_quad_vertex[i] * size - transform.origin;
+      vec2f local_pos = s_quad_vertex[i] * size - origin;
       vec2f rotated;
       rotated.x = local_pos.x * cosA - local_pos.y * sinA;
       rotated.y = local_pos.x * sinA + local_pos.y * cosA;

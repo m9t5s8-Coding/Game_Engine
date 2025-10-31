@@ -13,3 +13,6 @@
 [submodule "External/spdlog"]
 	path = External/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "External/json"]
+	path = External/json
+	url = https://github.com/nlohmann/json.git

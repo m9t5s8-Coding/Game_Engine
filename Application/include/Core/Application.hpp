@@ -29,12 +29,20 @@ namespace ag
     Application();
     virtual ~Application();
 
+
+    void init(const WindowProps& props);
     // main loop
     void run();
 
+    virtual void on_create() = 0;
+    virtual void on_destroy() = 0;
+
     void on_event(Event &e);
     void push_layer(Layer *layer);
+    void pop_layer(Layer* layer);
     void push_overlay(Layer *overlay);
+
+    
 
     inline static Application &get() { return *s_Instance; }
     inline Window &get_window() { return *m_Window; }

@@ -73,10 +73,11 @@ namespace ag
       is_zoom_in = false;
       scale_factor = 1.1f;
     }
-    vec2f before_zoom = Mouse::get_mouse_world_position(m_mouse_in_viewport, m_view, m_viewport_size);
+    vec2f before_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
     m_view.zoom(scale_factor);
 
-    vec2f after_zoom = Mouse::get_mouse_world_position(m_mouse_in_viewport, m_view, m_viewport_size);
+    vec2f after_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
+
     vec2f offset = before_zoom - after_zoom;
     
     if ((is_zoom_in && !m_view_ismin) || (!is_zoom_in && !m_view_ismax))
@@ -130,8 +131,8 @@ namespace ag
     if(!m_middle_pressed) return false;
 
     vec2f current = m_mouse_in_viewport;
-    vec2f start = Mouse::get_mouse_world_position(m_last_mouse_pos, m_view, m_viewport_size);
-    vec2f end = Mouse::get_mouse_world_position(current, m_view, m_viewport_size);
+    vec2f start = Math::screen_to_world(m_last_mouse_pos, m_view.get_float_rect(), m_viewport_size);
+    vec2f end = Math::screen_to_world(current, m_view.get_float_rect(), m_viewport_size);
 
     m_view.move(start - end);
 

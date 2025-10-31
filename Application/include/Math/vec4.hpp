@@ -16,6 +16,19 @@ namespace ag
 
     vec4(T scalar) : x(scalar), y(scalar), z(scalar), w(scalar) {}
 
+    json save() const
+    {
+      return { x, y, z, w };
+    }
+
+    void load(const json& j)
+    {
+      x = j[0].get<T>();
+      y = j[1].get<T>();
+      z = j[2].get<T>();
+      w = j[3].get<T>();
+    }
+
     vec4 round() const
     {
       return {std::round(x), std::round(y), std::round(z), std::round(w)};

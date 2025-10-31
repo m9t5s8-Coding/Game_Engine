@@ -1,4 +1,4 @@
-#include <EditorLayer.hpp>
+#include <Application/EditorLayer.hpp>
 
 namespace ag
 {
@@ -10,19 +10,19 @@ namespace ag
 
 	void EditorLayer::on_attach()
 	{
+
 		ag::vec2u window_size = Application::get().get_window().get_size();
 		ag::vec2f view_center(0, 0);
 		m_view_controller = ag::AG_cref<ViewController>(window_size, view_center);
 
-		m_texture = ag::Texture2D::create("assets/textures/tiles.png");
-		Renderer2D::set_texture(m_texture);
-
 		FrameBufferSpecification spec;
 		spec.size = window_size;
+
 
 		m_framebuffer = FrameBuffer::create(spec);
 		m_scene = AG_cref<Scene>();
 		m_panel = AG_cref<ScenePanel>(m_scene);
+
 	}
 
 	void EditorLayer::on_detach()
@@ -31,16 +31,18 @@ namespace ag
 
 	void EditorLayer::on_update(TimeStamp ts)
 	{
-		m_view_controller->on_update(ts);
-		m_panel->on_update();
 
 		m_framebuffer->bind();
 		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
 		RenderCommand::clear();
 
+		m_view_controller->on_update(ts);
+		m_panel->on_update();
+
 		Renderer2D::begin_scene(m_view_controller->get_view());
 		m_scene->on_update(ts);
 		Renderer2D::end_scene();
+
 		m_framebuffer->unbind();
 	}
 
@@ -79,7 +81,7 @@ namespace ag
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin("ViewPort", nullptr, viewport_flags);
-		{																								 
+		{
 			bool view_hovered = ImGui::IsWindowHovered();
 			if (view_hovered)
 				ImGui::SetWindowFocus();
@@ -96,7 +98,7 @@ namespace ag
 			vec2f mouse_viewport = get_imgui_viewport_mouse_position();
 			vec2f current_mouse_pos = Math::screen_to_world(mouse_viewport, m_view_controller->get_view().get_float_rect(), m_viewport_size);
 			m_panel->set_current_mouse_position(current_mouse_pos);
-			
+
 			m_view_controller->set_viewport_mouse(mouse_viewport);
 
 			uint32_t texture_ID = m_framebuffer->get_colorattachment_id();
@@ -107,15 +109,13 @@ namespace ag
 
 		m_panel->on_imgui_render();
 
-		ImGui::Begin("Test2");
-
-		ImGui::Text("Hello World");
-		ImGui::End();
 		ImGui::End();
 	}
 
 	void EditorLayer::on_event(ag::Event& e)
 	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(EditorLayer::on_key_pressed));
 		m_view_controller->on_event(e);
 		m_panel->on_event(e);
 	}
@@ -134,5 +134,25 @@ namespace ag
 		mouse_in_viewport.y = std::clamp(mouse_in_viewport.y, 0.0f, viewport_size.y);
 
 		return vec2f(mouse_in_viewport.x, mouse_in_viewport.y);
+	}
+
+	bool EditorLayer::on_key_pressed(KeyPressedEvent& e)
+	{
+		bool control = Keyboard::is_key_pressed(Key::LeftControl) || Keyboard::is_key_pressed(Key::RightControl);
+		bool shift = Keyboard::is_key_pressed(Key::LeftShift) || Keyboard::is_key_pressed(Key::RightShift);
+		if (control)
+		{
+			if (e.get_key_code() == Key::S)
+				SaveScene::save_scene(m_scene, "");
+
+			if (e.get_key_code() == Key::O)
+			{
+				m_scene = SaveScene::load_scene("D//");
+				m_panel->set_scene(m_scene);
+			}
+
+			return false;
+		}
+		return false;
 	}
 }

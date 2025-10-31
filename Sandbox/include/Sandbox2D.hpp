@@ -1,11 +1,8 @@
 #pragma once
 
 #include <Aero.hpp>
-#include <iostream>
 
-#include <imgui.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <Platform/OpenGL/OpenGLShader.hpp>
+
 
 class Sandbox2D : public ag::Layer
 {
@@ -20,10 +17,11 @@ public:
   virtual void on_imgui_render() override;
   virtual void on_event(ag::Event &e) override;
 
-private:
-  ag::AG_ref<ag::ViewController> m_view_controller;
-  ag::AG_ref<ag::Texture> m_texture;
 
-  ag::vec3f m_triangle_pos;
-  ag::Color m_color;
+private:
+
+  void create_new_project();
+  void open_existing_project();
+
+
 };

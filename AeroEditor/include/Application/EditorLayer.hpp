@@ -4,13 +4,10 @@
 #include <iostream>
 
 #include <imgui.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <Platform/OpenGL/OpenGLShader.hpp>
 #include <Panels/ScenePanel.hpp>
 
 namespace ag
 {
-
 	class EditorLayer : public Layer
 	{
 	public:
@@ -25,6 +22,10 @@ namespace ag
 		virtual void on_event(Event& e) override;
 
 		ag::vec2f get_imgui_viewport_mouse_position();
+
+
+
+		bool on_key_pressed(KeyPressedEvent& e);
 	private:
 		AG_ref<ViewController> m_view_controller;
 		AG_ref<Texture> m_texture;

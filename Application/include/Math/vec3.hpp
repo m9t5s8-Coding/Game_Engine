@@ -30,7 +30,17 @@ namespace ag
             return {std::round(x), std::round(y), std::round(z)};
         }
 
+        json save() const
+        {
+          return { x, y, z };
+        }
 
+        void load(const json& j)
+        {
+          x = j[0].get<T>();
+          y = j[1].get<T>();
+          z = j[2].get<T>();
+        }
 
         vec3 operator+(const vec3 &other) const
         {

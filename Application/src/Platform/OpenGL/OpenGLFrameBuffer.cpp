@@ -32,7 +32,7 @@ namespace ag
 
     // Gen and Bind Textures
     glGenTextures(1, &m_colorattachment);
-    glBindTexture(GL_TEXTURE_2D, m_ID);
+    glBindTexture(GL_TEXTURE_2D, m_colorattachment);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_specification.size.x, m_specification.size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 

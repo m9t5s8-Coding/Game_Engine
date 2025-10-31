@@ -18,16 +18,30 @@ namespace ag
 
 	}
 
-	Entity Scene::create_entity(const std::string& name, const NodeType type)
+	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
 		Entity entity = { m_registry.create(), this };
 		entity.add_component<Tag>(name, m_next_index++, RenderLayer::MidGround, type);
 
-		auto it = NodeFactory::create_map.find(type);
-		if (it != NodeFactory::create_map.end())
-			it->second(entity);
+		if (!is_cloning)
+		{
+			auto it = NodeFactory::create_map.find(type);
+			if (it != NodeFactory::create_map.end())
+				it->second(entity);
+		}
 
 		return entity;
+	}
+	Entity Scene::duplicate_entity(Entity original)
+	{
+		auto& original_tag = original.get_component<Tag>();
+		Entity duplicate = create_entity(original_tag.tag, original_tag.node_type, true);
+
+		auto it = NodeFactory::clone_map.find(original_tag.node_type);
+		if (it != NodeFactory::clone_map.end())
+			it->second(original, duplicate);
+
+		return duplicate;
 	}
 
 	void Scene::on_update(TimeStamp ts)

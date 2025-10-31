@@ -15,6 +15,18 @@ namespace ag
         {
         }
 
+        json save() const
+        {
+          return { r, g, b, a };
+        }
+
+        void load(const json& j)
+        {
+          r = j[0].get<uint8_t>();
+          g = j[1].get<uint8_t>();
+          b = j[2].get<uint8_t>();
+          a = j[3].get<uint8_t>();
+        }
 
         void normalize_color(vec4f &color) const
         {

@@ -17,27 +17,27 @@ namespace ag
   Application::Application()
   {
     s_Instance = this;
-    m_Window = std::unique_ptr<Window>(Window::create());
-    m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
-
-    Renderer::init();
-    NodeFactory::init();
-    m_imgui_layer = new ImGuiLayer();
-    push_overlay(m_imgui_layer);
   }
 
   Application::~Application() = default;
 
+  void Application::init(const WindowProps& props)
+  {
+    m_Window = std::unique_ptr<Window>(Window::create(props));
+    m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
+
+    m_imgui_layer = new ImGuiLayer();
+    push_overlay(m_imgui_layer);
+  }
+
   void Application::run()
   {
+    on_create();
     while (m_running)
     {
       float time = static_cast<float>(glfwGetTime());
       TimeStamp timestamp = time - m_last_frametime;
       m_last_frametime = time;
-
-      //AERO_CORE_INFO("FPS:{0}", (int)(1/timestamp.get_seconds()));
-
 
       if (!m_minimized)
       {
@@ -53,14 +53,19 @@ namespace ag
 
       m_Window->on_update();
     }
-
-    Renderer2D::shut_down();
+    on_destroy();
+    
   }
 
   void Application::push_layer(Layer *layer)
   {
     m_layerstack.push_layer(layer);
     layer->on_attach();
+  }
+  void Application::pop_layer(Layer* layer)
+  {
+    m_layerstack.pop_layer(layer);
+    layer->on_detach();
   }
 
   void Application::push_overlay(Layer *overlay)

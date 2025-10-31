@@ -50,6 +50,7 @@ target_include_directories(Application
         ${CMAKE_SOURCE_DIR}/External/imgui
         ${CMAKE_SOURCE_DIR}/External/imgui/backends
         ${CMAKE_SOURCE_DIR}/External/stb_image
+        ${CMAKE_SOURCE_DIR}/External/json/single_include
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

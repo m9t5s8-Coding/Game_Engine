@@ -6,6 +6,9 @@ namespace ag
 	std::unordered_map<NodeType, std::function<void(Entity)>> NodeFactory::create_map;
 	std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> NodeFactory::draw_map;
 	std::unordered_map<NodeType, std::function<void(Entity)>> NodeFactory::properties_map;
+	std::unordered_map<NodeType, std::function<void(Entity, Entity)>> NodeFactory::clone_map;
+	std::unordered_map<NodeType, std::function<json(Entity)>> NodeFactory::save_map;
+	std::unordered_map<NodeType, std::function<void(Entity, json&)>> NodeFactory::load_map;
 	std::unordered_map<NodeType, std::string> NodeFactory::nodes;
 
 	void NodeFactory::init()
@@ -27,9 +30,35 @@ namespace ag
 		properties_map[NodeType::Sprite] = SpriteNode::show_properties;
 		properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
 
+		clone_map[NodeType::Rectangle] = RectangleNode::clone_node;
+		clone_map[NodeType::Circle] = CircleNode::clone_node;
+		clone_map[NodeType::Sprite] = SpriteNode::clone_node;
+		clone_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::clone_node;
+
+		save_map[NodeType::Rectangle] = RectangleNode::save;
+		save_map[NodeType::Circle] = CircleNode::save;
+		save_map[NodeType::Sprite] = SpriteNode::save;
+		save_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::save;
+
+		load_map[NodeType::Rectangle] = RectangleNode::load;
+		load_map[NodeType::Circle] = CircleNode::load;
+		load_map[NodeType::Sprite] = SpriteNode::load;
+		load_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::load;
+
 		nodes[NodeType::Rectangle] = "Rectangle";
 		nodes[NodeType::Circle] = "Circle";
 		nodes[NodeType::Sprite] = "Sprite";
 		nodes[NodeType::AnimatedSprite2D] = "AnimatedSprite2D";
+	}
+
+	void NodeFactory::shut_down()
+	{
+		create_map.clear();
+		draw_map.clear();
+		properties_map.clear();
+		clone_map.clear();
+		save_map.clear();
+		load_map.clear();
+		nodes.clear();
 	}
 }

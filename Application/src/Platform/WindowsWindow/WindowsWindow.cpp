@@ -176,6 +176,42 @@ namespace ag
     }
   }
 
+  void WindowsWindow::set_size(const vec2u& size)
+  {
+    m_win_data.size = size;
+    glfwSetWindowSize(m_Window, size.x, size.y);
+  }
+
+  void WindowsWindow::set_position(const vec2i& position)
+  {
+    glfwSetWindowPos(m_Window, position.x, position.y);
+  }
+
+  vec2i WindowsWindow::get_position() const
+  {
+    vec2i window_pos;
+    glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);
+
+    return window_pos;
+  }
+
+  void WindowsWindow::center_window()
+  {
+    GLFWmonitor* primary_monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* p_mode = glfwGetVideoMode(primary_monitor);
+
+    vec2i monitor_size = { p_mode->width, p_mode->height };
+    vec2i position = monitor_size / 2 - m_win_data.size / 2;
+
+    set_position(position);
+    m_win_data.is_center_window = true;
+  }
+
+  void WindowsWindow::show_decoration(const bool show)
+  {
+    glfwSetWindowAttrib(m_Window, GLFW_DECORATED, show);
+  }
+
   bool WindowsWindow::is_vsync() const
   {
     return m_win_data.vsync;

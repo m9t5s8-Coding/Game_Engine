@@ -16,6 +16,8 @@ namespace ag
 	void ScenePanel::on_update()
 	{
 		update_transform_settings();
+
+		m_last_mouse_position = m_current_mouse_position;
 	}
 
 	void ScenePanel::on_event(Event& e)
@@ -111,7 +113,9 @@ namespace ag
 
 	void ScenePanel::update_transform_settings()
 	{
-		if(m_selected_entity && m_selected_entity.has_component<Transform>())
+		if (!m_selected_entity || !m_selected_entity.has_component<Transform>())
+			return;
+
 		switch (m_current_transform_setting)
 		{
 		case ag::TransformSetting::None:
@@ -123,8 +127,14 @@ namespace ag
 			scale_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_current_transform_setting = TransformSetting::None;
-				m_current_transform_axix = TransformAxix::None;
+				m_initial_transform.scale = m_selected_entity.get_component<Transform>().scale;
+				reset_transform_setting();
+			}
+			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+			{
+				auto& scale = m_selected_entity.get_component<Transform>().scale;
+				scale = m_initial_transform.scale;
+				reset_transform_setting();
 			}
 			return;
 		}
@@ -133,8 +143,14 @@ namespace ag
 			rotate_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_current_transform_setting = TransformSetting::None;
-				m_current_transform_axix = TransformAxix::None;
+				m_initial_transform.rotation = m_selected_entity.get_component<Transform>().rotation;
+				reset_transform_setting();
+			}
+			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+			{
+				auto& rotation = m_selected_entity.get_component<Transform>().rotation;
+				rotation = m_initial_transform.rotation;
+				reset_transform_setting();
 			}
 			return;
 		}
@@ -143,8 +159,14 @@ namespace ag
 			move_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_current_transform_setting = TransformSetting::None;
-				m_current_transform_axix = TransformAxix::None;
+				m_initial_transform.position = m_selected_entity.get_component<Transform>().position;
+				reset_transform_setting();
+			}
+			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+			{
+				auto& position = m_selected_entity.get_component<Transform>().position;
+				position = m_initial_transform.position;
+				reset_transform_setting();
 			}
 			return;
 		}
@@ -154,70 +176,131 @@ namespace ag
 	void ScenePanel::move_transform_setting()
 	{
 		auto& position = m_selected_entity.get_component<Transform>().position;
+
+
+		if (!m_move_flag)
+		{
+			m_initial_transform.position = position;
+			m_last_mouse_position = m_current_mouse_position;
+			m_move_flag = true;
+		}
+
+		vec2f delta = m_current_mouse_position - m_last_mouse_position;
+
 		switch (m_current_transform_axix)
 		{
-			case ag::TransformAxix::None:
-			{
-				position = m_current_mouse_position;
-				break;
-			}
-			case ag::TransformAxix::X:
-			{
-				position.x = m_current_mouse_position.x;
-				break;
-			}
-			case ag::TransformAxix::Y:
-			{
-				position.y = m_current_mouse_position.y;
-				break;
-			}
+		case ag::TransformAxix::None:
+		{
+			position += delta;
+			break;
+		}
+		case ag::TransformAxix::X:
+		{
+			position.x += delta.x;
+			break;
+		}
+		case ag::TransformAxix::Y:
+		{
+			position.y += delta.y;
+			break;
+		}
 		}
 	}
 	void ScenePanel::rotate_transform_setting()
 	{
 		auto& rotation = m_selected_entity.get_component<Transform>().rotation;
 		auto& position = m_selected_entity.get_component<Transform>().position;
-		rotation = Math::angle_betn_points(position, m_current_mouse_position);
+
+		if (!m_rotate_flag)
+		{
+			m_initial_transform.rotation = rotation;
+			m_last_mouse_position = m_current_mouse_position;
+			m_rotate_flag = true;
+		}
+
+		vec2f delta = m_current_mouse_position - m_last_mouse_position;
+
+		rotation += Math::angle_betn_3points(m_last_mouse_position,position, m_current_mouse_position);
+
+		if (rotation > 360) rotation -= 360;
+		if (rotation < -360) rotation += 360;
 	}
 	void ScenePanel::scale_transform_setting()
 	{
-		auto& scale = m_selected_entity.get_component<Transform>().scale;
+		auto& transform = m_selected_entity.get_component<Transform>();
+
+		if (!m_scale_flag)
+		{
+			m_initial_transform.scale = transform.scale;
+			m_last_mouse_position = m_current_mouse_position;
+			m_scale_flag = true;
+		}
+
+		float initial_distance = (m_last_mouse_position - transform.position).length();
+		float current_distance = (m_current_mouse_position - transform.position).length();
+
+		float scale_ratio = current_distance / std::max(initial_distance, 0.001f);
+
+
+		switch (m_current_transform_axix)
+		{
+			case TransformAxix::None:
+			{
+				transform.scale *= scale_ratio;
+				break;
+			}
+			case TransformAxix::X:
+			{
+				transform.scale.x *= scale_ratio;
+				break;
+			}
+			case TransformAxix::Y:
+			{
+				transform.scale.y *= scale_ratio;
+				break;
+			}
+		}
+
+		transform.scale.x = std::max(0.01f, transform.scale.x);
+		transform.scale.y = std::max(0.01f, transform.scale.y);
+	}
+
+	void ScenePanel::reset_transform_setting()
+	{
+		m_current_transform_setting = TransformSetting::None;
+		m_current_transform_axix = TransformAxix::None;
+		m_move_flag = true;
+		m_scale_flag = true;
+		m_rotate_flag = true;
 	}
 
 	bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
 	{
-		if (!m_selected_entity)
-			return false;
-
-		if (e.get_key_code() == Key::G)
-			m_current_transform_setting = TransformSetting::Move;
-
-		if (e.get_key_code() == Key::S)
-			m_current_transform_setting = TransformSetting::Scale;
-
-		if (e.get_key_code() == Key::R)
-			m_current_transform_setting = TransformSetting::Rotate;
-
-		if (e.get_key_code() == Key::X)
-			m_current_transform_axix = TransformAxix::X;
-
-		if (e.get_key_code() == Key::Y)
-			m_current_transform_axix = TransformAxix::Y;
-
-		//TODO
-		//if (e.get_key_code() == Key::Delete)
-			//m_selected_entity.delete_entity();
-
-		if (m_current_transform_setting != TransformSetting::None)
+		bool control = Keyboard::is_key_pressed(Key::LeftControl) || Keyboard::is_key_pressed(Key::RightControl);
+		bool shift = Keyboard::is_key_pressed(Key::LeftShift) || Keyboard::is_key_pressed(Key::RightShift);
+		if (control)
 		{
-			if (e.get_key_code() == Key::Escape)
-			{
-				m_current_transform_setting = TransformSetting::None;
-				m_current_transform_axix = TransformAxix::None;
-			}
+			if (e.get_key_code() == Key::D && m_selected_entity)
+				m_selected_entity = m_scene->duplicate_entity(m_selected_entity);
+
+			return false;
 		}
 
+		//Transformation Setting
+		if (!m_selected_entity)
+			return false;
+		switch (e.get_key_code())
+		{
+		case Key::G: m_current_transform_setting = TransformSetting::Move; break;
+		case Key::S: m_current_transform_setting = TransformSetting::Scale; break;
+		case Key::R: m_current_transform_setting = TransformSetting::Rotate; break;
+		case Key::X: m_current_transform_axix = TransformAxix::X; break;
+		case Key::Y: m_current_transform_axix = TransformAxix::Y; break;
+		case Key::Escape:
+			if (m_current_transform_setting != TransformSetting::None)
+				reset_transform_setting();
+			break;
+		}
 		return false;
 	}
-	
 }
