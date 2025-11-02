@@ -21,7 +21,7 @@ namespace ag
     virtual std::string get_title() const override { return m_win_data.title; }
 
     virtual void set_position(const vec2i& position) override;
-    virtual vec2i get_position() const override;
+    virtual vec2u get_position() const override;
 
     virtual void center_window() override;
     virtual bool is_center_window() const override { return m_win_data.is_fullscreen; }

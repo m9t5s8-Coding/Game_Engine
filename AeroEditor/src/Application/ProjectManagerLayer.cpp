@@ -160,6 +160,7 @@ namespace ag
 
 		auto project = ag::Project::new_project(newPath);
 		json j;
+		Helper::makefile_read_only(AppSettings::get_settings_path(), false);
 		std::ifstream in_file(AppSettings::get_settings_path());
 		if (in_file.is_open())
 			in_file >> j;
@@ -171,10 +172,11 @@ namespace ag
 		Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
 		Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::Editor));
 
-
+		AERO_CORE_INFO("Project File:{0}", project->get_project_file_directory());
 		std::ofstream out_file(AppSettings::get_settings_path());
 		out_file << j.dump(4);
 		out_file.close();
+		Helper::makefile_read_only(AppSettings::get_settings_path());
 
 		AppSettings::reload_app();
 	}
@@ -185,11 +187,14 @@ namespace ag
 		{
 			auto project = ag::Project::load_project(path);
 			json j;
+
+			Helper::makefile_read_only(AppSettings::get_settings_path(), false);
 			std::ifstream in_file(AppSettings::get_settings_path());
 			if (in_file.is_open())
 				in_file >> j;
 
 			in_file.close();
+			
 
 			Helper::save_json(j["Project"], "Name", project->get_name());
 			Helper::save_json(j["Project"], "Directory", project->get_directory());
@@ -201,6 +206,7 @@ namespace ag
 			out_file << j.dump(4);
 			out_file.close();
 
+			Helper::makefile_read_only(AppSettings::get_settings_path());
 			AppSettings::reload_app();
 		}
 

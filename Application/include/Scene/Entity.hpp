@@ -9,7 +9,7 @@ namespace ag
 	class Entity
 	{
 	public:
-		Entity(entt::entity handle, Scene* scene);
+		Entity(entt::entity handle);
 		Entity(const Entity& other) = default;
 		Entity();
 
@@ -55,6 +55,6 @@ namespace ag
 		bool operator!=(const Entity& other) const { return !(*this == other); }
 	private:
 		entt::entity m_entity_handler;
-		Scene* m_scene;
+		AG_ref<Scene> m_scene;
 	};
 }

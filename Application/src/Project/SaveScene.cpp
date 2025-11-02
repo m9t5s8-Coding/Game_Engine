@@ -3,20 +3,27 @@
 #include <Scene/Entity.hpp>
 #include <GameObjects/NodeFactory.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <Helper.hpp>
 
 namespace fs = std::filesystem;
 
 namespace ag
 {
-	void SaveScene::save_scene(const AG_ref<Scene>& scene, const std::string& path)
+	void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
 	{
 		json j;
-		j["Entities"] = json::array();
+		Helper::save_json(j["Scene"], "Name", scene->get_name());
+		Helper::save_json(j["Scene"], "Path", scene->get_directory());
+
+		Scene::set_active_scene(scene);
+		
+		j["Scene"]["Entities"] = json::array();
+
 
 		auto group = scene->m_registry.group<Tag>();
 		for (auto entityID : group)
 		{
-			Entity e{ entityID, scene.get() };
+			Entity e(entityID);
 			const auto& tag = e.get_component<Tag>();
 
 			json entityjson;
@@ -29,9 +36,10 @@ namespace ag
 				json nodeJson = it->second(e);
 				entityjson.update(nodeJson);
 			}
-			j["Entities"].push_back(entityjson);
+			j["Scene"]["Entities"].push_back(entityjson);
 		}
-		std::ofstream file(path);
+
+		std::ofstream file(path, std::ios::trunc);
 		if (!file.is_open())
 		{
 			AERO_CORE_INFO("Failed to Open File for Saving: {}", path);
@@ -42,9 +50,11 @@ namespace ag
 		file.close();
 		AERO_CORE_INFO("Scene saved successfully to {}", path);
 	}
+
+
 	AG_ref<Scene> SaveScene::load_scene(const std::string& path)
 	{
-		AG_ref<Scene> scene = std::make_shared<Scene>();
+		AG_ref<Scene> scene = Scene::create();
 
 		json j;
 		std::ifstream file(path);
@@ -52,26 +62,44 @@ namespace ag
 		if (!file.is_open())
 		{
 			AERO_CORE_ERROR("Failed to Open File!");
-			return nullptr;
+			return Scene::create("default");
 		}
 
 		file >> j;
 		file.close();
 
-		for (auto& entityjson : j["Entities"])
+		std::string scene_name, scene_path;
+		Helper::load_json(j["Scene"], "Name", scene_name);
+		Helper::load_json(j["Scene"], "Path", scene_path);
+		scene->set_name(scene_name);
+		scene->set_directory(scene_path);
+
+		for (auto& entityjson : j["Scene"]["Entities"])
 		{
-			NodeType type = static_cast<NodeType>(entityjson["NodeType"].get<int>());
-			Entity e = scene->create_entity(entityjson["Tag"].get<std::string>(), type);
+			NodeType type;
+			std::string tag;
+			{
+				int node;
+				Helper::load_json(entityjson, "NodeType", node);
+				Helper::load_json(entityjson, "Tag", tag);
+
+				type = static_cast<NodeType>(node);
+			}
+			
+
+			Entity e = scene->create_entity(tag, type);
+			auto& t = e.get_component<Tag>();
+
+			e.add_component<SortKey>(t.index);
 
 			auto it = NodeFactory::load_map.find(type);
 			if (it != NodeFactory::load_map.end())
 			{
-				
 				it->second(e, entityjson);
 			}
 		}
 
-		AERO_CORE_INFO("Scene Loaded Successfully!");
+		AERO_CORE_INFO("Scene Loaded Successfully: {0}", path);
 		return scene;
 	}
 }

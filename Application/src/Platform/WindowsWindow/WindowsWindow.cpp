@@ -187,7 +187,7 @@ namespace ag
     glfwSetWindowPos(m_Window, position.x, position.y);
   }
 
-  vec2i WindowsWindow::get_position() const
+  vec2u WindowsWindow::get_position() const
   {
     vec2i window_pos;
     glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);

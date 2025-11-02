@@ -36,7 +36,7 @@ namespace ag
     virtual void set_size(const vec2u& size) = 0;
 
     virtual void set_position(const vec2i& position) = 0;
-    virtual vec2i get_position() const = 0;
+    virtual vec2u get_position() const = 0;
 
     virtual void show_decoration(const bool show = true) = 0;
 

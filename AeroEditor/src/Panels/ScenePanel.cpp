@@ -39,10 +39,11 @@ namespace ag
 			m_show_create_panel = true;
 		}
 		ImGui::Spacing();
+
 		auto view = m_scene->m_registry.view<Tag>();
 		for (auto entityID : view)
 		{
-			Entity entity{ entityID, m_scene.get() };
+			Entity entity{ entityID };
 			draw_node_hierarchy(entity);
 			ImGui::Spacing();
 		}
@@ -63,15 +64,20 @@ namespace ag
 		auto& tag = entity.get_component<Tag>().tag;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 8));
+
 		ImGuiTreeNodeFlags flags =
-			((m_selected_entity == entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf;
-		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
+			((m_selected_entity == entity) ? ImGuiTreeNodeFlags_Selected : 0) |
+			ImGuiTreeNodeFlags_SpanAvailWidth |
+			ImGuiTreeNodeFlags_Leaf;
+
+		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.c_str());
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 			m_selected_entity = entity;
 
 		if (opened)
 			ImGui::TreePop();
+
 		ImGui::PopStyleVar();
 	}
 
@@ -104,6 +110,9 @@ namespace ag
 			if (ImGui::Button("Create Entity"))
 			{
 				Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
+				auto& tag = newEntity.get_component<Tag>();
+				newEntity.add_component<SortKey>(tag.index);
+
 				m_selected_entity = newEntity;
 				m_show_create_panel = false;
 			}

@@ -2,7 +2,9 @@
 
 #include <nlohmann/json.hpp>
 #include <Math/Math.hpp>
+#include <algorithm>
 #include <string>
+#include <Windows.h>
 using json = nlohmann::json;
 
 namespace ag::Helper
@@ -63,6 +65,15 @@ namespace ag::Helper
     std::string result = path;
     std::replace(result.begin(), result.end(), '/', '\\');
     return result;
+  }
+
+
+  inline void makefile_read_only(const std::string& path, bool read_only = true)
+  {
+    if(read_only)
+      SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_READONLY);
+    else
+      SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
   }
 
 }

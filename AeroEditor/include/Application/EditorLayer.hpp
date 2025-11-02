@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 #include <Panels/ScenePanel.hpp>
+#include <unordered_map>
 
 namespace ag
 {
@@ -32,7 +33,7 @@ namespace ag
 		AG_ref<FrameBuffer> m_framebuffer;
 		AG_ref<Scene> m_scene;
     AG_ref<ScenePanel> m_panel;
-
+		std::unordered_map<std::string, AG_ref<Scene>> m_scenes;
 
 		vec2i m_viewport_size;
 	};

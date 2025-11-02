@@ -5,6 +5,8 @@
 #include <Scene/Entity.hpp>
 #include <GameObjects/NodeFactory.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <Project/SaveScene.hpp>
+#include <Project/Project.hpp>
 
 namespace ag
 {
@@ -20,7 +22,7 @@ namespace ag
 
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
-		Entity entity = { m_registry.create(), this };
+		Entity entity = { m_registry.create() };
 		entity.add_component<Tag>(name, m_next_index++, RenderLayer::MidGround, type);
 
 		if (!is_cloning)
@@ -46,14 +48,14 @@ namespace ag
 
 	void Scene::on_update(TimeStamp ts)
 	{
-		m_registry.sort<Tag>([](const Tag& a, const Tag& b) {
+		m_registry.sort<SortKey>([](const SortKey& a, const SortKey& b) {
 			return a.index < b.index;
 			});
 
 		auto group = m_registry.group<Tag>();
 		for (auto entityID : group)
 		{
-			Entity e{ entityID, this };
+			Entity e( entityID );
 
 			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
 			if (it != NodeFactory::draw_map.end())
@@ -61,5 +63,14 @@ namespace ag
 		}
 	}
 
+	AG_ref<Scene> Scene::create(const std::string& name, const std::string& directory)
+	{
+		auto scene = AG_cref<Scene>();
 
+		scene->set_name(name);
+		scene->set_directory(directory);
+
+
+		return scene;
+	}
 }

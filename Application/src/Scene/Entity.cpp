@@ -8,10 +8,10 @@ namespace ag
 
 	}
 
-	Entity::Entity(entt::entity handle, Scene* scene)
-		:m_entity_handler(handle), m_scene(scene)
+	Entity::Entity(entt::entity handle)
+		:m_entity_handler(handle)
 	{
-
+		m_scene = Scene::get_active_scene();
 	}
 
 	Entity::~Entity()

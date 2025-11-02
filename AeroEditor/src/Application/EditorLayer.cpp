@@ -20,9 +20,17 @@ namespace ag
 
 
 		m_framebuffer = FrameBuffer::create(spec);
-		m_scene = AG_cref<Scene>();
-		m_panel = AG_cref<ScenePanel>(m_scene);
 
+		AERO_CORE_INFO("Scene name:{0}", Scene::get_active_scene()->get_name());
+		m_scene = Scene::get_active_scene();
+
+		if (!m_scene)
+		{
+			AERO_CORE_INFO("Invalid Scene");
+		}
+		m_panel = AG_cref<ScenePanel>(m_scene);
+		// todo
+		m_scenes[m_scene->get_name()] = m_scene;
 	}
 
 	void EditorLayer::on_detach()
@@ -77,11 +85,96 @@ namespace ag
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 
-		ImGuiWindowFlags viewport_flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+		ImGuiWindowFlags viewport_flags = ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+
 		ImGui::Begin("ViewPort", nullptr, viewport_flags);
 		{
+			
+			{
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+				ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+				ImGui::BeginChild("Toolbar", ImVec2(0, 40), false, flags);
+				{
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+
+					ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+					ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+					ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+					ImVec4 active_scene = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
+
+					ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bg_hovered);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
+					ImGui::PushStyleColor(ImGuiCol_Text, text_color);
+
+					ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
+
+					bool is_first = true;
+					std::string scene_to_remove;
+					for (auto& [name, scene] : m_scenes)
+					{
+						if (!is_first)
+							ImGui::SameLine(0, 10);
+
+						is_first = false;
+						ImGui::PushID(name.c_str());
+						ImGui::BeginGroup();
+
+						if(m_scene == scene)
+							ImGui::PushStyleColor(ImGuiCol_Button, active_scene);
+						else
+							ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
+
+						if (ImGui::Button( name.c_str(), ImVec2(0, 30)))
+						{
+							m_scene = scene;
+							m_scene->set_active_scene(scene);
+							m_panel->set_scene(scene);
+						}
+						ImGui::PopStyleColor();
+						ImGui::SameLine(0, 1);
+						if (ImGui::Button("x", ImVec2(0, 30)))
+						{
+							// cross button
+							scene_to_remove = name;
+						}
+						ImGui::EndGroup();
+						ImGui::PopID();
+					}
+
+					if (!scene_to_remove.empty())
+					{
+						m_scenes.erase(scene_to_remove);
+					}
+					
+					
+					ImGui::SameLine(0, 10);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
+					ImGui::SetWindowFontScale(1.5f);
+					if (ImGui::Button("+", ImVec2(0, 30)))
+					{
+						// scene
+					}
+					ImGui::SetWindowFontScale(1.0f);
+					ImGui::PopStyleVar();
+
+					ImGui::PopStyleColor(4);
+					ImGui::PopStyleVar(2);
+				}
+				ImGui::EndChild();
+				ImGui::PopStyleVar();
+			}
+			
 			bool view_hovered = ImGui::IsWindowHovered();
 			if (view_hovered)
 				ImGui::SetWindowFocus();
@@ -105,7 +198,7 @@ namespace ag
 			ImGui::Image((void*)(intptr_t)texture_ID, viewport_size, ImVec2(0, 1), ImVec2(1, 0));
 		}
 		ImGui::End();
-		ImGui::PopStyleVar();
+		ImGui::PopStyleVar(2);
 
 		m_panel->on_imgui_render();
 
@@ -133,6 +226,7 @@ namespace ag
 		mouse_in_viewport.x = std::clamp(mouse_in_viewport.x, 0.0f, viewport_size.x);
 		mouse_in_viewport.y = std::clamp(mouse_in_viewport.y, 0.0f, viewport_size.y);
 
+		mouse_in_viewport.y -= 35;
 		return vec2f(mouse_in_viewport.x, mouse_in_viewport.y);
 	}
 
@@ -143,11 +237,17 @@ namespace ag
 		if (control)
 		{
 			if (e.get_key_code() == Key::S)
-				SaveScene::save_scene(m_scene, "");
+			{
+				auto project = Project::get_active_project();
+				std::string scene_path = project->get_directory()  + project->get_scene_directory()  + m_scene->get_directory();
+				SaveScene::save_scene(m_scene, scene_path);
+			}
 
 			if (e.get_key_code() == Key::O)
 			{
-				m_scene = SaveScene::load_scene("D//");
+				auto project = Project::get_active_project();
+				std::string scene_path = project->get_directory() + project->get_scene_directory() + m_scene->get_directory();
+				m_scene = SaveScene::load_scene(scene_path);
 				m_panel->set_scene(m_scene);
 			}
 

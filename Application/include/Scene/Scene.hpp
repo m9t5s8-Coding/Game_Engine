@@ -13,6 +13,12 @@ namespace ag
   class ScenePanel;
 	class SaveScene;
   enum class NodeType;
+
+	struct SortKey
+	{
+		int index = 0;
+	};
+
 	class Scene
 	{
 	public:
@@ -36,6 +42,10 @@ namespace ag
 		bool has_directory() { return m_directory.empty(); }
 
 
+		static AG_ref<Scene> get_active_scene() { return s_active_scene; }
+		static void set_active_scene(const AG_ref<Scene>& scene) { s_active_scene = scene; }
+
+		static AG_ref<Scene> create(const std::string& name = "", const std::string& directory = "");
 
 	private:
 		entt::registry m_registry;
@@ -44,7 +54,7 @@ namespace ag
 		std::string m_name = "";
 		std::string m_directory = "";
 
-		
+		inline static AG_ref<Scene> s_active_scene;
 
 		friend class Entity;
     friend class ScenePanel;
