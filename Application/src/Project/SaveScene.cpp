@@ -73,6 +73,7 @@ namespace ag
 		Helper::load_json(j["Scene"], "Path", scene_path);
 		scene->set_name(scene_name);
 		scene->set_directory(scene_path);
+		Scene::set_active_scene(scene);
 
 		for (auto& entityjson : j["Scene"]["Entities"])
 		{
@@ -99,7 +100,7 @@ namespace ag
 			}
 		}
 
-		AERO_CORE_INFO("Scene Loaded Successfully: {0}", path);
+		AERO_CORE_INFO("Scene Loaded Successfully: {0}", scene->get_name());
 		return scene;
 	}
 }

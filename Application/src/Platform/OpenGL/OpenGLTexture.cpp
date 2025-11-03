@@ -12,7 +12,7 @@ namespace ag
     int width, height, channels;
 
     stbi_uc *data = stbi_load(p_path.c_str(), &width, &height, &channels, 4);
-    AERO_CORE_ASSERT(data, "Failed to load Image!");
+    AERO_CORE_ASSERT(data, "Failed to load Image: {0}", p_path);
     m_size = vec2u(width, height);
 
     // Create and Bind the texture

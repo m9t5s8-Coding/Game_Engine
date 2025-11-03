@@ -88,7 +88,9 @@ namespace ag
 
     static void draw(Entity entity, TimeStamp ts)
     {
+
       auto &transform = entity.get_component<Transform>();
+      
       auto &rect = entity.get_component<RectangleProp>();
       Rectangle rectangle;
       rectangle.size = rect.size;

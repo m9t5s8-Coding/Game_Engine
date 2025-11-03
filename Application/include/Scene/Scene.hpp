@@ -16,7 +16,7 @@ namespace ag
 
 	struct SortKey
 	{
-		int index = 0;
+		uint32_t index = 0;
 	};
 
 	class Scene

@@ -22,7 +22,7 @@ namespace ag
 
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
-		Entity entity = { m_registry.create() };
+		Entity entity(m_registry.create());
 		entity.add_component<Tag>(name, m_next_index++, RenderLayer::MidGround, type);
 
 		if (!is_cloning)
@@ -55,8 +55,7 @@ namespace ag
 		auto group = m_registry.group<Tag>();
 		for (auto entityID : group)
 		{
-			Entity e( entityID );
-
+			Entity e(entityID);
 			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
 			if (it != NodeFactory::draw_map.end())
 				it->second(e, ts);

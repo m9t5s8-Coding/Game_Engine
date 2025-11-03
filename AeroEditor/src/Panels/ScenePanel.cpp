@@ -43,7 +43,7 @@ namespace ag
 		auto view = m_scene->m_registry.view<Tag>();
 		for (auto entityID : view)
 		{
-			Entity entity{ entityID };
+			Entity entity(entityID);
 			draw_node_hierarchy(entity);
 			ImGui::Spacing();
 		}

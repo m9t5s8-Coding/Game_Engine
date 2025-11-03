@@ -32,6 +32,11 @@ namespace ag
 			{
 				auto& props = entity.get_component<SpriteProp>();
 				props.texture_path = j["Texture Path"].get<std::string>();
+				{
+					auto project = Project::get_active_project();
+					std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" +  props.texture_path;
+					props.texture = Texture2D::create(texture_path);
+				}
 				props.size.load(j["Size"]);
 				props.texture_rect.load(j["Texture Rect"]);
 			}
@@ -42,7 +47,11 @@ namespace ag
 		{
 			entity.add_component<Transform>();
 			SpriteProp sprite_;
-			sprite_.texture = Texture2D::create(default_path + sprite_.texture_path);
+			{
+				auto project = Project::get_active_project();
+				std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite_.texture_path;
+				sprite_.texture = Texture2D::create(texture_path);
+			}
 			sprite_.size = sprite_.texture->get_size();
 			sprite_.texture_rect = uint_rect(0, 0, sprite_.size);
 			entity.add_component<SpriteProp>(sprite_);
@@ -82,7 +91,11 @@ namespace ag
 					UI::draw_string("Texture Path", sprite.texture_path);
 					if (ImGui::Button("Load Texture"))
 					{
-						sprite.texture = Texture2D::create(default_path + sprite.texture_path);
+						{
+							auto project = Project::get_active_project();
+							std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite.texture_path;
+							sprite.texture = Texture2D::create(texture_path);
+						}
 						sprite.size = sprite.texture->get_size();
 						sprite.texture_rect = uint_rect(0, 0, sprite.size);
 					}

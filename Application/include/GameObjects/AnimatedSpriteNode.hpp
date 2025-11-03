@@ -29,7 +29,7 @@ namespace ag
 
 				return j;
 			}
-		
+
 			static void load(Animation& anim,const json& j)
 			{
 				anim.name = j["Animation Name"].get<std::string>();
@@ -42,7 +42,7 @@ namespace ag
 
 		struct AnimatedSpriteProps
 		{
-			std::string texture_path = "default.png";
+			std::string texture_path = "/default.png";
 			AG_ref<Texture2D> texture;
 			std::unordered_map<std::string, Animation> animations;
 			vec2u frame_grid = { 1, 1 };
@@ -72,7 +72,12 @@ namespace ag
 			{
 				auto& props = entity.get_component<AnimatedSpriteProps>();
 				props.texture_path = j["Texture Path"].get<std::string>();
-				props.texture = Texture2D::create(default_path + props.texture_path);
+
+				{
+					auto project = Project::get_active_project();
+					std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + props.texture_path;
+					props.texture = Texture2D::create(texture_path);
+				}
 
 				props.frame_grid.load(j["Frame Grid"]);
 				props.texture_rect.load(j["Texture Rect"]);
@@ -100,7 +105,11 @@ namespace ag
 			entity.add_component<Transform>();
 
 			AnimatedSpriteProps props;
-			props.texture = Texture2D::create(default_path + props.texture_path);
+			{
+				auto project = Project::get_active_project();
+				std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + props.texture_path;
+				props.texture = Texture2D::create(texture_path);
+			}
 			props.texture_rect = { 0, 0, props.texture->get_size() };
 
 			entity.add_component<AnimatedSpriteProps>(props);
@@ -128,7 +137,7 @@ namespace ag
 
 		static void load(Entity entity,const json& j)
 		{
-			
+
 			Transform::load(entity, j["Transform"]);
 			AnimatedSpriteProps::load(entity, j["AnimationSprite2DProps"]);
 		}
@@ -142,7 +151,11 @@ namespace ag
 					UI::draw_string("Texture Path", sprite.texture_path);
 					if (ImGui::Button("Load Texture"))
 					{
-						sprite.texture = Texture2D::create(default_path + sprite.texture_path);
+						{
+							auto project = Project::get_active_project();
+							std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite.texture_path;
+							sprite.texture = Texture2D::create(texture_path);
+						}
 						{
 							vec2u texture_size = sprite.texture->get_size();
 							sprite.texture_rect.size = texture_size / sprite.frame_grid;
@@ -184,8 +197,6 @@ namespace ag
 
 						if (open)
 						{
-							// Name editing — but since keys can't be changed directly,
-							// we handle rename by adding a new key and removing the old one.
 
 							UI::draw_string("Name", anim.name);
 							ImGui::SameLine();
@@ -195,7 +206,7 @@ namespace ag
 								if (sprite.current_animation == key)
 								{
 									sprite.current_animation = anim.name;
-									
+
 								}
 								sprite.animations.erase(it++);
 								ImGui::TreePop();
@@ -240,7 +251,7 @@ namespace ag
 		{
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
-			
+
 
 			if (!s.current_animation.empty())
 			{
@@ -259,7 +270,7 @@ namespace ag
 				{
 					s.timer -=  anim.duration;
 					s.current_frame++;
-					
+
 
 					if (s.current_frame >= frame_count)
 					{

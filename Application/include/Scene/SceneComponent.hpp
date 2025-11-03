@@ -4,6 +4,7 @@
 #include <Renderer/Color.hpp>
 #include <Renderer/View.hpp>
 #include <Scene/Entity.hpp>
+#include <Project/Project.hpp>
 #include <string>
 #include <UI/DrawUI.hpp>
 #include <cstdint>

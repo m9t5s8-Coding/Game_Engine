@@ -71,6 +71,8 @@ namespace ag
 			Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
 			set_active_project(project);
 		}
+
+		AERO_CORE_INFO("Project Loaded Successfully ! {0}", project->m_name);
 		return project;
 	}
 

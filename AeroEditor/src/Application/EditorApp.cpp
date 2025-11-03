@@ -9,11 +9,12 @@ namespace ag
 
 	void EditorApp::on_create()
 	{
+		NodeFactory::init();
 		load_project_data();
 		
 
 		Renderer::init();
-		NodeFactory::init();
+		
 
 		push_layer(new EditorLayer());
 	}
@@ -47,6 +48,7 @@ namespace ag
 	void EditorApp::load_project_data()
 	{
 		json j;
+		Helper::makefile_read_only(AppSettings::get_settings_path(), false);
 		std::ifstream in_file(AppSettings::get_settings_path());
 
 		if (!in_file.is_open())
@@ -56,12 +58,14 @@ namespace ag
 		}
 		in_file >> j;
 		in_file.close();
+		Helper::makefile_read_only(AppSettings::get_settings_path());
 
 		std::string project_path;
 		Helper::load_json(j["Project"], "Directory", project_path);
 		auto project = Project::load_project(project_path);
 
 
+		Helper::makefile_read_only(project->get_project_file_directory(), false);
 		std::ifstream in_proj_file(project->get_project_file_directory());
 		if (!in_proj_file.is_open())
 		{
@@ -70,6 +74,8 @@ namespace ag
 		}
 		in_proj_file >> j;
 		in_proj_file.close();
+		Helper::makefile_read_only(project->get_project_file_directory());
+
 
 		// Window Data Loaded and Created
 		{

@@ -9,7 +9,7 @@ namespace ag
 	class Entity
 	{
 	public:
-		Entity(entt::entity handle);
+		Entity(const entt::entity handle);
 		Entity(const Entity& other) = default;
 		Entity();
 
