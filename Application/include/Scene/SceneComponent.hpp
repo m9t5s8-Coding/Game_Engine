@@ -8,6 +8,8 @@
 #include <string>
 #include <UI/DrawUI.hpp>
 #include <cstdint>
+#include <Project/FileDialogs.hpp>
+#include <Helper.hpp>
 
 namespace ag
 {

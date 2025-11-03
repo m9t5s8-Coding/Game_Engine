@@ -54,12 +54,11 @@ namespace ag::Helper
   }
 
 
-  inline std::string normalize_path(const std::string& path)
+  inline void normalize_path(std::string& path)
   {
-    std::string result = path;
-    std::replace(result.begin(), result.end(), '\\', '/');
-    return result;
+    std::replace(path.begin(), path.end(), '\\', '/');
   }
+
   inline std::string denormalize_path(const std::string& path)
   {
     std::string result = path;

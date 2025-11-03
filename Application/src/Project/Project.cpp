@@ -10,7 +10,8 @@ namespace ag
 {
 	AG_ref<Project> Project::new_project(const std::string& path)
 	{
-		auto project_path = Helper::normalize_path(path);
+		std::string project_path = path;
+		Helper::normalize_path(project_path);
 		AERO_CORE_INFO("Project Path:{0}", project_path);
 		auto project = AG_cref<Project>();
 
@@ -33,7 +34,8 @@ namespace ag
 
 	AG_ref<Project> Project::load_project(const std::string& path)
 	{
-		std::string file_path = Helper::normalize_path(path);
+		std::string file_path = path;
+		Helper::normalize_path(file_path);
 
 		if (std::filesystem::is_directory(path))
 		{

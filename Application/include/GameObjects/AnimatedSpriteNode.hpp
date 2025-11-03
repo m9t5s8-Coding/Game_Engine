@@ -42,7 +42,7 @@ namespace ag
 
 		struct AnimatedSpriteProps
 		{
-			std::string texture_path = "/default.png";
+			std::string texture_path = "default.png";
 			AG_ref<Texture2D> texture;
 			std::unordered_map<std::string, Animation> animations;
 			vec2u frame_grid = { 1, 1 };
@@ -149,14 +149,30 @@ namespace ag
 				Tag::show_properties(entity);
 				{
 					UI::draw_string("Texture Path", sprite.texture_path);
+
 					if (ImGui::Button("Load Texture"))
 					{
+						std::string full_path = FileDialogs::open_file("Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0");
+						if (!full_path.empty())
 						{
 							auto project = Project::get_active_project();
-							std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite.texture_path;
-							sprite.texture = Texture2D::create(texture_path);
-						}
-						{
+							Helper::normalize_path(full_path);
+
+							std::string project_dir = project->get_directory();
+							std::string assets_dir = project->get_assets_directory();
+
+							std::string base_path = project_dir + assets_dir + "/";
+
+							std::string relative_path = full_path;
+							if (relative_path.find(base_path) == 0)
+								relative_path = relative_path.substr(base_path.size());
+
+							Helper::normalize_path(relative_path);
+
+							sprite.texture_path = relative_path;
+
+							sprite.texture = Texture2D::create(full_path);
+
 							vec2u texture_size = sprite.texture->get_size();
 							sprite.texture_rect.size = texture_size / sprite.frame_grid;
 						}

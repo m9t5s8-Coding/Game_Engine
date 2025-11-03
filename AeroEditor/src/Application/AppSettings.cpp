@@ -22,7 +22,9 @@ namespace ag
 	}
 	void AppSettings::create_app_folder()
 	{
-		std::string app_data_path = Helper::normalize_path(get_appdata_path());
+		std::string app_data_path = get_appdata_path();
+		Helper::normalize_path(app_data_path);
+
 		std::string app_folder = app_data_path + "/AEROEngine";
 		s_settings_path = app_folder + "/settings.json";
 		s_recent_projects_path = app_folder + "/recent_projects.json";
