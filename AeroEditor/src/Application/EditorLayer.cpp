@@ -1,4 +1,5 @@
 #include <Application/EditorLayer.hpp>
+#include <algorithm>
 
 namespace ag
 {
@@ -10,9 +11,8 @@ namespace ag
 
 	void EditorLayer::on_attach()
 	{
-
 		ag::vec2u window_size = Application::get().get_window().get_size();
-		ag::vec2f view_center(0, 0);
+		ag::vec2f view_center;
 		m_view_controller = ag::AG_cref<ViewController>(window_size, view_center);
 
 		FrameBufferSpecification spec;
@@ -163,7 +163,34 @@ namespace ag
 					ImGui::SetWindowFontScale(1.5f);
 					if (ImGui::Button("+", ImVec2(0, 30)))
 					{
-						// scene
+						auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+						if (!full_path.empty())
+						{
+							auto project = Project::get_active_project();
+							Helper::normalize_path(full_path);
+
+							std::string project_dir = project->get_directory();
+							std::string scene_dir = project->get_scene_directory();
+
+							std::string base_path = project_dir + scene_dir + "/";
+
+							std::string relative_path = full_path;
+							if (relative_path.find(base_path) == 0)
+								relative_path = relative_path.substr(base_path.size());
+
+							Helper::normalize_path(relative_path);
+
+							std::filesystem::path p(full_path);
+							std::string scene_name = p.stem().string();
+							std::string scene_path = "/" + relative_path;
+
+							m_scene = Scene::create(scene_name, scene_path);
+							SaveScene::save_scene(m_scene, full_path);
+							Scene::set_active_scene(m_scene);
+
+							m_scenes[scene_name] = m_scene;
+							m_panel->set_scene(m_scene);
+						}
 					}
 					ImGui::SetWindowFontScale(1.0f);
 					ImGui::PopStyleVar();
@@ -223,8 +250,8 @@ namespace ag
 		ImVec2 mouse_in_viewport = ImVec2(mouse_pos.x - content_pos.x, mouse_pos.y - content_pos.y);
 
 		ImVec2 viewport_size = ImGui::GetContentRegionAvail();
-		mouse_in_viewport.x = std::clamp(mouse_in_viewport.x, 0.0f, viewport_size.x);
-		mouse_in_viewport.y = std::clamp(mouse_in_viewport.y, 0.0f, viewport_size.y);
+		/*mouse_in_viewport.x = std::clamp(mouse_in_viewport.x, 0.0f, viewport_size.x);
+		mouse_in_viewport.y = std::clamp(mouse_in_viewport.y, 0.0f, viewport_size.y);*/
 
 		mouse_in_viewport.y -= 35;
 		return vec2f(mouse_in_viewport.x, mouse_in_viewport.y);
@@ -245,9 +272,10 @@ namespace ag
 
 			if (e.get_key_code() == Key::O)
 			{
-				auto project = Project::get_active_project();
-				std::string scene_path = project->get_directory() + project->get_scene_directory() + m_scene->get_directory();
-				m_scene = SaveScene::load_scene(scene_path);
+				auto full_path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+				Helper::normalize_path(full_path);
+				m_scene = SaveScene::load_scene(full_path);
+				m_scenes[m_scene->get_name()] = m_scene;
 				m_panel->set_scene(m_scene);
 			}
 

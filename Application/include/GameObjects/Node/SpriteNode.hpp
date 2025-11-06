@@ -68,7 +68,7 @@ namespace ag
 			clone.add_component<SpriteProp>(original.get_component<SpriteProp>());
 		}
 
-		static json save(Entity entity)
+		static json save_json(Entity entity)
 		{
 			json j;
 			j["SpriteProp"] = SpriteProp::save(entity);
@@ -76,7 +76,7 @@ namespace ag
 			return j;
 		}
 
-		static void load(Entity entity, const json& j)
+		static void load_json(Entity entity, const json& j)
 		{
 			SpriteProp::load(entity, j["SpriteProp"]);
 			Transform::load(entity, j["Transform"]);

@@ -11,7 +11,7 @@ namespace ag
 	void ProjectManagerApp::on_create()
 	{
 		WindowProps props;
-		props.Size = { 650, 720 };
+		props.Size = vec2u(650, 720);
 		props.Title = "Project Manager";
 		init(props);
 		get().get_window().center_window();

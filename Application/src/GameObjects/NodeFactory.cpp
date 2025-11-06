@@ -17,38 +17,47 @@ namespace ag
 		create_map[NodeType::Circle] = CircleNode::create_node;
 		create_map[NodeType::Sprite] = SpriteNode::create_node;
 		create_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::create_node;
+		create_map[NodeType::Camera] = CameraComponent::create_node;
 
 
 		draw_map[NodeType::Rectangle] = RectangleNode::draw;
 		draw_map[NodeType::Circle] = CircleNode::draw;
 		draw_map[NodeType::Sprite] = SpriteNode::draw;
 		draw_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::draw;
+		draw_map[NodeType::Camera] = CameraComponent::draw;
 
 
 		properties_map[NodeType::Rectangle] = RectangleNode::show_properties;
 		properties_map[NodeType::Circle] = CircleNode::show_properties;
 		properties_map[NodeType::Sprite] = SpriteNode::show_properties;
 		properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
+		properties_map[NodeType::Camera] = CameraComponent::show_properties;
+
+
 
 		clone_map[NodeType::Rectangle] = RectangleNode::clone_node;
 		clone_map[NodeType::Circle] = CircleNode::clone_node;
 		clone_map[NodeType::Sprite] = SpriteNode::clone_node;
 		clone_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::clone_node;
+		clone_map[NodeType::Camera] = CameraComponent::clone_node;
 
-		save_map[NodeType::Rectangle] = RectangleNode::save;
-		save_map[NodeType::Circle] = CircleNode::save;
-		save_map[NodeType::Sprite] = SpriteNode::save;
-		save_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::save;
+		save_map[NodeType::Rectangle] = RectangleNode::save_json;
+		save_map[NodeType::Circle] = CircleNode::save_json;
+		save_map[NodeType::Sprite] = SpriteNode::save_json;
+		save_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::save_json;
+		save_map[NodeType::Camera] = CameraComponent::save_json;
 
-		load_map[NodeType::Rectangle] = RectangleNode::load;
-		load_map[NodeType::Circle] = CircleNode::load;
-		load_map[NodeType::Sprite] = SpriteNode::load;
-		load_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::load;
+		load_map[NodeType::Rectangle] = RectangleNode::load_json;
+		load_map[NodeType::Circle] = CircleNode::load_json;
+		load_map[NodeType::Sprite] = SpriteNode::load_json;
+		load_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::load_json;
+		load_map[NodeType::Camera] = CameraComponent::load_json;
 
 		nodes[NodeType::Rectangle] = "Rectangle";
 		nodes[NodeType::Circle] = "Circle";
 		nodes[NodeType::Sprite] = "Sprite";
 		nodes[NodeType::AnimatedSprite2D] = "AnimatedSprite2D";
+		nodes[NodeType::Camera] = "CameraComponent";
 	}
 
 	void NodeFactory::shut_down()

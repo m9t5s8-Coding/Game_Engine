@@ -29,7 +29,6 @@ namespace ag
 		bool on_key_pressed(KeyPressedEvent& e);
 	private:
 		AG_ref<ViewController> m_view_controller;
-		AG_ref<Texture> m_texture;
 		AG_ref<FrameBuffer> m_framebuffer;
 		AG_ref<Scene> m_scene;
     AG_ref<ScenePanel> m_panel;

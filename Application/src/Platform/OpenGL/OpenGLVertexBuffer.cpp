@@ -3,12 +3,6 @@
 
 namespace ag
 {
-  struct Vertex_Data
-  {
-    float x, y;
-    float r, g, b, a;
-    float u, v;
-  };
   OpenGLVertexBuffer::OpenGLVertexBuffer(float *vertices, size_t size)
   {
     glGenBuffers(1, &m_ID);

@@ -20,6 +20,11 @@ namespace ag
       s_renderAPI->draw_indexed(p_vertexarray);
     }
 
+    inline static void draw_instanced(const AG_ref<VertexArray> &p_vertexarray, const AG_uint instance_count)
+    {
+      s_renderAPI->draw_instanced(p_vertexarray, instance_count);
+    }
+
   private:
     static RendererAPI *s_renderAPI;
   };

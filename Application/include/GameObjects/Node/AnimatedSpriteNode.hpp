@@ -126,7 +126,7 @@ namespace ag
 			clone.add_component<AnimatedSpriteProps>(original.get_component<AnimatedSpriteProps>());
 		}
 
-		static json save(Entity entity)
+		static json save_json(Entity entity)
 		{
 			json j;
 			j["AnimationSprite2DProps"] = AnimatedSpriteProps::save(entity);
@@ -135,7 +135,7 @@ namespace ag
 			return j;
 		}
 
-		static void load(Entity entity,const json& j)
+		static void load_json(Entity entity,const json& j)
 		{
 
 			Transform::load(entity, j["Transform"]);

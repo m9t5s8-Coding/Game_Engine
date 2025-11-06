@@ -14,11 +14,6 @@ namespace ag
 	class SaveScene;
   enum class NodeType;
 
-	struct SortKey
-	{
-		uint32_t index = 0;
-	};
-
 	class Scene
 	{
 	public:

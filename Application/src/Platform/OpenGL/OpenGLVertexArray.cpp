@@ -40,15 +40,19 @@ namespace ag
     glBindVertexArray(0);
   }
 
-  void OpenGLVertexArray::add_vertex_buffer(const AG_ref<VertexBuffer> &p_vertexbuffer)
+  void OpenGLVertexArray::add_vertex_buffer(const AG_ref<VertexBuffer> &p_vertexbuffer, bool instanced)
   {
-    // AERO_CORE_ASSERT(p_vertexbuffer->get_layout().get_element().size(),"Vertex buffer has no layout!");
     glBindVertexArray(m_ID);
     p_vertexbuffer->bind();
 
-
-    uint32_t index = 0;
     const auto& layout = p_vertexbuffer->get_layout();
+    uint32_t starting_index = 0;
+    for (const auto& buffer : m_vertexbuffers)
+    {
+      starting_index += buffer->get_layout().get_element_count();
+    }
+    uint32_t index = starting_index;
+   
     for (const auto &element : layout)
     {
       glEnableVertexAttribArray(index);
@@ -57,10 +61,14 @@ namespace ag
         element.normalized ? GL_TRUE : GL_FALSE,
         layout.get_stride(),
         reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
+      if(instanced)
+        glVertexAttribDivisor(index, 1);
+
+
       index++;
     }
-    m_vertexbuffer = p_vertexbuffer;
-    // m_vertexbuffers.push_back(p_vertexbuffer);
+    
+    m_vertexbuffers.push_back(p_vertexbuffer);
   }
   void OpenGLVertexArray::set_index_buffer(const AG_ref<IndexBuffer> &p_indexbuffer)
   {

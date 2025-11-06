@@ -1,6 +1,7 @@
 #pragma once
 
-#include <GameObjects/RectangleNode.hpp>
-#include <GameObjects/CircleNode.hpp>
-#include <GameObjects/SpriteNode.hpp>
-#include <GameObjects/AnimatedSpriteNode.hpp>
+#include <GameObjects/Node/RectangleNode.hpp>
+#include <GameObjects/Node/CircleNode.hpp>
+#include <GameObjects/Node/SpriteNode.hpp>
+#include <GameObjects/Node/AnimatedSpriteNode.hpp>
+#include <GameObjects/Node/CameraComponent.hpp>

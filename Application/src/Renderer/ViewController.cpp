@@ -11,7 +11,7 @@ namespace ag
     vec2u window_size = Application::get().get_window().get_size();
     m_last_size = vec2f(window_size.x, window_size.y);
   }
-  ViewController::ViewController(const vec2u& view_size, const vec2f& view_center)
+  ViewController::ViewController(const vec2f& view_size, const vec2f& view_center)
     : ViewController()
   {
     m_view.set_size(view_size);
@@ -20,6 +20,12 @@ namespace ag
 
   ViewController::~ViewController()
   {
+  }
+
+  AG_ref<ViewController> ViewController::create(const vec2f& view_size, const vec2f& view_center)
+  {
+    auto view_controller = AG_cref<ViewController>(view_size, view_center);
+    return view_controller;
   }
 
   void ViewController::set_view(const vec2u& view_size, const vec2f& view_center)
@@ -140,4 +146,7 @@ namespace ag
 
     return false;
   }
+
+
+
 }

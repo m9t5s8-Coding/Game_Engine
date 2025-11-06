@@ -21,7 +21,8 @@ namespace ag
 		Rectangle,
 		Circle,
 		Sprite,
-		AnimatedSprite2D
+		AnimatedSprite2D,
+		Camera
 	};
 
 	enum class RenderLayer
@@ -88,12 +89,16 @@ namespace ag
 	{
 		vec2f size;
 		Color fill_color;
+    float border_thickness = 0.0f;
+    Color border_color;
 	};
 
 	struct Circle
 	{
 		vec2f size;
 		Color fill_color;
+		float border_thickness = 0.0f;
+		Color border_color;
 	};
 
 	struct Sprite

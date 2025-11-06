@@ -2,6 +2,7 @@
 #define RECT_HPP
 
 #include <Math/vec2.hpp>
+#include <Math/vec4.hpp>
 
 namespace ag
 {
@@ -36,6 +37,13 @@ namespace ag
           size.y = j[3].get<T>();
         }
 
+        void to_vec4(vec4f& other) const
+        {
+          other.x = position.x;
+          other.y = position.y;
+          other.z = size.x;
+          other.w = size.y;
+        }
 
         bool intersects(const  rect& other) const
         {

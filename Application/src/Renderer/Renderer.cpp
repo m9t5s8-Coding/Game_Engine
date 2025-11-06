@@ -33,4 +33,11 @@ namespace ag
     p_vertexarray->bind();
     RenderCommand::draw_indexed(p_vertexarray);
   }
+  void Renderer::submit_instanced(const AG_ref<Shader>& p_shader, const AG_ref<VertexArray>& p_vertexarray, const AG_uint instanced_count)
+  {
+    p_shader->bind();
+    p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
+    p_vertexarray->bind();
+    RenderCommand::draw_instanced(p_vertexarray, instanced_count);
+  }
 }

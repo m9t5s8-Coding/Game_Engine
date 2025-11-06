@@ -18,6 +18,7 @@ namespace ag
     virtual void init() override;
 
     virtual void draw_indexed(const std::shared_ptr<VertexArray>& p_vertexarray) override;
+    virtual void draw_instanced(const AG_ref<VertexArray> &p_vertexarray, const AG_uint instance_count) override;
 
   private:
   };

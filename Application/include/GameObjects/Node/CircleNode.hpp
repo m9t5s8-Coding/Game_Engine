@@ -57,7 +57,7 @@ namespace ag
 			clone.add_component<CircleProp>(original.get_component<CircleProp>());
 		}
 
-		static json save(Entity entity)
+		static json save_json(Entity entity)
 		{
 			json j;
 			j["CircleProps"] = CircleProp::save(entity);
@@ -66,7 +66,7 @@ namespace ag
 			return j;
 		}
 
-		static void load(Entity entity, const json& j)
+		static void load_json(Entity entity, const json& j)
 		{
 			CircleProp::load(entity, j["CircleProps"]);
 			Transform::load(entity, j["Transform"]);
@@ -77,10 +77,11 @@ namespace ag
 			{
 				Tag::show_properties(entity);
 				{
-					vec2u& size = entity.get_component<CircleProp>().size;
-					UI::draw_vec2("Size", size);
-					Color& color = entity.get_component<CircleProp>().fill_color;
-					UI::draw_color("Fill Color", color);
+					auto& props = entity.get_component<CircleProp>();
+					UI::draw_vec2("Size", props.size);
+					UI::draw_value("Border Thickness", props.border_thickness);
+					UI::draw_color("Fill Color", props.fill_color);
+					UI::draw_color("Border Color", props.border_color);
 				}
 				Transform::show_properties(entity);
 			}
@@ -93,6 +94,8 @@ namespace ag
 			Circle circle;
 			circle.size = c.size;
 			circle.fill_color = c.fill_color;
+			circle.border_color = c.border_color;
+			circle.border_thickness = c.border_thickness;
 			Renderer2D::draw_circle(circle, transform);
 		}
 

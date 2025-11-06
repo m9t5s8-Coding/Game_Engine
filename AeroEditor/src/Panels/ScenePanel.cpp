@@ -110,8 +110,8 @@ namespace ag
 			if (ImGui::Button("Create Entity"))
 			{
 				Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
-				auto& tag = newEntity.get_component<Tag>();
-				newEntity.add_component<SortKey>(tag.index);
+				/*auto& tag = newEntity.get_component<Tag>();
+				newEntity.add_component<SortKey>(tag.index);*/
 
 				m_selected_entity = newEntity;
 				m_show_create_panel = false;

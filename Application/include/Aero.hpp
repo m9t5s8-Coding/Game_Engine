@@ -41,4 +41,6 @@
 #include <Project/FileDialogs.hpp>
 #include <Project/SaveScene.hpp>
 
+#include <Scripting/LuaManager.hpp>
+
 #include <Helper.hpp>

@@ -20,25 +20,36 @@ namespace ag
 		j["Scene"]["Entities"] = json::array();
 
 
-		auto group = scene->m_registry.group<Tag>();
-		for (auto entityID : group)
+		auto view = scene->m_registry.view<Tag>();
+		if (!view.empty())
 		{
-			Entity e(entityID);
-			const auto& tag = e.get_component<Tag>();
-
-			json entityjson;
-			entityjson["NodeType"] = static_cast<int>(tag.node_type);
-			entityjson["Tag"] = tag.tag;
-
-			auto it = NodeFactory::save_map.find(tag.node_type);
-			if (it != NodeFactory::save_map.end())
+			for (auto entityID : view)
 			{
-				json nodeJson = it->second(e);
-				entityjson.update(nodeJson);
+				if (!scene->m_registry.valid(entityID))
+					continue;
+
+				Entity e(entityID);
+
+				if (!e.has_component<Tag>())
+					continue;
+
+				const auto& tag = e.get_component<Tag>();
+
+				json entityjson;
+				entityjson["NodeType"] = static_cast<int>(tag.node_type);
+				entityjson["Tag"] = tag.tag;
+
+				auto it = NodeFactory::save_map.find(tag.node_type);
+				if (it != NodeFactory::save_map.end())
+				{
+					json nodeJson = it->second(e);
+					entityjson.update(nodeJson);
+				}
+				j["Scene"]["Entities"].push_back(entityjson);
 			}
-			j["Scene"]["Entities"].push_back(entityjson);
 		}
 
+		Helper::makefile_read_only(path, false);
 		std::ofstream file(path, std::ios::trunc);
 		if (!file.is_open())
 		{
@@ -49,6 +60,7 @@ namespace ag
 		file << j.dump(4);
 		file.close();
 		AERO_CORE_INFO("Scene saved successfully to {}", path);
+		Helper::makefile_read_only(path);
 	}
 
 
@@ -57,6 +69,7 @@ namespace ag
 		AG_ref<Scene> scene = Scene::create();
 
 		json j;
+		Helper::makefile_read_only(path, false);
 		std::ifstream file(path);
 
 		if (!file.is_open())
@@ -67,6 +80,7 @@ namespace ag
 
 		file >> j;
 		file.close();
+		Helper::makefile_read_only(path);
 
 		std::string scene_name, scene_path;
 		Helper::load_json(j["Scene"], "Name", scene_name);
@@ -89,9 +103,6 @@ namespace ag
 			
 
 			Entity e = scene->create_entity(tag, type);
-			auto& t = e.get_component<Tag>();
-
-			e.add_component<SortKey>(t.index);
 
 			auto it = NodeFactory::load_map.find(type);
 			if (it != NodeFactory::load_map.end())

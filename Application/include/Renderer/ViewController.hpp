@@ -12,8 +12,10 @@ namespace ag
   {
   public:
     ViewController();
-    ViewController(const vec2u& view_size, const vec2f& view_center);
+    ViewController(const vec2f& view_size, const vec2f& view_center);
     ~ViewController();
+
+    static AG_ref<ViewController> create(const vec2f& view_size, const vec2f& view_center);
 
     void set_view(const vec2u& view_size, const vec2f& view_center);
 

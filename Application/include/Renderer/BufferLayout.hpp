@@ -93,6 +93,7 @@ namespace ag
     inline uint32_t get_stride() const { return m_stride; }
 
     inline const std::vector<BufferElement> &get_element() { return m_buffer_elements; }
+    inline size_t get_element_count() const { return m_buffer_elements.size(); }
 
     std::vector<BufferElement>::iterator begin() { return m_buffer_elements.begin(); }
     std::vector<BufferElement>::iterator end() { return m_buffer_elements.end(); }

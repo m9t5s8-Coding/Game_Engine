@@ -32,4 +32,9 @@ namespace ag
   {
     glDrawElements(GL_TRIANGLES, p_vertexarray->get_index_buffer()->get_count(), GL_UNSIGNED_INT, nullptr);
   }
+
+  void OpenGLRendererAPI::draw_instanced(const AG_ref<VertexArray> &p_vertexarray, const AG_uint instance_count)
+  {
+    glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, instance_count);
+  }
 }

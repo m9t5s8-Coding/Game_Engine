@@ -48,12 +48,12 @@ namespace ag
 
 	void Scene::on_update(TimeStamp ts)
 	{
-		m_registry.sort<SortKey>([](const SortKey& a, const SortKey& b) {
+		m_registry.sort<Tag>([](const Tag& a, const Tag& b) {
 			return a.index < b.index;
-			});
+		});
 
-		auto group = m_registry.group<Tag>();
-		for (auto entityID : group)
+		auto view = m_registry.view<Tag>();
+		for (auto entityID : view)
 		{
 			Entity e(entityID);
 			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
