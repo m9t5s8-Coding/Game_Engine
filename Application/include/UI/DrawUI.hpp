@@ -180,4 +180,30 @@ namespace ag::UI
 		ImGui::SeparatorText(label);
 		ImGui::Spacing();
 	}
+
+
+
+
+
+
+	static void windowed_titlebar(const std::string& title)
+	{
+		float titlebar_height = 30.0f;
+
+		ImGui::GetWindowDrawList()->AddRectFilled(
+			ImGui::GetWindowPos(),
+			ImVec2(ImGui::GetWindowPos().x + ImGui::GetWindowWidth(),
+				ImGui::GetWindowPos().y + titlebar_height),
+			IM_COL32(50, 50, 50, 255)
+		);
+
+		ImGui::SetCursorPos(ImVec2(10, 2));
+		ImGui::Text(title.c_str());
+
+		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 30, 2));
+		if (ImGui::Button("X", ImVec2(20, 20))) 
+		{
+
+		}
+	}
 }

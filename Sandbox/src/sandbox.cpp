@@ -18,18 +18,20 @@ public:
     init(props);
     get().get_window().center_window();
 
+    ag::Engine::start_runtime();
     ag::NodeFactory::init();
     ag::Renderer::init();
-    ag::LuaManager::init();
+    ag::ScriptManager::init();
 
     push_layer(new ag::Sandbox2D());
   }
 
   virtual void on_destroy() override
   {
+    ag::Scene::get_active_scene()->destroy();
     ag::NodeFactory::shut_down();
     ag::Renderer2D::shut_down();
-    ag::LuaManager::shut_down();
+    ag::ScriptManager::shut_down();
   }
 };
 

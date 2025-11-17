@@ -16,6 +16,8 @@ namespace ag
 			vec2u size;
 			uint_rect texture_rect;
 
+			bool is_visible = true;
+
 			static json save(Entity entity)
 			{
 				json j;
@@ -107,7 +109,7 @@ namespace ag
 					UI::draw_vec2("Texture Size", sprite.texture_rect.size, texture_size);
 				}
 				Transform::show_properties(entity);
-				
+
 
 			}
 		}
@@ -124,5 +126,5 @@ namespace ag
 			Renderer2D::set_texture(s.texture);
 			Renderer2D::draw_sprite(sprite, transform);
 		}
-	};	
+	};
 }

@@ -75,6 +75,7 @@ namespace ag
 		}
 
 		AERO_CORE_INFO("Project Loaded Successfully ! {0}", project->m_name);
+		Project::set_active_project(project);
 		return project;
 	}
 

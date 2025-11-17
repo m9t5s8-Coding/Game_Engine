@@ -1,4 +1,6 @@
-#include <Panels/ScenePanel.hpp>
+﻿#include <Panels/ScenePanel.hpp>
+#include <Application/EditorLayer.hpp>
+#include <Node/TileMapNodeFeatures.hpp>
 
 namespace ag
 {
@@ -16,6 +18,8 @@ namespace ag
 	void ScenePanel::on_update()
 	{
 		update_transform_settings();
+		update_tilemap();
+
 
 		m_last_mouse_position = m_current_mouse_position;
 	}
@@ -24,6 +28,7 @@ namespace ag
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(ScenePanel::on_key_pressed));
+		dispatcher.Dispatch<MouseButtonPressedEvent>(AERO_BIND_EVENT_FN(ScenePanel::on_mouse_pressed));
 	}
 
 	void ScenePanel::set_selected_entity(Entity entity)
@@ -34,17 +39,14 @@ namespace ag
 	void ScenePanel::on_imgui_render()
 	{
 		ImGui::Begin("Scene");
-		if (ImGui::Button("Add Objects"))
-		{
-			m_show_create_panel = true;
-		}
+		draw_scene_top_panel();
 		ImGui::Spacing();
 
 		auto view = m_scene->m_registry.view<Tag>();
 		for (auto entityID : view)
 		{
 			Entity entity(entityID);
-			draw_node_hierarchy(entity);
+			draw_node_hierarchy(entity, 0);
 			ImGui::Spacing();
 		}
 		ImGui::End();
@@ -57,29 +59,133 @@ namespace ag
 
 		if (m_show_create_panel)
 			draw_create_object();
+
+		if (m_selected_entity)
+		{
+			auto& tag = m_selected_entity.get_component<Tag>();
+			if (tag.node_type == NodeType::TileMap)
+			{
+				if (m_selected_entity.has_component<TileMapNode::TileMapProp>())
+				{
+					auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
+					m_is_texture_selected = (texture_selector(props.texture, props.size, m_texture_rect));
+					if (m_is_texture_selected)
+					{
+						auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+						props.ghost_sprite.texture_rect = m_texture_rect;
+						props.display_ghost = true;
+					}
+				}
+			}
+		}
 	}
 
-	void ScenePanel::draw_node_hierarchy(Entity entity)
+	void ScenePanel::draw_node_hierarchy(Entity entity, int level)
 	{
-		auto& tag = entity.get_component<Tag>().tag;
+		auto& tag = entity.get_component<Tag>();
+		// TreeNode flags
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+		if (m_selected_entity == entity)
+			flags |= ImGuiTreeNodeFlags_Selected;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 8));
+		if (tag.children.empty())
+			flags |= ImGuiTreeNodeFlags_Leaf;
 
-		ImGuiTreeNodeFlags flags =
-			((m_selected_entity == entity) ? ImGuiTreeNodeFlags_Selected : 0) |
-			ImGuiTreeNodeFlags_SpanAvailWidth |
-			ImGuiTreeNodeFlags_Leaf;
+		ImGui::Indent(level * 20.0f);
 
-		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.c_str());
+		// Draw the tree node
+		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.tag.c_str());
 
+		// Selection
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+		{
+			if (m_selected_entity != entity)
+			{
+				m_move_flag = false;
+				m_scale_flag = false;
+				m_rotate_flag = false;
+
+				if (m_selected_entity)
+				{
+					if (m_selected_entity.has_component<Tag>())
+					{
+						auto& tag = m_selected_entity.get_component<Tag>();
+						if (tag.node_type == NodeType::TileMap)
+						{
+							auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+							props.display_ghost = false;
+						}
+					}
+				}
+
+			}
 			m_selected_entity = entity;
-
+		}
+		// Draw children recursively
 		if (opened)
-			ImGui::TreePop();
+		{
+			for (auto& child : tag.children)
+			{
+				draw_node_hierarchy(child, level + 1);
+			}
 
-		ImGui::PopStyleVar();
+			if (!(flags & ImGuiTreeNodeFlags_Leaf))
+				ImGui::TreePop();
+		}
+
+		ImGui::TreePop();
+		ImGui::Unindent(level * 20.0f);
 	}
+
+	void ScenePanel::draw_scene_top_panel()
+	{
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+			ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+			ImGui::BeginChild("Toolbar", ImVec2(0, 40), false, flags);
+			{
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 5));
+
+				ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+				ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+				ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+				ImVec4 active_scene = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
+
+				ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bg_hovered);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
+				ImGui::PushStyleColor(ImGuiCol_Text, text_color);
+
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
+
+
+
+				ImGui::SameLine(0, 10);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
+				ImGui::SetWindowFontScale(1.5f);
+				if (ImGui::Button("+", ImVec2(30, 30)))
+				{
+					m_show_create_panel = true;
+				}
+				ImGui::SameLine(0, 5.0f);
+				if (ImGui::Button("s", ImVec2(30, 30)))
+				{
+
+				}
+				ImGui::SetWindowFontScale(1.0f);
+				ImGui::PopStyleVar();
+
+				ImGui::PopStyleColor(4);
+				ImGui::PopStyleVar(2);
+			}
+			ImGui::EndChild();
+			ImGui::PopStyleVar();
+		}
+	}
+
 
 	void ScenePanel::draw_properties_panel()
 	{
@@ -110,8 +216,15 @@ namespace ag
 			if (ImGui::Button("Create Entity"))
 			{
 				Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
-				/*auto& tag = newEntity.get_component<Tag>();
-				newEntity.add_component<SortKey>(tag.index);*/
+
+				/*if (m_selected_entity)
+				{
+					auto& tag = m_selected_entity.get_component<Tag>();
+					auto& new_e_tag = newEntity.get_component<Tag>();
+
+					new_e_tag.parent = m_selected_entity;
+					tag.children.push_back(newEntity);
+				}*/
 
 				m_selected_entity = newEntity;
 				m_show_create_panel = false;
@@ -185,8 +298,6 @@ namespace ag
 	void ScenePanel::move_transform_setting()
 	{
 		auto& position = m_selected_entity.get_component<Transform>().position;
-
-
 		if (!m_move_flag)
 		{
 			m_initial_transform.position = position;
@@ -196,19 +307,19 @@ namespace ag
 
 		vec2f delta = m_current_mouse_position - m_last_mouse_position;
 
-		switch (m_current_transform_axix)
+		switch (m_current_transform_axis)
 		{
-		case ag::TransformAxix::None:
+		case ag::TransformAxis::None:
 		{
 			position += delta;
 			break;
 		}
-		case ag::TransformAxix::X:
+		case ag::TransformAxis::X:
 		{
 			position.x += delta.x;
 			break;
 		}
-		case ag::TransformAxix::Y:
+		case ag::TransformAxis::Y:
 		{
 			position.y += delta.y;
 			break;
@@ -229,7 +340,7 @@ namespace ag
 
 		vec2f delta = m_current_mouse_position - m_last_mouse_position;
 
-		rotation += Math::angle_betn_3points(m_last_mouse_position,position, m_current_mouse_position);
+		rotation += Math::angle_betn_3points(m_last_mouse_position, position, m_current_mouse_position);
 
 		if (rotation > 360) rotation -= 360;
 		if (rotation < -360) rotation += 360;
@@ -251,23 +362,23 @@ namespace ag
 		float scale_ratio = current_distance / std::max(initial_distance, 0.001f);
 
 
-		switch (m_current_transform_axix)
+		switch (m_current_transform_axis)
 		{
-			case TransformAxix::None:
-			{
-				transform.scale *= scale_ratio;
-				break;
-			}
-			case TransformAxix::X:
-			{
-				transform.scale.x *= scale_ratio;
-				break;
-			}
-			case TransformAxix::Y:
-			{
-				transform.scale.y *= scale_ratio;
-				break;
-			}
+		case TransformAxis::None:
+		{
+			transform.scale *= scale_ratio;
+			break;
+		}
+		case TransformAxis::X:
+		{
+			transform.scale.x *= scale_ratio;
+			break;
+		}
+		case TransformAxis::Y:
+		{
+			transform.scale.y *= scale_ratio;
+			break;
+		}
 		}
 
 		transform.scale.x = std::max(0.01f, transform.scale.x);
@@ -277,10 +388,71 @@ namespace ag
 	void ScenePanel::reset_transform_setting()
 	{
 		m_current_transform_setting = TransformSetting::None;
-		m_current_transform_axix = TransformAxix::None;
-		m_move_flag = true;
-		m_scale_flag = true;
-		m_rotate_flag = true;
+		m_current_transform_axis = TransformAxis::None;
+		m_move_flag = false;
+		m_scale_flag = false;
+		m_rotate_flag = false;
+	}
+
+	void ScenePanel::update_tilemap()
+	{
+		if (!m_selected_entity)
+			return;
+
+		if (m_selected_entity.has_component<Tag>())
+		{
+			const auto& tag = m_selected_entity.get_component<Tag>();
+			if (tag.node_type == NodeType::TileMap)
+			{
+				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+				if (EditorLayer::get().is_viewport_hovered())
+				{
+					if (props.display_ghost)
+					{
+						vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
+						vec2i tile_pos = {
+							(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
+							(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
+						};
+
+						props.ghost_sprite.texture_rect = m_texture_rect;
+						props.ghost_sprite_position = tile_pos;
+						props.ghost_sprite.size = props.size;
+					}
+				}
+				else
+				{
+					props.ghost_sprite.size = { 0, 0 };
+				}
+			}
+		}
+	}
+
+	bool ScenePanel::texture_selector(const AG_ref<Texture2D>& texture, const vec2u& tile_size, uint_rect& texture_rect)
+	{
+		bool is_selected = false;
+		ImGui::Begin("Texture Selector");
+		{
+			ImVec2 image_size(texture->get_size().x, texture->get_size().y);
+			ImGui::Image((void*)texture->get_texture_id(), image_size);
+
+			ImVec2 image_pos = ImGui::GetItemRectMin();
+			ImVec2 mouse_pos = ImGui::GetMousePos();
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				int relX = (int)(mouse_pos.x - image_pos.x);
+				int relY = (int)(mouse_pos.y - image_pos.y);
+
+				int tile_x = relX / tile_size.x;
+				int tile_y = relY / tile_size.y;
+
+				texture_rect = uint_rect(tile_x * tile_size.x, tile_y * tile_size.y, tile_size);
+
+				is_selected = true;
+			}
+		}
+		ImGui::End();
+		return is_selected;
 	}
 
 	bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
@@ -300,16 +472,64 @@ namespace ag
 			return false;
 		switch (e.get_key_code())
 		{
-		case Key::G: m_current_transform_setting = TransformSetting::Move; break;
-		case Key::S: m_current_transform_setting = TransformSetting::Scale; break;
-		case Key::R: m_current_transform_setting = TransformSetting::Rotate; break;
-		case Key::X: m_current_transform_axix = TransformAxix::X; break;
-		case Key::Y: m_current_transform_axix = TransformAxix::Y; break;
+		case Key::G: reset_transform_setting(); m_current_transform_setting = TransformSetting::Move; break;
+		case Key::S: reset_transform_setting(); m_current_transform_setting = TransformSetting::Scale; break;
+		case Key::R: reset_transform_setting(); m_current_transform_setting = TransformSetting::Rotate; break;
+		case Key::X: m_current_transform_axis = TransformAxis::X; break;
+		case Key::Y: m_current_transform_axis = TransformAxis::Y; break;
 		case Key::Escape:
 			if (m_current_transform_setting != TransformSetting::None)
 				reset_transform_setting();
 			break;
+
+		case Key::Delete: m_selected_entity.delete_entity(); break;
 		}
+		return false;
+	}
+
+	bool ScenePanel::on_mouse_pressed(MouseButtonPressedEvent& e)
+	{
+		if (!m_selected_entity)
+			return false;
+
+		if (m_selected_entity.has_component<Tag>() && EditorLayer::get().is_viewport_hovered())
+		{
+			const auto& tag = m_selected_entity.get_component<Tag>();
+			if (tag.node_type == NodeType::TileMap)
+			{
+				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+				if (props.display_ghost)
+				{
+					vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
+					vec2i tile_pos = {
+						(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
+						(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
+					};
+
+					if (e.get_mouse_button() == Button::ButtonLeft)
+					{
+						TileMapNode::Tile tile;
+						tile.position = tile_pos;
+						tile.texture_rect = m_texture_rect;
+						props.tiles[tile_pos] = tile;
+					}
+					else if (e.get_mouse_button() == Button::ButtonRight)
+					{
+						if (props.tiles.contains(tile_pos))
+						{
+							auto it = props.tiles.find(tile_pos);
+							if (it != props.tiles.end())
+							{
+								props.tiles.erase(it);
+							}
+						}
+					}
+
+				}
+			}
+		}
+
+
 		return false;
 	}
 }

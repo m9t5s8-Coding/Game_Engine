@@ -62,6 +62,18 @@ namespace ag
 		}
 	}
 
+	void Scene::destroy()
+	{
+		auto view = m_registry.view<Tag>();
+		for (auto entityID : view)
+		{
+			Entity e(entityID);
+			auto it = NodeFactory::clear_map.find(e.get_component<Tag>().node_type);
+			if (it != NodeFactory::clear_map.end())
+				it->second(e);
+		}
+	}
+
 	AG_ref<Scene> Scene::create(const std::string& name, const std::string& directory)
 	{
 		auto scene = AG_cref<Scene>();
@@ -69,7 +81,7 @@ namespace ag
 		scene->set_name(name);
 		scene->set_directory(directory);
 
-
+		//auto camera_entity = scene->create_entity("Camera", NodeType::Camera);
 		return scene;
 	}
 }

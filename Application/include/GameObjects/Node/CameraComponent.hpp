@@ -18,6 +18,8 @@ namespace ag
 			float zoom = 1.0f;
 			bool is_active = false;
 
+			bool is_visible = true;
+
 			static json save(Entity entity)
 			{
 				const auto& props = entity.get_component<CameraProps>();
@@ -88,7 +90,16 @@ namespace ag
 
 		static void draw(Entity entity, TimeStamp ts)
 		{
+			auto& props = entity.get_component<CameraProps>();
+			Rectangle rectangle;
+			rectangle.size = props.view_size;
+			rectangle.fill_color = Color::Transparent;
+			rectangle.border_color = Color(100, 100, 100, 255);
+			rectangle.border_thickness = 1.0f;
 
+			Transform transform;
+			transform.position = props.view_center;
+			Renderer2D::draw_rectangle(rectangle, transform);
 		}
 	};
 }

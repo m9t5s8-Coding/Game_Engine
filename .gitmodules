@@ -23,3 +23,6 @@
 	path = External/lua
 	url = https://github.com/lua/lua.git
 	branch = v5.4
+[submodule "External/box2d"]
+	path = External/box2d
+	url = https://github.com/erincatto/box2d.git

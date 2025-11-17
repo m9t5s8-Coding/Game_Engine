@@ -14,11 +14,13 @@ namespace ag
     virtual AG_uint get_height() const override { return m_size.y; };
     virtual vec2u get_size() const override { return m_size; }
 
-    virtual void bind(uint32_t p_slot = 0) const override;
+    virtual AG_uint get_texture_id() const override { return m_ID; }
+
+    virtual void bind(AG_uint p_slot = 0) const override;
 
   private:
     std::string m_path;
     vec2u m_size;
-    uint32_t m_ID;
+    AG_uint m_ID;
   };
 }

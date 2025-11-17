@@ -2,6 +2,10 @@
 
 namespace ag
 {
+	enum class FileType
+	{
+		Project_File, Scene_File, Folder
+	};
 	class FileDialogs
 	{
 	public:

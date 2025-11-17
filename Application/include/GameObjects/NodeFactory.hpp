@@ -20,6 +20,7 @@ namespace ag
 		static std::unordered_map<NodeType, std::function<void(Entity, Entity)>> clone_map;
 		static std::unordered_map<NodeType, std::function<json(Entity)>> save_map;
 		static std::unordered_map<NodeType, std::function<void(Entity, json&)>> load_map;
+		static std::unordered_map<NodeType, std::function<void(Entity)>> clear_map;
 		static std::unordered_map<NodeType, std::string> nodes;
 
 		static void init();

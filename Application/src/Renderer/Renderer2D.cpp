@@ -235,8 +235,20 @@ namespace ag
 
   void Renderer2D::end_scene()
   {
-    s_data->total_quads = 0;
     flush();
+  }
+
+  void Renderer2D::begin_screen_scene(const vec2f& viewport_size)
+  {
+    Renderer::begin_screen_scene(viewport_size);
+    start_batch();
+
+    s_data->total_quads = 0;
+  }
+  void Renderer2D::end_screen_scene()
+  {
+    flush();
+    Renderer::end_screen_scene();
   }
 
   void Renderer2D::start_batch()
@@ -256,7 +268,7 @@ namespace ag
     if (s_data->texture == texture)
       return;
 
-    flush_sprite();
+    flush();
     s_data->texture = texture;
   }
 

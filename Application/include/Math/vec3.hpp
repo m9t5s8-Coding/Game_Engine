@@ -127,6 +127,6 @@ namespace ag
 
     using vec3i = vec3<int>;
     using vec3f = vec3<float>;
-    using vec3u = vec3<unsigned int>;
+    using vec3u = vec3<uint32_t>;
 }
 

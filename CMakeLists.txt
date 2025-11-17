@@ -5,6 +5,7 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+
 add_compile_options(/utf-8)
 
 project("Game_Engine" LANGUAGES C CXX)
@@ -106,6 +107,7 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/stb_image
     ${CMAKE_SOURCE_DIR}/External/json/single_include
     ${CMAKE_SOURCE_DIR}/External/sol2/include
+    ${CMAKE_SOURCE_DIR}/External/box2d/include
 )
 
 # Compile definitions for External

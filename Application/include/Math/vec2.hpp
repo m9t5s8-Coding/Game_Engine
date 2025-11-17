@@ -159,10 +159,23 @@ namespace ag
         {
           return vec2(x = other.x, y = other.y);
         }
-      };
+    };
+
+    template <typename T>
+    struct vec2_hash
+    {
+      std::size_t operator()(const vec2<T>& v) const noexcept
+      {
+        std::hash<T> hasher;
+        return hasher(v.x) ^ (hasher(v.y) << 1);
+      }
+    };
+
+
 
     using vec2i = vec2<int>;
     using vec2f = vec2<float>;
-    using vec2u = vec2<unsigned int>;
+    using vec2u = vec2<uint32_t>;
+
 }
 

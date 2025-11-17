@@ -14,6 +14,16 @@ namespace ag
   {
 
   }
+  void Renderer::begin_screen_scene(const vec2f& viewport_size)
+  {
+    vec2f window_size = viewport_size;
+    vec2f window_center = window_size / 2;
+    s_scenedata->view_matrix = Math::get_view_matrix(window_size, window_center);
+  }
+  void Renderer::end_screen_scene()
+  {
+
+  }
 
   void Renderer::init()
   {

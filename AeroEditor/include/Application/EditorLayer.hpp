@@ -22,9 +22,11 @@ namespace ag
 		virtual void on_imgui_render() override;
 		virtual void on_event(Event& e) override;
 
-		ag::vec2f get_imgui_viewport_mouse_position();
+		ag::vec2f get_viewport_mouse_position() { return m_viewport_mouse_pos; }
 
+		bool is_viewport_hovered() const { return m_viewport_hovered; }
 
+		static EditorLayer& get() { return *s_instance; }
 
 		bool on_key_pressed(KeyPressedEvent& e);
 	private:
@@ -35,6 +37,14 @@ namespace ag
 		std::unordered_map<std::string, AG_ref<Scene>> m_scenes;
 
 		vec2i m_viewport_size;
+		vec2f m_viewport_mouse_pos;
+		bool m_viewport_hovered = false;
+
+		static EditorLayer *s_instance;
+
+	private:
+		void editor_things();
+		void draw_transform_settings(Entity e);
 	};
 
 }

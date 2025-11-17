@@ -51,6 +51,10 @@ namespace ag
 			int current_frame = 0;
 			bool playing = true;
 			float timer = 0.0f;
+
+			bool is_visible = true;
+
+
 			static json save(Entity entity)
 			{
 				const auto& props = entity.get_component<AnimatedSpriteProps>();
@@ -140,6 +144,8 @@ namespace ag
 
 			Transform::load(entity, j["Transform"]);
 			AnimatedSpriteProps::load(entity, j["AnimationSprite2DProps"]);
+
+			
 		}
 
 		static void show_properties(Entity entity)
@@ -180,6 +186,7 @@ namespace ag
 				}
 				{
 					UI::draw_title("Animations");
+					ImGui::Checkbox("Play Animation", &sprite.playing);
 					if (UI::draw_vec2("Frame Grid", sprite.frame_grid, { 1, 1 }))
 					{
 						vec2u texture_size = sprite.texture->get_size();
@@ -263,31 +270,23 @@ namespace ag
 			}
 		}
 
-		static void draw(Entity entity, TimeStamp ts)
+		static void update(Entity entity, TimeStamp ts)
 		{
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
-
-
 			if (!s.current_animation.empty())
 			{
 				auto it = s.animations.find(s.current_animation);
 				if (it == s.animations.end()) return;
 				Animation& anim = it->second;
-
 				float deltatime = ts.get_seconds();
 				s.timer += deltatime;
-
 				int frame_count = anim.end_frame - anim.start_frame + 1;
-
 				if (frame_count <= 0) frame_count = 1;
-
 				if (s.timer >= anim.duration && anim.duration != 0.0f)
 				{
-					s.timer -=  anim.duration;
+					s.timer -= anim.duration;
 					s.current_frame++;
-
-
 					if (s.current_frame >= frame_count)
 					{
 						if (anim.loop)
@@ -305,7 +304,18 @@ namespace ag
 				s.texture_rect.position.x = (frame_index % s.frame_grid.x) * s.texture_rect.size.x;
 				s.texture_rect.position.y = (frame_index / s.frame_grid.x) * s.texture_rect.size.y;
 			}
+		}
+
+		static void draw(Entity entity, TimeStamp ts)
+		{
+			
+			auto& transform = entity.get_component<Transform>();
+			auto& s = entity.get_component<AnimatedSpriteProps>();
+			if(s.playing)
+				update(entity, ts);
+
 			Renderer2D::set_texture(s.texture);
+
 			Sprite sprite;
 			sprite.texture_rect = s.texture_rect;
 			sprite.size = s.texture_rect.size;

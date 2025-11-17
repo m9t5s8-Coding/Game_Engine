@@ -5,3 +5,4 @@
 #include <GameObjects/Node/SpriteNode.hpp>
 #include <GameObjects/Node/AnimatedSpriteNode.hpp>
 #include <GameObjects/Node/CameraComponent.hpp>
+#include <GameObjects/Node/TileMapNode.hpp>

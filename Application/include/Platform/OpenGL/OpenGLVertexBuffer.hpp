@@ -19,7 +19,7 @@ namespace ag
     virtual const BufferLayout &get_layout() const override { return m_layout; };
 
   private:
-    unsigned int m_ID;
+    AG_uint m_ID;
     BufferLayout m_layout;
   };
 

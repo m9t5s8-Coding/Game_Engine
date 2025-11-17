@@ -66,6 +66,6 @@ namespace ag
 
     using int_rect = rect<int>;
     using float_rect = rect<float>;
-    using uint_rect = rect<unsigned int>;
+    using uint_rect = rect<uint32_t>;
 }
 #endif

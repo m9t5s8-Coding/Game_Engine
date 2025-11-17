@@ -163,5 +163,5 @@ namespace ag
 
   using vec4f = vec4<float>;
   using vec4i = vec4<int>;
-  using vec4u = vec4<unsigned int>;
+  using vec4u = vec4<uint32_t>;
 }

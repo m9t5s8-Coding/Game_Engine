@@ -17,6 +17,8 @@ namespace ag
 			float border_thickness = 0.0f;
 			Color border_color = Color::White;
 
+			bool is_visible = true;
+
 			static json save(Entity entity)
 			{
 				json j;

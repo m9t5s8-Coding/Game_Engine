@@ -47,6 +47,9 @@ namespace ag
     inline static Application &get() { return *s_Instance; }
     inline Window &get_window() { return *m_Window; }
 
+    inline static void set_mouse_position(const vec2f& mouse_pos) { s_mouse_position = mouse_pos; }
+    inline static vec2f get_mouse_position() { return s_mouse_position; }
+
     ImGuiLayer *get_imgui_layer() { return m_imgui_layer; }
 
   private:
@@ -65,6 +68,7 @@ namespace ag
 
   private:
     static Application *s_Instance;
+    inline static vec2f s_mouse_position;
   };
 
   Application *create_application();

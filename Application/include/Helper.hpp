@@ -10,14 +10,14 @@ using json = nlohmann::json;
 namespace ag::Helper
 {
   template <typename T>
-  void load_json(const json& j, const std::string& key, T& value)
+  inline void load_json(const json& j, const std::string& key, T& value)
   {
     if (j.contains(key))
       value = j[key].get<T>();
   }
 
   template <typename T>
-  void load_json(const json& j, const std::string& key, vec2<T>& value)
+  inline void load_json(const json& j, const std::string& key, vec2<T>& value)
   {
     if (j.contains(key))
     {
@@ -26,7 +26,7 @@ namespace ag::Helper
   }
 
   template <typename T>
-  void load_json(const json& j, const std::string& key, rect<T>& value)
+  inline void load_json(const json& j, const std::string& key, rect<T>& value)
   {
     if (j.contains(key))
     {
@@ -35,20 +35,23 @@ namespace ag::Helper
   }
 
 
+
+
+
   template <typename T>
-  void save_json(json& j, const std::string& key, const T& value)
+  inline void save_json(json& j, const std::string& key, const T& value)
   {
     j[key] = value;
   }
 
   template <typename T>
-  void save_json(json& j, const std::string& key, const vec2<T>& value)
+  inline void save_json(json& j, const std::string& key, const vec2<T>& value)
   {
     j[key] = value.save();;
   }
 
   template <typename T>
-  void save_json(json& j, const std::string& key, const rect<T>& value)
+  inline void save_json(json& j, const std::string& key, const rect<T>& value)
   {
     j[key] = value.save();;
   }

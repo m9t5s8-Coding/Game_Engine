@@ -6,7 +6,7 @@
 
 namespace ag
 {
-  AG_ref<IndexBuffer> IndexBuffer::create(unsigned int *indices, uint32_t count)
+  AG_ref<IndexBuffer> IndexBuffer::create(AG_uint *indices, AG_uint count)
   {
     switch (Renderer::get_API())
     {

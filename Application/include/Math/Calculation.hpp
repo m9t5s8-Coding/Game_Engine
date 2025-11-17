@@ -5,6 +5,8 @@
 #include <Math/vec3.hpp>
 #include <Math/vec4.hpp>
 #include <cmath>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 
 namespace ag::Math
@@ -71,4 +73,20 @@ namespace ag::Math
     return screen;
   }
 
+
+  // Getting the view matrix on the basis of the size and center
+  inline glm::mat3 get_view_matrix(const vec2f& size, const vec2f& center, float rotation = 0)
+  {
+    float cos_r = cos(glm::radians(rotation));
+    float sin_r = sin(glm::radians(rotation));
+
+    glm::mat3 translate(1.0f); translate[2] = glm::vec3(-center.x, -center.y, 1.0f);
+    glm::mat3 rotate(1.0f);
+    rotate[0][0] = cos_r; rotate[0][1] = -sin_r;
+    rotate[1][0] = sin_r; rotate[1][1] = cos_r;
+    glm::mat3 scale = glm::mat3(1.0f); scale[0][0] = 2.0f / size.x; scale[1][1] = 2.0f / size.y;
+    glm::mat3 flip = glm::mat3(1.0f); flip[1][1] = -1.0f;
+
+    return flip * scale * rotate * translate;
+  }
 }

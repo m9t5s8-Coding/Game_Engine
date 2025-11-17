@@ -35,17 +35,7 @@ namespace ag
 
     glm::mat3 get_view_matrix() const
     {
-      float cos_r = cos(glm::radians(m_rotation));
-      float sin_r = sin(glm::radians(m_rotation));
-
-      glm::mat3 translate(1.0f); translate[2] = glm::vec3(-m_center.x, -m_center.y, 1.0f);
-      glm::mat3 rotate(1.0f);
-      rotate[0][0] = cos_r; rotate[0][1] = -sin_r;
-      rotate[1][0] = sin_r; rotate[1][1] = cos_r;
-      glm::mat3 scale = glm::mat3(1.0f); scale[0][0] = 2.0f / m_size.x; scale[1][1] = 2.0f / m_size.y;
-      glm::mat3 flip = glm::mat3(1.0f); flip[1][1] = -1.0f;
-
-      return flip * scale * rotate * translate;
+      return Math::get_view_matrix(m_size, m_center, m_rotation);
     }
 
   private:

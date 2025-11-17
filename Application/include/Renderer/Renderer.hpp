@@ -11,7 +11,10 @@ namespace ag
   {
   public:
     static void begin_scene(const View &view);
+    static void begin_screen_scene(const vec2f& viewport_size);
     static void end_scene();
+    static void end_screen_scene();
+
 
     static void on_window_resize(const vec2u& p_size);
 

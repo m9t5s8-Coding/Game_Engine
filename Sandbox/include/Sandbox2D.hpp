@@ -22,5 +22,6 @@ namespace ag
     AG_ref<ViewController> m_view_controller;
     AG_ref<Scene> m_scene;
 
+    void load_project_data();
   };
 }

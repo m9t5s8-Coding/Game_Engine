@@ -10,7 +10,7 @@ namespace ag
     None, Scale, Rotate, Move
   };
 
-  enum class TransformAxix
+  enum class TransformAxis
   {
     None, X, Y
   };
@@ -28,12 +28,16 @@ namespace ag
     void on_event(Event& e);
     void on_update();
 
+
+    TransformSetting get_transform_setting() const { return m_current_transform_setting; }
+    TransformAxis get_transform_axis() const { return m_current_transform_axis; }
+
     void is_mouse_inside_window(const bool inside_window) { m_mouse_inside_window = inside_window; }
 
     Entity get_selected_entity() const { return m_selected_entity; }
     void set_selected_entity(Entity entity);
 
-    void draw_node_hierarchy(Entity entity);
+    void draw_node_hierarchy(Entity entity, int level = 0);
     void draw_properties_panel();
     void draw_create_object();
 
@@ -45,7 +49,16 @@ namespace ag
     void scale_transform_setting();
     void reset_transform_setting();
 
+
+    void update_tilemap();
+
+    bool texture_selector(const AG_ref<Texture2D>& texture, const vec2u& tile_size, uint_rect& texture_rect);
+
+
+    void draw_scene_top_panel();
+
     bool on_key_pressed(KeyPressedEvent& e);
+    bool on_mouse_pressed(MouseButtonPressedEvent& e);
 
   private:
     AG_ref<Scene> m_scene;
@@ -56,13 +69,16 @@ namespace ag
     vec2f m_current_mouse_position;
     bool m_mouse_inside_window;
 
+    uint_rect m_texture_rect;
+    bool m_is_texture_selected;
+
     bool m_move_flag = false;
     bool m_scale_flag = false;
     bool m_rotate_flag = false;
 
     Transform m_initial_transform;
     TransformSetting m_current_transform_setting = TransformSetting::None;
-    TransformAxix m_current_transform_axix = TransformAxix::None;
+    TransformAxis m_current_transform_axis = TransformAxis::None;
   };
 
 }

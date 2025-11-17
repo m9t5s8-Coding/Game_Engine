@@ -14,13 +14,8 @@ namespace ag
 		
 
 		Renderer::init();
-		LuaManager::init();
 
-		{
-			auto project = Project::get_active_project();
-			std::string script_path = project->get_directory() + project->get_scripts_directory() + "/test.lua";
-			LuaManager::load_script(script_path);
-		}
+		
 		
 
 		push_layer(new EditorLayer());
@@ -32,7 +27,6 @@ namespace ag
 		save_json();
 
 		Renderer2D::shut_down();
-		LuaManager::shut_down();
 		NodeFactory::shut_down();
 	}
 
@@ -118,9 +112,10 @@ namespace ag
 		{
 			WindowProps props;
 			Helper::load_json(j["Window"], "Title", props.Title);
-			Helper::load_json(j["Window"], "Size", props.Size);
+			props.Size = { 1280, 720 };
 			init(props);
 
+			
 			auto& window = Application::get().get_window();
 			{
 				bool fullscreen;
@@ -144,6 +139,11 @@ namespace ag
 				bool is_vsync;
 				Helper::load_json(j["Window"], "Vsync", is_vsync);
 				window.set_vsync(is_vsync);
+			}
+			{
+				vec2u window_size;
+				Helper::load_json(j["Window"], "Size", window_size);
+				window.set_size(window_size);
 			}
 		}
 

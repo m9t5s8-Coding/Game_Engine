@@ -12,6 +12,7 @@ namespace ag
 	class Entity;
   class ScenePanel;
 	class SaveScene;
+	class EditorLayer;
   enum class NodeType;
 
 	class Scene
@@ -23,6 +24,7 @@ namespace ag
 
 
 		void on_update(TimeStamp ts);
+		void destroy();
 
 		Entity create_entity(const std::string& name, NodeType type, bool is_cloning = false);
 		Entity duplicate_entity(Entity original);
@@ -44,7 +46,7 @@ namespace ag
 
 	private:
 		entt::registry m_registry;
-		uint32_t m_next_index = 0;
+		AG_uint m_next_index = 0;
 
 		std::string m_name = "";
 		std::string m_directory = "";
@@ -54,5 +56,6 @@ namespace ag
 		friend class Entity;
     friend class ScenePanel;
 		friend class SaveScene;
+		friend class EditorLayer;
 	};
 }

@@ -17,6 +17,8 @@ namespace ag
       float border_thickness = 0.0f;
       Color border_color = Color::White;
 
+      bool is_visible = true;
+
       static json save(Entity entity)
       {
         json j;
@@ -49,7 +51,8 @@ namespace ag
 
     static void delete_node(Entity entity)
     {
-        entity.delete_entity();
+      ScriptComponent::destroy(entity);
+      entity.delete_entity();
     }
 
     static void clone_node(Entity original, Entity clone)
@@ -64,6 +67,8 @@ namespace ag
       j["RectangleProps"] = RectangleProp::save(entity);
       j["Transform"] = Transform::save(entity);
 
+      j["ScriptComponent"] = ScriptComponent::save(entity);
+
       return j;
     }
 
@@ -71,6 +76,8 @@ namespace ag
     {
       RectangleProp::load(entity, j["RectangleProps"]);
       Transform::load(entity, j["Transform"]);
+
+      ScriptComponent::load(entity, j["ScriptComponent"]);
     }
 
     static void show_properties(Entity entity)
@@ -83,8 +90,6 @@ namespace ag
           UI::draw_value("Border Thickness", props.border_thickness);
           UI::draw_color("Fill Color", props.fill_color);
           UI::draw_color("Border Color", props.border_color);
-
-
         }
         Transform::show_properties(entity);
       }
@@ -92,6 +97,7 @@ namespace ag
 
     static void draw(Entity entity, TimeStamp ts)
     {
+      ScriptComponent::update(entity, ts);
 
       auto &transform = entity.get_component<Transform>();
       

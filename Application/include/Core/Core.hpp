@@ -9,7 +9,7 @@ using json = nlohmann::json;
 
 namespace ag
 {
-  using AG_uint = unsigned int;
+  using AG_uint = uint32_t;
 
   template<typename T>
   using AG_ref = std::shared_ptr<T>;
@@ -28,4 +28,19 @@ namespace ag
   {
     return std::make_unique<T>(std::forward<Args>(args)...);
   }
+
+  enum class EngineMode
+  {
+    Editor, Runtime
+  };
+  class Engine
+  {
+  public:
+    inline static bool is_runtime() { return s_mode == EngineMode::Runtime; }
+    static void start_runtime() { s_mode = EngineMode::Runtime; }
+    static void stop_runtime() { s_mode = EngineMode::Editor; }
+
+  private:
+    inline static EngineMode s_mode = EngineMode::Editor;
+  };
 }

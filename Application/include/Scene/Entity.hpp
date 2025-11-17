@@ -46,10 +46,10 @@ namespace ag
 
 
 
-		uint32_t get_id() const { return static_cast<uint32_t>(m_entity_handler); }
+		AG_uint get_id() const { return static_cast<AG_uint>(m_entity_handler); }
 
 		operator bool() const { return m_entity_handler != entt::null; }
-		operator uint32_t() const { return static_cast<uint32_t>(m_entity_handler); }
+		operator uint32_t() const { return static_cast<AG_uint>(m_entity_handler); }
 
 		bool operator==(const Entity& other) const { return m_entity_handler == other.m_entity_handler && m_scene == other.m_scene; }
 		bool operator!=(const Entity& other) const { return !(*this == other); }

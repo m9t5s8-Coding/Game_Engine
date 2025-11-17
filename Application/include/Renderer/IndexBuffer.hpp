@@ -13,9 +13,9 @@ namespace ag
     virtual void bind() const = 0;
     virtual void unbind() const = 0;
 
-    virtual uint32_t get_count() const = 0;
-    virtual void set_count(uint32_t count) = 0;
+    virtual AG_uint get_count() const = 0;
+    virtual void set_count(AG_uint count) = 0;
 
-    static AG_ref<IndexBuffer> create(unsigned int* indices, uint32_t size);
+    static AG_ref<IndexBuffer> create(AG_uint* indices, AG_uint size);
   };
 }

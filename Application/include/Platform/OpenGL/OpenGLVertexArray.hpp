@@ -25,7 +25,7 @@ namespace ag
     private:
       std::vector<AG_ref<VertexBuffer>> m_vertexbuffers;
       AG_ref<IndexBuffer> m_indexbuffer;
-      unsigned int m_ID;
+      AG_uint m_ID;
   };
 
 }

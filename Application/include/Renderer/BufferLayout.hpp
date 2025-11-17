@@ -103,7 +103,7 @@ namespace ag
   private:
     void calculate_offset_stride()
     {
-      uint32_t offset = 0;
+      AG_uint offset = 0;
       m_stride = 0;
       for (auto &element : m_buffer_elements)
       {
@@ -115,6 +115,6 @@ namespace ag
 
   private:
     std::vector<BufferElement> m_buffer_elements;
-    uint32_t m_stride = 0;
+    AG_uint m_stride = 0;
   };
 }

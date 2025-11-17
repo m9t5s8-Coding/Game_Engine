@@ -7,18 +7,18 @@ namespace ag
   class OpenGLIndexBuffer : public IndexBuffer
   {
   public:
-    OpenGLIndexBuffer(unsigned int* indices, uint32_t count);
+    OpenGLIndexBuffer(AG_uint* indices, uint32_t count);
     virtual ~OpenGLIndexBuffer();
 
     virtual void bind() const override;
     virtual void unbind() const override;
 
-    virtual void set_count(uint32_t count) override;
+    virtual void set_count(AG_uint count) override;
 
-    virtual uint32_t get_count() const override { return m_count; }
+    virtual AG_uint get_count() const override { return m_count; }
   private:
     unsigned int m_ID;
-    uint32_t m_count;
+    AG_uint m_count;
   };
 
 }
