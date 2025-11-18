@@ -12,12 +12,21 @@
 #include <Helper.hpp>
 #include <Scripting/LuaEnv.hpp>
 #include <Scripting/LuaFunc.hpp>
+#include <Scripting/ScriptableEntity.hpp>
 #include <Core/Core.hpp>
+#include <Events/KeyEvent.hpp>
+#include <Events/MouseEvent.hpp>
+#include <Events/WindowEvent.hpp>
 
 namespace ag
 {
 	static std::string default_path = "assets/textures/";
 
+	enum class RenderMode
+	{
+		Screen = 0,
+		World = 1
+	};
 
 	enum class NodeType
 	{
@@ -99,18 +108,39 @@ namespace ag
 		LuaFunc on_create;
 		LuaFunc on_update;
 		LuaFunc on_destroy;
+		LuaFunc on_event;
 
-		static json save(Entity entity)
+		static json save_json(Entity entity)
 		{
 			json j;
 			if (!entity.has_component<ScriptComponent>())
 				return j;
 
 			auto& comp = entity.get_component<ScriptComponent>();
-			comp.script_path = "/test.lua";
 			Helper::save_json(j, "Script Path", comp.script_path);
 
 			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			std::string path = "";
+			Helper::load_json(j, "Script Path", path);
+
+			if (path.empty())
+				return;
+			ScriptComponent comp;
+			comp.script_path = path;
+
+			if (entity.has_component<ScriptComponent>())
+			{
+				auto& s_component = entity.get_component<ScriptComponent>();
+				s_component = comp;
+			}
+			else
+			{
+				entity.add_component<ScriptComponent>(comp);
+			}
 		}
 
 		static void create(Entity entity)
@@ -128,9 +158,6 @@ namespace ag
 		{
 			if (!entity.has_component<ScriptComponent>() || !Engine::is_runtime())
 				return;
-
-			if (entity.has_component<ScriptComponent>())
-				AERO_CORE_INFO("Has Component");
 
 			auto& comp = entity.get_component<ScriptComponent>();
 
@@ -156,31 +183,45 @@ namespace ag
 			comp.on_create = LuaFunc();
 			comp.on_update = LuaFunc();
 			comp.on_destroy = LuaFunc();
+			comp.on_event = LuaFunc();
 		}
 
-		static void load(Entity entity, const json& j)
+		static bool event(Entity entity, Event& e)
+		{
+			if (!entity.has_component<ScriptComponent>() || !Engine::is_runtime())
+				return false;
+
+			auto& comp = entity.get_component<ScriptComponent>();
+			if (!comp.on_event.is_valid())
+				return false;
+
+			comp.on_event.call(e);
+
+			return false;
+		}
+
+		static void load_scripts(Entity entity, const json& j)
 		{
 			if (!Engine::is_runtime())
 				return;
 
-			std::string path = "";
-			Helper::load_json(j, "Script Path", path);
-
-			if (path == "")
-				return;
-			ScriptComponent comp;
-			comp.script_path = path;
+			auto& comp = entity.get_component<ScriptComponent>();
 
 			auto project = Project::get_active_project();
 			std::string full_path = project->get_directory() + project->get_scripts_directory() + comp.script_path;
 
+			comp.env.get().set_function("get_entity", [entity]() -> Entity {
+				return entity;
+				});
+
 			ScriptManager::load_script(full_path, comp.env);
+
+			
 
 			comp.on_create.set_function(comp.env, "on_create");
 			comp.on_update.set_function(comp.env, "on_update");
 			comp.on_destroy.set_function(comp.env, "on_destroy");
-
-			entity.add_component<ScriptComponent>(comp);
+			comp.on_event.set_function(comp.env, "on_event");
 			create(entity);
 		}
 	};
@@ -191,6 +232,7 @@ namespace ag
 		Color fill_color;
 		float border_thickness = 0.0f;
 		Color border_color;
+		RenderMode mode = RenderMode::World;
 	};
 
 	struct Circle
@@ -199,12 +241,14 @@ namespace ag
 		Color fill_color;
 		float border_thickness = 0.0f;
 		Color border_color;
+		RenderMode mode = RenderMode::World;
 	};
 
 	struct Sprite
 	{
 		vec2f size;
 		uint_rect texture_rect;
+		RenderMode mode = RenderMode::World;
 	};
 
 }

@@ -50,6 +50,7 @@ namespace ag
 
 		static void delete_node(Entity entity)
 		{
+			ScriptComponent::destroy(entity);
 			entity.delete_entity();
 		}
 
@@ -57,6 +58,11 @@ namespace ag
 		{
 			clone.add_component<Transform>(original.get_component<Transform>());
 			clone.add_component<CircleProp>(original.get_component<CircleProp>());
+
+			if (original.has_component<ScriptComponent>())
+			{
+				clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
+			}
 		}
 
 		static json save_json(Entity entity)
@@ -65,6 +71,8 @@ namespace ag
 			j["CircleProps"] = CircleProp::save(entity);
 			j["Transform"] = Transform::save(entity);
 
+			j["ScriptComponent"] = ScriptComponent::save_json(entity);
+
 			return j;
 		}
 
@@ -72,6 +80,12 @@ namespace ag
 		{
 			CircleProp::load(entity, j["CircleProps"]);
 			Transform::load(entity, j["Transform"]);
+
+			if (j.contains("ScriptComponent"))
+			{
+				ScriptComponent::load_json(entity, j["ScriptComponent"]);
+				ScriptComponent::load_scripts(entity, j["ScriptComponent"]);
+			}
 		}
 
 		static void show_properties(Entity entity)
@@ -91,6 +105,8 @@ namespace ag
 
 		static void draw(Entity entity, TimeStamp ts)
 		{
+			ScriptComponent::update(entity, ts);
+
 			auto& transform = entity.get_component<Transform>();
 			auto& c = entity.get_component<CircleProp>();
 			Circle circle;

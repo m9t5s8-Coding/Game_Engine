@@ -15,8 +15,6 @@ namespace ag
 			vec2f position;
 			uint_rect texture_rect;
 
-			
-
 			static json save(Tile tile)
 			{
 				json j;

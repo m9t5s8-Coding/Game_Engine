@@ -20,6 +20,7 @@ namespace ag
 
 	}
 
+
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
 		Entity entity(m_registry.create());
@@ -71,6 +72,19 @@ namespace ag
 			auto it = NodeFactory::clear_map.find(e.get_component<Tag>().node_type);
 			if (it != NodeFactory::clear_map.end())
 				it->second(e);
+		}
+	}
+
+	void Scene::on_event(Event& event)
+	{
+		auto view = m_registry.view<Tag>();
+		for (auto entityID : view)
+		{
+			Entity entity(entityID);
+			if (entity.has_component<ScriptComponent>())
+			{
+				ScriptComponent::event(entity, event);
+			}
 		}
 	}
 

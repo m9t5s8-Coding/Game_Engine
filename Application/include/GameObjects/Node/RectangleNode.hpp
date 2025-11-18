@@ -46,7 +46,6 @@ namespace ag
     {
       entity.add_component<Transform>();
       entity.add_component<RectangleProp>();
-
     }
 
     static void delete_node(Entity entity)
@@ -59,6 +58,11 @@ namespace ag
     {
       clone.add_component<Transform>(original.get_component<Transform>());
       clone.add_component<RectangleProp>(original.get_component<RectangleProp>());
+
+      if (original.has_component<ScriptComponent>())
+      {
+        clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
+      }
     }
 
     static json save_json(Entity entity)
@@ -67,7 +71,7 @@ namespace ag
       j["RectangleProps"] = RectangleProp::save(entity);
       j["Transform"] = Transform::save(entity);
 
-      j["ScriptComponent"] = ScriptComponent::save(entity);
+      j["ScriptComponent"] = ScriptComponent::save_json(entity);
 
       return j;
     }
@@ -77,7 +81,12 @@ namespace ag
       RectangleProp::load(entity, j["RectangleProps"]);
       Transform::load(entity, j["Transform"]);
 
-      ScriptComponent::load(entity, j["ScriptComponent"]);
+      if (j.contains("ScriptComponent"))
+      {
+        ScriptComponent::load_json(entity, j["ScriptComponent"]);
+        ScriptComponent::load_scripts(entity, j["ScriptComponent"]);
+      }
+      
     }
 
     static void show_properties(Entity entity)
@@ -99,9 +108,13 @@ namespace ag
     {
       ScriptComponent::update(entity, ts);
 
+      auto& rect = entity.get_component<RectangleProp>();
+      if (!rect.is_visible)
+        return;
+
       auto &transform = entity.get_component<Transform>();
       
-      auto &rect = entity.get_component<RectangleProp>();
+      
       Rectangle rectangle;
       rectangle.size = rect.size;
       rectangle.fill_color = rect.fill_color;

@@ -30,17 +30,16 @@ namespace ag
 
 		m_view_controller->on_update(ts);
 
-		{
-			auto project = Project::get_active_project();
-			std::string script_path = project->get_directory() + project->get_scripts_directory() + "/test.lua";
-			ScriptManager::load_script(script_path);
-		}
-
-		Renderer2D::begin_scene(m_view_controller->get_view());
+		Renderer2D::begin_scene(m_view_controller->get_view(), Application::get().get_window().get_size());
 
 		m_scene->on_update(ts);
 
 		Renderer2D::end_scene();
+	}
+
+	void Sandbox2D::on_event(Event& event)
+	{
+		m_scene->on_event(event);
 	}
 
 	void Sandbox2D::load_project_data()
@@ -50,7 +49,7 @@ namespace ag
 			Project::load_project(project_path);
 		}
 
-		std::string scene_path = "D:/Aero/Test/Scenes/test.aeroscene";
+		std::string scene_path = "D:/Aero/Test/Scenes/game.aeroscene";
 
 		m_scene = SaveScene::load_scene(scene_path);
 		Scene::set_active_scene(m_scene);

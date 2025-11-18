@@ -5,6 +5,8 @@
 
 namespace ag
 {
+  const float MOVE_THRESHOLD = 1.0f;
+
   enum class TransformSetting
   {
     None, Scale, Rotate, Move
@@ -50,6 +52,8 @@ namespace ag
     void reset_transform_setting();
 
 
+    void add_scripts();
+
     void update_tilemap();
 
     bool texture_selector(const AG_ref<Texture2D>& texture, const vec2u& tile_size, uint_rect& texture_rect);
@@ -68,6 +72,7 @@ namespace ag
     vec2f m_last_mouse_position;
     vec2f m_current_mouse_position;
     bool m_mouse_inside_window;
+    vec2f m_delta;
 
     uint_rect m_texture_rect;
     bool m_is_texture_selected;

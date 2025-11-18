@@ -15,7 +15,7 @@ namespace ag
     virtual void on_detach() override;
 
     virtual void on_update(TimeStamp ts) override;
-
+    virtual void on_event(Event& event) override;
 
   private:
 

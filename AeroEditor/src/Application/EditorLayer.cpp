@@ -52,12 +52,17 @@ namespace ag
 		m_view_controller->on_update(ts);
 		m_panel->on_update();
 
+		
+		Renderer2D::begin_scene(m_view_controller->get_view(), m_viewport_size);
 		editor_things();
-		Renderer2D::begin_scene(m_view_controller->get_view());
+
 		m_scene->on_update(ts);
+
+		
 		Renderer2D::end_scene();
 
 		m_framebuffer->unbind();
+
 	}
 
 	void EditorLayer::on_imgui_render()
@@ -229,11 +234,36 @@ namespace ag
 				ImVec2 img_pos = ImGui::GetItemRectMin();
 				ImVec2 mouse = ImGui::GetMousePos();
 				m_viewport_hovered = ImGui::IsItemHovered();
+				ImGuiIO& io = ImGui::GetIO();
 
 				m_viewport_mouse_pos = { mouse.x - img_pos.x, mouse.y - img_pos.y };
+
+				//if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+				//{
+				//	if (m_viewport_mouse_pos.x < 0)
+				//		m_viewport_mouse_pos.x = m_viewport_size.x - 1;
+				//	else if (m_viewport_mouse_pos.x > m_viewport_size.x)
+				//		m_viewport_mouse_pos.x = 1;
+
+				//	// vertical wrap
+				//	if (m_viewport_mouse_pos.y < 0)
+				//		m_viewport_mouse_pos.y = m_viewport_size.y - 1;
+				//	else if (m_viewport_mouse_pos.y > m_viewport_size.y)
+				//		m_viewport_mouse_pos.y = 1;
+
+				//	// Update actual ImGui mouse
+				//	io.MousePos.x = img_pos.x + m_viewport_mouse_pos.x;
+				//	io.MousePos.y = img_pos.y + m_viewport_mouse_pos.y;
+
+				//}
+
+
 				m_view_controller->set_viewport_mouse(m_viewport_mouse_pos);
 				m_viewport_mouse_pos = Math::screen_to_world(m_viewport_mouse_pos, m_view_controller->get_view().get_float_rect(), m_viewport_size);
+				
 				m_panel->set_current_mouse_position(m_viewport_mouse_pos);
+
+				
 			}
 		}
 		ImGui::End();
@@ -282,7 +312,6 @@ namespace ag
 
 	void EditorLayer::editor_things()
 	{
-		Renderer2D::begin_screen_scene(m_viewport_size);
 		Rectangle x_axis, y_axis;
 		Transform x_axis_transform, y_axis_transform;
 		x_axis.fill_color = Color(255, 107, 107, 200);
@@ -291,11 +320,14 @@ namespace ag
 		x_axis.size =  vec2f(m_viewport_size.x, 1);
 		y_axis.size =  vec2f(1, m_viewport_size.y);
 
+		x_axis.mode = RenderMode::Screen;
+		y_axis.mode = RenderMode::Screen;
+
 		const auto& view = m_view_controller->get_view();
 		// x axis and y axis
 		{
-			x_axis_transform.position = { view.get_center().x, 0 };
-			y_axis_transform.position = { 0, view.get_center().y };
+			x_axis_transform.position = vec2i( view.get_center().x, 0 );
+			y_axis_transform.position = vec2i( 0, view.get_center().y );
 			x_axis_transform.position = Math::world_to_screen(x_axis_transform.position, view.get_float_rect(), m_viewport_size);
 			y_axis_transform.position = Math::world_to_screen(y_axis_transform.position, view.get_float_rect(), m_viewport_size);
 			Renderer2D::draw_rectangle(y_axis, y_axis_transform);
@@ -345,7 +377,6 @@ namespace ag
 			}
 		}*/
 
-		Renderer2D::end_screen_scene();
 	}
 
 	void EditorLayer::draw_transform_settings(Entity e)
@@ -357,20 +388,23 @@ namespace ag
 		Transform x_axis_transform, y_axis_transform;
 
 		// Axis visual properties
-		x_axis.fill_color = Color(255, 107, 107, 150);
-		y_axis.fill_color = Color(78, 205, 196, 150);
+		x_axis.fill_color = Color(255, 107, 107, 180);
+		y_axis.fill_color = Color(78, 205, 196, 180);
 
 		x_axis.size = vec2f(m_viewport_size.x, 1);
 		y_axis.size = vec2f(1, m_viewport_size.y);
+
+		x_axis.mode = RenderMode::Screen;
+		y_axis.mode = RenderMode::Screen;
 
 		if (!e.has_component<Transform>())
 			return;
 
 		const auto& transform = e.get_component<Transform>();
 
-		vec2f x_pos{ view.get_center().x, transform.position.y };
-		vec2f y_pos{ transform.position.x, view.get_center().y };
-
+		vec2i x_pos = vec2i( view.get_center().x, transform.position.y );
+		vec2i y_pos = vec2i( transform.position.x, view.get_center().y );
+		 
 		x_axis_transform.position = Math::world_to_screen(x_pos, view.get_float_rect(), m_viewport_size);
 		y_axis_transform.position = Math::world_to_screen(y_pos, view.get_float_rect(), m_viewport_size);
 

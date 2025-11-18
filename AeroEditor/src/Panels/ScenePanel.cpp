@@ -173,7 +173,7 @@ namespace ag
 				ImGui::SameLine(0, 5.0f);
 				if (ImGui::Button("s", ImVec2(30, 30)))
 				{
-
+					add_scripts();
 				}
 				ImGui::SetWindowFontScale(1.0f);
 				ImGui::PopStyleVar();
@@ -303,25 +303,37 @@ namespace ag
 			m_initial_transform.position = position;
 			m_last_mouse_position = m_current_mouse_position;
 			m_move_flag = true;
+			m_delta = { 0, 0 };
 		}
 
 		vec2f delta = m_current_mouse_position - m_last_mouse_position;
+		m_delta += delta;
 
 		switch (m_current_transform_axis)
 		{
 		case ag::TransformAxis::None:
 		{
-			position += delta;
+			vec2f int_part = { std::floor(m_delta.x), std::floor(m_delta.y) };
+			position += int_part;
+
+			m_delta.x -= int_part.x;
+			m_delta.y -= int_part.y;
 			break;
 		}
 		case ag::TransformAxis::X:
 		{
-			position.x += delta.x;
+			float int_x = std::floor(m_delta.x);
+			position.x += int_x;
+
+			m_delta.x -= int_x;
 			break;
 		}
 		case ag::TransformAxis::Y:
 		{
-			position.y += delta.y;
+			float int_y = std::floor(m_delta.y);
+			position.y += int_y;
+
+			m_delta.y -= int_y;
 			break;
 		}
 		}
@@ -385,6 +397,45 @@ namespace ag
 		transform.scale.y = std::max(0.01f, transform.scale.y);
 	}
 
+	void ScenePanel::add_scripts()
+	{
+		if (!m_selected_entity)
+			return;
+
+		auto full_path = FileDialogs::open_file("Lua Scripts(*.lua)\0 * .lua\0All Files(*.*)\0 * .*\0");
+		if (!full_path.empty())
+		{
+			auto project = Project::get_active_project();
+			Helper::normalize_path(full_path);
+
+			std::string project_dir = project->get_directory();
+			std::string script_dir = project->get_scripts_directory();
+
+			std::string base_path = project_dir + script_dir + "/";
+
+			std::string relative_path = full_path;
+			if (relative_path.find(base_path) == 0)
+				relative_path = relative_path.substr(base_path.size());
+
+			Helper::normalize_path(relative_path);
+
+			std::filesystem::path p(full_path);
+			std::string script_path = "/" + relative_path;
+
+			if (!m_selected_entity.has_component<ScriptComponent>())
+			{
+				ScriptComponent comp;
+				comp.script_path = script_path;
+				m_selected_entity.add_component<ScriptComponent>(comp);
+			}
+			else
+			{
+				auto& comp = m_selected_entity.get_component<ScriptComponent>();
+				comp.script_path = script_path;
+			}
+		}
+	}
+
 	void ScenePanel::reset_transform_setting()
 	{
 		m_current_transform_setting = TransformSetting::None;
@@ -392,6 +443,7 @@ namespace ag
 		m_move_flag = false;
 		m_scale_flag = false;
 		m_rotate_flag = false;
+		m_delta = { 0, 0 };
 	}
 
 	void ScenePanel::update_tilemap()

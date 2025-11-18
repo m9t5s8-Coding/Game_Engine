@@ -52,6 +52,8 @@ namespace ag
 
     ImGuiLayer *get_imgui_layer() { return m_imgui_layer; }
 
+    bool is_minimized() const { return m_minimized; }
+
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);

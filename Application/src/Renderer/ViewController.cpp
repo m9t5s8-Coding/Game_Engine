@@ -36,23 +36,7 @@ namespace ag
 
   void ViewController::on_update(TimeStamp ts)
   {
-    if (m_view.get_size().x >= 3000)
-    {
-      float aspect_ratio = m_view.get_size().x / m_view.get_size().y;
-      m_view.set_size({ 3000, 3000 / aspect_ratio });
-      m_view_ismax = true;
-    }
-    else if (m_view.get_size().x <= 100)
-    {
-      float aspect_ratio = m_view.get_size().x / m_view.get_size().y;
-      m_view.set_size({ 100, 100 / aspect_ratio });
-      m_view_ismin = true;
-    }
-    else
-    {
-      m_view_ismax = false;
-      m_view_ismin = false;
-    }
+    
   }
 
   void ViewController::on_event(Event &e)
@@ -67,35 +51,42 @@ namespace ag
 
   bool ViewController::on_mouse_scroll(MouseScrolledEvent &e)
   {
-    float scale_factor = 1.0f;
-    bool is_zoom_in = false;
-    if (e.get_offsetY() > 0)
+    float scale_factor = (e.get_offsetY() > 0) ? 0.9f : 1.1f;
+
+    vec2f world_before_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
+
+    m_view.zoom(scale_factor);
+
+    vec2f view_size = m_view.get_size();
+    float aspect_ratio = view_size.x / view_size.y;
+
+    vec2f world_after_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
+    vec2f offset = world_before_zoom - world_after_zoom;
+
+    if (view_size.x > 4000.0f)
     {
-      is_zoom_in = true;
-      scale_factor = 0.9f;
+      m_view.set_size({ 4000.0f, 4000.0f / aspect_ratio });
+    }
+    else if (view_size.x < 50.0f)
+    {
+      m_view.set_size({ 50.0f, 50.0f / aspect_ratio });
     }
     else
     {
-      is_zoom_in = false;
-      scale_factor = 1.1f;
-    }
-    vec2f before_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
-    m_view.zoom(scale_factor);
-
-    vec2f after_zoom = Math::screen_to_world(m_mouse_in_viewport, m_view.get_float_rect(), m_viewport_size);
-
-    vec2f offset = before_zoom - after_zoom;
-    
-    if ((is_zoom_in && !m_view_ismin) || (!is_zoom_in && !m_view_ismax))
-    {
       m_view.move(offset);
     }
+
     return false;
   }
 
   bool ViewController::on_window_resize(WindowResizeEvent &e)
   {
     vec2f window_size = e.get_size();
+    if (window_size.x == 0 || window_size.y == 0)
+      return false;
+
+    m_last_size = window_size;
+
     on_resize(window_size);
     return false;
   }
@@ -109,7 +100,6 @@ namespace ag
     view_size.y *= scale_y;
 
     m_view.set_size(view_size);
-
     m_last_size = size;
   }
 
@@ -132,9 +122,9 @@ namespace ag
     return false;
   }
 
-  bool ViewController::on_mouse_moved(MouseMovedEvent &e)
+  bool ViewController::on_mouse_moved(MouseMovedEvent& e)
   {
-    if(!m_middle_pressed) return false;
+    if (!m_middle_pressed) return false;
 
     vec2f current = m_mouse_in_viewport;
     vec2f start = Math::screen_to_world(m_last_mouse_pos, m_view.get_float_rect(), m_viewport_size);

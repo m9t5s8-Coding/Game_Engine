@@ -38,7 +38,10 @@ namespace ag
 
 		vec2i m_viewport_size;
 		vec2f m_viewport_mouse_pos;
+		vec2f m_last_mouse;
 		bool m_viewport_hovered = false;
+
+		bool m_minimized = false;
 
 		static EditorLayer *s_instance;
 

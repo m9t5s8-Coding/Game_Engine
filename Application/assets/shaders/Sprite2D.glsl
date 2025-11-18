@@ -10,8 +10,10 @@ layout(location = 3) in vec2 a_int_pos;
 layout(location = 4) in float a_int_rotation;
 layout(location = 5) in vec2 a_int_texture_size;
 layout(location = 6) in vec4 a_int_texture_rect;
+layout(location = 7) in int a_int_mode;
 
 uniform mat3 u_view_matrix;
+uniform mat3 u_screen_matrix;
 
 out vec2 tex_coord;
 
@@ -34,7 +36,17 @@ void main()
 
 
   vec3 pos = vec3(rotated, 1.0);
-  vec3 ndc = u_view_matrix * pos;
+
+  vec3 ndc;
+  if(a_int_mode == 0)
+  {
+    ndc = u_screen_matrix * pos;
+  }
+  else if(a_int_mode == 1)
+  {
+    ndc = u_view_matrix * pos;
+  }
+
   gl_Position = vec4(ndc.xy, 0.0, 1.0);
 
   vec2 tex_local_pos;

@@ -56,15 +56,23 @@ namespace ag
     for (const auto &element : layout)
     {
       glEnableVertexAttribArray(index);
-      glVertexAttribPointer(index, element.get_component_count(),
-        shader_dt_to_openGL_type(element.type),
-        element.normalized ? GL_TRUE : GL_FALSE,
-        layout.get_stride(),
-        reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
+      if (shader_dt_to_openGL_type(element.type) == GL_FLOAT)
+      {
+        glVertexAttribPointer(index, element.get_component_count(),
+          shader_dt_to_openGL_type(element.type),
+          element.normalized ? GL_TRUE : GL_FALSE,
+          layout.get_stride(),
+          reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
+      }
+      else if (shader_dt_to_openGL_type(element.type) == GL_INT)
+      {
+        glVertexAttribIPointer(index, element.get_component_count(),
+          GL_INT,
+          layout.get_stride(),
+          reinterpret_cast<const void*>(static_cast<uintptr_t>(element.offset)));
+      }
       if(instanced)
         glVertexAttribDivisor(index, 1);
-
-
       index++;
     }
     

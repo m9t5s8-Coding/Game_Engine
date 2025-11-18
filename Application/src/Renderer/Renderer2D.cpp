@@ -24,6 +24,7 @@ namespace ag
     float border_thickness;
     vec4f fill_color;
     vec4f border_color;
+    int mode;
   };
 
   struct Circle_Instance
@@ -35,6 +36,7 @@ namespace ag
     float border_thickness;
     vec4f fill_color;
     vec4f border_color;
+    int mode;
   };
 
   struct Sprite_Instance
@@ -44,6 +46,7 @@ namespace ag
     float rotation;
     vec2f texture_size;
     vec4f texture_rect;
+    int mode;
   };
 
   struct Renderer2D_Data
@@ -126,6 +129,7 @@ namespace ag
           {ShaderDataType::Float, "a_BorderThickness"},
           {ShaderDataType::Float4, "a_FillColor"},
           {ShaderDataType::Float4, "a_BorderColor"},
+          {ShaderDataType::Int, "a_RenderMode"}
       };
       s_data->rect_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Rectangle_Instance) * s_data->max_vertices);
       s_data->rect_instanced_buffer->set_layout(instance_layout);
@@ -155,6 +159,7 @@ namespace ag
           {ShaderDataType::Float, "a_BorderThickness"},
           {ShaderDataType::Float4, "a_FillColor"},
           {ShaderDataType::Float4, "a_BorderColor"},
+          {ShaderDataType::Int, "a_RenderMode"}
       };
 
       s_data->circle_instanced_buffer = VertexBuffer::create(nullptr, s_data->max_vertices * sizeof(Circle_Instance));
@@ -190,6 +195,7 @@ namespace ag
          {ShaderDataType::Float, "a_InstanceRotation"},
          {ShaderDataType::Float2, "a_Texture_Size"},
          {ShaderDataType::Float4, "a_TextureRect"},
+         {ShaderDataType::Int, "a_RenderMode"}
       };
       s_data->sprite_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Sprite_Instance) * s_data->max_vertices);
       s_data->sprite_instanced_buffer->set_layout(instance_layout);
@@ -223,9 +229,9 @@ namespace ag
     }
   }
 
-  void Renderer2D::begin_scene(const View &view)
+  void Renderer2D::begin_scene(const View& view, const vec2f& viewport_size)
   {
-    Renderer::begin_scene(view);
+    Renderer::begin_scene(view, viewport_size);
     s_data->view = view;
 
     start_batch();
@@ -238,18 +244,6 @@ namespace ag
     flush();
   }
 
-  void Renderer2D::begin_screen_scene(const vec2f& viewport_size)
-  {
-    Renderer::begin_screen_scene(viewport_size);
-    start_batch();
-
-    s_data->total_quads = 0;
-  }
-  void Renderer2D::end_screen_scene()
-  {
-    flush();
-    Renderer::end_screen_scene();
-  }
 
   void Renderer2D::start_batch()
   {
@@ -297,6 +291,7 @@ namespace ag
       instance->border_thickness = rect.border_thickness;
       rect.fill_color.normalize_color(instance->fill_color);
       rect.border_color.normalize_color(instance->border_color);
+      instance->mode = static_cast<int>(rect.mode);
     }
     s_data->rectangle_index++;
   }
@@ -316,6 +311,7 @@ namespace ag
       instance->border_thickness = circle.border_thickness;
       circle.fill_color.normalize_color(instance->fill_color);
       circle.border_color.normalize_color(instance->border_color);
+      instance->mode = (int)circle.mode;
     }
     s_data->circle_index++;
   }
@@ -333,6 +329,7 @@ namespace ag
       instance->rotation = Math::to_radians(transform.rotation);
       instance->size = sprite.size * transform.scale;
       sprite.texture_rect.to_vec4(instance->texture_rect);
+      instance->mode = (int)sprite.mode;
     }
     s_data->sprite_index++;
   }

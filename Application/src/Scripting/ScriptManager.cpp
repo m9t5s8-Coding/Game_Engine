@@ -67,16 +67,7 @@ namespace ag
 	{
 		auto& e = env.get();
 
-		sol::load_result script = s_lua_state.load_file(path);
-
-		if (!script.valid())
-		{
-			sol::error err = script;
-			AERO_CORE_ERROR("[Lua Error] {0}", err.what());
-			return;
-		}
-
-		sol::protected_function_result result = script(e);
+		sol::protected_function_result result = s_lua_state.safe_script_file(path, e);
 
 		if (!result.valid())
 		{

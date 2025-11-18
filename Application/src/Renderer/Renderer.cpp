@@ -5,25 +5,19 @@
 namespace ag
 {
   Renderer::SceneData* Renderer::s_scenedata = new Renderer::SceneData;
-  void Renderer::begin_scene(const View &view)
+  void Renderer::begin_scene(const View& view, const vec2f& viewport_size)
   {
     s_scenedata->view_matrix = view.get_view_matrix();
+
+    vec2f viewport_center = viewport_size / 2;
+    s_scenedata->screen_matrix = Math::get_view_matrix(viewport_size, viewport_center);
   }
 
   void Renderer::end_scene()
   {
 
   }
-  void Renderer::begin_screen_scene(const vec2f& viewport_size)
-  {
-    vec2f window_size = viewport_size;
-    vec2f window_center = window_size / 2;
-    s_scenedata->view_matrix = Math::get_view_matrix(window_size, window_center);
-  }
-  void Renderer::end_screen_scene()
-  {
 
-  }
 
   void Renderer::init()
   {
@@ -40,6 +34,8 @@ namespace ag
   {
     p_shader->bind();
     p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
+    p_shader->set_mat3("u_screen_matrix", s_scenedata->screen_matrix);
+
     p_vertexarray->bind();
     RenderCommand::draw_indexed(p_vertexarray);
   }
@@ -47,6 +43,7 @@ namespace ag
   {
     p_shader->bind();
     p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
+    p_shader->set_mat3("u_screen_matrix", s_scenedata->screen_matrix);
     p_vertexarray->bind();
     RenderCommand::draw_instanced(p_vertexarray, instanced_count);
   }

@@ -10,8 +10,10 @@ layout(location = 4) in float a_int_rotation;
 layout(location = 5) in float a_int_border_thickness;
 layout(location = 6) in vec4 a_int_fill_color;
 layout(location = 7) in vec4 a_int_border_color;
+layout(location = 8) in int a_int_mode;
 
 uniform mat3 u_view_matrix;
+uniform mat3 u_screen_matrix;
 
 out vec4 fill_color;
 out vec4 border_color;
@@ -52,7 +54,16 @@ void main()
 
   rotated += a_int_pos;
   vec3 pos = vec3(rotated, 1.0);
-  vec3 ndc = u_view_matrix * pos;
+
+  vec3 ndc;
+  if(a_int_mode == 0)
+  {
+    ndc = u_screen_matrix * pos;
+  }
+  else if(a_int_mode == 1)
+  {
+    ndc = u_view_matrix * pos;
+  }
   gl_Position = vec4(ndc.xy, 0.0, 1.0);
 }
 

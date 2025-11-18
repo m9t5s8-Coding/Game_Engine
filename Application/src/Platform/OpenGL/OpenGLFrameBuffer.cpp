@@ -65,6 +65,7 @@ namespace ag
   void OpenGLFrameBuffer::resize(const vec2u& size)
   {
     m_specification.size = size;
+
     invalidate();
   }
 }

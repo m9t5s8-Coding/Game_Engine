@@ -14,9 +14,9 @@ namespace ag
 		{
 			vec2f view_size;
 			vec2f view_center;
+			bool is_active = false;
 
 			float zoom = 1.0f;
-			bool is_active = false;
 
 			bool is_visible = true;
 

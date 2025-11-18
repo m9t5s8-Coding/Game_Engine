@@ -16,11 +16,9 @@ namespace ag
     static void init();
     static void shut_down();
 
-    static void begin_scene(const View &view);
+    static void begin_scene(const View &view, const vec2f& viewport_size);
     static void end_scene();
 
-    static void begin_screen_scene(const vec2f& viewport_size);
-    static void end_screen_scene();
 
     static void flush();
 
