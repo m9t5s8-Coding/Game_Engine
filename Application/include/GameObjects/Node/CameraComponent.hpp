@@ -18,7 +18,6 @@ namespace ag
 
 			float zoom = 1.0f;
 
-			bool is_visible = true;
 
 			static json save(Entity entity)
 			{

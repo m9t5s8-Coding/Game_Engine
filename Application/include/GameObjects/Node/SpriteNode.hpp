@@ -16,7 +16,8 @@ namespace ag
 			vec2u size;
 			uint_rect texture_rect;
 
-			bool is_visible = true;
+			bool flip_horizontal = false;
+			bool flip_vertical = false;
 
 			static json save(Entity entity)
 			{
@@ -93,13 +94,30 @@ namespace ag
 					UI::draw_string("Texture Path", sprite.texture_path);
 					if (ImGui::Button("Load Texture"))
 					{
+						std::string full_path = FileDialogs::open_file("Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0");
+						if (!full_path.empty())
 						{
 							auto project = Project::get_active_project();
-							std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite.texture_path;
-							sprite.texture = Texture2D::create(texture_path);
+							Helper::normalize_path(full_path);
+
+							std::string project_dir = project->get_directory();
+							std::string assets_dir = project->get_assets_directory();
+
+							std::string base_path = project_dir + assets_dir + "/";
+
+							std::string relative_path = full_path;
+							if (relative_path.find(base_path) == 0)
+								relative_path = relative_path.substr(base_path.size());
+
+							Helper::normalize_path(relative_path);
+
+							sprite.texture_path = relative_path;
+
+							sprite.texture = Texture2D::create(full_path);
+
+							vec2u texture_size = sprite.texture->get_size();
+							sprite.texture_rect = {0, 0, sprite.size};
 						}
-						sprite.size = sprite.texture->get_size();
-						sprite.texture_rect = uint_rect(0, 0, sprite.size);
 					}
 				}
 				{
@@ -116,12 +134,19 @@ namespace ag
 
 		static void draw(Entity entity, TimeStamp ts)
 		{
+			auto is_visible = entity.get_component<Tag>().is_visible;
+			if (!is_visible)
+				return;
+
+
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<SpriteProp>();
 			Sprite sprite;
 			sprite.size = s.size;
 
 			sprite.texture_rect = s.texture_rect;
+			sprite.flip_horizontal = s.flip_horizontal;
+			sprite.flip_vertical = s.flip_vertical;
 
 			Renderer2D::set_texture(s.texture);
 			Renderer2D::draw_sprite(sprite, transform);

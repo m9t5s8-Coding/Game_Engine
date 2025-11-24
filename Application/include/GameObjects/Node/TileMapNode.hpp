@@ -12,39 +12,59 @@ namespace ag
 	{
 		struct Tile
 		{
-			vec2f position;
-			uint_rect texture_rect;
+			vec2u texture_id;
 
 			static json save(Tile tile)
 			{
 				json j;
 
-				Helper::save_json(j, "Position", tile.position);
-				Helper::save_json(j, "Texture Rect", tile.texture_rect);
+				Helper::save_json(j, "Texture ID", tile.texture_id);
 
 				return j;
 			}
 
 			static void load(Tile& tile, const json& j)
 			{
-				Helper::load_json(j, "Position", tile.position);
-				Helper::load_json(j, "Texture Rect", tile.texture_rect);
+				Helper::load_json(j, "Texture ID", tile.texture_id);
 			}
 		};
+
+		struct TileTexture
+		{
+			vec2u texture_pos;
+			uint_rect texture_rect;
+
+			static json save(TileTexture texture)
+			{
+				json j;
+
+				Helper::save_json(j, "Position", texture.texture_pos);
+				Helper::save_json(j, "Texture Rect", texture.texture_rect);
+
+				return j;
+			}
+
+			static void load(TileTexture& texture, const json& j)
+			{
+				Helper::load_json(j, "Position", texture.texture_pos);
+				Helper::load_json(j, "Texture Rect", texture.texture_rect);
+			}
+		};
+
+
 		struct TileMapProp
 		{
 			vec2f size = { 32, 32 };
 			vec2f offset;
 			AG_ref<Texture2D> texture;
 			std::string texture_path = "default.png";
-			std::unordered_map<vec2i, Tile, vec2_hash<int>> tiles;
 
+			std::unordered_map<vec2u, TileTexture, vec2_hash<AG_uint>> tile_textures;
+			std::unordered_map<vec2i, Tile, vec2_hash<int>> tiles;
 
 			Sprite ghost_sprite;
 			bool display_ghost = false;
 			vec2i ghost_sprite_position;
-
-			bool is_visible = true;
 
 			static json save(Entity entity)
 			{
@@ -108,26 +128,31 @@ namespace ag
 			}
 			entity.add_component<TileMapProp>(props);
 		}
+		
 		static void delete_node(Entity entity)
 		{
 
 		}
+		
 		static void clone_node(Entity original, Entity clone)
 		{
 			auto& src = original.get_component<TileMapProp>();
 
 			clone.add_component<TileMapProp>(src);
 		}
+		
 		static json save_json(Entity entity)
 		{
 			json j;
 			j["TileMapProp"] = TileMapProp::save(entity);
 			return j;
 		}
+		
 		static void load_json(Entity entity, const json& j)
 		{
 			TileMapProp::load(entity, j["TileMapProp"]);
 		}
+		
 		static void show_properties(Entity entity)
 		{
 				auto& props = entity.get_component<TileMapProp>();
@@ -163,12 +188,18 @@ namespace ag
 					}
 				}
 		}
+		
 		static void update(Entity enitity, TimeStamp ts)
 		{
 
 		}
+		
 		static void draw(Entity entity, TimeStamp ts)
 		{
+			auto is_visible = entity.get_component<Tag>().is_visible;
+			if (!is_visible)
+				return;
+
 
 			auto& props = entity.get_component<TileMapProp>();
 			Transform trans;
@@ -177,8 +208,15 @@ namespace ag
 			for (const auto& [position, tile] : props.tiles)
 			{
 				sprite.size = props.size;
-				sprite.texture_rect = tile.texture_rect;
-				trans.position = (tile.position * props.size) + props.size / 2 + props.offset;
+
+				auto tex_it = props.tile_textures.find(tile.texture_id);
+				if (tex_it != props.tile_textures.end())
+				{
+					const TileTexture& tile_tex = tex_it->second;
+					sprite.texture_rect = tile_tex.texture_rect;
+				}
+
+				trans.position = (position * props.size) + props.size / 2 + props.offset;
 
         Renderer2D::draw_sprite(sprite, trans);
 			}

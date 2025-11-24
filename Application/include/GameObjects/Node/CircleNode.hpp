@@ -17,7 +17,6 @@ namespace ag
 			float border_thickness = 0.0f;
 			Color border_color = Color::White;
 
-			bool is_visible = true;
 
 			static json save(Entity entity)
 			{
@@ -106,6 +105,10 @@ namespace ag
 		static void draw(Entity entity, TimeStamp ts)
 		{
 			ScriptComponent::update(entity, ts);
+
+			auto is_visible = entity.get_component<Tag>().is_visible;
+			if (!is_visible)
+				return;
 
 			auto& transform = entity.get_component<Transform>();
 			auto& c = entity.get_component<CircleProp>();

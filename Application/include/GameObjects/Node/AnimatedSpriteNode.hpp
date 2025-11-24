@@ -52,8 +52,8 @@ namespace ag
 			bool playing = true;
 			float timer = 0.0f;
 
-			bool is_visible = true;
-
+			bool flip_horizontal = false;
+			bool flip_vertical = false;
 
 			static json save(Entity entity)
 			{
@@ -121,6 +121,7 @@ namespace ag
 
 		static void delete_node(Entity entity)
 		{
+			ScriptComponent::destroy(entity);
 			entity.delete_entity();
 		}
 
@@ -128,6 +129,11 @@ namespace ag
 		{
 			clone.add_component<Transform>(original.get_component<Transform>());
 			clone.add_component<AnimatedSpriteProps>(original.get_component<AnimatedSpriteProps>());
+
+			if (original.has_component<ScriptComponent>())
+			{
+				clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
+			}
 		}
 
 		static json save_json(Entity entity)
@@ -135,6 +141,8 @@ namespace ag
 			json j;
 			j["AnimationSprite2DProps"] = AnimatedSpriteProps::save(entity);
 			j["Transform"] = Transform::save(entity);
+
+			j["ScriptComponent"] = ScriptComponent::save_json(entity);
 
 			return j;
 		}
@@ -145,7 +153,12 @@ namespace ag
 			Transform::load(entity, j["Transform"]);
 			AnimatedSpriteProps::load(entity, j["AnimationSprite2DProps"]);
 
-			
+			if (j.contains("ScriptComponent"))
+			{
+				ScriptComponent::load_json(entity, j["ScriptComponent"]);
+				ScriptComponent::load_scripts(entity, j["ScriptComponent"]);
+			}
+
 		}
 
 		static void show_properties(Entity entity)
@@ -308,7 +321,12 @@ namespace ag
 
 		static void draw(Entity entity, TimeStamp ts)
 		{
-			
+			ScriptComponent::update(entity, ts);
+
+			auto is_visible = entity.get_component<Tag>().is_visible;
+			if (!is_visible)
+				return;
+
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
 			if(s.playing)
@@ -319,7 +337,33 @@ namespace ag
 			Sprite sprite;
 			sprite.texture_rect = s.texture_rect;
 			sprite.size = s.texture_rect.size;
+			sprite.flip_horizontal = s.flip_horizontal;
+			sprite.flip_vertical = s.flip_vertical;
+
 			Renderer2D::draw_sprite(sprite, transform);
 		}
-	};
+	
+		
+		static bool play_animation(Entity entity, const std::string& anim_name)
+		{
+			if (entity.has_component<AnimatedSprite2DNode::AnimatedSpriteProps>())
+			{
+				auto& props = entity.get_component<AnimatedSprite2DNode::AnimatedSpriteProps>();
+
+				if (props.animations.contains(anim_name));
+				{
+					for (auto& [name, anim] : props.animations)
+					{
+						if (props.current_animation != anim_name)
+						{
+							props.current_frame = 0;
+							props.current_animation = anim_name;
+						}
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+};
 }

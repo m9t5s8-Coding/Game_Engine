@@ -49,7 +49,7 @@ namespace ag
 			Project::load_project(project_path);
 		}
 
-		std::string scene_path = "D:/Aero/Test/Scenes/game.aeroscene";
+		std::string scene_path = "D:/Aero/Test/Scenes/player.aeroscene";
 
 		m_scene = SaveScene::load_scene(scene_path);
 		Scene::set_active_scene(m_scene);

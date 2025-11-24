@@ -47,6 +47,7 @@ namespace ag
     vec2f texture_size;
     vec4f texture_rect;
     int mode;
+    vec2f flip;
   };
 
   struct Renderer2D_Data
@@ -195,7 +196,8 @@ namespace ag
          {ShaderDataType::Float, "a_InstanceRotation"},
          {ShaderDataType::Float2, "a_Texture_Size"},
          {ShaderDataType::Float4, "a_TextureRect"},
-         {ShaderDataType::Int, "a_RenderMode"}
+         {ShaderDataType::Int, "a_RenderMode"},
+         {ShaderDataType::Float2, "a_flip"}
       };
       s_data->sprite_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Sprite_Instance) * s_data->max_vertices);
       s_data->sprite_instanced_buffer->set_layout(instance_layout);
@@ -330,6 +332,8 @@ namespace ag
       instance->size = sprite.size * transform.scale;
       sprite.texture_rect.to_vec4(instance->texture_rect);
       instance->mode = (int)sprite.mode;
+      instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
+      instance->flip.y = (sprite.flip_vertical) ? -1.0f : 1.0f;
     }
     s_data->sprite_index++;
   }

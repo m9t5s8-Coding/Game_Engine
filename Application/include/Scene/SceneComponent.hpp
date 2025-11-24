@@ -56,6 +56,8 @@ namespace ag
 		Entity parent;
 		std::vector<Entity> children;
 
+		bool is_visible = true;
+
 		static void show_properties(Entity entity)
 		{
 			auto& tag = entity.get_component<Tag>();
@@ -249,6 +251,8 @@ namespace ag
 		vec2f size;
 		uint_rect texture_rect;
 		RenderMode mode = RenderMode::World;
+		bool flip_horizontal = false;
+		bool flip_vertical = false;
 	};
 
 }

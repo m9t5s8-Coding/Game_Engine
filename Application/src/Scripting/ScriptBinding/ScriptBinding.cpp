@@ -77,10 +77,13 @@ namespace ag
 					{"Menu", ag::Key::Menu}
 			});
 
+
+		// Keyboard.is_key_down(Key.W)
 		keyboard.set_function("is_key_down", [](ag::KeyCode key) -> bool {
 			return ag::Keyboard::is_key_pressed(key);
 			});
 
+		// Keyboard.is_key_up(Key.W)
 		keyboard.set_function("is_key_up", [](ag::KeyCode key) -> bool {
 			return ag::Keyboard::is_key_released(key);
 			});
@@ -92,25 +95,29 @@ namespace ag
 
 		sol::table mouse = lua.create_named_table("Mouse");
 
-		lua.new_enum<ag::KeyCode>("Button",
+		lua.new_enum<ag::MouseCode>("Button",
 			{
-					{"Left", ag::Button::ButtonLeft},
-					{"Right", ag::Button::ButtonRight},
-					{"Middle", ag::Button::ButtonRight}
+				{"Left", ag::Button::Button0},
+				{"Right", ag::Button::Button1},
+				{"Middle", ag::Button::Button2},
 			});
 
+		// Mouse.is_button_down(Button.Left)
 		mouse.set_function("is_button_down", [](ag::MouseCode button) -> bool {
 			return ag::Mouse::is_mouse_pressed(button);
 			});
 
+		// Mouse.is_button_up(Button.Left)
 		mouse.set_function("is_button_up", [](ag::MouseCode button) -> bool {
 			return ag::Mouse::is_mouse_released(button);
 			});
 
+		// Mouse.get_mouse_position()
 		mouse.set_function("get_mouse_position", []() -> ag::vec2f {
 			return ag::Mouse::get_mouse_position();
 			});
 
+		// Mouse.set_mouse_position(position)
 		mouse.set_function("set_mouse_position", [](ag::vec2f position) {
 			ag::Mouse::set_mouse_position(position);
 			});
@@ -120,8 +127,6 @@ namespace ag
 	void ScriptBinding::register_events()
 	{
 		auto& lua = ScriptManager::get_lua();
-
-		sol::table mouse = lua.create_named_table("Mouse");
 
 		lua.new_enum<ag::Event_Type>("EventType",
 			{
@@ -321,171 +326,226 @@ namespace ag
 			"get", &ScriptableEntity::get
 		);
 
-		// Position
-		lua.set_function("get_position", [](ag::Entity& entity) -> vec2f
-			{
-				if (entity.has_component<Transform>()) {
-					return entity.get_component<Transform>().position;
-				}
-				return vec2f{ 0, 0 };
-			});
-		lua.set_function("set_position", [](ag::Entity& entity, const vec2f& position)
-			{
-				if (entity.has_component<Transform>())
-				{
-					entity.get_component<Transform>().position = position;
-				}
-			});
+		// Tag Component
+		{
+			// Visibility
+			lua.set_function("is_visible", [](ag::Entity& entity) -> bool {
+				return NodeHelper::get_comp_value(entity, &Tag::is_visible, true);
+				});
 
-		// Scale
-		lua.set_function("get_scale", [](ag::Entity& entity) -> vec2f {
-			if (entity.has_component<Transform>())
-			{
-				return entity.get_component<Transform>().scale;
-			}
-			return { 0, 0 };
-			});
-		lua.set_function("set_scale", [](ag::Entity& entity, const vec2f& scale) {
-			if (entity.has_component<Transform>())
-			{
-				entity.get_component<Transform>().scale = scale;
-			}
-			});
+			lua.set_function("set_visible", [](ag::Entity& entity, const bool visible) {
+				NodeHelper::set_comp_value(entity, &Tag::is_visible, visible);
+				});
 		
-		//Rotation
-		lua.set_function("get_rotation", [](ag::Entity& entity) -> float
-			{
-				if (entity.has_component<Transform>())
-				{
-					return entity.get_component<Transform>().rotation;
-				}
-				return 0.0f;
-			});
-		lua.set_function("set_rotation", [](ag::Entity& entity, const float rotation)
-			{
-				if (entity.has_component<Transform>())
-				{
-					entity.get_component<Transform>().rotation = rotation;
-				}
-			});
-	
+		
 
-		// Rectangle Node
+		}
+
+		// Transform Component
+		{
+			// Position
+			lua.set_function("get_position", [](ag::Entity& entity) -> vec2f
+				{
+					return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+				});
+
+			lua.set_function("set_position", [](ag::Entity& entity, const vec2f& position)
+				{
+					NodeHelper::set_comp_value(entity, &Transform::position, position);
+				});
+
+
+			// Scale
+			lua.set_function("get_scale", [](ag::Entity& entity) -> vec2f {
+				return NodeHelper::get_comp_value(entity, &Transform::scale, vec2f(1, 1));
+				});
+
+			lua.set_function("set_scale", [](ag::Entity& entity, const vec2f& scale) {
+				NodeHelper::set_comp_value(entity, &Transform::scale, scale);
+				});
+
+
+			//Rotation
+			lua.set_function("get_rotation", [](ag::Entity& entity) -> float
+				{
+					return NodeHelper::get_comp_value(entity, &Transform::rotation, 0.0f);
+				});
+
+			lua.set_function("set_rotation", [](ag::Entity& entity, const float rotation)
+				{
+					NodeHelper::set_comp_value(entity, &Transform::rotation, rotation);
+				});
+		}
+
+		// Rectangle Node and Circle Node
 		{
 			// Fill Color
 			lua.set_function("get_fill_color", [](ag::Entity& entity) -> Color {
-				auto node_type = entity.get_component<Tag>().node_type;
+				auto node_type = NodeHelper::get_nodetype(entity);
 				switch (node_type)
 				{
 				case ag::NodeType::Rectangle:
-				{
-					if (entity.has_component<RectangleNode::RectangleProp>())
-					{
-						return entity.get_component<RectangleNode::RectangleProp>().fill_color;
-					}
-					break;
-				}
+					return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::fill_color, Color::Transparent);
+
 				case ag::NodeType::Circle:
-				{
-					if (entity.has_component<CircleNode::CircleProp>())
-					{
-						return entity.get_component<CircleNode::CircleProp>().fill_color;
-					}
-					break;
-				}
+					return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::fill_color, Color::Transparent);
+
 				default:
-				{
 					return ag::Color::Transparent;
-					break;
 				}
-				}
-				return ag::Color::Transparent;
 				});
+
 			lua.set_function("set_fill_color", [](ag::Entity& entity, const ag::Color& color) {
 				auto node_type = entity.get_component<Tag>().node_type;
 				switch (node_type)
 				{
 				case ag::NodeType::Rectangle:
 				{
-					if (entity.has_component<RectangleNode::RectangleProp>())
-					{
-						entity.get_component<RectangleNode::RectangleProp>().fill_color = color;
-					}
-					break;
+					NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::fill_color, color);
+					return;
 				}
 				case ag::NodeType::Circle:
 				{
-					if (entity.has_component<CircleNode::CircleProp>())
-					{
-						entity.get_component<CircleNode::CircleProp>().fill_color = color;
-					}
-					break;
+					NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::fill_color, color);
+					return;
 				}
 				default:
 				{
-					break;
+					return;
 				}
 				}
 				});
-		
 
-			lua.set_function("get_border_thickness", [](ag::Entity& entity) -> float {
-				auto node_type = entity.get_component<Tag>().node_type;
-				switch (node_type)
-				{
-				case ag::NodeType::Rectangle:
-				{
-					if (entity.has_component<RectangleNode::RectangleProp>())
+
+				//Border Color
+				lua.set_function("get_border_color", [](ag::Entity& entity) -> Color {
+					auto node_type = NodeHelper::get_nodetype(entity);
+					switch (node_type)
 					{
-						return entity.get_component<RectangleNode::RectangleProp>().border_thickness;
+					case ag::NodeType::Rectangle:
+						return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_color, Color::Transparent);
+
+					case ag::NodeType::Circle:
+						return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_color, Color::Transparent);
+
+					default:
+						return ag::Color::Transparent;
 					}
-					break;
-				}
-				case ag::NodeType::Circle:
-				{
-					if (entity.has_component<CircleNode::CircleProp>())
+					});
+
+				lua.set_function("set_border_color", [](ag::Entity& entity, const ag::Color& color) {
+					auto node_type = NodeHelper::get_nodetype(entity);
+					switch (node_type)
 					{
-						entity.get_component<CircleNode::CircleProp>().border_thickness;
-					}
-					break;
-				}
-				default:
-				{
-					return 0.0f;
-					break;
-				}
-				}
-				return 0.0f;
-				});
-			lua.set_function("set_border_thickness", [](ag::Entity& entity, const float& thickness) {
-				auto node_type = entity.get_component<Tag>().node_type;
-				switch (node_type)
-				{
-				case ag::NodeType::Rectangle:
-				{
-					if (entity.has_component<RectangleNode::RectangleProp>())
+					case ag::NodeType::Rectangle:
 					{
-						entity.get_component<RectangleNode::RectangleProp>().border_thickness = thickness;
+						NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_color, color);
+						return;
 					}
-					break;
-				}
-				case ag::NodeType::Circle:
-				{
-					if (entity.has_component<CircleNode::CircleProp>())
+					case ag::NodeType::Circle:
 					{
-						entity.get_component<CircleNode::CircleProp>().border_thickness = thickness;
+						NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_color, color);
+						return;
 					}
-					break;
-				}
-				default:
-				{
-					break;
-				}
-				}
-				});
+					default:
+					{
+						return;
+					}
+					}
+					});
+
+
+				// Border Color
+				lua.set_function("get_border_thickness", [](ag::Entity& entity) -> float {
+					auto node_type = entity.get_component<Tag>().node_type;
+					switch (node_type)
+					{
+					case ag::NodeType::Rectangle:
+						return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, 0.0f);
+
+					case ag::NodeType::Circle:
+						return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_thickness, 0.0f);
+
+					default:
+						return 0.0f;
+					}
+					});
+
+				lua.set_function("set_border_thickness", [](ag::Entity& entity, const float& thickness) {
+					auto node_type = entity.get_component<Tag>().node_type;
+					switch (node_type)
+					{
+					case ag::NodeType::Rectangle:
+					{
+						NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, thickness);
+						return;
+					}
+					case ag::NodeType::Circle:
+					{
+						NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_thickness, thickness);
+						return;
+					}
+					default:
+					{
+						return;
+					}
+					}
+					});
+
 
 
 		}
-	
+
+		//Animated Sprite 2D and Sprite Node
+		{
+			lua.set_function("play_animation", [](ag::Entity& entity, const std::string& animation_name) -> bool {
+
+				auto type = NodeHelper::get_nodetype(entity);
+				if (type == NodeType::AnimatedSprite2D)
+				{
+					return AnimatedSprite2DNode::play_animation(entity, animation_name);
+				}
+				return false;
+				});
+
+			lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical) {
+				
+				auto type = NodeHelper::get_nodetype(entity);
+				switch (type)
+				{
+					case ag::NodeType::Sprite:
+						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_vertical, vertical);
+						return;
+
+					case ag::NodeType::AnimatedSprite2D:
+						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_vertical, vertical);
+						return;
+
+					default:
+						return;
+				}
+				});
+
+			lua.set_function("flip_horizontal", [](ag::Entity& entity, const bool horizontal) {
+				auto type = NodeHelper::get_nodetype(entity);
+				switch (type)
+				{
+					case ag::NodeType::Sprite:
+						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_horizontal, horizontal);
+						return;
+
+					case ag::NodeType::AnimatedSprite2D:
+						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_horizontal, horizontal);
+						return;
+
+					default:
+						return;
+				}
+				});
+		}
+
+
 	}
 }
+
+

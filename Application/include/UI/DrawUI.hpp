@@ -188,7 +188,7 @@ namespace ag::UI
 
 	static void windowed_titlebar(const std::string& title)
 	{
-		float titlebar_height = 30.0f;
+		float titlebar_height = 40.0f;
 
 		ImGui::GetWindowDrawList()->AddRectFilled(
 			ImGui::GetWindowPos(),
@@ -200,8 +200,8 @@ namespace ag::UI
 		ImGui::SetCursorPos(ImVec2(10, 2));
 		ImGui::Text(title.c_str());
 
-		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 30, 2));
-		if (ImGui::Button("X", ImVec2(20, 20))) 
+		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - titlebar_height, 0));
+		if (ImGui::Button("X", ImVec2(titlebar_height, titlebar_height)))
 		{
 
 		}

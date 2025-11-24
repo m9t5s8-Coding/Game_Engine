@@ -69,13 +69,15 @@ namespace ag
 				{
 					auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
 					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
-					m_is_texture_selected = (texture_selector(props.texture, props.size, m_texture_rect));
+					TileMapNodeFeatures::register_tile(m_selected_entity);
+
+					/*m_is_texture_selected = (texture_selector(props.texture, props.size, m_texture_rect));
 					if (m_is_texture_selected)
 					{
 						auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
 						props.ghost_sprite.texture_rect = m_texture_rect;
 						props.display_ghost = true;
-					}
+					}*/
 				}
 			}
 		}
@@ -561,8 +563,8 @@ namespace ag
 					if (e.get_mouse_button() == Button::ButtonLeft)
 					{
 						TileMapNode::Tile tile;
-						tile.position = tile_pos;
-						tile.texture_rect = m_texture_rect;
+						//tile.position = tile_pos;
+						//tile.texture_rect = m_texture_rect;
 						props.tiles[tile_pos] = tile;
 					}
 					else if (e.get_mouse_button() == Button::ButtonRight)

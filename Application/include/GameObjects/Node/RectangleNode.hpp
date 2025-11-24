@@ -108,12 +108,13 @@ namespace ag
     {
       ScriptComponent::update(entity, ts);
 
-      auto& rect = entity.get_component<RectangleProp>();
-      if (!rect.is_visible)
+     
+      auto is_visible = entity.get_component<Tag>().is_visible;
+      if (!is_visible)
         return;
 
       auto &transform = entity.get_component<Transform>();
-      
+      auto& rect = entity.get_component<RectangleProp>();
       
       Rectangle rectangle;
       rectangle.size = rect.size;
