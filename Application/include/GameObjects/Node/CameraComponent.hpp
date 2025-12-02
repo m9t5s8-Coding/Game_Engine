@@ -37,6 +37,7 @@ namespace ag
 				Helper::load_json(j,"View Center", props.view_center);
 				Helper::load_json(j,"Zoom", props.zoom);
 				Helper::load_json(j,"IsActive", props.is_active);
+
 			}
 		};
 
@@ -81,24 +82,14 @@ namespace ag
 		{
       Tag::show_properties(entity);
 			auto& props = entity.get_component<CameraProps>();
-			UI::draw_vec2("View Size", props.view_size,{1280, 720});
-			UI::draw_vec2("View Center", props.view_center, {640, 360});
+			UI::draw_vec2("View Size", props.view_size,{props.view_size.y * 16 / 9, props.view_size.x * 9 / 16 });
+			UI::draw_vec2("View Center", props.view_center, props.view_size / 2);
 			UI::draw_value("Zoom", props.zoom);
 			ImGui::Checkbox("IsActive", &props.is_active);
 		}
 
 		static void draw(Entity entity, TimeStamp ts)
 		{
-			auto& props = entity.get_component<CameraProps>();
-			Rectangle rectangle;
-			rectangle.size = props.view_size;
-			rectangle.fill_color = Color::Transparent;
-			rectangle.border_color = Color(100, 100, 100, 255);
-			rectangle.border_thickness = 1.0f;
-
-			Transform transform;
-			transform.position = props.view_center;
-			Renderer2D::draw_rectangle(rectangle, transform);
 		}
 	};
 }

@@ -25,13 +25,20 @@ namespace ag::Math
 
   // Distance Caluclation
   template <typename T>
-  inline float distance(const vec2<T> first, const vec2<T> second)
+  inline float distance(const vec2<T>& first, const vec2<T>& second)
   {
     float dx = static_cast<float>(second.x - first.x);
     float dy = static_cast<float>(second.y - first.y);
 
     return std::sqrt(dx * dx + dy * dy);
   }
+
+  template <typename T>
+  inline vec2f mid_point(const vec2<T>& first, const vec2<T>& second)
+  {
+    return vec2f((first + second) / 2);
+  }
+
 
   inline float angle_betn_points(const vec2f& first, const vec2f& second)
   {

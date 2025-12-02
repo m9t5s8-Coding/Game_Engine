@@ -16,7 +16,7 @@ namespace ag
 
     virtual AG_uint get_texture_id() const override { return m_ID; }
 
-    virtual void bind(AG_uint p_slot = 0) const override;
+    virtual void bind(AG_uint p_slot = 1) const override;
 
   private:
     std::string m_path;

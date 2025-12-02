@@ -6,6 +6,8 @@
 
 namespace ag
 {
+	constexpr AG_uint INVALID_ENTITY = static_cast<AG_uint>(entt::null);
+
 	class Entity
 	{
 	public:
@@ -40,9 +42,9 @@ namespace ag
 			m_scene->m_registry.remove<T>(m_entity_handler);
 		}
 
-		// TODO
-		void delete_entity() { m_scene->m_registry.destroy(m_entity_handler); }
-		//void delete_entity() { m_entity_handler = entt::null; }
+		void delete_entity() {
+			m_scene->m_registry.destroy(m_entity_handler);
+		}
 
 
 

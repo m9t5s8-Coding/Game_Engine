@@ -11,6 +11,8 @@ namespace ag
 
     vec2f viewport_center = viewport_size / 2;
     s_scenedata->screen_matrix = Math::get_view_matrix(viewport_size, viewport_center);
+
+    s_scenedata->scale = viewport_size / view.get_size();
   }
 
   void Renderer::end_scene()
@@ -44,6 +46,7 @@ namespace ag
     p_shader->bind();
     p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
     p_shader->set_mat3("u_screen_matrix", s_scenedata->screen_matrix);
+    p_shader->set_vec2f("u_scale", s_scenedata->scale);
     p_vertexarray->bind();
     RenderCommand::draw_instanced(p_vertexarray, instanced_count);
   }

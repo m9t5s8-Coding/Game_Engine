@@ -46,8 +46,12 @@ namespace ag
 		for (auto entityID : view)
 		{
 			Entity entity(entityID);
-			draw_node_hierarchy(entity, 0);
-			ImGui::Spacing();
+			auto& tag = entity.get_component<Tag>();
+			if (tag.parent.get_id() == INVALID_ENTITY)
+			{
+				draw_node_hierarchy(entity, 0);
+				ImGui::Spacing();
+			}
 		}
 		ImGui::End();
 
@@ -86,7 +90,7 @@ namespace ag
 	void ScenePanel::draw_node_hierarchy(Entity entity, int level)
 	{
 		auto& tag = entity.get_component<Tag>();
-		// TreeNode flags
+	
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
 		if (m_selected_entity == entity)
 			flags |= ImGuiTreeNodeFlags_Selected;
@@ -94,7 +98,7 @@ namespace ag
 		if (tag.children.empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
-		ImGui::Indent(level * 20.0f);
+		ImGui::Indent(level * 10.0f);
 
 		// Draw the tree node
 		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.tag.c_str());
@@ -132,12 +136,11 @@ namespace ag
 				draw_node_hierarchy(child, level + 1);
 			}
 
-			if (!(flags & ImGuiTreeNodeFlags_Leaf))
-				ImGui::TreePop();
+			
+			ImGui::TreePop();
 		}
 
-		ImGui::TreePop();
-		ImGui::Unindent(level * 20.0f);
+		ImGui::Unindent(level * 10.0f);
 	}
 
 	void ScenePanel::draw_scene_top_panel()
@@ -219,14 +222,14 @@ namespace ag
 			{
 				Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
 
-				/*if (m_selected_entity)
+				if (m_selected_entity)
 				{
 					auto& tag = m_selected_entity.get_component<Tag>();
 					auto& new_e_tag = newEntity.get_component<Tag>();
 
 					new_e_tag.parent = m_selected_entity;
 					tag.children.push_back(newEntity);
-				}*/
+				}
 
 				m_selected_entity = newEntity;
 				m_show_create_panel = false;
@@ -516,8 +519,15 @@ namespace ag
 		if (control)
 		{
 			if (e.get_key_code() == Key::D && m_selected_entity)
+			{
 				m_selected_entity = m_scene->duplicate_entity(m_selected_entity);
+				AERO_CORE_INFO("Duplicate Entity: {0}", m_selected_entity.get_id());
 
+				auto& tag = m_selected_entity.get_component<Tag>();
+
+				AERO_CORE_INFO("Name: {0}", tag.tag);
+				AERO_CORE_INFO("Parent ID: {0}", tag.parent.get_id());
+			}
 			return false;
 		}
 
@@ -536,7 +546,7 @@ namespace ag
 				reset_transform_setting();
 			break;
 
-		case Key::Delete: m_selected_entity.delete_entity(); break;
+		case Key::Delete: m_scene->destroy_entity(m_selected_entity); break;
 		}
 		return false;
 	}

@@ -69,6 +69,11 @@ namespace ag
 		{
 			clone.add_component<Transform>(original.get_component<Transform>());
 			clone.add_component<SpriteProp>(original.get_component<SpriteProp>());
+
+			if (original.has_component<ScriptComponent>())
+			{
+				clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
+			}
 		}
 
 		static json save_json(Entity entity)
@@ -76,6 +81,12 @@ namespace ag
 			json j;
 			j["SpriteProp"] = SpriteProp::save(entity);
 			j["Transform"] = Transform::save(entity);
+
+			if (entity.has_component<ScriptComponent>())
+			{
+				j["ScriptComponent"] = ScriptComponent::save_json(entity);
+			}
+
 			return j;
 		}
 
@@ -116,6 +127,7 @@ namespace ag
 							sprite.texture = Texture2D::create(full_path);
 
 							vec2u texture_size = sprite.texture->get_size();
+							sprite.size = texture_size;
 							sprite.texture_rect = {0, 0, sprite.size};
 						}
 					}

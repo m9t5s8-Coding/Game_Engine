@@ -19,7 +19,7 @@ namespace ag
 
     virtual AG_uint get_texture_id() const = 0;
 
-    virtual void bind(AG_uint p_slot = 0) const = 0;
+    virtual void bind(AG_uint p_slot = 1) const = 0;
   };
 
   class Texture2D : public Texture

@@ -58,6 +58,14 @@ namespace ag
 
 		m_scene->on_update(ts);
 
+
+		Text text;
+		text.text = "Hi guys my name is Mitesh Lamsal.\nI live in Belchautara Tanahun.";
+		//text.text = "a";
+		text.text_color = Color::White;
+		Transform trans;
+		trans.position = { 0, 0 };
+		Renderer2D::draw_text(text, trans);
 		
 		Renderer2D::end_scene();
 
@@ -368,14 +376,75 @@ namespace ag
 		}
 
 		// Camera
-	/*	{
+		{
 			auto scene = Scene::get_active_scene();
-			const auto& view = scene->m_registry.view<CameraComponent::CameraProps>();
-			for (auto& camera : view)
+			const auto& entities = scene->m_registry.view<Tag>();
+			for (auto& entityID : entities)
 			{
-				AERO_CORE_INFO("Has an camera!");
+				Entity entity(entityID);
+				auto& type = entity.get_component<Tag>().node_type;
+
+				if (type != NodeType::Camera)
+					continue;
+
+				if (entity.has_component<CameraComponent::CameraProps>())
+				{
+					auto& props = entity.get_component<CameraComponent::CameraProps>();
+
+					vec2f top_left = props.view_center - (props.view_size * props.zoom) / 2;
+					
+
+					vec2f bottom_right = props.view_center + (props.view_size * props.zoom) / 2;
+					
+
+					vec2f top_right = { bottom_right.x, top_left.y };
+					
+
+					vec2f bottom_left = { top_left.x, bottom_right.y };
+					
+
+					top_left = Math::world_to_screen(top_left, view.get_float_rect(), m_viewport_size);
+					top_right = Math::world_to_screen(top_right, view.get_float_rect(), m_viewport_size);
+					bottom_left = Math::world_to_screen(bottom_left, view.get_float_rect(), m_viewport_size);
+					bottom_right = Math::world_to_screen(bottom_right, view.get_float_rect(), m_viewport_size);
+
+					vec2f size;
+					size.x = top_right.x - top_left.x;
+					size.y = bottom_right.y - top_right.y;
+
+					Rectangle width, height;
+
+					width.size = { size.x, 1.0f };
+					height.size = { 1.0f, size.y };
+
+					width.fill_color = Color(120, 120, 120, 255);
+					height.fill_color = Color(120, 120, 120, 255);
+
+					width.mode = RenderMode::Screen;
+					height.mode = RenderMode::Screen;
+
+					Transform transform;
+					
+
+					// Top
+					transform.position = Math::mid_point(top_left , top_right);
+					Renderer2D::draw_rectangle(width, transform);
+
+					// Left
+					transform.position = Math::mid_point(top_left , bottom_left);
+					Renderer2D::draw_rectangle(height, transform);
+
+					// Bottom
+					transform.position = Math::mid_point(bottom_left, bottom_right);
+					Renderer2D::draw_rectangle(width, transform);
+
+					// Right
+					transform.position = Math::mid_point(bottom_right, top_right);
+					Renderer2D::draw_rectangle(height, transform);
+
+				}
 			}
-		}*/
+		}
 
 	}
 

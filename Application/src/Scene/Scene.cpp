@@ -24,7 +24,13 @@ namespace ag
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
 		Entity entity(m_registry.create());
-		entity.add_component<Tag>(name, m_next_index++, RenderLayer::MidGround, type);
+
+		Tag tag;
+		tag.tag = name;
+		tag.index = entity.get_id();
+		tag.node_type = type;
+
+		entity.add_component<Tag>(tag);
 
 		if (!is_cloning)
 		{
@@ -40,11 +46,18 @@ namespace ag
 		auto& original_tag = original.get_component<Tag>();
 		Entity duplicate = create_entity(original_tag.tag, original_tag.node_type, true);
 
+		Tag::clone(original, duplicate);
+
 		auto it = NodeFactory::clone_map.find(original_tag.node_type);
 		if (it != NodeFactory::clone_map.end())
 			it->second(original, duplicate);
 
 		return duplicate;
+	}
+
+	void Scene::destroy_entity(Entity entity)
+	{
+		m_to_delete_entity.push_back(entity);
 	}
 
 	void Scene::on_update(TimeStamp ts)
@@ -60,6 +73,16 @@ namespace ag
 			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
 			if (it != NodeFactory::draw_map.end())
 				it->second(e, ts);
+
+		}
+
+		{
+			for (auto& entity : m_to_delete_entity)
+			{
+				auto& tag = entity.get_component<Tag>().tag;
+				entity.delete_entity();
+			}
+			m_to_delete_entity.clear();
 		}
 	}
 

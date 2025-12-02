@@ -142,7 +142,10 @@ namespace ag
 			j["AnimationSprite2DProps"] = AnimatedSpriteProps::save(entity);
 			j["Transform"] = Transform::save(entity);
 
-			j["ScriptComponent"] = ScriptComponent::save_json(entity);
+			if (entity.has_component<ScriptComponent>())
+			{
+				j["ScriptComponent"] = ScriptComponent::save_json(entity);
+			}
 
 			return j;
 		}
@@ -156,10 +159,11 @@ namespace ag
 			if (j.contains("ScriptComponent"))
 			{
 				ScriptComponent::load_json(entity, j["ScriptComponent"]);
-				ScriptComponent::load_scripts(entity, j["ScriptComponent"]);
 			}
 
 		}
+
+		
 
 		static void show_properties(Entity entity)
 		{

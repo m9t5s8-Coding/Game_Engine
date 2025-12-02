@@ -85,6 +85,11 @@ in vec2 tex_coord;
 
 uniform sampler2D u_texture;
 
+float median(float r, float g, float b) 
+{
+    return max(min(r, g), min(max(r, g), b));
+}
+
 void main()
 {
   FragColor = texture(u_texture, tex_coord);

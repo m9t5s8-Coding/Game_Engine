@@ -30,6 +30,11 @@ namespace ag
           y = j[1].get<T>();
         }
 
+        void print() const
+        {
+          AERO_CORE_INFO("({0}, {1})", x, y);
+        }
+
         vec2 round() const
         {
             return {std::round(x), std::round(y)};

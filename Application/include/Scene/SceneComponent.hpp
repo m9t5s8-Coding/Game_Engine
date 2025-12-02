@@ -35,7 +35,8 @@ namespace ag
 		Sprite,
 		AnimatedSprite2D,
 		Camera,
-		TileMap
+		TileMap,
+		Scene2D
 	};
 
 	enum class RenderLayer
@@ -58,12 +59,106 @@ namespace ag
 
 		bool is_visible = true;
 
+		AG_uint parent_id = INVALID_ENTITY;
+		std::vector<AG_uint> children_id;
+
 		static void show_properties(Entity entity)
 		{
 			auto& tag = entity.get_component<Tag>();
 			UI::draw_string("Tag", tag.tag);
 		}
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			if (!entity.has_component<Tag>())
+				return j;
+
+			const auto& tag = entity.get_component<Tag>();
+
+			Helper::save_json(j, "Tag", tag.tag);
+			Helper::save_json(j, "NodeType", static_cast<int>(tag.node_type));
+			Helper::save_json(j, "Index", tag.index);
+			Helper::save_json(j, "Visible", tag.is_visible);
+
+			Helper::save_json(j, "ID", entity.get_id());
+
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				Helper::save_json(j, "Parent", tag.parent.get_id());
+			}
+
+			if (!tag.children.empty())
+			{
+				json children_json = json::array();
+				for (auto& child : tag.children)
+				{
+					children_json.push_back(child.get_id());
+				}
+				j["Children"] = children_json;
+			}
+			return j;
+
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			auto& tag = entity.get_component<Tag>();
+			Helper::load_json(j, "Tag", tag.tag);
+			Helper::load_json(j, "NodeType", tag.node_type);
+			Helper::load_json(j, "Index", tag.index);
+			Helper::load_json(j, "Visible", tag.is_visible);
+
+			Helper::load_json(j, "Parent", tag.parent_id);
+
+			if (j.contains("Children") && j["Children"].is_array())
+			{
+				auto& child_array = j["Children"];
+				tag.children_id.clear();
+				for (auto& id_json : child_array)
+				{
+					AG_uint child_id = id_json.get<AG_uint>();
+					tag.children_id.push_back(child_id);
+				}
+			}
+		}
+
+		static void load_children(Entity entity)
+		{
+			auto& tag = entity.get_component<Tag>();
+
+			if (tag.parent_id != INVALID_ENTITY)
+			{
+				Entity parent(static_cast<entt::entity>(tag.parent_id));
+				tag.parent = parent;
+			}
+
+			if (!tag.children_id.empty())
+			{
+				for (auto& child_id : tag.children_id)
+				{
+					Entity child(static_cast<entt::entity>(child_id));
+					tag.children.push_back(child);
+				}
+			}
+		}
+
+		static void clone(Entity original, Entity duplicate)
+		{
+			const auto& original_tag = original.get_component<Tag>();
+
+			auto& duplicate_tag = duplicate.get_component<Tag>();
+
+			duplicate_tag = original_tag;
+
+			duplicate_tag.index = duplicate.get_id();
+
+			auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
+			parent_tag.children.push_back(duplicate);
+		}
 	};
+
+
 	struct Transform
 	{
 		vec2f position;
@@ -202,9 +297,12 @@ namespace ag
 			return false;
 		}
 
-		static void load_scripts(Entity entity, const json& j)
+		static void load_scripts(Entity entity)
 		{
 			if (!Engine::is_runtime())
+				return;
+
+			if (!entity.has_component<ScriptComponent>())
 				return;
 
 			auto& comp = entity.get_component<ScriptComponent>();
@@ -216,9 +314,28 @@ namespace ag
 				return entity;
 				});
 
+			comp.env.get().set_function("get_children", [](ag::Entity& e, const std::string& name) -> Entity {
+
+				if (!e.has_component<Tag>())
+					return {};
+
+				auto& tag = e.get_component<Tag>();
+
+				for (auto& child : tag.children)
+				{
+					auto& child_tag = child.get_component<Tag>();
+					if (child_tag.tag == name)
+					{
+						return child;
+					}
+				}
+
+				return {};
+				});
+
 			ScriptManager::load_script(full_path, comp.env);
 
-			
+
 
 			comp.on_create.set_function(comp.env, "on_create");
 			comp.on_update.set_function(comp.env, "on_update");
@@ -253,6 +370,13 @@ namespace ag
 		RenderMode mode = RenderMode::World;
 		bool flip_horizontal = false;
 		bool flip_vertical = false;
+	};
+
+	struct Text
+	{
+		std::string text;
+		RenderMode mode = RenderMode::World;
+		Color text_color;
 	};
 
 }

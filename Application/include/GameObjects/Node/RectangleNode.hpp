@@ -71,7 +71,10 @@ namespace ag
       j["RectangleProps"] = RectangleProp::save(entity);
       j["Transform"] = Transform::save(entity);
 
-      j["ScriptComponent"] = ScriptComponent::save_json(entity);
+      if (entity.has_component<ScriptComponent>())
+      {
+        j["ScriptComponent"] = ScriptComponent::save_json(entity);
+      }
 
       return j;
     }
@@ -84,7 +87,6 @@ namespace ag
       if (j.contains("ScriptComponent"))
       {
         ScriptComponent::load_json(entity, j["ScriptComponent"]);
-        ScriptComponent::load_scripts(entity, j["ScriptComponent"]);
       }
       
     }

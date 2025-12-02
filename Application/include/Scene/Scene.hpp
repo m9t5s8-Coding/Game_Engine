@@ -41,6 +41,15 @@ namespace ag
 		bool has_directory() { return !m_directory.empty(); }
 
 
+		template <typename T>
+		auto get_view()
+		{
+			return m_registry.view<T>();
+		}
+
+		void destroy_entity(Entity entity);
+
+
 		static AG_ref<Scene> get_active_scene() { return s_active_scene; }
 		static void set_active_scene(const AG_ref<Scene>& scene) { s_active_scene = scene; }
 
@@ -52,7 +61,7 @@ namespace ag
 
 		std::string m_name = "";
 		std::string m_directory = "";
-
+		std::vector<Entity> m_to_delete_entity;
 
 		inline static AG_ref<Scene> s_active_scene;
 

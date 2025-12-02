@@ -13,9 +13,8 @@ namespace ag
 	{
 		load_project_data();
 
-		vec2f view_size = Application::get().get_window().get_size();
-		vec2f view_center = view_size / 2.0f;
-		m_view_controller = ViewController::create(view_size, view_center);
+		
+		
 	}
 
 	void Sandbox2D::on_detach()
@@ -49,9 +48,21 @@ namespace ag
 			Project::load_project(project_path);
 		}
 
-		std::string scene_path = "D:/Aero/Test/Scenes/player.aeroscene";
+		std::string scene_path = "D:/Aero/Test/Scenes/tik.aeroscene";
 
 		m_scene = SaveScene::load_scene(scene_path);
 		Scene::set_active_scene(m_scene);
+
+		auto entities = m_scene->get_view<CameraComponent::CameraProps>();
+		for (auto entityID : entities)
+		{
+			Entity entity(entityID);
+			auto& props = entity.get_component< CameraComponent::CameraProps>();
+			
+			auto& view = m_view_controller->get_view();
+			vec2f view_size = props.view_size * props.zoom;
+
+			m_view_controller = ViewController::create(view_size, props.view_center);
+		}
 	}
 }

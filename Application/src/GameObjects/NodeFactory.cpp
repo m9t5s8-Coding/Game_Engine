@@ -20,7 +20,8 @@ namespace ag
 		create_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::create_node;
 		create_map[NodeType::Camera] = CameraComponent::create_node;
 		create_map[NodeType::TileMap] = TileMapNode::create_node;
-
+		create_map[NodeType::Scene2D] = Scene2D::create_node;
+		
 
 		draw_map[NodeType::Rectangle] = RectangleNode::draw;
 		draw_map[NodeType::Circle] = CircleNode::draw;
@@ -28,6 +29,7 @@ namespace ag
 		draw_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::draw;
 		draw_map[NodeType::Camera] = CameraComponent::draw;
     draw_map[NodeType::TileMap] = TileMapNode::draw;
+    draw_map[NodeType::Scene2D] = Scene2D::draw;
 
 
 		properties_map[NodeType::Rectangle] = RectangleNode::show_properties;
@@ -36,6 +38,7 @@ namespace ag
 		properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
 		properties_map[NodeType::Camera] = CameraComponent::show_properties;
     properties_map[NodeType::TileMap] = TileMapNode::show_properties;
+    properties_map[NodeType::Scene2D] = Scene2D::show_properties;
 
 
 		clone_map[NodeType::Rectangle] = RectangleNode::clone_node;
@@ -44,6 +47,7 @@ namespace ag
 		clone_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::clone_node;
 		clone_map[NodeType::Camera] = CameraComponent::clone_node;
     clone_map[NodeType::TileMap] = TileMapNode::clone_node;
+    clone_map[NodeType::Scene2D] = Scene2D::clone_node;
 
 		save_map[NodeType::Rectangle] = RectangleNode::save_json;
 		save_map[NodeType::Circle] = CircleNode::save_json;
@@ -51,6 +55,7 @@ namespace ag
 		save_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::save_json;
 		save_map[NodeType::Camera] = CameraComponent::save_json;
     save_map[NodeType::TileMap] = TileMapNode::save_json;
+    save_map[NodeType::Scene2D] = Scene2D::save_json;
 
 		load_map[NodeType::Rectangle] = RectangleNode::load_json;
 		load_map[NodeType::Circle] = CircleNode::load_json;
@@ -58,6 +63,7 @@ namespace ag
 		load_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::load_json;
 		load_map[NodeType::Camera] = CameraComponent::load_json;
     load_map[NodeType::TileMap] = TileMapNode::load_json;
+    load_map[NodeType::Scene2D] = Scene2D::load_json;
 
 		clear_map[NodeType::Rectangle] = RectangleNode::delete_node;
 		clear_map[NodeType::Circle] = CircleNode::delete_node;
@@ -65,13 +71,15 @@ namespace ag
 		clear_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::delete_node;
 		clear_map[NodeType::Camera] = CameraComponent::delete_node;
     clear_map[NodeType::TileMap] = TileMapNode::delete_node;
+    clear_map[NodeType::Scene2D] = Scene2D::delete_node;
 
-		nodes[NodeType::Rectangle] = "Rectangle";
-		nodes[NodeType::Circle] = "Circle";
-		nodes[NodeType::Sprite] = "Sprite";
+		nodes[NodeType::Rectangle] = "Rectangle2D";
+		nodes[NodeType::Circle] = "Circle2D";
+		nodes[NodeType::Sprite] = "Sprite2D";
 		nodes[NodeType::AnimatedSprite2D] = "AnimatedSprite2D";
-		//nodes[NodeType::Camera] = "CameraComponent";
-    nodes[NodeType::TileMap] = "TileMap";
+		nodes[NodeType::Camera] = "Camera2D";
+    nodes[NodeType::TileMap] = "MapLayer2D";
+    nodes[NodeType::Scene2D] = "Scene2D";
 	}
 
 	void NodeFactory::shut_down()

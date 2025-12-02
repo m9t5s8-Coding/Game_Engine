@@ -28,6 +28,7 @@ namespace ag
     {
       glm::mat3 view_matrix;
       glm::mat3 screen_matrix;
+      vec2f scale;
     };
     static SceneData* s_scenedata;
   };

@@ -113,9 +113,26 @@ namespace ag
 			});
 
 		// Mouse.get_mouse_position()
-		mouse.set_function("get_mouse_position", []() -> ag::vec2f {
-			return ag::Mouse::get_mouse_position();
-			});
+		mouse.set_function("get_mouse_position", sol::overload(
+
+			[]() -> ag::vec2f {
+				return ag::Mouse::get_mouse_position();
+			},
+
+			[](ag::Entity& entity) -> vec2f {
+				auto type = NodeHelper::get_nodetype(entity);
+
+				if (type == NodeType::Camera)
+				{
+					const auto& props = entity.get_component<CameraComponent::CameraProps>();
+					float_rect window_rect = { props.view_center - props.view_size / 2, props.view_size * props.zoom };
+					vec2f screen_pos = ag::Mouse::get_mouse_position();
+					vec2f window_size = Application::get().get_window().get_size();
+					return Math::screen_to_world(screen_pos, window_rect, window_size);
+				}
+				return { 0, 0 };
+			}
+		));
 
 		// Mouse.set_mouse_position(position)
 		mouse.set_function("set_mouse_position", [](ag::vec2f position) {
@@ -270,7 +287,7 @@ namespace ag
 
 	}
 
-
+	 
 	//TODO overload with scalar and vec2
 	void ScriptBinding::register_vec2()
 	{
@@ -322,10 +339,6 @@ namespace ag
 	{
 		auto& lua = ScriptManager::get_lua();
 
-		lua.new_usertype<ScriptableEntity>("Entity",
-			"get", &ScriptableEntity::get
-		);
-
 		// Tag Component
 		{
 			// Visibility
@@ -336,9 +349,6 @@ namespace ag
 			lua.set_function("set_visible", [](ag::Entity& entity, const bool visible) {
 				NodeHelper::set_comp_value(entity, &Tag::is_visible, visible);
 				});
-		
-		
-
 		}
 
 		// Transform Component
@@ -417,7 +427,7 @@ namespace ag
 				});
 
 
-				//Border Color
+				// Border Color
 				lua.set_function("get_border_color", [](ag::Entity& entity) -> Color {
 					auto node_type = NodeHelper::get_nodetype(entity);
 					switch (node_type)
@@ -496,8 +506,32 @@ namespace ag
 
 		}
 
+		// Sprite Node Rectangle and Circle
+		{
+			lua.set_function("get_size", [](ag::Entity& entity) -> vec2f {
+				auto type = NodeHelper::get_nodetype(entity);
+
+				if (type == NodeType::Rectangle)
+				{
+					return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::size, { 0, 0 });
+				}
+				else if (type == NodeType::Circle)
+				{
+					return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::size, { 0, 0 });
+				}
+				else if (type == NodeType::Sprite)
+				{
+					return NodeHelper::get_comp_value(entity, &SpriteNode::SpriteProp::size, { 0, 0 });
+				}
+				return { 0, 0 };
+				});
+		
+
+		}
+
 		//Animated Sprite 2D and Sprite Node
 		{
+
 			lua.set_function("play_animation", [](ag::Entity& entity, const std::string& animation_name) -> bool {
 
 				auto type = NodeHelper::get_nodetype(entity);
@@ -509,20 +543,20 @@ namespace ag
 				});
 
 			lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical) {
-				
+
 				auto type = NodeHelper::get_nodetype(entity);
 				switch (type)
 				{
-					case ag::NodeType::Sprite:
-						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_vertical, vertical);
-						return;
+				case ag::NodeType::Sprite:
+					NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_vertical, vertical);
+					return;
 
-					case ag::NodeType::AnimatedSprite2D:
-						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_vertical, vertical);
-						return;
+				case ag::NodeType::AnimatedSprite2D:
+					NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_vertical, vertical);
+					return;
 
-					default:
-						return;
+				default:
+					return;
 				}
 				});
 
@@ -530,20 +564,31 @@ namespace ag
 				auto type = NodeHelper::get_nodetype(entity);
 				switch (type)
 				{
-					case ag::NodeType::Sprite:
-						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_horizontal, horizontal);
-						return;
+				case ag::NodeType::Sprite:
+					NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_horizontal, horizontal);
+					return;
 
-					case ag::NodeType::AnimatedSprite2D:
-						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_horizontal, horizontal);
-						return;
+				case ag::NodeType::AnimatedSprite2D:
+					NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_horizontal, horizontal);
+					return;
 
-					default:
-						return;
+				default:
+					return;
 				}
 				});
+
 		}
 
+
+
+		lua.set_function("duplicate_entity", [](ag::Entity& entity) -> ag::Entity {
+			return Scene::get_active_scene()->duplicate_entity(entity);
+			});
+
+		lua.set_function("delete_entity", [](ag::Entity& entity){
+			const auto& scene = Scene::get_active_scene();
+			scene->destroy_entity(entity);
+			});
 
 	}
 }

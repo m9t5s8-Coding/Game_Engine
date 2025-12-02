@@ -28,9 +28,11 @@ namespace ag
     static void draw_rectangle(const Rectangle& rect, const Transform& transform);
     static void draw_circle(const Circle& circle, const Transform& transform);
     static void draw_sprite(const Sprite& sprite, const Transform& transform);
+    static void draw_text(const Text& text, const Transform& transform);
 
     static void flush_rectangle();
     static void flush_circle();
     static void flush_sprite();
+    static void flush_text();
   };
 }
