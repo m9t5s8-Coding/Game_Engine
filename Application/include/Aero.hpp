@@ -13,6 +13,8 @@
 
 #include <Math/Math.hpp>
 
+#include <Events/TextInput.hpp>
+
 
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Color.hpp>

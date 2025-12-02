@@ -4,6 +4,7 @@
 #include <Events/KeyEvent.hpp>
 #include <Events/MouseEvent.hpp>
 #include <Events/WindowEvent.hpp>
+#include <Events/TextInput.hpp>
 
 #include <Platform/OpenGL/OpenGLContext.hpp>
 
@@ -141,6 +142,14 @@ namespace ag
 
       MouseMovedEvent event(static_cast<float>(pos_x), static_cast<float>(pos_y));
       data.event_callback(event); });
+  
+    glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int codepoint) {
+      WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
+
+      TextInputEvent event(static_cast<char>(codepoint));
+
+      data.event_callback(event);
+      });
   }
 
   void WindowsWindow::set_vsync(bool enabled)
@@ -229,6 +238,16 @@ namespace ag
     {
       glfwDestroyWindow(m_Window);
     }
+  }
+
+  std::string WindowsWindow::get_clipboard_string() const
+  {
+    const char* clipboard_text = glfwGetClipboardString(m_Window);
+    if (clipboard_text)
+    {
+      return std::string(clipboard_text);
+    }
+    return std::string(" ");
   }
 
 }

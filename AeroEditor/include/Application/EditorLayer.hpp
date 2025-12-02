@@ -29,6 +29,8 @@ namespace ag
 		static EditorLayer& get() { return *s_instance; }
 
 		bool on_key_pressed(KeyPressedEvent& e);
+
+		bool on_text_input(TextInputEvent& e);
 	private:
 		AG_ref<ViewController> m_view_controller;
 		AG_ref<FrameBuffer> m_framebuffer;
@@ -40,6 +42,8 @@ namespace ag
 		vec2f m_viewport_mouse_pos;
 		vec2f m_last_mouse;
 		bool m_viewport_hovered = false;
+
+		std::string m_text_buffer;
 
 		bool m_minimized = false;
 

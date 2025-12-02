@@ -38,6 +38,8 @@ namespace ag
     void set_vsync(bool enabled) override;
     [[nodiscard]] bool is_vsync() const override;
 
+    virtual std::string get_clipboard_string() const override;
+
     virtual void* get_native_window() const { return m_Window; }
 
   private:

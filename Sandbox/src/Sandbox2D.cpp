@@ -12,9 +12,6 @@ namespace ag
 	void Sandbox2D::on_attach()
 	{
 		load_project_data();
-
-		
-		
 	}
 
 	void Sandbox2D::on_detach()

@@ -11,7 +11,7 @@ namespace ag
     Window_Close,
     Window_Resize,
     Window_Focus,
-    Window_lost_Focus,
+    Window_Lost_Focus,
     Window_Moved,
 
     // App Event
@@ -23,6 +23,8 @@ namespace ag
     Key_Pressed,
     Key_Released,
     Key_Typed,
+
+    Text_Input,
 
     // Mouse Event
     Mouse_Button_Pressed,

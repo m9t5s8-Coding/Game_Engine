@@ -58,14 +58,14 @@ namespace ag
 
 		m_scene->on_update(ts);
 
-
 		Text text;
-		text.text = "Hi guys my name is Mitesh Lamsal.\nI live in Belchautara Tanahun.";
-		//text.text = "a";
-		text.text_color = Color::White;
 		Transform trans;
+		text.text = m_text_buffer;
+		text.text_color = Color::White;
+		text.mode = RenderMode::World;
 		trans.position = { 0, 0 };
 		Renderer2D::draw_text(text, trans);
+	
 		
 		Renderer2D::end_scene();
 
@@ -286,6 +286,7 @@ namespace ag
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(EditorLayer::on_key_pressed));
+		dispatcher.Dispatch<TextInputEvent>(AERO_BIND_EVENT_FN(EditorLayer::on_text_input));
 		m_view_controller->on_event(e);
 		m_panel->on_event(e);
 	}
@@ -313,9 +314,38 @@ namespace ag
 				m_panel->set_scene(m_scene);
 			}
 
+			if (e.get_key_code() == Key::V)
+			{
+				auto text = Application::get().get_window().get_clipboard_string();
+				m_text_buffer += text;
+			}
+			
+			
+
 			return false;
 		}
+
+		if (e.get_key_code() == Key::Backspace && !m_text_buffer.empty())
+		{
+			m_text_buffer.pop_back();
+		}
+
+		if (e.get_key_code() == Key::Enter)
+		{
+			m_text_buffer += '\n';
+		}
+
+		if (e.get_key_code() == Key::Tab)
+		{
+			m_text_buffer += "    ";
+		}
 		return false;
+	}
+
+	bool EditorLayer::on_text_input(TextInputEvent& e)
+	{
+		m_text_buffer += e.get_character();
+		return true;
 	}
 
 	void EditorLayer::editor_things()

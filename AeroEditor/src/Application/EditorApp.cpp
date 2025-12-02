@@ -15,7 +15,7 @@ namespace ag
 
 		Renderer::init();
 
-		
+		ag::ScriptManager::init();
 		
 
 		push_layer(new EditorLayer());
@@ -28,6 +28,7 @@ namespace ag
 
 		Renderer2D::shut_down();
 		NodeFactory::shut_down();
+		ag::ScriptManager::shut_down();
 	}
 
 	void EditorApp::save_json()
