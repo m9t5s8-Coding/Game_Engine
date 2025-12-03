@@ -34,6 +34,13 @@ namespace ag::Helper
     }
   }
 
+  inline void load_json(const json& j, const std::string& key, Color& color)
+  {
+    if (j.contains(key))
+    {
+      color.load(j[key]);
+    }
+  }
 
 
 
@@ -54,6 +61,11 @@ namespace ag::Helper
   inline void save_json(json& j, const std::string& key, const rect<T>& value)
   {
     j[key] = value.save();;
+  }
+
+  inline void save_json(json& j, const std::string& key, const Color& color)
+  {
+    j[key] = color.save();
   }
 
 

@@ -58,6 +58,7 @@ namespace ag
 			sprite_.size = sprite_.texture->get_size();
 			sprite_.texture_rect = uint_rect(0, 0, sprite_.size);
 			entity.add_component<SpriteProp>(sprite_);
+
 		}
 
 		static void delete_node(Entity entity)

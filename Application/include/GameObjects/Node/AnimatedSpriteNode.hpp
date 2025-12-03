@@ -21,22 +21,31 @@ namespace ag
 			{
 				json j;
 
-				j["Animation Name"] = anim.name;
-				j["Start Frame"] = anim.start_frame;
-				j["End Frame"] = anim.end_frame;
-				j["Duration"] = anim.duration;
-				j["Loop"] = anim.loop;
+				Helper::save_json(j, "Animation Name", anim.name);
+
+				Helper::save_json(j, "Start Frame", anim.start_frame);
+
+				Helper::save_json(j, "End Frame", anim.end_frame);
+
+				Helper::save_json(j, "Duration", anim.duration);
+
+				Helper::save_json(j, "Loop", anim.loop);
+
 
 				return j;
 			}
 
-			static void load(Animation& anim,const json& j)
+			static void load(Animation& anim, const json& j)
 			{
-				anim.name = j["Animation Name"].get<std::string>();
-				anim.start_frame = j["Start Frame"].get<int>();
-				anim.end_frame = j["End Frame"].get<int>();
-				anim.duration = j["Duration"].get<float>();
-				anim.loop = j["Loop"].get<bool>();
+				Helper::load_json(j, "Animation Name", anim.name);
+
+				Helper::load_json(j, "Start Frame", anim.start_frame);
+
+				Helper::load_json(j, "End Frame", anim.end_frame);
+
+				Helper::load_json(j, "Duration", anim.duration);
+
+				Helper::load_json(j, "Loop", anim.loop);
 			}
 		};
 
@@ -60,11 +69,14 @@ namespace ag
 				const auto& props = entity.get_component<AnimatedSpriteProps>();
 
 				json j;
-				j["Texture Path"] = props.texture_path;
-				j["Frame Grid"] = { props.frame_grid.x, props.frame_grid.y };
-				j["Frame Grid"] = props.frame_grid.save();
-				j["Texture Rect"] = props.texture_rect.save();
-				j["Current Animation"] = props.current_animation;
+				Helper::save_json(j, "Texture Path", props.texture_path);
+
+				Helper::save_json(j, "Frame Grid", props.frame_grid);
+
+				Helper::save_json(j, "Texture Rect", props.texture_rect);
+
+				Helper::save_json(j, "Current Animation", props.current_animation);
+
 				for (auto& [name, anim] : props.animations)
 				{
 					j["Animations"][name] = Animation::save(anim);
@@ -150,7 +162,7 @@ namespace ag
 			return j;
 		}
 
-		static void load_json(Entity entity,const json& j)
+		static void load_json(Entity entity, const json& j)
 		{
 
 			Transform::load(entity, j["Transform"]);
@@ -210,9 +222,9 @@ namespace ag
 					{
 						if (ImGui::Button("Add Animation"))
 						{
-								Animation new_anim;
-								new_anim.name = "Animation";
-								sprite.animations[new_anim.name] = new_anim;
+							Animation new_anim;
+							new_anim.name = "Animation";
+							sprite.animations[new_anim.name] = new_anim;
 						}
 					}
 
@@ -331,7 +343,7 @@ namespace ag
 
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
-			if(s.playing)
+			if (s.playing)
 				update(entity, ts);
 
 			Renderer2D::set_texture(s.texture);
@@ -344,7 +356,7 @@ namespace ag
 
 			Renderer2D::draw_sprite(sprite, transform);
 		}
-	
+
 		static bool play_animation(Entity entity, const std::string& anim_name)
 		{
 			if (entity.has_component<AnimatedSprite2DNode::AnimatedSpriteProps>())
@@ -366,5 +378,5 @@ namespace ag
 			}
 			return false;
 		}
-};
+	};
 }

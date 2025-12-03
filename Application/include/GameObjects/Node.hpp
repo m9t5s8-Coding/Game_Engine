@@ -7,3 +7,4 @@
 #include <GameObjects/Node/CameraComponent.hpp>
 #include <GameObjects/Node/TileMapNode.hpp>
 #include <GameObjects/Node/Scene2D.hpp>
+#include <GameObjects/Node/TextNode.hpp>

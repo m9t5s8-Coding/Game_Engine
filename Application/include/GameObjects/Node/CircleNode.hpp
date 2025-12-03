@@ -22,22 +22,23 @@ namespace ag
 			{
 				json j;
 				const auto& props = entity.get_component<CircleProp>();
-
-				j["Size"] = props.size.save();
-				j["Fill Color"] = props.fill_color.save();
-				j["Border Color"] = props.border_color.save();
-				j["Border Thickness"] = props.border_thickness;
+				Helper::save_json(j, "Size", props.size);
+				Helper::save_json(j, "Fill Color", props.fill_color);
+				Helper::save_json(j, "Border Color", props.border_color);
+				Helper::save_json(j, "Border Thickness", props.border_thickness);
 
 				return j;
 			}
-		
-			static void load(Entity entity,const json& j)
+
+			static void load(Entity entity, const json& j)
 			{
 				auto& props = entity.get_component<CircleProp>();
-				props.size.load(j["Size"]);
-				props.fill_color.load(j["Fill Color"]);
-				props.border_color.load(j["Border Color"]);
-				props.border_thickness = j["Border Thickness"].get<float>();
+
+				Helper::load_json(j, "Size", props.size);
+				Helper::load_json(j, "Fill Color", props.fill_color);
+				Helper::load_json(j, "Border Color", props.border_color);
+				Helper::load_json(j, "Border Thickness", props.border_thickness);
+
 			}
 		};
 

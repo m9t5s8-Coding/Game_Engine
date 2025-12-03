@@ -36,7 +36,8 @@ namespace ag
 		AnimatedSprite2D,
 		Camera,
 		TileMap,
-		Scene2D
+		Scene2D,
+		TextNode
 	};
 
 	enum class RenderLayer
@@ -376,7 +377,7 @@ namespace ag
 	{
 		std::string text;
 		RenderMode mode = RenderMode::World;
-		Color text_color;
+		Color text_color = Color::White;
 	};
 
 }
