@@ -230,7 +230,7 @@ namespace ag
 			s_data->sprite_shader = ag::Shader::create("assets/shaders/Sprite2D.glsl");
 		}
 
-		s_data->sprite_texture = ag::Texture2D::create("assets/textures/default.png");
+		s_data->sprite_texture = ag::Texture2D::create("assets/textures/default.png", false);
 		s_data->sprite_shader->bind();
 		s_data->sprite_shader->set_int("u_texture", 1);
 
@@ -271,7 +271,7 @@ namespace ag
 
 			s_data->text_shader = ag::Shader::create("assets/shaders/Text2D.glsl");
 
-			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png");
+			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png", false);
 			s_data->text_shader->bind();
 			s_data->text_shader->set_int("u_texture", 0);
 

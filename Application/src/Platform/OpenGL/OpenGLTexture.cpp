@@ -5,7 +5,7 @@
 
 namespace ag
 {
-  OpenGLTexture2D::OpenGLTexture2D(const std::string &p_path)
+  OpenGLTexture2D::OpenGLTexture2D(const std::string &p_path, bool is_nearest)
       : m_path(p_path)
   {
     // Load the image from the file
@@ -21,8 +21,17 @@ namespace ag
 
     // How to load images linear or nearest
     // Upscaling and Downscaling
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (is_nearest)
+    {
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+    else
+    {
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    
 
     // Repeat Horizontally and Vertically
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

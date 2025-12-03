@@ -43,7 +43,6 @@ namespace ag
 		vec2f m_last_mouse;
 		bool m_viewport_hovered = false;
 
-		std::string m_text_buffer;
 
 		bool m_minimized = false;
 

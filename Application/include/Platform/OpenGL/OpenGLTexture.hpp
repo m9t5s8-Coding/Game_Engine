@@ -7,7 +7,7 @@ namespace ag
   class OpenGLTexture2D : public Texture2D
   {
   public:
-    OpenGLTexture2D(const std::string& p_path);
+    OpenGLTexture2D(const std::string& p_path, bool is_nearest);
     virtual ~OpenGLTexture2D();
 
     virtual AG_uint get_width() const override { return m_size.x; };

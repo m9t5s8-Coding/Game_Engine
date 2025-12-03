@@ -90,7 +90,7 @@ namespace ag
 	void ScenePanel::draw_node_hierarchy(Entity entity, int level)
 	{
 		auto& tag = entity.get_component<Tag>();
-	
+
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
 		if (m_selected_entity == entity)
 			flags |= ImGuiTreeNodeFlags_Selected;
@@ -136,7 +136,7 @@ namespace ag
 				draw_node_hierarchy(child, level + 1);
 			}
 
-			
+
 			ImGui::TreePop();
 		}
 
@@ -546,7 +546,19 @@ namespace ag
 				reset_transform_setting();
 			break;
 
-		case Key::Delete: m_scene->destroy_entity(m_selected_entity); break;
+		case Key::Delete:
+		{
+			auto& tag = m_selected_entity.get_component<Tag>();
+			auto& parent_tag = tag.parent.get_component<Tag>();
+
+			parent_tag.children.erase(
+				std::remove(parent_tag.children.begin(), parent_tag.children.end(), m_selected_entity), parent_tag.children.end()
+			);
+			m_scene->destroy_entity(m_selected_entity);
+			m_selected_entity = Entity();
+			break;
+		}
+
 		}
 		return false;
 	}

@@ -25,6 +25,6 @@ namespace ag
   class Texture2D : public Texture
   {
   public:
-    static std::shared_ptr<Texture2D> create(const std::string& p_path);
+    static std::shared_ptr<Texture2D> create(const std::string& p_path, bool is_nearest = true);
   };
 }

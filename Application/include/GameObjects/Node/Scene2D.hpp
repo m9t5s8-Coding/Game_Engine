@@ -51,7 +51,6 @@ namespace ag
     {
       {
         Tag::show_properties(entity);
-        
       }
     }
 

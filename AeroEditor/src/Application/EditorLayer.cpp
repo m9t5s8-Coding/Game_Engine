@@ -56,17 +56,7 @@ namespace ag
 		Renderer2D::begin_scene(m_view_controller->get_view(), m_viewport_size);
 		editor_things();
 
-		m_scene->on_update(ts);
-
-		Text text;
-		Transform trans;
-		text.text = m_text_buffer;
-		text.text_color = Color::White;
-		text.mode = RenderMode::World;
-		trans.position = { 0, 0 };
-		Renderer2D::draw_text(text, trans);
-	
-		
+		m_scene->on_update(ts);		
 		Renderer2D::end_scene();
 
 		m_framebuffer->unbind();
@@ -291,7 +281,6 @@ namespace ag
 		m_panel->on_event(e);
 	}
 
-
 	bool EditorLayer::on_key_pressed(KeyPressedEvent& e)
 	{
 		bool control = Keyboard::is_key_pressed(Key::LeftControl) || Keyboard::is_key_pressed(Key::RightControl);
@@ -313,39 +302,14 @@ namespace ag
 				m_scenes[m_scene->get_name()] = m_scene;
 				m_panel->set_scene(m_scene);
 			}
-
-			if (e.get_key_code() == Key::V)
-			{
-				auto text = Application::get().get_window().get_clipboard_string();
-				m_text_buffer += text;
-			}
-			
-			
-
 			return false;
-		}
-
-		if (e.get_key_code() == Key::Backspace && !m_text_buffer.empty())
-		{
-			m_text_buffer.pop_back();
-		}
-
-		if (e.get_key_code() == Key::Enter)
-		{
-			m_text_buffer += '\n';
-		}
-
-		if (e.get_key_code() == Key::Tab)
-		{
-			m_text_buffer += "    ";
 		}
 		return false;
 	}
 
 	bool EditorLayer::on_text_input(TextInputEvent& e)
 	{
-		m_text_buffer += e.get_character();
-		return true;
+		return false;
 	}
 
 	void EditorLayer::editor_things()

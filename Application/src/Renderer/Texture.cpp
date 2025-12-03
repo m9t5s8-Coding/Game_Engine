@@ -6,7 +6,7 @@
 
 namespace ag
 {
-  std::shared_ptr<Texture2D> Texture2D::create(const std::string& p_path)
+  std::shared_ptr<Texture2D> Texture2D::create(const std::string& p_path, bool is_nearest)
   {
     static std::unordered_map<std::string, std::weak_ptr<Texture2D>> s_texture_cache;
     switch (Renderer::get_API())
@@ -18,7 +18,7 @@ namespace ag
         {
           return cached;
         }
-        auto texture = std::make_shared<OpenGLTexture2D>(p_path);
+        auto texture = std::make_shared<OpenGLTexture2D>(p_path, is_nearest);
         s_texture_cache[p_path] = texture;
         return texture;
       }

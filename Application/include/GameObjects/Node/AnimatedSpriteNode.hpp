@@ -163,8 +163,6 @@ namespace ag
 
 		}
 
-		
-
 		static void show_properties(Entity entity)
 		{
 			auto& sprite = entity.get_component<AnimatedSpriteProps>();
@@ -347,7 +345,6 @@ namespace ag
 			Renderer2D::draw_sprite(sprite, transform);
 		}
 	
-		
 		static bool play_animation(Entity entity, const std::string& anim_name)
 		{
 			if (entity.has_component<AnimatedSprite2DNode::AnimatedSpriteProps>())
