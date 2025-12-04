@@ -33,7 +33,7 @@ namespace ag
 
 				return j;
 			}
-			static json load_json(Entity entity, const json &j)
+			static void load_json(Entity entity, const json &j)
 			{
 
 				auto &props = entity.get_component<TextureButtonProps>();
@@ -41,7 +41,7 @@ namespace ag
 				Helper::load_json(j, "Hover Texture Rect", props.hover_texture_rect);
 				Helper::load_json(j, "Active Texture Rect", props.active_texture_rect);
 				Helper::load_json(j, "Texture Path", props.texture_path);
-				Helper::load_json(j, "Mode", static_cast<RenderMode>(props.mode));
+				Helper::load_json(j, "Mode", props.mode);
 			}
 		};
 
@@ -74,7 +74,7 @@ namespace ag
 			return j;
 		}
 
-		static json load_json(Entity entity, const json &j)
+		static void load_json(Entity entity, const json &j)
 		{
 			TextureButtonProps::load_json(entity, j["TextureButtonProps"]);
 			Transform::load(entity, j["Transform"]);

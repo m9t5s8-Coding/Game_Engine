@@ -461,13 +461,13 @@ namespace ag
 
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
 			instance->position.y = base_line - (g.plane_top * scale_y );
-			
+
 
 			starting_pos.x += g.advance * scale_x;
 
 			s_data->text_index++;
 		}
-		
+
 	}
 
 	void Renderer2D::flush_rectangle()
