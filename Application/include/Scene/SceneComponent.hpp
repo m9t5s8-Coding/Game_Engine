@@ -38,7 +38,10 @@ namespace ag
 		Camera,
 		TileMap,
 		Scene2D,
-		TextNode
+		TextNode,
+		Button,
+		TextureButton
+
 	};
 
 	enum class RenderLayer
