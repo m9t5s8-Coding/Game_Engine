@@ -15,7 +15,8 @@ namespace ag
 	{
 	public:
 		static std::unordered_map<NodeType, std::function<void(Entity)>> create_map;
-		static std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> draw_map;
+		static std::unordered_map<NodeType, std::function<void(Entity)>> draw_map;
+		static std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> update_map;
 		static std::unordered_map<NodeType, std::function<void(Entity)>> properties_map;
 		static std::unordered_map<NodeType, std::function<void(Entity, Entity)>> clone_map;
 		static std::unordered_map<NodeType, std::function<json(Entity)>> save_map;

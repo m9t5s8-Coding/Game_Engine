@@ -51,6 +51,7 @@ namespace ag
 			{
 				draw_node_hierarchy(entity, 0);
 				ImGui::Spacing();
+
 			}
 		}
 		ImGui::End();
@@ -549,11 +550,15 @@ namespace ag
 		case Key::Delete:
 		{
 			auto& tag = m_selected_entity.get_component<Tag>();
-			auto& parent_tag = tag.parent.get_component<Tag>();
 
-			parent_tag.children.erase(
-				std::remove(parent_tag.children.begin(), parent_tag.children.end(), m_selected_entity), parent_tag.children.end()
-			);
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				auto& parent_tag = tag.parent.get_component<Tag>();
+
+				parent_tag.children.erase(
+					std::remove(parent_tag.children.begin(), parent_tag.children.end(), m_selected_entity), parent_tag.children.end()
+				);
+			}
 			m_scene->destroy_entity(m_selected_entity);
 			m_selected_entity = Entity();
 			break;

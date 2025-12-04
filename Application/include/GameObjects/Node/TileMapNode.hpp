@@ -145,6 +145,7 @@ namespace ag
 		{
 			json j;
 			j["TileMapProp"] = TileMapProp::save(entity);
+
 			return j;
 		}
 		
@@ -189,12 +190,12 @@ namespace ag
 				}
 		}
 		
-		static void update(Entity enitity, TimeStamp ts)
+		static void update(Entity entity, TimeStamp ts)
 		{
 
 		}
 		
-		static void draw(Entity entity, TimeStamp ts)
+		static void draw(Entity entity)
 		{
 			auto is_visible = entity.get_component<Tag>().is_visible;
 			if (!is_visible)

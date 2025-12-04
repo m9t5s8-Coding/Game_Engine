@@ -95,6 +95,11 @@ namespace ag
 		{
 			SpriteProp::load(entity, j["SpriteProp"]);
 			Transform::load(entity, j["Transform"]);
+
+			if (j.contains("ScriptComponent"))
+			{
+				ScriptComponent::load_json(entity, j["ScriptComponent"]);
+			}
 		}
 
 		static void show_properties(Entity entity)
@@ -145,11 +150,17 @@ namespace ag
 			}
 		}
 
-		static void draw(Entity entity, TimeStamp ts)
+		static void update(Entity entity, TimeStamp ts)
+		{
+			ScriptComponent::update(entity, ts);
+		}
+
+		static void draw(Entity entity)
 		{
 			auto is_visible = entity.get_component<Tag>().is_visible;
 			if (!is_visible)
 				return;
+
 
 
 			auto& transform = entity.get_component<Transform>();

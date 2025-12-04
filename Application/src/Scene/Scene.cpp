@@ -27,7 +27,7 @@ namespace ag
 
 		Tag tag;
 		tag.tag = name;
-		tag.index = entity.get_id();
+		tag.index = m_next_index++;
 		tag.node_type = type;
 
 		entity.add_component<Tag>(tag);
@@ -66,13 +66,25 @@ namespace ag
 			return a.index < b.index;
 		});
 
+
+		// Update Thread
 		auto view = m_registry.view<Tag>();
+		for (auto entityID : view)
+		{
+			Entity e(entityID);
+			auto it = NodeFactory::update_map.find(e.get_component<Tag>().node_type);
+			if (it != NodeFactory::update_map.end())
+				it->second(e, ts);
+
+		}
+
+		// Draw Thread
 		for (auto entityID : view)
 		{
 			Entity e(entityID);
 			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
 			if (it != NodeFactory::draw_map.end())
-				it->second(e, ts);
+				it->second(e);
 
 		}
 

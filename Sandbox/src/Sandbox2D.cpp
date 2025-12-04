@@ -16,7 +16,7 @@ namespace ag
 
 	void Sandbox2D::on_detach()
 	{
-		
+
 	}
 
 	void Sandbox2D::on_update(ag::TimeStamp ts)
@@ -38,14 +38,61 @@ namespace ag
 		m_scene->on_event(event);
 	}
 
+	std::string Sandbox2D::get_appdata_path()
+	{
+		const char* appdata = std::getenv("APPDATA");
+
+		if (appdata)
+			return std::string(appdata);
+		else
+			return ".";
+	}
+
 	void Sandbox2D::load_project_data()
 	{
-		std::string project_path = "D:/Aero/Test/Test.aeroproj";
+		std::string app_data_path = get_appdata_path();
+		Helper::normalize_path(app_data_path);
+		std::string app_folder = app_data_path + "/AEROEngine";
+		std::string settings_path = app_folder + "/settings.json";
+
+		json j;
+
+		// Open Setting File For an AeroEngine
 		{
-			Project::load_project(project_path);
+			std::ifstream file(settings_path);
+			if (!file.is_open())
+			{
+				AERO_CORE_INFO("Cannot Open File {0}", settings_path);
+			}
+			file >> j;
+			file.close();
+		}
+		// Load the Project
+		{
+			std::string project_path;
+			Helper::load_json(j["Project"], "File Path", project_path);
+			{
+				Project::load_project(project_path);
+			}
+		}
+		
+		std::string scene_path;
+		{
+			auto project = Project::get_active_project();
+			auto& project_file = project->get_project_file_directory();
+			std::ifstream proj_file(project_file);
+			if (!proj_file.is_open())
+			{
+				AERO_CORE_INFO("Cannot Open File :{0}", project_file);
+			}
+			proj_file >> j;
+			proj_file.close();
+			Helper::load_json(j["Scene"], "Last Loaded Path", scene_path);
+			auto& project_directory = project->get_directory();
+			auto& scene_directory = project->get_scene_directory();
+			scene_path = project_directory + scene_directory + scene_path;
 		}
 
-		std::string scene_path = "D:/Aero/Test/Scenes/tik.aeroscene";
 
 		m_scene = SaveScene::load_scene(scene_path);
 		Scene::set_active_scene(m_scene);
@@ -54,12 +101,13 @@ namespace ag
 		for (auto entityID : entities)
 		{
 			Entity entity(entityID);
-			auto& props = entity.get_component< CameraComponent::CameraProps>();
-			
+			auto& props = entity.get_component<CameraComponent::CameraProps>();
+
 			auto& view = m_view_controller->get_view();
 			vec2f view_size = props.view_size * props.zoom;
 
 			m_view_controller = ViewController::create(view_size, props.view_center);
 		}
+		
 	}
 }

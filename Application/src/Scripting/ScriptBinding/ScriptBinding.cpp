@@ -523,6 +523,11 @@ namespace ag
 				{
 					return NodeHelper::get_comp_value(entity, &SpriteNode::SpriteProp::size, { 0, 0 });
 				}
+				else if (type == NodeType::AnimatedSprite2D)
+				{
+					auto texture_rect = NodeHelper::get_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::texture_rect, { 0, 0, 0, 0 });
+					return texture_rect.size;
+				}
 				return { 0, 0 };
 				});
 		

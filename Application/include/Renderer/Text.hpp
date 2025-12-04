@@ -13,6 +13,7 @@ namespace ag::TextLoader
     float advance;
     float plane_top;
     float plane_bottom;
+    float plane_left;
   };
   struct Font
   {
@@ -70,12 +71,14 @@ namespace ag::TextLoader
 
       g.advance = g.advance * font.em_size;
 
-      float planeTop, planeBottom;
-      Helper::load_json(glyphData["planeBounds"], "top", planeTop);
-      Helper::load_json(glyphData["planeBounds"], "bottom", planeBottom);
+      float plane_top, plane_bottom, plane_left;
+      Helper::load_json(glyphData["planeBounds"], "top", plane_top);
+      Helper::load_json(glyphData["planeBounds"], "bottom", plane_bottom);
+      Helper::load_json(glyphData["planeBounds"], "left", plane_left);
 
-      g.plane_top = planeTop * font.em_size;
-      g.plane_bottom = planeBottom * font.em_size;
+      g.plane_top = plane_top * font.em_size;
+      g.plane_bottom = plane_bottom * font.em_size;
+      g.plane_left = plane_left * font.em_size;
 
 
       font.glyphs[c] = g;

@@ -18,7 +18,6 @@ namespace ag
 
 			float zoom = 1.0f;
 
-
 			static json save(Entity entity)
 			{
 				const auto& props = entity.get_component<CameraProps>();
@@ -88,7 +87,12 @@ namespace ag
 			ImGui::Checkbox("IsActive", &props.is_active);
 		}
 
-		static void draw(Entity entity, TimeStamp ts)
+		static void update(Entity entity, TimeStamp ts)
+		{
+
+		}
+
+		static void draw(Entity entity)
 		{
 		}
 	};

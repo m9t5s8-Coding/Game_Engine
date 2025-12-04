@@ -114,6 +114,11 @@ namespace ag
 
 			Tag::load_json(e, entityjson);
 
+			{
+				auto& tag = e.get_component<Tag>();
+				scene->set_next_index(std::max(scene->get_index(), tag.index + 1));
+			}
+
 			auto it = NodeFactory::load_map.find(type);
 			if (it != NodeFactory::load_map.end())
 			{
@@ -140,7 +145,7 @@ namespace ag
 			}
 		}
 
-
+		index_map.clear();
 		AERO_CORE_INFO("Scene Loaded Successfully: {0}", scene->get_name());
 		return scene;
 	}

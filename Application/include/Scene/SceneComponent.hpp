@@ -21,6 +21,7 @@
 namespace ag
 {
 	static std::string default_path = "assets/textures/";
+	inline std::unordered_map<AG_uint, Entity> index_map;
 
 	enum class RenderMode
 	{
@@ -75,18 +76,17 @@ namespace ag
 			if (!entity.has_component<Tag>())
 				return j;
 
-			const auto& tag = entity.get_component<Tag>();
+			auto& tag = entity.get_component<Tag>();
 
 			Helper::save_json(j, "Tag", tag.tag);
 			Helper::save_json(j, "NodeType", static_cast<int>(tag.node_type));
-			Helper::save_json(j, "Index", tag.index);
 			Helper::save_json(j, "Visible", tag.is_visible);
-
-			Helper::save_json(j, "ID", entity.get_id());
+			Helper::save_json(j, "ID", tag.index);
 
 			if (tag.parent.get_id() != INVALID_ENTITY)
 			{
-				Helper::save_json(j, "Parent", tag.parent.get_id());
+				auto parent_index = tag.parent.get_component<Tag>().index;
+				Helper::save_json(j, "Parent", parent_index);
 			}
 
 			if (!tag.children.empty())
@@ -94,7 +94,8 @@ namespace ag
 				json children_json = json::array();
 				for (auto& child : tag.children)
 				{
-					children_json.push_back(child.get_id());
+					auto child_index = child.get_component<Tag>().index;
+					children_json.push_back(child_index);
 				}
 				j["Children"] = children_json;
 			}
@@ -107,7 +108,7 @@ namespace ag
 			auto& tag = entity.get_component<Tag>();
 			Helper::load_json(j, "Tag", tag.tag);
 			Helper::load_json(j, "NodeType", tag.node_type);
-			Helper::load_json(j, "Index", tag.index);
+			Helper::load_json(j, "ID", tag.index);
 			Helper::load_json(j, "Visible", tag.is_visible);
 
 			Helper::load_json(j, "Parent", tag.parent_id);
@@ -122,6 +123,8 @@ namespace ag
 					tag.children_id.push_back(child_id);
 				}
 			}
+
+			index_map[tag.index] = entity;
 		}
 
 		static void load_children(Entity entity)
@@ -130,32 +133,40 @@ namespace ag
 
 			if (tag.parent_id != INVALID_ENTITY)
 			{
-				Entity parent(static_cast<entt::entity>(tag.parent_id));
-				tag.parent = parent;
+				if (index_map.contains(tag.parent_id))
+				{
+					tag.parent = index_map[tag.parent_id];
+				}
 			}
 
-			if (!tag.children_id.empty())
+			for (auto& child_id : tag.children_id)
 			{
-				for (auto& child_id : tag.children_id)
-				{
-					Entity child(static_cast<entt::entity>(child_id));
-					tag.children.push_back(child);
-				}
+				if (!index_map.contains(child_id))
+					continue;
+
+				Entity child = index_map[child_id];
+				tag.children.push_back(child);
 			}
 		}
 
 		static void clone(Entity original, Entity duplicate)
 		{
 			const auto& original_tag = original.get_component<Tag>();
-
 			auto& duplicate_tag = duplicate.get_component<Tag>();
 
-			duplicate_tag = original_tag;
+			duplicate_tag.tag = original_tag.tag;
+			duplicate_tag.node_type = original_tag.node_type;
+			duplicate_tag.layer = original_tag.layer;
+			duplicate_tag.is_visible = original_tag.is_visible;
+			duplicate_tag.parent = original_tag.parent;
+			duplicate_tag.children.clear();
 
-			duplicate_tag.index = duplicate.get_id();
+			if (duplicate_tag.parent)
+			{
+				auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
+				parent_tag.children.push_back(duplicate);
+			}
 
-			auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
-			parent_tag.children.push_back(duplicate);
 		}
 	};
 

@@ -23,5 +23,8 @@ namespace ag
     AG_ref<Scene> m_scene;
 
     void load_project_data();
+
+    std::string get_appdata_path();
+    
   };
 }

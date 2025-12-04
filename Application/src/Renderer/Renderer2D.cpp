@@ -414,7 +414,14 @@ namespace ag
 	void Renderer2D::draw_text(const Text& text_string, const Transform& transform)
 	{
 		vec2f starting_pos = transform.position;
-		float base_line = starting_pos.y + TextLoader::font.ascender * TextLoader::font.em_size;
+		const float scale_x = transform.scale.x;
+		const float scale_y = transform.scale.y;
+
+		const float ascender = TextLoader::font.ascender * TextLoader::font.em_size * scale_y;
+		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y;
+
+		float base_line = starting_pos.y + ascender;
+
 
 		if (s_data->text_index >= s_data->max_shape)
 		{
@@ -430,7 +437,7 @@ namespace ag
 			if (c == '\n')
 			{
 				starting_pos.x = transform.position.x;
-				base_line += TextLoader::font.line_height * TextLoader::font.em_size;
+				base_line += line_height;
 				continue;
 			}
 
@@ -444,17 +451,19 @@ namespace ag
 
 			Text_Instance* instance = s_data->text_instanced_ptr++;
 			instance->texture_size = s_data->text_texture->get_size();
-			instance->size = g.texture_rect.size;
+
+			instance->size = g.texture_rect.size * transform.scale;
+
 			g.texture_rect.to_vec4(instance->texture_rect);
 			text_string.text_color.normalize_color(instance->text_color);
 			instance->mode = (int)text_string.mode;
 
 
-			instance->position.x = starting_pos.x;
-			instance->position.y = base_line - g.plane_top;
+			instance->position.x = starting_pos.x + g.plane_left * scale_x;
+			instance->position.y = base_line - (g.plane_top * scale_y );
 			
 
-			starting_pos.x += g.advance;
+			starting_pos.x += g.advance * scale_x;
 
 			s_data->text_index++;
 		}

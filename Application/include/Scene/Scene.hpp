@@ -40,6 +40,9 @@ namespace ag
 		bool has_name() { return !m_name.empty(); }
 		bool has_directory() { return !m_directory.empty(); }
 
+		AG_uint get_index() const { return m_next_index; }
+		void set_next_index(AG_uint index) { m_next_index = index; }
+
 
 		template <typename T>
 		auto get_view()

@@ -22,13 +22,9 @@ namespace ag
 				json j;
 
 				Helper::save_json(j, "Animation Name", anim.name);
-
 				Helper::save_json(j, "Start Frame", anim.start_frame);
-
 				Helper::save_json(j, "End Frame", anim.end_frame);
-
 				Helper::save_json(j, "Duration", anim.duration);
-
 				Helper::save_json(j, "Loop", anim.loop);
 
 
@@ -38,13 +34,9 @@ namespace ag
 			static void load(Animation& anim, const json& j)
 			{
 				Helper::load_json(j, "Animation Name", anim.name);
-
 				Helper::load_json(j, "Start Frame", anim.start_frame);
-
 				Helper::load_json(j, "End Frame", anim.end_frame);
-
 				Helper::load_json(j, "Duration", anim.duration);
-
 				Helper::load_json(j, "Loop", anim.loop);
 			}
 		};
@@ -299,8 +291,13 @@ namespace ag
 
 		static void update(Entity entity, TimeStamp ts)
 		{
-			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
+			auto& tag = entity.get_component<Tag>();
+
+			ScriptComponent::update(entity, ts);
+			if (!s.playing || !tag.is_visible)
+				return;
+			
 			if (!s.current_animation.empty())
 			{
 				auto it = s.animations.find(s.current_animation);
@@ -333,9 +330,8 @@ namespace ag
 			}
 		}
 
-		static void draw(Entity entity, TimeStamp ts)
+		static void draw(Entity entity)
 		{
-			ScriptComponent::update(entity, ts);
 
 			auto is_visible = entity.get_component<Tag>().is_visible;
 			if (!is_visible)
@@ -343,9 +339,7 @@ namespace ag
 
 			auto& transform = entity.get_component<Transform>();
 			auto& s = entity.get_component<AnimatedSpriteProps>();
-			if (s.playing)
-				update(entity, ts);
-
+			
 			Renderer2D::set_texture(s.texture);
 
 			Sprite sprite;
@@ -353,7 +347,6 @@ namespace ag
 			sprite.size = s.texture_rect.size;
 			sprite.flip_horizontal = s.flip_horizontal;
 			sprite.flip_vertical = s.flip_vertical;
-
 			Renderer2D::draw_sprite(sprite, transform);
 		}
 

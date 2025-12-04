@@ -19,6 +19,7 @@ namespace ag
         const auto& props = entity.get_component<TextProp>();
 
         Helper::save_json(j, "Text", props.text.text);
+        Helper::save_json(j, "Text Color", props.text.text_color);
         return j;
       }
 
@@ -26,6 +27,7 @@ namespace ag
       {
         auto& props = entity.get_component<TextProp>();
         Helper::load_json(j, "Text", props.text.text);
+        Helper::load_json(j, "Text Color", props.text.text_color);
       }
     };
 
@@ -82,24 +84,28 @@ namespace ag
     {
       {
         Tag::show_properties(entity);
-
+        {
+          auto& props = entity.get_component<TextProp>();
+          UI::draw_string("Text", props.text.text);
+          UI::draw_color("Fill Color", props.text.text_color);
+        }
         Transform::show_properties(entity);
       }
     }
 
-    static void draw(Entity entity, TimeStamp ts)
+    static void update(Entity entity, TimeStamp ts)
     {
       ScriptComponent::update(entity, ts);
+    }
 
-
+    static void draw(Entity entity)
+    {
       auto is_visible = entity.get_component<Tag>().is_visible;
       if (!is_visible)
         return;
 
       auto& transform = entity.get_component<Transform>();
       auto& props = entity.get_component<TextProp>();
-
-      props.text.text = "Pawan Wagle";
 
       Renderer2D::draw_text(props.text, transform);
     }

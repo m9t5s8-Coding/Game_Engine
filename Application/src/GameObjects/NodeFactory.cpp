@@ -4,7 +4,8 @@
 namespace ag
 {
 	std::unordered_map<NodeType, std::function<void(Entity)>> NodeFactory::create_map;
-	std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> NodeFactory::draw_map;
+	std::unordered_map<NodeType, std::function<void(Entity)>> NodeFactory::draw_map;
+	std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> NodeFactory::update_map;
 	std::unordered_map<NodeType, std::function<void(Entity)>> NodeFactory::properties_map;
 	std::unordered_map<NodeType, std::function<void(Entity, Entity)>> NodeFactory::clone_map;
 	std::unordered_map<NodeType, std::function<json(Entity)>> NodeFactory::save_map;
@@ -14,6 +15,7 @@ namespace ag
 
 	void NodeFactory::init()
 	{
+		// Create Node Function
 		create_map[NodeType::Rectangle] = RectangleNode::create_node;
 		create_map[NodeType::Circle] = CircleNode::create_node;
 		create_map[NodeType::Sprite] = SpriteNode::create_node;
@@ -24,7 +26,7 @@ namespace ag
 		create_map[NodeType::TextNode] = TextNode::create_node;
 
 
-
+		// Draw Function
 		draw_map[NodeType::Rectangle] = RectangleNode::draw;
 		draw_map[NodeType::Circle] = CircleNode::draw;
 		draw_map[NodeType::Sprite] = SpriteNode::draw;
@@ -34,6 +36,15 @@ namespace ag
 		draw_map[NodeType::Scene2D] = Scene2D::draw;
 		draw_map[NodeType::TextNode] = TextNode::draw;
 
+
+		update_map[NodeType::Rectangle] = RectangleNode::update;
+		update_map[NodeType::Circle] = CircleNode::update;
+		update_map[NodeType::Sprite] = SpriteNode::update;
+		update_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::update;
+		update_map[NodeType::Camera] = CameraComponent::update;
+		update_map[NodeType::TileMap] = TileMapNode::update;
+		update_map[NodeType::Scene2D] = Scene2D::update;
+		update_map[NodeType::TextNode] = TextNode::update;
 
 
 		properties_map[NodeType::Rectangle] = RectangleNode::show_properties;

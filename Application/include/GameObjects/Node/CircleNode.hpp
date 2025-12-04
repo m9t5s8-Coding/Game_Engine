@@ -105,10 +105,17 @@ namespace ag
 			}
 		}
 
-		static void draw(Entity entity, TimeStamp ts)
+		static void update(Entity entity, TimeStamp ts)
 		{
 			ScriptComponent::update(entity, ts);
 
+			auto is_visible = entity.get_component<Tag>().is_visible;
+			if (!is_visible)
+				return;
+		}
+
+		static void draw(Entity entity)
+		{
 			auto is_visible = entity.get_component<Tag>().is_visible;
 			if (!is_visible)
 				return;
