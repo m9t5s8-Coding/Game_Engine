@@ -16,6 +16,7 @@ namespace ag
 
       float border_thickness = 0.0f;
       Color border_color = Color::White;
+      float corner_radius = 0.0f;
 
       bool is_visible = true;
 
@@ -28,6 +29,7 @@ namespace ag
         j["Fill Color"] = props.fill_color.save();
         j["Border Color"] = props.border_color.save();
         j["Border Thickness"] = props.border_thickness;
+        Helper::save_json(j, "Corner Radius", props.corner_radius);
 
         return j;
       }
@@ -39,6 +41,7 @@ namespace ag
         props.fill_color.load(j["Fill Color"]);
         props.border_color.load(j["Border Color"]);
         props.border_thickness = j["Border Thickness"].get<float>();
+        Helper::load_json(j, "Corner Radius", props.corner_radius);
       }
     };
 
@@ -99,6 +102,7 @@ namespace ag
           auto& props = entity.get_component<RectangleProp>();
           UI::draw_vec2("Size", props.size);
           UI::draw_value("Border Thickness", props.border_thickness);
+          UI::draw_value("Corner Radius", props.corner_radius);
           UI::draw_color("Fill Color", props.fill_color);
           UI::draw_color("Border Color", props.border_color);
         }
@@ -129,6 +133,7 @@ namespace ag
       rectangle.size = rect.size;
       rectangle.fill_color = rect.fill_color;
       rectangle.border_color = rect.border_color;
+      rectangle.corner_radius = rect.corner_radius;
       rectangle.border_thickness = rect.border_thickness;
       Renderer2D::draw_rectangle(rectangle, transform);
     }

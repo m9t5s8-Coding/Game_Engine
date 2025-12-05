@@ -7,9 +7,7 @@
 namespace ag::UI
 {
 	static float columnWidth = 180.0f;
-	// ---------------------------------------
-	// Utility: Uniform label/value structure
-	// ---------------------------------------
+
 	static void BeginProperty(const char* label)
 	{
 		ImGui::Columns(2);
@@ -27,9 +25,6 @@ namespace ag::UI
 		ImGui::Spacing();
 	}
 
-	// ---------------------------------------
-	// Vector2 Drawer (stylish and compact)
-	// ---------------------------------------
 	template <typename T>
 	static bool draw_vec2(const char* label, T& vec, const vec2f& reset_value = vec2f(0, 0))
 	{
@@ -96,9 +91,7 @@ namespace ag::UI
 		return is_changed;
 	}
 
-	// ---------------------------------------
-	// Value Drawer (for single floats/ints)
-	// ---------------------------------------
+
 	template <typename T>
 	static void draw_value(const char* label, T& value)
 	{
@@ -122,9 +115,6 @@ namespace ag::UI
 		ImGui::PopID();
 	}
 
-	// ---------------------------------------
-	// Color Drawer
-	// ---------------------------------------
 	static void draw_color(const char* label, Color& color)
 	{
 		ImGui::PushID(label);
@@ -145,9 +135,7 @@ namespace ag::UI
 		ImGui::PopID();
 	}
 
-	// ---------------------------------------
-	// String Drawer
-	// ---------------------------------------
+
 	static bool draw_string(const char* label, std::string& str)
 	{
 		ImGui::PushID(label);
@@ -169,9 +157,7 @@ namespace ag::UI
 		return is_changed;
 	}
 
-	// ---------------------------------------
-	// Section Title (for grouping)
-	// ---------------------------------------
+
 	static void draw_title(const char* label)
 	{
 		ImGui::Spacing();
@@ -203,5 +189,4 @@ namespace ag::UI
 	}
 
 
-	static void 
 }

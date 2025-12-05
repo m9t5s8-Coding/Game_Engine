@@ -32,17 +32,17 @@ namespace ag
 
 	enum class NodeType
 	{
-		Rectangle,
-		Circle,
-		Sprite,
-		AnimatedSprite2D,
-		Camera,
-		TileMap,
-		Scene2D,
-		TextNode,
-		Button,
-		TextureButton
-
+    None = -1,
+		Rectangle = 0,
+		Circle = 1,
+		Sprite = 2,
+		AnimatedSprite2D = 3,
+		Camera = 4,
+		TileMap = 5,
+		Scene2D = 6,
+		TextNode = 7,
+		Button = 8,
+		TextureButton = 9
 	};
 
 	enum class RenderLayer
@@ -366,6 +366,7 @@ namespace ag
 		vec2f size;
 		Color fill_color;
 		float border_thickness = 0.0f;
+		float corner_radius = 0.0f;
 		Color border_color;
 		RenderMode mode = RenderMode::World;
 	};

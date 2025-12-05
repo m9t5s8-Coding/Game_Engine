@@ -26,6 +26,7 @@ namespace ag
 		vec4f fill_color;
 		vec4f border_color;
 		int mode;
+		float corner_radius;
 	};
 
 	struct Circle_Instance
@@ -152,7 +153,8 @@ namespace ag
 					{ShaderDataType::Float, "a_BorderThickness"},
 					{ShaderDataType::Float4, "a_FillColor"},
 					{ShaderDataType::Float4, "a_BorderColor"},
-					{ShaderDataType::Int, "a_RenderMode"}
+					{ShaderDataType::Int, "a_RenderMode"},
+					{ShaderDataType::Float, "a_CornerRadius"}
 			};
 			s_data->rect_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Rectangle_Instance) * s_data->max_vertices);
 			s_data->rect_instanced_buffer->set_layout(instance_layout);
@@ -363,10 +365,11 @@ namespace ag
 			instance->position = transform.position;
 			instance->origin = instance->size / 2;
 			instance->rotation = Math::to_radians(transform.rotation);
-			instance->border_thickness = rect.border_thickness;
+			instance->border_thickness = rect.border_thickness * (transform.scale.x + transform.scale.y) * 0.5;
 			rect.fill_color.normalize_color(instance->fill_color);
 			rect.border_color.normalize_color(instance->border_color);
 			instance->mode = static_cast<int>(rect.mode);
+			instance->corner_radius = rect.corner_radius * (transform.scale.x + transform.scale.y) * 0.5;
 		}
 		s_data->rectangle_index++;
 	}
@@ -460,7 +463,7 @@ namespace ag
 
 
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
-			instance->position.y = base_line - (g.plane_top * scale_y );
+			instance->position.y = base_line - (g.plane_top * scale_y);
 
 
 			starting_pos.x += g.advance * scale_x;

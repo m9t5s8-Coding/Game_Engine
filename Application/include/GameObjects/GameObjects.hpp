@@ -11,6 +11,7 @@ namespace ag::NodeHelper
 		{
 			return entity.get_component<Tag>().node_type;
 		}
+    return NodeType::None;
 	}
 
 	//C = Component R = ReturnType  D = DefaultValue

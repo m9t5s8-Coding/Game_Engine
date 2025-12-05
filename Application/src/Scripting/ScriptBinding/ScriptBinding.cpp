@@ -287,7 +287,7 @@ namespace ag
 
 	}
 
-	 
+
 	//TODO overload with scalar and vec2
 	void ScriptBinding::register_vec2()
 	{
@@ -530,7 +530,7 @@ namespace ag
 				}
 				return { 0, 0 };
 				});
-		
+
 
 		}
 
@@ -594,6 +594,8 @@ namespace ag
 			const auto& scene = Scene::get_active_scene();
 			scene->destroy_entity(entity);
 			});
+
+    
 
 	}
 }

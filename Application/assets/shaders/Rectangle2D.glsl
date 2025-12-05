@@ -11,6 +11,7 @@ layout(location = 5) in float a_int_border_thickness;
 layout(location = 6) in vec4 a_int_fill_color;
 layout(location = 7) in vec4 a_int_border_color;
 layout(location = 8) in int a_int_mode;
+layout(location = 9) in float a_corner_radius;
 
 uniform mat3 u_view_matrix;
 uniform mat3 u_screen_matrix;
@@ -21,12 +22,13 @@ out vec2 frag_pos;
 out vec2 size;
 
 out float border_size;
-
+out float corner_radius;
 
 void main()
 {
   fill_color = a_int_fill_color;
   border_color = a_int_border_color;
+  corner_radius = a_corner_radius;
 
 
   vec2 total_size;
@@ -78,12 +80,46 @@ in vec4 border_color;
 in vec2 frag_pos;
 in vec2 size;
 in float border_size;
+in float corner_radius;
 
 
 void main()
 {
-  bool is_border = frag_pos.x < border_size || frag_pos.x > (size.x - border_size) ||
+
+  float total_radius = corner_radius + abs(border_size);
+  bool is_corner = false;
+  if(corner_radius > 0)
+   {
+        is_corner = (frag_pos.x < total_radius || frag_pos.x > size.x - total_radius) &&
+                 (frag_pos.y < total_radius || frag_pos.y > size.y - total_radius);
+   }
+
+   if(is_corner)
+   {
+    vec2 corner_center;
+        corner_center.x = frag_pos.x < total_radius ? total_radius : size.x - total_radius;
+        corner_center.y = frag_pos.y < total_radius ? total_radius : size.y - total_radius;
+        float dist = distance(frag_pos, corner_center);
+        if(dist > total_radius)
+        {
+            discard;
+        }
+        else if(dist > corner_radius)
+        {
+           FragColor = border_color;
+        }
+        else
+        {
+            FragColor = fill_color;
+        }
+   }
+   else
+   {
+    bool is_border = frag_pos.x < border_size || frag_pos.x > (size.x - border_size) ||
                   frag_pos.y < border_size || frag_pos.y > (size.y - border_size);
-  FragColor =  is_border ? border_color : fill_color;
+      FragColor =  is_border ? border_color : fill_color;
+   }
+
+  
 
 }

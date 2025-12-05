@@ -18,6 +18,7 @@ namespace ag
       std::string button_text = "Button";
       float border_thickness = 1.0f;
       float font_size = 24.0f;
+      float corner_radius;
 
       Color normal_color = Color::White;
       Color hover_color = Color::White;
@@ -40,6 +41,7 @@ namespace ag
         Helper::save_json(j, "Size", props.size);
         Helper::save_json(j, "Text", props.button_text);
         Helper::save_json(j, "Font Size", props.font_size);
+        Helper::save_json(j, "Corner Radius", props.corner_radius);
 
         Helper::save_json(j, "Normal Color", props.normal_color);
         Helper::save_json(j, "Hover Color", props.hover_color);
@@ -66,6 +68,7 @@ namespace ag
         Helper::load_json(j, "Size", props.size);
         Helper::load_json(j, "Text", props.button_text);
         Helper::load_json(j, "Font Size", props.font_size);
+        Helper::load_json(j, "Corner Radius", props.corner_radius);
 
         Helper::load_json(j, "Normal Color", props.normal_color);
         Helper::load_json(j, "Hover Color", props.hover_color);
@@ -135,6 +138,7 @@ namespace ag
         UI::draw_string("Text", props.button_text);
         UI::draw_value("Border Thickness", props.border_thickness);
         UI::draw_value("Font Size", props.font_size);
+        UI::draw_value("Corner Radius", props.corner_radius);
 
 
         UI::draw_title("Normal");
@@ -190,8 +194,13 @@ namespace ag
 
       if (rect.contains(mouse_pos))
       {
-        props.hovered = false;
-        props.pressed = true;
+        props.hovered = true;
+        props.pressed = false;
+        if (Mouse::is_mouse_pressed(Button::ButtonLeft) && props.hovered)
+        {
+          props.hovered = false;
+          props.pressed = true;
+        }
       }
       else
       {
@@ -217,6 +226,7 @@ namespace ag
       text.font_size = props.font_size;
       rect.size = props.size;
       rect.border_thickness = props.border_thickness;
+      rect.corner_radius = props.corner_radius;
 
       if (Engine::is_runtime())
       {
