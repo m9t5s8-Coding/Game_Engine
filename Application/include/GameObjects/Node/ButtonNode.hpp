@@ -120,7 +120,10 @@ namespace ag
     static void load_json(Entity entity, const json &j)
     {
       ButtonProps::load_json(entity, j["ButtonProps"]);
-      Transform::load(entity, j["Transform"]);
+      if (j.contains("Transform"))
+      {
+        Transform::load(entity, j["Transform"]);
+      }
 
       if (j.contains("ScriptComponent"))
       {
@@ -218,7 +221,7 @@ namespace ag
         return;
 
       auto &props = entity.get_component<ButtonProps>();
-      auto& transform = entity.get_component<Transform>();
+      const auto& transform = Transform::get_world_transform(entity);
 
       Rectangle rect;
       Text text;

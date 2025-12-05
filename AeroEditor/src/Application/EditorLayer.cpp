@@ -54,9 +54,11 @@ namespace ag
 
 		
 		Renderer2D::begin_scene(m_view_controller->get_view(), m_viewport_size);
+		
 		editor_things();
 
 		m_scene->on_update(ts);		
+		m_panel->draw_selected_text();
 		Renderer2D::end_scene();
 
 		m_framebuffer->unbind();

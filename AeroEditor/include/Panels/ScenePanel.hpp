@@ -42,6 +42,7 @@ namespace ag
     void draw_node_hierarchy(Entity entity, int level = 0);
     void draw_properties_panel();
     void draw_create_object();
+    void draw_selected_text();
 
 
     void set_current_mouse_position(const vec2f& position) { m_current_mouse_position = position; }

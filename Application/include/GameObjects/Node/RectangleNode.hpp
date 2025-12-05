@@ -126,7 +126,7 @@ namespace ag
       if (!is_visible)
         return;
 
-      auto &transform = entity.get_component<Transform>();
+      const auto& transform = Transform::get_world_transform(entity);
       auto& rect = entity.get_component<RectangleProp>();
       
       Rectangle rectangle;

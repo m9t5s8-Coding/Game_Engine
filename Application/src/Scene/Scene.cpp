@@ -89,9 +89,31 @@ namespace ag
 		}
 
 		{
-			for (auto& entity : m_to_delete_entity)
+			while(!m_to_delete_entity.empty())
 			{
-				auto& tag = entity.get_component<Tag>().tag;
+				Entity entity = m_to_delete_entity.back();
+				m_to_delete_entity.pop_back();
+
+				auto& tag = entity.get_component<Tag>();
+
+				//Remove From The Parent Entity
+				if (tag.parent.get_id() != INVALID_ENTITY)
+				{
+					auto& parent_tag = tag.parent.get_component<Tag>();
+					parent_tag.children.erase(
+						std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end()
+					);
+				}
+
+				for (auto& children : tag.children)
+				{
+					auto& child_tag = children.get_component<Tag>();
+					child_tag.parent = Entity{};
+					destroy_entity(children);
+				}
+
+				tag.children.clear();
+
 				entity.delete_entity();
 			}
 			m_to_delete_entity.clear();

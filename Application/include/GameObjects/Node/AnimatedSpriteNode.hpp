@@ -157,7 +157,10 @@ namespace ag
 		static void load_json(Entity entity, const json& j)
 		{
 
-			Transform::load(entity, j["Transform"]);
+			if (j.contains("Transform"))
+			{
+				Transform::load(entity, j["Transform"]);
+			}
 			AnimatedSpriteProps::load(entity, j["AnimationSprite2DProps"]);
 
 			if (j.contains("ScriptComponent"))
@@ -337,8 +340,9 @@ namespace ag
 			if (!is_visible)
 				return;
 
-			auto& transform = entity.get_component<Transform>();
+			
 			auto& s = entity.get_component<AnimatedSpriteProps>();
+			const auto& transform = Transform::get_world_transform(entity);
 			
 			Renderer2D::set_texture(s.texture);
 

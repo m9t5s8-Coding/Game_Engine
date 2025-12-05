@@ -201,7 +201,7 @@ namespace ag
 				return;
 
 			auto &props = entity.get_component<TextureButtonProps>();
-			auto &transform = entity.get_component<Transform>();
+			const auto& transform = Transform::get_world_transform(entity);
 
 			Sprite sprite;
 

@@ -107,7 +107,7 @@ namespace ag
       if (!is_visible)
         return;
 
-      auto& transform = entity.get_component<Transform>();
+      const auto& transform = Transform::get_world_transform(entity);
       auto& props = entity.get_component<TextProp>();
 
       Renderer2D::draw_text(props.text, transform);

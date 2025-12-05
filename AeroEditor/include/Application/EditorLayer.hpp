@@ -28,6 +28,9 @@ namespace ag
 
 		static EditorLayer& get() { return *s_instance; }
 
+		float_rect get_float_rect() { return m_view_controller->get_view().get_float_rect(); }
+		vec2f get_viewport_size() { return m_viewport_size; }
+
 		bool on_key_pressed(KeyPressedEvent& e);
 
 		bool on_text_input(TextInputEvent& e);

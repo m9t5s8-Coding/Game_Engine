@@ -27,6 +27,8 @@ namespace ag
 				j["Texture Path"] = props.texture_path;
 				j["Size"] = props.size.save();
 				j["Texture Rect"] = props.texture_rect.save();
+				Helper::save_json(j, "Vertical Flip", props.flip_vertical);
+				Helper::save_json(j, "Horizontal Flip", props.flip_horizontal);
 
 				return j;
 			}
@@ -42,6 +44,9 @@ namespace ag
 				}
 				props.size.load(j["Size"]);
 				props.texture_rect.load(j["Texture Rect"]);
+				
+				Helper::load_json(j, "Vertical Flip", props.flip_vertical);
+				Helper::load_json(j, "Horizontal Flip", props.flip_horizontal);
 			}
 
 		};
@@ -143,6 +148,8 @@ namespace ag
 					UI::draw_vec2("Size", sprite.size, sprite.texture_rect.size);
 					UI::draw_vec2("Texture Position", sprite.texture_rect.position, vec2f(0, 0));
 					UI::draw_vec2("Texture Size", sprite.texture_rect.size, texture_size);
+					ImGui::Checkbox("Vertical Flip", &sprite.flip_vertical);
+					ImGui::Checkbox("Horizontal Flip", &sprite.flip_horizontal);
 				}
 				Transform::show_properties(entity);
 
@@ -163,7 +170,7 @@ namespace ag
 
 
 
-			auto& transform = entity.get_component<Transform>();
+			const auto& transform = Transform::get_world_transform(entity);
 			auto& s = entity.get_component<SpriteProp>();
 			Sprite sprite;
 			sprite.size = s.size;

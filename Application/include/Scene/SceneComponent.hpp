@@ -162,14 +162,26 @@ namespace ag
 			duplicate_tag.node_type = original_tag.node_type;
 			duplicate_tag.layer = original_tag.layer;
 			duplicate_tag.is_visible = original_tag.is_visible;
-			duplicate_tag.parent = original_tag.parent;
-			duplicate_tag.children.clear();
+
 
 			if (duplicate_tag.parent)
 			{
 				auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
 				parent_tag.children.push_back(duplicate);
 			}
+
+			duplicate_tag.children.clear();
+			auto scene = Scene::get_active_scene();
+			for(auto& children : original_tag.children)
+			{
+				auto new_child = scene->duplicate_entity(children);
+
+				auto& new_tag = new_child.get_component<Tag>();
+				new_tag.parent = duplicate;
+				duplicate_tag.children.push_back(new_child);
+			}
+
+			
 
 		}
 	};
@@ -211,6 +223,23 @@ namespace ag
 			transform.position.load(j["Position"]);
 			transform.scale.load(j["Scale"]);
 			transform.rotation = j["Rotation"].get<float>();
+		}
+	
+		static Transform get_world_transform(Entity entity)
+		{
+			Transform world = entity.get_component<Transform>();
+			auto& tag = entity.get_component<Tag>();
+
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				Transform parent_world = get_world_transform(tag.parent);
+
+				world.position = parent_world.position + world.position * parent_world.scale;
+				world.scale = parent_world.scale * world.scale;
+				world.rotation = parent_world.rotation + world.rotation;
+			}
+
+			return world;
 		}
 	};
 

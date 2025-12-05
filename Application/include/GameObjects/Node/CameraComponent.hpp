@@ -15,6 +15,7 @@ namespace ag
 			vec2f view_size;
 			vec2f view_center;
 			bool is_active = false;
+			vec2u window_size = { 1280, 720 };
 
 			float zoom = 1.0f;
 
@@ -24,6 +25,7 @@ namespace ag
 				json j;
 				Helper::save_json(j, "View Size", props.view_size);
 				Helper::save_json(j, "View Center", props.view_center);
+				Helper::save_json(j, "Window Size", props.window_size);
 				Helper::save_json(j, "Zoom", props.zoom);
 				Helper::save_json(j, "IsActive", props.is_active);
 				return j;
@@ -34,6 +36,7 @@ namespace ag
 				auto& props = entity.get_component<CameraProps>();
 				Helper::load_json(j,"View Size", props.view_size);
 				Helper::load_json(j,"View Center", props.view_center);
+				Helper::load_json(j, "Window Size", props.window_size);
 				Helper::load_json(j,"Zoom", props.zoom);
 				Helper::load_json(j,"IsActive", props.is_active);
 
@@ -83,6 +86,7 @@ namespace ag
 			auto& props = entity.get_component<CameraProps>();
 			UI::draw_vec2("View Size", props.view_size,{props.view_size.y * 16 / 9, props.view_size.x * 9 / 16 });
 			UI::draw_vec2("View Center", props.view_center, props.view_size / 2);
+			UI::draw_vec2("Window Size", props.window_size, vec2u(1280, 720));
 			UI::draw_value("Zoom", props.zoom);
 			ImGui::Checkbox("IsActive", &props.is_active);
 		}

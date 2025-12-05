@@ -22,6 +22,8 @@ namespace ag
 
 
 		m_last_mouse_position = m_current_mouse_position;
+
+
 	}
 
 	void ScenePanel::on_event(Event& e)
@@ -237,6 +239,26 @@ namespace ag
 			}
 		}
 		ImGui::End();
+	}
+
+	void ScenePanel::draw_selected_text()
+	{
+		if (m_selected_entity.get_id() == INVALID_ENTITY)
+			return;
+
+		if (m_selected_entity.has_component<Transform>())
+		{
+			auto& name = m_selected_entity.get_component<Tag>().tag;
+			auto trans = Transform::get_world_transform(m_selected_entity);
+			Transform transform;
+			transform.position = Math::world_to_screen(trans.position, EditorLayer::get().get_float_rect(), EditorLayer::get().get_viewport_size());
+			Text text;
+			text.text = name;
+			text.text_color = Color(220, 220, 220);
+			text.font_size = 18;
+			text.mode = RenderMode::Screen;
+			Renderer2D::draw_text(text, transform);
+		}
 	}
 
 	void ScenePanel::update_transform_settings()
@@ -521,13 +543,16 @@ namespace ag
 		{
 			if (e.get_key_code() == Key::D && m_selected_entity)
 			{
-				m_selected_entity = m_scene->duplicate_entity(m_selected_entity);
-				AERO_CORE_INFO("Duplicate Entity: {0}", m_selected_entity.get_id());
+				auto new_entity = m_scene->duplicate_entity(m_selected_entity);
+				auto& original = m_selected_entity.get_component<Tag>();
+				auto& clone = new_entity.get_component<Tag>();
+				clone.parent = original.parent;
 
-				auto& tag = m_selected_entity.get_component<Tag>();
+				auto& original_parent = original.parent;
+				original_parent.get_component<Tag>().children.push_back(new_entity);
+				m_selected_entity = new_entity;
 
-				AERO_CORE_INFO("Name: {0}", tag.tag);
-				AERO_CORE_INFO("Parent ID: {0}", tag.parent.get_id());
+
 			}
 			return false;
 		}
@@ -549,16 +574,6 @@ namespace ag
 
 		case Key::Delete:
 		{
-			auto& tag = m_selected_entity.get_component<Tag>();
-
-			if (tag.parent.get_id() != INVALID_ENTITY)
-			{
-				auto& parent_tag = tag.parent.get_component<Tag>();
-
-				parent_tag.children.erase(
-					std::remove(parent_tag.children.begin(), parent_tag.children.end(), m_selected_entity), parent_tag.children.end()
-				);
-			}
 			m_scene->destroy_entity(m_selected_entity);
 			m_selected_entity = Entity();
 			break;

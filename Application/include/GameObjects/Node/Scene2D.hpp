@@ -11,7 +11,7 @@ namespace ag
   {
     static void create_node(Entity entity)
     {
-     
+      entity.add_component<Transform>();
     }
 
     static void delete_node(Entity entity)
@@ -22,6 +22,7 @@ namespace ag
 
     static void clone_node(Entity original, Entity clone)
     {
+      clone.add_component<Transform>(original.get_component<Transform>());
       if (original.has_component<ScriptComponent>())
       {
         clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
@@ -31,6 +32,7 @@ namespace ag
     static json save_json(Entity entity)
     {
       json j;
+      j["Transform"] = Transform::save(entity);
       if (entity.has_component<ScriptComponent>())
       {
         j["ScriptComponent"] = ScriptComponent::save_json(entity);
@@ -41,6 +43,11 @@ namespace ag
 
     static void load_json(Entity entity, json j)
     {
+      if (j.contains("Transform"))
+      {
+        Transform::load(entity, j["Transform"]);
+      }
+      
       if (j.contains("ScriptComponent"))
       {
         ScriptComponent::load_json(entity, j["ScriptComponent"]);
@@ -51,6 +58,7 @@ namespace ag
     {
       {
         Tag::show_properties(entity);
+        Transform::show_properties(entity);
       }
     }
 

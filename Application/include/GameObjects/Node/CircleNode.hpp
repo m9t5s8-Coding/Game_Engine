@@ -120,7 +120,7 @@ namespace ag
 			if (!is_visible)
 				return;
 
-			auto& transform = entity.get_component<Transform>();
+			const auto& transform = Transform::get_world_transform(entity);
 			auto& c = entity.get_component<CircleProp>();
 			Circle circle;
 			circle.size = c.size;

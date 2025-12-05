@@ -11,6 +11,9 @@ namespace ag
 
 	void Sandbox2D::on_attach()
 	{
+		auto size = Application::get().get_window().get_size();
+		m_view_controller = ViewController::create(size, size/2);
+		ViewController::set_main_controller(m_view_controller);
 		load_project_data();
 	}
 
@@ -109,6 +112,8 @@ namespace ag
 
 			m_view_controller = ViewController::create(view_size, props.view_center);
 			ViewController::set_main_controller(m_view_controller);
+			Application::get().get_window().set_size(props.window_size);
+			Application::get().get_window().center_window();
 		}
 		
 	}
