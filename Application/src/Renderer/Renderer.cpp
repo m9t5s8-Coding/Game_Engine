@@ -9,8 +9,17 @@ namespace ag
   {
     s_scenedata->view_matrix = view.get_view_matrix();
 
-    vec2f viewport_center = viewport_size / 2;
-    s_scenedata->screen_matrix = Math::get_view_matrix(viewport_size, viewport_center);
+    vec2f size;
+    if (Engine::is_runtime())
+    {
+      size = view.get_size();
+    }
+    else
+    {
+      size = viewport_size;
+    }
+    vec2f viewport_center = size / 2;
+    s_scenedata->screen_matrix = Math::get_view_matrix(size, viewport_center);
 
     s_scenedata->scale = viewport_size / view.get_size();
   }

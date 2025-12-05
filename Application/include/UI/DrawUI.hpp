@@ -181,11 +181,6 @@ namespace ag::UI
 		ImGui::Spacing();
 	}
 
-
-
-
-
-
 	static void windowed_titlebar(const std::string& title)
 	{
 		float titlebar_height = 40.0f;
@@ -206,4 +201,7 @@ namespace ag::UI
 
 		}
 	}
+
+
+	static void 
 }

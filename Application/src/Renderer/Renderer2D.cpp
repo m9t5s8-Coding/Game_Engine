@@ -413,9 +413,9 @@ namespace ag
 
 	void Renderer2D::draw_text(const Text& text_string, const Transform& transform)
 	{
-		vec2f starting_pos = transform.position;
-		const float scale_x = transform.scale.x;
-		const float scale_y = transform.scale.y;
+		vec2f starting_pos = Text::center_text(text_string, transform);
+		const float scale_x = transform.scale.x * text_string.font_size / TextLoader::font.em_size;
+		const float scale_y = transform.scale.y * text_string.font_size / TextLoader::font.em_size;
 
 		const float ascender = TextLoader::font.ascender * TextLoader::font.em_size * scale_y;
 		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y;
@@ -452,7 +452,7 @@ namespace ag
 			Text_Instance* instance = s_data->text_instanced_ptr++;
 			instance->texture_size = s_data->text_texture->get_size();
 
-			instance->size = g.texture_rect.size * transform.scale;
+			instance->size = g.texture_rect.size * vec2f(scale_x, scale_y);
 
 			g.texture_rect.to_vec4(instance->texture_rect);
 			text_string.text_color.normalize_color(instance->text_color);

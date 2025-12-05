@@ -17,6 +17,7 @@
 #include <Events/KeyEvent.hpp>
 #include <Events/MouseEvent.hpp>
 #include <Events/WindowEvent.hpp>
+#include <Renderer/Text.hpp>
 
 namespace ag
 {
@@ -390,8 +391,44 @@ namespace ag
 	struct Text
 	{
 		std::string text;
+		float font_size = 48;
 		RenderMode mode = RenderMode::World;
 		Color text_color = Color::White;
+		vec2f starting_pos;
+
+		static vec2f calc_text_size(const Text& text, const vec2f& s)
+		{
+			vec2f scale;
+			scale  = s * (text.font_size / TextLoader::font.em_size);
+			vec2f size = { 0, 0 };
+			float line_height = (TextLoader::font.ascender - TextLoader::font.descender) * TextLoader::font.em_size * scale.y;
+			size.y = line_height;
+			float width = 0.0f;
+
+			for (char c : text.text)
+			{
+				if (c == '\n')
+				{
+					size.x = std::max(size.x, width);
+					width = 0.0f;
+					size.y += line_height;
+					continue;
+				}
+				auto it = TextLoader::font.glyphs.find(c);
+				if (it != TextLoader::font.glyphs.end())
+				{
+					width += it->second.advance * scale.x;
+				}
+			}
+			size.x = std::max(size.x, width);
+			return size;
+		}
+
+		static vec2f center_text(const Text& text,const Transform& transform)
+		{
+			vec2f size = calc_text_size(text, transform.scale);
+			return transform.position - (size * 0.5f);
+		}
 	};
 
 }

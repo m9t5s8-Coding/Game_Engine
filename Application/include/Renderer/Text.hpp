@@ -1,3 +1,5 @@
+#pragma once
+
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <string>
@@ -26,9 +28,9 @@ namespace ag::TextLoader
     float atlas_height;
   };
 
-  Font font;
+  inline Font font;
 
-  void loadGlyph(const std::string& jsonPath) 
+  inline void loadGlyph(const std::string& jsonPath) 
   {
     std::ifstream file(jsonPath);
     json j;

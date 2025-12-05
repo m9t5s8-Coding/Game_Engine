@@ -14,21 +14,22 @@ namespace ag
       bool hovered = false;
       bool pressed = false;
 
-      vec2u size;
-      std::string button_text;
-      float border_thickness;
+      vec2f size = { 150,50 };
+      std::string button_text = "Button";
+      float border_thickness = 1.0f;
+      float font_size = 24.0f;
 
-      Color normal_color;
-      Color hover_color;
-      Color active_color;
+      Color normal_color = Color::White;
+      Color hover_color = Color::White;
+      Color active_color = Color::White;
 
-      Color normal_text_color;
-      Color hover_text_color;
-      Color active_text_color;
+      Color normal_text_color = Color::Black;
+      Color hover_text_color = Color::Black;
+      Color active_text_color = Color::Black;
 
-      Color normal_border_color;
-      Color hover_border_color;
-      Color active_border_color;
+      Color normal_border_color = Color::Black;
+      Color hover_border_color = Color::Black;
+      Color active_border_color = Color::Black;
 
       RenderMode mode = RenderMode::Screen;
 
@@ -38,6 +39,7 @@ namespace ag
         auto &props = entity.get_component<ButtonProps>();
         Helper::save_json(j, "Size", props.size);
         Helper::save_json(j, "Text", props.button_text);
+        Helper::save_json(j, "Font Size", props.font_size);
 
         Helper::save_json(j, "Normal Color", props.normal_color);
         Helper::save_json(j, "Hover Color", props.hover_color);
@@ -63,6 +65,7 @@ namespace ag
         auto &props = entity.get_component<ButtonProps>();
         Helper::load_json(j, "Size", props.size);
         Helper::load_json(j, "Text", props.button_text);
+        Helper::load_json(j, "Font Size", props.font_size);
 
         Helper::load_json(j, "Normal Color", props.normal_color);
         Helper::load_json(j, "Hover Color", props.hover_color);
@@ -131,30 +134,32 @@ namespace ag
         UI::draw_vec2("Size", props.size);
         UI::draw_string("Text", props.button_text);
         UI::draw_value("Border Thickness", props.border_thickness);
+        UI::draw_value("Font Size", props.font_size);
+
 
         UI::draw_title("Normal");
-        UI::draw_color("BackGround Color", props.normal_color);
-        UI::draw_color("Text Color", props.normal_text_color);
-        UI::draw_color("Border Color", props.normal_border_color);
+        UI::draw_color("BackGround Color##normal", props.normal_color);
+        UI::draw_color("Text Color##normal", props.normal_text_color);
+        UI::draw_color("Border Color##normal", props.normal_border_color);
 
         UI::draw_title("Hover");
-        UI::draw_color("BackGround Color", props.hover_color);
-        UI::draw_color("Text Color", props.hover_text_color);
-        UI::draw_color("Border Color", props.hover_border_color);
+        UI::draw_color("BackGround Color##hover", props.hover_color);
+        UI::draw_color("Text Color##hover", props.hover_text_color);
+        UI::draw_color("Border Color##hover", props.hover_border_color);
 
         UI::draw_title("Active");
-        UI::draw_color("BackGround Color", props.active_color);
-        UI::draw_color("Text Color", props.active_text_color);
-        UI::draw_color("Border Color", props.active_border_color);
+        UI::draw_color("BackGround Color##active", props.active_color);
+        UI::draw_color("Text Color##active", props.active_text_color);
+        UI::draw_color("Border Color##active", props.active_border_color);
 
         UI::draw_title("Render Mode");
         if (ImGui::RadioButton("Screen", props.mode == RenderMode::Screen))
         {
-          props.mode == RenderMode::Screen;
+          props.mode = RenderMode::Screen;
         }
         if (ImGui::RadioButton("World", props.mode == RenderMode::World))
         {
-          props.mode == RenderMode::World;
+          props.mode = RenderMode::World;
         }
       }
       Transform::show_properties(entity);
@@ -162,6 +167,37 @@ namespace ag
 
     static void update(Entity entity, TimeStamp ts)
     {
+      if (!Engine::is_runtime())
+        return;
+
+      auto& props = entity.get_component<ButtonProps>();
+      auto& transform = entity.get_component<Transform>();
+      float_rect rect;
+
+
+      rect.position = transform.position - (props.size * transform.scale) / 2;
+
+
+      rect.size = { props.size * transform.scale };
+
+
+      auto view_rect = ViewController::get_view_floatrect();
+      auto mouse_pos = Mouse::get_mouse_position();
+      auto size = Application::get().get_window().get_size();
+      mouse_pos = Math::screen_to_world(mouse_pos, view_rect, size);
+
+
+
+      if (rect.contains(mouse_pos))
+      {
+        props.hovered = false;
+        props.pressed = true;
+      }
+      else
+      {
+        props.hovered = false;
+        props.pressed = false;
+      }
       ScriptComponent::update(entity, ts);
     }
 
@@ -178,8 +214,21 @@ namespace ag
       Rectangle rect;
       Text text;
       text.text = props.button_text;
+      text.font_size = props.font_size;
       rect.size = props.size;
-      rect.mode = props.mode;
+      rect.border_thickness = props.border_thickness;
+
+      if (Engine::is_runtime())
+      {
+        rect.mode = props.mode;
+        text.mode = props.mode;
+      }
+      else
+      {
+        rect.mode = RenderMode::World;
+        text.mode = RenderMode::World;
+      }
+      
       if(props.hovered)
       {
         rect.fill_color = props.hover_color;

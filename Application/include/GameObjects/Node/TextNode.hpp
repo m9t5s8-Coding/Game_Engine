@@ -20,6 +20,7 @@ namespace ag
 
         Helper::save_json(j, "Text", props.text.text);
         Helper::save_json(j, "Text Color", props.text.text_color);
+        Helper::save_json(j, "Font Size", props.text.font_size);
         return j;
       }
 
@@ -28,6 +29,7 @@ namespace ag
         auto& props = entity.get_component<TextProp>();
         Helper::load_json(j, "Text", props.text.text);
         Helper::load_json(j, "Text Color", props.text.text_color);
+        Helper::load_json(j, "Font Size", props.text.font_size);
       }
     };
 
@@ -88,6 +90,7 @@ namespace ag
           auto& props = entity.get_component<TextProp>();
           UI::draw_string("Text", props.text.text);
           UI::draw_color("Fill Color", props.text.text_color);
+          UI::draw_value("Font Size", props.text.font_size);
         }
         Transform::show_properties(entity);
       }

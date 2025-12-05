@@ -101,7 +101,7 @@ namespace ag
         vec2 operator*=(T scalar)
         {
           x *= scalar;
-          y*= scalar;
+          y *= scalar;
           return *this;
         }
         vec2 operator*(T scalar) const

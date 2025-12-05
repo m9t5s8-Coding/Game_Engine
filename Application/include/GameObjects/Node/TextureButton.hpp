@@ -41,13 +41,25 @@ namespace ag
 				Helper::load_json(j, "Hover Texture Rect", props.hover_texture_rect);
 				Helper::load_json(j, "Active Texture Rect", props.active_texture_rect);
 				Helper::load_json(j, "Texture Path", props.texture_path);
+				{
+					auto project = Project::get_active_project();
+					std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + props.texture_path;
+					props.texture = Texture2D::create(texture_path);
+				}
 				Helper::load_json(j, "Mode", props.mode);
 			}
 		};
 
 		static void create_node(Entity entity)
 		{
-			entity.add_component<TextureButtonProps>();
+			TextureButtonProps props;
+			{
+				auto project = Project::get_active_project();
+				std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + props.texture_path;
+				props.texture = Texture2D::create(texture_path);
+			}
+			props.normal_texture_rect = uint_rect(0, 0, props.texture->get_size());
+			entity.add_component<TextureButtonProps>(props);
 			entity.add_component<Transform>();
 		}
 
@@ -125,31 +137,59 @@ namespace ag
 			}
 
 			UI::draw_title("Normal");
-			UI::draw_vec2("Texture Position", props.normal_texture_rect.position);
-			UI::draw_vec2("Texture Size", props.normal_texture_rect.size);
+			UI::draw_vec2("Texture Position##normal", props.normal_texture_rect.position);
+			UI::draw_vec2("Texture Size##normal", props.normal_texture_rect.size, props.texture->get_size());
 
 			UI::draw_title("Hover");
-			UI::draw_vec2("Texture Position", props.hover_texture_rect.position);
-			UI::draw_vec2("Texture Size", props.hover_texture_rect.size);
+			UI::draw_vec2("Texture Position##hover", props.hover_texture_rect.position);
+			UI::draw_vec2("Texture Size##hover", props.hover_texture_rect.size, props.texture->get_size());
 
 			UI::draw_title("Active");
-			UI::draw_vec2("Texture Position", props.active_texture_rect.position);
-			UI::draw_vec2("Texture Size", props.active_texture_rect.size);
+			UI::draw_vec2("Texture Position##active", props.active_texture_rect.position);
+			UI::draw_vec2("Texture Size##active", props.active_texture_rect.size, props.texture->get_size());
 
 			UI::draw_title("Render Mode");
 			if (ImGui::RadioButton("Screen", props.mode == RenderMode::Screen))
 			{
-				props.mode == RenderMode::Screen;
+				props.mode = RenderMode::Screen;
 			}
 			if (ImGui::RadioButton("World", props.mode == RenderMode::World))
 			{
-				props.mode == RenderMode::World;
+				props.mode = RenderMode::World;
 			}
 			Transform::show_properties(entity);
 		}
 
 		static void update(Entity entity, TimeStamp ts)
 		{
+			if (!Engine::is_runtime())
+				return;
+
+			auto& props = entity.get_component<TextureButtonProps>();
+			auto& transform = entity.get_component<Transform>();
+
+			float_rect rect;
+
+			rect.position = transform.position - (vec2f(props.normal_texture_rect.size) * transform.scale) / 2;
+			rect.size = vec2f(props.normal_texture_rect.size) * transform.scale;
+
+			auto mouse_pos = ViewController::get_mouse_position();
+
+			if (rect.contains(mouse_pos))
+			{
+				props.hovered = true;
+				props.pressed = false;
+				if (Mouse::is_mouse_pressed(Button::ButtonLeft) && props.hovered)
+				{
+					props.hovered = false;
+					props.pressed = true;
+				}
+			}
+			else
+			{
+				props.hovered = false;
+				props.pressed = false;
+			}
 			ScriptComponent::update(entity, ts);
 		}
 
@@ -164,7 +204,16 @@ namespace ag
 			auto &transform = entity.get_component<Transform>();
 
 			Sprite sprite;
-			sprite.mode = props.mode;
+
+			if (Engine::is_runtime())
+			{
+				sprite.mode = props.mode;
+			}
+			else
+			{
+				sprite.mode = RenderMode::World;
+			}
+
 			if (props.hovered)
 			{
 				sprite.texture_rect = props.hover_texture_rect;
@@ -180,7 +229,19 @@ namespace ag
 				sprite.texture_rect = props.normal_texture_rect;
 				sprite.size = props.normal_texture_rect.size;
 			}
+			Renderer2D::set_texture(props.texture);
 			Renderer2D::draw_sprite(sprite, transform);
 		}
-	};
+
+		static bool is_hovered(Entity entity)
+		{
+			return entity.get_component<TextureButtonProps>().hovered;
+		}
+
+		static bool is_pressed(Entity entity)
+		{
+			return entity.get_component<TextureButtonProps>().pressed;
+		}
+
+};
 }

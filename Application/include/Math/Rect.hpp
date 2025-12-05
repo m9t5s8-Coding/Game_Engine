@@ -53,6 +53,14 @@ namespace ag
                   (position.y + size.y > other.position.y);
         }
 
+        bool contains(const vec2f& point) const
+        {
+          return (point.x >= position.x) &&
+            (point.x <= position.x + size.x) &&
+            (point.y >= position.y) &&
+            (point.y <= position.y + size.y);
+        }
+
 
         bool operator == (const rect& other) const
         {

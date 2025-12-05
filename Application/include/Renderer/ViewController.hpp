@@ -30,6 +30,14 @@ namespace ag
 
     void on_resize(const vec2f &size);
 
+    static void set_main_controller(const AG_ref<ViewController>& controller) { s_main_controller = controller; }
+    static AG_ref<ViewController> get_main_controller() { return s_main_controller; }
+
+    static float_rect get_view_floatrect() { return s_main_controller->get_view().get_float_rect(); }
+
+    static vec2f get_mouse_position() { return s_mouse_position; }
+    static void set_mouse_position();
+
   private:
     bool on_mouse_scroll(MouseScrolledEvent &e);
     bool on_window_resize(WindowResizeEvent &e);
@@ -40,6 +48,9 @@ namespace ag
 
   private:
     View m_view;
+
+    inline static AG_ref<ViewController> s_main_controller;
+    inline static vec2f s_mouse_position;
 
     bool m_middle_pressed = false;
     bool m_view_ismax = false;

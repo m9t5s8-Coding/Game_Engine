@@ -21,6 +21,7 @@ namespace ag
 
 	void Sandbox2D::on_update(ag::TimeStamp ts)
 	{
+		ViewController::set_mouse_position();
 		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
 		RenderCommand::clear();
 
@@ -107,6 +108,7 @@ namespace ag
 			vec2f view_size = props.view_size * props.zoom;
 
 			m_view_controller = ViewController::create(view_size, props.view_center);
+			ViewController::set_main_controller(m_view_controller);
 		}
 		
 	}
