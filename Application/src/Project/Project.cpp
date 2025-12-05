@@ -35,19 +35,22 @@ namespace ag
 	AG_ref<Project> Project::load_project(const std::string& path)
 	{
 		std::string file_path = path;
+		std::string p = path;
 		Helper::normalize_path(file_path);
+		Helper::normalize_path(p);
 
-		if (std::filesystem::is_directory(path))
+		if (std::filesystem::is_directory(file_path))
 		{
-			for (const auto& entry : std::filesystem::directory_iterator(path))
+			for (const auto& entry : std::filesystem::directory_iterator(file_path))
 			{
 				if (entry.path().extension() == ".aeroproj")
 				{
 					file_path = entry.path().string();
+					Helper::normalize_path(file_path);
 					break;
 				}
 			}
-			if (file_path == path)
+			if (file_path == p)
 			{
 				AERO_CORE_INFO("Project not Found!");
 				return nullptr;
@@ -67,7 +70,8 @@ namespace ag
 		{
 			Helper::load_json(j["Project"], "Name", project->m_name);
 			Helper::load_json(j["Project"], "Directory", project->m_directory);
-			Helper::load_json(j["Project"], "File Path", project->m_project_file_path);
+			project->m_directory = std::filesystem::path(file_path).parent_path().string();
+			project->m_project_file_path = file_path;
 			Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
 			Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
 			Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
@@ -99,6 +103,9 @@ namespace ag
 			{ "Position", window.get_position().save() },
 			{ "Vsync", window.is_vsync() }
 		};
+
+		Helper::save_json(j["Project"], "Directory", project->get_directory());
+		Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
 
 		Helper::makefile_read_only(project->get_project_file_directory(), false);
 		std::ofstream out(project->get_project_file_directory());
