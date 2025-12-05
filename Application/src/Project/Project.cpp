@@ -39,6 +39,8 @@ namespace ag
 		Helper::normalize_path(file_path);
 		Helper::normalize_path(p);
 
+		auto project = AG_cref<Project>();
+
 		if (std::filesystem::is_directory(file_path))
 		{
 			for (const auto& entry : std::filesystem::directory_iterator(file_path))
@@ -53,7 +55,8 @@ namespace ag
 			if (file_path == p)
 			{
 				AERO_CORE_INFO("Project not Found!");
-				return nullptr;
+				project->m_project_loaded = false;
+				return project;
 			}
 		}
 
@@ -61,25 +64,28 @@ namespace ag
 		Helper::makefile_read_only(file_path, false);
 		std::ifstream in(file_path);
 		if (!in.is_open())
-			return nullptr;
+		{
+			project->m_project_loaded = false;
+			return project;
+		}
 		in >> j;
 		in.close();
 		Helper::makefile_read_only(file_path);
 
-		auto project = AG_cref<Project>();
+		project->m_directory = std::filesystem::path(file_path).parent_path().string();
+		project->m_project_file_path = file_path;
+		project->m_project_loaded = true;
 		{
 			Helper::load_json(j["Project"], "Name", project->m_name);
-			Helper::load_json(j["Project"], "Directory", project->m_directory);
-			project->m_directory = std::filesystem::path(file_path).parent_path().string();
-			project->m_project_file_path = file_path;
 			Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
 			Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
 			Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
-			set_active_project(project);
 		}
 
 		AERO_CORE_INFO("Project Loaded Successfully ! {0}", project->m_name);
+		
 		Project::set_active_project(project);
+		
 		return project;
 	}
 

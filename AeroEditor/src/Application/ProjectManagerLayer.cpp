@@ -182,11 +182,29 @@ namespace ag
 	}
 	void ProjectManagerLayer::open_existing_project()
 	{
+
 		std::string path = ag::FileDialogs::select_folder("Select Your Project Folder");
 		if (!path.empty())
 		{
-			auto project = ag::Project::load_project(path);
 			json j;
+			auto project = ag::Project::load_project(path);
+			if (!project->m_project_loaded)
+			{
+				Helper::makefile_read_only(AppSettings::get_settings_path(), false);
+				std::ifstream in_file(AppSettings::get_settings_path());
+				if (in_file.is_open())
+					in_file >> j;
+
+				in_file.close();
+				Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+				std::ofstream out_file(AppSettings::get_settings_path());
+				out_file << j.dump(4);
+				out_file.close();
+				Helper::makefile_read_only(AppSettings::get_settings_path());
+				AppSettings::reload_app();
+				return;
+			}
+			
 
 			Helper::makefile_read_only(AppSettings::get_settings_path(), false);
 			std::ifstream in_file(AppSettings::get_settings_path());

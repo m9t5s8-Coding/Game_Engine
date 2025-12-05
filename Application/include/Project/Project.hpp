@@ -34,6 +34,7 @@ namespace ag
 
 		void save();
 
+		bool m_project_loaded;
 	private:
 		std::string m_name;
 		std::string m_directory;
@@ -41,6 +42,8 @@ namespace ag
 		std::string m_assets_directory;
 		std::string m_scenes_directory;
 		std::string m_scripts_directory;
+
+		
 
 
 		inline static AG_ref<Project> s_active_project;

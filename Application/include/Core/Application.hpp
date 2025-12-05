@@ -54,13 +54,15 @@ namespace ag
 
     bool is_minimized() const { return m_minimized; }
 
+
+    bool m_running = true;
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);
     bool on_key_pressed(KeyPressedEvent &e);
 
     std::unique_ptr<Window> m_Window;
-    bool m_running = true;
+    
     bool m_minimized = false;
 
     ImGuiLayer *m_imgui_layer;

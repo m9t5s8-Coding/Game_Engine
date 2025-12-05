@@ -51,6 +51,8 @@ namespace ag
 		}
 		{
 			auto project = Project::get_active_project();
+			
+
 			auto project_file_path = project->get_project_file_directory();
 			Helper::makefile_read_only(project_file_path, false);
 			std::ifstream in_file(project_file_path);
@@ -95,6 +97,22 @@ namespace ag
 		std::string project_path;
 		Helper::load_json(j["Project"], "Directory", project_path);
 		auto project = Project::load_project(project_path);
+		if (!project->m_project_loaded)
+		{
+			Helper::makefile_read_only(AppSettings::get_settings_path(), false);
+			std::ifstream in_file(AppSettings::get_settings_path());
+			if (in_file.is_open())
+				in_file >> j;
+
+			in_file.close();
+			Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+			std::ofstream out_file(AppSettings::get_settings_path());
+			out_file << j.dump(4);
+			out_file.close();
+			Helper::makefile_read_only(AppSettings::get_settings_path());
+			AppSettings::reload_app();
+			return;
+		}
 
 
 		Helper::makefile_read_only(project->get_project_file_directory(), false);
