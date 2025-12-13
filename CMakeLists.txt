@@ -59,16 +59,25 @@ set(LUA_SRC
     "${CMAKE_SOURCE_DIR}/External/lua/lzio.c"
 )
 
+file(GLOB_RECURSE BOX2D_SRC
+  "${CMAKE_SOURCE_DIR}/External/box2d/src/*.cpp"
+)
+
 set_source_files_properties(${LUA_SRC} PROPERTIES LANGUAGE C)
+set_source_files_properties(${BOX2D_SRC} PROPERTIES LANGUAGE CXX)
 add_library(lua STATIC ${LUA_SRC})
+add_library(box2d STATIC ${BOX2D_SRC})
 set_target_properties(lua PROPERTIES LINKER_LANGUAGE C)
+set_target_properties(box2d PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(lua PUBLIC
     "${CMAKE_SOURCE_DIR}/External/lua"
 )
+target_include_directories(box2d PUBLIC
+    "${CMAKE_SOURCE_DIR}/External/box2d/include"
+)
 
 target_compile_definitions(lua PRIVATE
-    LUA_USE_WINDOWS
     LUA_COMPAT_5_3
     _CRT_SECURE_NO_WARNINGS
 )
@@ -87,6 +96,8 @@ set(IMGUI_SRC
     "${CMAKE_SOURCE_DIR}/External/imgui/backends/imgui_impl_glfw.cpp"
     "${CMAKE_SOURCE_DIR}/External/imgui/backends/imgui_impl_opengl3.cpp"
 )
+
+
 
 add_library(External STATIC 
     ${GLAD_SRC}
@@ -107,7 +118,6 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/stb_image
     ${CMAKE_SOURCE_DIR}/External/json/single_include
     ${CMAKE_SOURCE_DIR}/External/sol2/include
-    ${CMAKE_SOURCE_DIR}/External/box2d/include
 )
 
 # Compile definitions for External
@@ -133,7 +143,9 @@ target_include_directories(Application PUBLIC
 target_link_libraries(Application PUBLIC 
     lua
     glfw
+    box2d
     External
+    
    
 )
 

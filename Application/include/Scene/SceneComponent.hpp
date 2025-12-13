@@ -42,7 +42,8 @@ namespace ag
 		Scene2D = 6,
 		TextNode = 7,
 		Button = 8,
-		TextureButton = 9
+		TextureButton = 9,
+    CollisionShape = 10
 	};
 
 	enum class RenderLayer
@@ -158,14 +159,13 @@ namespace ag
 			const auto& original_tag = original.get_component<Tag>();
 			auto& duplicate_tag = duplicate.get_component<Tag>();
 
-			duplicate_tag.tag = original_tag.tag;
-			duplicate_tag.node_type = original_tag.node_type;
 			duplicate_tag.layer = original_tag.layer;
 			duplicate_tag.is_visible = original_tag.is_visible;
+			
 
-
-			if (duplicate_tag.parent)
+			if (original_tag.parent.get_id() != INVALID_ENTITY)
 			{
+				duplicate_tag.parent = original_tag.parent;
 				auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
 				parent_tag.children.push_back(duplicate);
 			}
@@ -177,12 +177,10 @@ namespace ag
 				auto new_child = scene->duplicate_entity(children);
 
 				auto& new_tag = new_child.get_component<Tag>();
+
 				new_tag.parent = duplicate;
 				duplicate_tag.children.push_back(new_child);
 			}
-
-			
-
 		}
 	};
 
@@ -224,22 +222,61 @@ namespace ag
 			transform.scale.load(j["Scale"]);
 			transform.rotation = j["Rotation"].get<float>();
 		}
-	
+
 		static Transform get_world_transform(Entity entity)
 		{
-			Transform world = entity.get_component<Transform>();
+			Transform world;
+			if (!entity.has_component<Transform>())
+				return world;
+
+			world = entity.get_component<Transform>();
 			auto& tag = entity.get_component<Tag>();
 
 			if (tag.parent.get_id() != INVALID_ENTITY)
 			{
 				Transform parent_world = get_world_transform(tag.parent);
 
-				world.position = parent_world.position + world.position * parent_world.scale;
+				world.position = parent_world.position + world.position;
 				world.scale = parent_world.scale * world.scale;
 				world.rotation = parent_world.rotation + world.rotation;
 			}
 
 			return world;
+		}
+
+		static void get_world(Entity entity)
+		{
+			if (!entity.has_component<Transform>())
+				return;
+
+			auto& world = entity.get_component<Transform>();
+			auto& tag = entity.get_component<Tag>();
+
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				get_world(tag.parent);
+				const auto& parent_world = tag.parent.get_component<Transform>();
+
+				world.position = parent_world.position + world.position;
+				world.scale = parent_world.scale * world.scale;
+				world.rotation = parent_world.rotation + world.rotation;
+			}
+
+		}
+
+		static void get_local_transform(Entity entity, const Transform& world_transform)
+		{
+			auto& transform = entity.get_component<Transform>();
+			auto& tag = entity.get_component<Tag>();
+
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				Transform parent_world = get_world_transform(tag.parent);
+
+				transform.position = world_transform.position - parent_world.position;
+				transform.scale = world_transform.scale / parent_world.scale;
+				transform.rotation = world_transform.rotation - parent_world.rotation;
+			}
 		}
 	};
 
@@ -363,9 +400,8 @@ namespace ag
 
 				if (!e.has_component<Tag>())
 					return {};
-
+				
 				auto& tag = e.get_component<Tag>();
-
 				for (auto& child : tag.children)
 				{
 					auto& child_tag = child.get_component<Tag>();

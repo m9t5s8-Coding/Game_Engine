@@ -131,7 +131,7 @@ namespace ag
 		
 		static void delete_node(Entity entity)
 		{
-
+			entity.delete_entity();
 		}
 		
 		static void clone_node(Entity original, Entity clone)

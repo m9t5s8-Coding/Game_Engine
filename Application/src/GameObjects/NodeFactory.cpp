@@ -26,6 +26,7 @@ namespace ag
 		create_map[NodeType::TextNode] = TextNode::create_node;
 		create_map[NodeType::Button] = ButtonNode::create_node;
 		create_map[NodeType::TextureButton] = TextureButton::create_node;
+		create_map[NodeType::CollisionShape] = CollisionShape::create_node;
 
 
 		// Draw Function
@@ -39,7 +40,7 @@ namespace ag
 		draw_map[NodeType::TextNode] = TextNode::draw;
 		draw_map[NodeType::Button] = ButtonNode::draw;
 		draw_map[NodeType::TextureButton] = TextureButton::draw;
-
+    draw_map[NodeType::CollisionShape] = CollisionShape::draw;
 
 		update_map[NodeType::Rectangle] = RectangleNode::update;
 		update_map[NodeType::Circle] = CircleNode::update;
@@ -51,6 +52,7 @@ namespace ag
 		update_map[NodeType::TextNode] = TextNode::update;
 		update_map[NodeType::Button] = ButtonNode::update;
 		update_map[NodeType::TextureButton] = TextureButton::update;
+    update_map[NodeType::CollisionShape] = CollisionShape::update;
 
 
 		properties_map[NodeType::Rectangle] = RectangleNode::show_properties;
@@ -63,6 +65,7 @@ namespace ag
 		properties_map[NodeType::TextNode] = TextNode::show_properties;
 		properties_map[NodeType::Button] = ButtonNode::show_properties;
 		properties_map[NodeType::TextureButton] = TextureButton::show_properties;
+    properties_map[NodeType::CollisionShape] = CollisionShape::show_properties;
 
 
 
@@ -76,6 +79,7 @@ namespace ag
 		clone_map[NodeType::TextNode] = TextNode::clone_node;
 		clone_map[NodeType::Button] = ButtonNode::clone_node;
 		clone_map[NodeType::TextureButton] = TextureButton::clone_node;
+    clone_map[NodeType::CollisionShape] = CollisionShape::clone_node;
 
 
 		save_map[NodeType::Rectangle] = RectangleNode::save_json;
@@ -88,6 +92,7 @@ namespace ag
 		save_map[NodeType::TextNode] = TextNode::save_json;
 		save_map[NodeType::Button] = ButtonNode::save_json;
 		save_map[NodeType::TextureButton] = TextureButton::save_json;
+    save_map[NodeType::CollisionShape] = CollisionShape::save_json;
 
 
 		load_map[NodeType::Rectangle] = RectangleNode::load_json;
@@ -100,6 +105,7 @@ namespace ag
 		load_map[NodeType::TextNode] = TextNode::load_json;
 		load_map[NodeType::Button] = ButtonNode::load_json;
 		load_map[NodeType::TextureButton] = TextureButton::load_json;
+    load_map[NodeType::CollisionShape] = CollisionShape::load_json;
 
 
 		clear_map[NodeType::Rectangle] = RectangleNode::delete_node;
@@ -112,6 +118,7 @@ namespace ag
 		clear_map[NodeType::TextNode] = TextNode::delete_node;
 		clear_map[NodeType::Button] = ButtonNode::delete_node;
 		clear_map[NodeType::TextureButton] = TextureButton::delete_node;
+    clear_map[NodeType::CollisionShape] = CollisionShape::delete_node;
 
 
 		nodes[NodeType::Rectangle] = "Rectangle2D";
@@ -124,6 +131,7 @@ namespace ag
 		nodes[NodeType::TextNode] = "Text2D";
 		nodes[NodeType::Button] = "Button2D";
 		nodes[NodeType::TextureButton] = "TextureButton2D";
+		nodes[NodeType::CollisionShape] = "CollisionShape2D";
 
 	}
 

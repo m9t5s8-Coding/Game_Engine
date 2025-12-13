@@ -6,6 +6,7 @@
 
 namespace ag
 {
+	
 	class SaveScene
 	{
 	public:

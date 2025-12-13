@@ -106,6 +106,8 @@ namespace ag
 		{
 			Entity entity(entityID);
 			auto& props = entity.get_component<CameraComponent::CameraProps>();
+			if (!props.is_active)
+				continue;
 
 			auto& view = m_view_controller->get_view();
 			vec2f view_size = props.view_size * props.zoom;

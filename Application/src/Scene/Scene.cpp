@@ -10,149 +10,187 @@
 
 namespace ag
 {
-	Scene::Scene()
-	{
+  Scene::Scene()
+  {
+    if (Engine::is_runtime())
+    {
+      m_world = AG_cscope<b2World>(b2Vec2(0.0f, 28.8f));
+    }
+  }
 
-	}
+  Scene::~Scene()
+  {
+  }
 
-	Scene::~Scene()
-	{
+  Entity Scene::create_entity(const std::string &name, const NodeType type, bool is_cloning)
+  {
+    Entity entity(m_registry.create());
 
-	}
+    Tag tag;
+    tag.tag = name;
+    tag.index = m_next_index++;
+    tag.node_type = type;
 
+    entity.add_component<Tag>(tag);
 
-	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
-	{
-		Entity entity(m_registry.create());
+    if (!is_cloning)
+    {
+      auto it = NodeFactory::create_map.find(type);
+      if (it != NodeFactory::create_map.end())
+        it->second(entity);
+    }
 
-		Tag tag;
-		tag.tag = name;
-		tag.index = m_next_index++;
-		tag.node_type = type;
+    return entity;
+  }
+  Entity Scene::duplicate_entity(Entity original)
+  {
+    auto &original_tag = original.get_component<Tag>();
+    Entity duplicate = create_entity(original_tag.tag, original_tag.node_type, true);
 
-		entity.add_component<Tag>(tag);
+    Tag::clone(original, duplicate);
 
-		if (!is_cloning)
-		{
-			auto it = NodeFactory::create_map.find(type);
-			if (it != NodeFactory::create_map.end())
-				it->second(entity);
-		}
+    auto it = NodeFactory::clone_map.find(original_tag.node_type);
+    if (it != NodeFactory::clone_map.end())
+      it->second(original, duplicate);
 
-		return entity;
-	}
-	Entity Scene::duplicate_entity(Entity original)
-	{
-		auto& original_tag = original.get_component<Tag>();
-		Entity duplicate = create_entity(original_tag.tag, original_tag.node_type, true);
+    return duplicate;
+  }
 
-		Tag::clone(original, duplicate);
+  void Scene::destroy_entity(Entity entity)
+  {
+    m_to_delete_entity.push_back(entity);
+  }
 
-		auto it = NodeFactory::clone_map.find(original_tag.node_type);
-		if (it != NodeFactory::clone_map.end())
-			it->second(original, duplicate);
+  void Scene::on_update(TimeStamp ts)
+  {
+    if (Engine::is_runtime())
+    {
+      m_world->Step(ts.get_seconds(), 8, 3);
+    }
 
-		return duplicate;
-	}
+    m_registry.sort<Tag>([](const Tag &a, const Tag &b)
+                         { return a.index < b.index; });
 
-	void Scene::destroy_entity(Entity entity)
-	{
-		m_to_delete_entity.push_back(entity);
-	}
+    // Update Thread
+    auto view = m_registry.view<Tag>();
+    for (auto entityID : view)
+    {
+      Entity e(entityID);
+      auto it = NodeFactory::update_map.find(e.get_component<Tag>().node_type);
+      if (it != NodeFactory::update_map.end())
+        it->second(e, ts);
+    }
 
-	void Scene::on_update(TimeStamp ts)
-	{
-		m_registry.sort<Tag>([](const Tag& a, const Tag& b) {
-			return a.index < b.index;
-		});
+    // Draw Thread
+    for (auto entityID : view)
+    {
+      Entity e(entityID);
+      auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
+      if (it != NodeFactory::draw_map.end())
+        it->second(e);
+    }
 
+    {
+      while (!m_to_delete_entity.empty())
+      {
+        Entity entity = m_to_delete_entity.back();
+        m_to_delete_entity.pop_back();
 
-		// Update Thread
-		auto view = m_registry.view<Tag>();
-		for (auto entityID : view)
-		{
-			Entity e(entityID);
-			auto it = NodeFactory::update_map.find(e.get_component<Tag>().node_type);
-			if (it != NodeFactory::update_map.end())
-				it->second(e, ts);
+        auto &tag = entity.get_component<Tag>();
 
-		}
+        // Remove From The Parent Entity
+        if (tag.parent.get_id() != INVALID_ENTITY)
+        {
+          auto &parent_tag = tag.parent.get_component<Tag>();
+          parent_tag.children.erase(
+              std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end());
+        }
 
-		// Draw Thread
-		for (auto entityID : view)
-		{
-			Entity e(entityID);
-			auto it = NodeFactory::draw_map.find(e.get_component<Tag>().node_type);
-			if (it != NodeFactory::draw_map.end())
-				it->second(e);
+        for (auto &children : tag.children)
+        {
+          auto &child_tag = children.get_component<Tag>();
+          child_tag.parent = Entity{};
+          destroy_entity(children);
+        }
 
-		}
+        tag.children.clear();
 
-		{
-			while(!m_to_delete_entity.empty())
-			{
-				Entity entity = m_to_delete_entity.back();
-				m_to_delete_entity.pop_back();
+        auto it = NodeFactory::clear_map.find(tag.node_type);
+        if (it != NodeFactory::clear_map.end())
+          it->second(entity);
+      }
+      m_to_delete_entity.clear();
+    }
+  }
 
-				auto& tag = entity.get_component<Tag>();
+  void Scene::destroy()
+  {
+    if(Engine::is_runtime())
+    {
+      
+    }
+    // auto view = m_registry.view<Tag>();
+    // for (auto entityID : view)
+    //{
+    //	Entity e(entityID);
+    //	destroy_entity(e);
+    //
+    // }
+    //{
+    //	while (!m_to_delete_entity.empty())
+    //	{
+    //		Entity entity = m_to_delete_entity.back();
+    //		m_to_delete_entity.pop_back();
 
-				//Remove From The Parent Entity
-				if (tag.parent.get_id() != INVALID_ENTITY)
-				{
-					auto& parent_tag = tag.parent.get_component<Tag>();
-					parent_tag.children.erase(
-						std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end()
-					);
-				}
+    //		auto& tag = entity.get_component<Tag>();
 
-				for (auto& children : tag.children)
-				{
-					auto& child_tag = children.get_component<Tag>();
-					child_tag.parent = Entity{};
-					destroy_entity(children);
-				}
+    //		//Remove From The Parent Entity
+    //		if (tag.parent.get_id() != INVALID_ENTITY)
+    //		{
+    //			auto& parent_tag = tag.parent.get_component<Tag>();
+    //			parent_tag.children.erase(
+    //				std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end()
+    //			);
+    //		}
 
-				tag.children.clear();
+    //		for (auto& children : tag.children)
+    //		{
+    //			auto& child_tag = children.get_component<Tag>();
+    //			child_tag.parent = Entity{};
+    //			destroy_entity(children);
+    //		}
 
-				entity.delete_entity();
-			}
-			m_to_delete_entity.clear();
-		}
-	}
+    //		tag.children.clear();
 
-	void Scene::destroy()
-	{
-		auto view = m_registry.view<Tag>();
-		for (auto entityID : view)
-		{
-			Entity e(entityID);
-			auto it = NodeFactory::clear_map.find(e.get_component<Tag>().node_type);
-			if (it != NodeFactory::clear_map.end())
-				it->second(e);
-		}
-	}
+    //		auto it = NodeFactory::clear_map.find(tag.node_type);
+    //		if (it != NodeFactory::clear_map.end())
+    //			it->second(entity);
+    //	}
+    //	m_to_delete_entity.clear();
+    //}
+  }
 
-	void Scene::on_event(Event& event)
-	{
-		auto view = m_registry.view<Tag>();
-		for (auto entityID : view)
-		{
-			Entity entity(entityID);
-			if (entity.has_component<ScriptComponent>())
-			{
-				ScriptComponent::event(entity, event);
-			}
-		}
-	}
+  void Scene::on_event(Event &event)
+  {
+    auto view = m_registry.view<Tag>();
+    for (auto entityID : view)
+    {
+      Entity entity(entityID);
+      if (entity.has_component<ScriptComponent>())
+      {
+        ScriptComponent::event(entity, event);
+      }
+    }
+  }
 
-	AG_ref<Scene> Scene::create(const std::string& name, const std::string& directory)
-	{
-		auto scene = AG_cref<Scene>();
+  AG_ref<Scene> Scene::create(const std::string &name, const std::string &directory)
+  {
+    auto scene = AG_cref<Scene>();
 
-		scene->set_name(name);
-		scene->set_directory(directory);
+    scene->set_name(name);
+    scene->set_directory(directory);
 
-		//auto camera_entity = scene->create_entity("Camera", NodeType::Camera);
-		return scene;
-	}
+    // auto camera_entity = scene->create_entity("Camera", NodeType::Camera);
+    return scene;
+  }
 }

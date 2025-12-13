@@ -5,6 +5,9 @@
 #include <string>
 #include <cstdint>
 #include <Events/Event.hpp>
+#include "box2d/box2d.h"
+
+
 
 
 
@@ -43,6 +46,7 @@ namespace ag
 		AG_uint get_index() const { return m_next_index; }
 		void set_next_index(AG_uint index) { m_next_index = index; }
 
+		inline b2World& get_world() { return *m_world; }
 
 		template <typename T>
 		auto get_view()
@@ -58,15 +62,19 @@ namespace ag
 
 		static AG_ref<Scene> create(const std::string& name = "", const std::string& directory = "");
 
+		
 	private:
 		entt::registry m_registry;
 		AG_uint m_next_index = 0;
-
+		AG_scope<b2World> m_world;
 		std::string m_name = "";
 		std::string m_directory = "";
 		std::vector<Entity> m_to_delete_entity;
 
 		inline static AG_ref<Scene> s_active_scene;
+
+		
+
 
 		friend class Entity;
 		friend class ScenePanel;

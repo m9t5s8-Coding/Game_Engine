@@ -91,7 +91,7 @@ namespace ag
       {
         ScriptComponent::load_json(entity, j["ScriptComponent"]);
       }
-      
+
     }
 
     static void show_properties(Entity entity)
@@ -128,7 +128,7 @@ namespace ag
 
       const auto& transform = Transform::get_world_transform(entity);
       auto& rect = entity.get_component<RectangleProp>();
-      
+
       Rectangle rectangle;
       rectangle.size = rect.size;
       rectangle.fill_color = rect.fill_color;

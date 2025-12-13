@@ -50,6 +50,7 @@ namespace ag
       
       if (j.contains("ScriptComponent"))
       {
+        
         ScriptComponent::load_json(entity, j["ScriptComponent"]);
       }
     }

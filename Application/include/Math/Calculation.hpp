@@ -12,6 +12,7 @@
 namespace ag::Math
 {
   constexpr float PI = 3.14159265359f;
+  constexpr float PPM = 32.0f;
 
   // Conversion between degree and radians
 	inline float to_radians(const float degrees)
@@ -80,6 +81,24 @@ namespace ag::Math
     return screen;
   }
 
+  inline float pixels_to_meters(float pixels)
+  {
+    return pixels / PPM;
+  }
+
+  inline float meters_to_pixels(float meters)
+  {
+    return meters * PPM;
+  }
+
+  inline void pixels_to_meters(vec2f& pixels)
+  {
+    pixels  /= PPM;
+  }
+  inline void meters_to_pixels(vec2f& meters)
+  {
+    meters *= PPM;
+  }
 
   // Getting the view matrix on the basis of the size and center
   inline glm::mat3 get_view_matrix(const vec2f& size, const vec2f& center, float rotation = 0)

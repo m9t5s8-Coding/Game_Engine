@@ -124,6 +124,12 @@ namespace ag
         {
             return vec2(x / scalar, y / scalar);
         }
+        vec2 operator/=(T scalar)
+        {
+          x /= scalar;
+          y /= scalar;
+          return *this;
+        }
 
 
         bool operator==(const vec2<T> &other) const

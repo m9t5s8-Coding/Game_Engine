@@ -356,12 +356,42 @@ namespace ag
 			// Position
 			lua.set_function("get_position", [](ag::Entity& entity) -> vec2f
 				{
-					return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+					auto type = NodeHelper::get_nodetype(entity);
+					if (type != NodeType::CollisionShape)
+					{
+						Transform::get_world(entity);
+						return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+					}
+					else
+					{
+						auto& props = entity.get_component<CollisionShape::CollisionShapeProps>();
+						if (!props.body)
+							return vec2f(0, 0);
+						b2Vec2 pos = props.body->GetPosition();
+						vec2f position = vec2f(pos.x, pos.y);
+						Math::meters_to_pixels(position);
+						return position;
+					}
+					return vec2f(0, 0);
 				});
 
 			lua.set_function("set_position", [](ag::Entity& entity, const vec2f& position)
 				{
-					NodeHelper::set_comp_value(entity, &Transform::position, position);
+					auto type = NodeHelper::get_nodetype(entity);
+					if( type != NodeType::CollisionShape)
+					{
+						NodeHelper::set_comp_value(entity, &Transform::position, position);
+					}
+					else
+					{
+						auto& props = entity.get_component<CollisionShape::CollisionShapeProps>();
+						if (props.body_type == BodyType::Static)
+							return;
+						vec2f pos = position;
+						Math::pixels_to_meters(pos);
+						props.body->SetTransform({ pos.x, pos.y }, 0);
+						props.body->SetAwake(true);
+					}
 				});
 
 
@@ -427,80 +457,80 @@ namespace ag
 				});
 
 
-				// Border Color
-				lua.set_function("get_border_color", [](ag::Entity& entity) -> Color {
-					auto node_type = NodeHelper::get_nodetype(entity);
-					switch (node_type)
-					{
-					case ag::NodeType::Rectangle:
-						return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_color, Color::Transparent);
+			// Border Color
+			lua.set_function("get_border_color", [](ag::Entity& entity) -> Color {
+				auto node_type = NodeHelper::get_nodetype(entity);
+				switch (node_type)
+				{
+				case ag::NodeType::Rectangle:
+					return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_color, Color::Transparent);
 
-					case ag::NodeType::Circle:
-						return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_color, Color::Transparent);
+				case ag::NodeType::Circle:
+					return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_color, Color::Transparent);
 
-					default:
-						return ag::Color::Transparent;
-					}
-					});
+				default:
+					return ag::Color::Transparent;
+				}
+				});
 
-				lua.set_function("set_border_color", [](ag::Entity& entity, const ag::Color& color) {
-					auto node_type = NodeHelper::get_nodetype(entity);
-					switch (node_type)
-					{
-					case ag::NodeType::Rectangle:
-					{
-						NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_color, color);
-						return;
-					}
-					case ag::NodeType::Circle:
-					{
-						NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_color, color);
-						return;
-					}
-					default:
-					{
-						return;
-					}
-					}
-					});
+			lua.set_function("set_border_color", [](ag::Entity& entity, const ag::Color& color) {
+				auto node_type = NodeHelper::get_nodetype(entity);
+				switch (node_type)
+				{
+				case ag::NodeType::Rectangle:
+				{
+					NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_color, color);
+					return;
+				}
+				case ag::NodeType::Circle:
+				{
+					NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_color, color);
+					return;
+				}
+				default:
+				{
+					return;
+				}
+				}
+				});
 
 
-				// Border Color
-				lua.set_function("get_border_thickness", [](ag::Entity& entity) -> float {
-					auto node_type = entity.get_component<Tag>().node_type;
-					switch (node_type)
-					{
-					case ag::NodeType::Rectangle:
-						return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, 0.0f);
+			// Border Color
+			lua.set_function("get_border_thickness", [](ag::Entity& entity) -> float {
+				auto node_type = entity.get_component<Tag>().node_type;
+				switch (node_type)
+				{
+				case ag::NodeType::Rectangle:
+					return NodeHelper::get_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, 0.0f);
 
-					case ag::NodeType::Circle:
-						return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_thickness, 0.0f);
+				case ag::NodeType::Circle:
+					return NodeHelper::get_comp_value(entity, &CircleNode::CircleProp::border_thickness, 0.0f);
 
-					default:
-						return 0.0f;
-					}
-					});
+				default:
+					return 0.0f;
+				}
+				});
 
-				lua.set_function("set_border_thickness", [](ag::Entity& entity, const float& thickness) {
-					auto node_type = entity.get_component<Tag>().node_type;
-					switch (node_type)
-					{
-					case ag::NodeType::Rectangle:
-					{
-						NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, thickness);
-						return;
-					}
-					case ag::NodeType::Circle:
-					{
-						NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_thickness, thickness);
-						return;
-					}
-					default:
-					{
-						return;
-					}
-					}
-					});
+			lua.set_function("set_border_thickness", [](ag::Entity& entity, const float& thickness) {
+				auto node_type = entity.get_component<Tag>().node_type;
+				switch (node_type)
+				{
+				case ag::NodeType::Rectangle:
+				{
+					NodeHelper::set_comp_value(entity, &RectangleNode::RectangleProp::border_thickness, thickness);
+					return;
+				}
+				case ag::NodeType::Circle:
+				{
+					NodeHelper::set_comp_value(entity, &CircleNode::CircleProp::border_thickness, thickness);
+					return;
+				}
+				default:
+				{
+					return;
+				}
+				}
+				});
 
 
 
@@ -587,15 +617,26 @@ namespace ag
 
 
 		lua.set_function("duplicate_entity", [](ag::Entity& entity) -> ag::Entity {
-			return Scene::get_active_scene()->duplicate_entity(entity);
+			auto e = Scene::get_active_scene()->duplicate_entity(entity);
+			auto& transform = e.get_component<Transform>();
+			transform.position.print();
+			return e;
 			});
 
-		lua.set_function("delete_entity", [](ag::Entity& entity){
+		lua.set_function("delete_entity", [](ag::Entity& entity) {
 			const auto& scene = Scene::get_active_scene();
 			scene->destroy_entity(entity);
 			});
 
-    
+		lua.set_function("set_velocity", [](ag::Entity& entity, const vec2f& velocity) {
+			auto& tag = entity.get_component<Tag>();
+			if (tag.node_type != NodeType::CollisionShape)
+				return;
+			auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
+			vec2f v = velocity;
+			Math::pixels_to_meters(v);
+			body->SetLinearVelocity(b2Vec2(v.x, v.y));
+			});
 
 	}
 }

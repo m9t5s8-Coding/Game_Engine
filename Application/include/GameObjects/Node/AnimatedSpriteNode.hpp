@@ -300,7 +300,7 @@ namespace ag
 			ScriptComponent::update(entity, ts);
 			if (!s.playing || !tag.is_visible)
 				return;
-			
+
 			if (!s.current_animation.empty())
 			{
 				auto it = s.animations.find(s.current_animation);
@@ -340,10 +340,10 @@ namespace ag
 			if (!is_visible)
 				return;
 
-			
+
 			auto& s = entity.get_component<AnimatedSpriteProps>();
 			const auto& transform = Transform::get_world_transform(entity);
-			
+
 			Renderer2D::set_texture(s.texture);
 
 			Sprite sprite;

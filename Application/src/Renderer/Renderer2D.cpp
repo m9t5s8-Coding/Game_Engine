@@ -357,7 +357,7 @@ namespace ag
 
 		if (s_data->rectangle_index >= s_data->max_shape)
 		{
-			flush_rectangle();
+			flush();
 		}
 		{
 			Rectangle_Instance* instance = s_data->rect_instanced_ptr++;
@@ -378,7 +378,7 @@ namespace ag
 	{
 		if (s_data->circle_index >= s_data->max_shape)
 		{
-			flush_circle();
+			flush();
 		}
 		{
 			Circle_Instance* instance = s_data->circle_instanced_ptr++;
@@ -398,7 +398,7 @@ namespace ag
 	{
 		if (s_data->sprite_index >= s_data->max_shape)
 		{
-			flush_sprite();
+			flush();
 		}
 		{
 			Sprite_Instance* instance = s_data->sprite_instanced_ptr++;
@@ -428,7 +428,7 @@ namespace ag
 
 		if (s_data->text_index >= s_data->max_shape)
 		{
-			flush_text();
+			flush();
 		}
 		for (char c : text_string.text)
 		{

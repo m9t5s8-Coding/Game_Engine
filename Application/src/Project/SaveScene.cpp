@@ -96,6 +96,7 @@ namespace ag
 		scene->set_name(scene_name);
 		scene->set_directory(scene_path);
 		Scene::set_active_scene(scene);
+		std::unordered_map<AG_uint, Entity> id_map;
 
 		for (auto& entityjson : j["Scene"]["Entities"])
 		{
@@ -108,22 +109,14 @@ namespace ag
 
 				type = static_cast<NodeType>(node);
 			}
-
-
 			Entity e = scene->create_entity(tag, type);
 
 			Tag::load_json(e, entityjson);
-
 			{
 				auto& tag = e.get_component<Tag>();
 				scene->set_next_index(std::max(scene->get_index(), tag.index + 1));
-			}
-
-			auto it = NodeFactory::load_map.find(type);
-			if (it != NodeFactory::load_map.end())
-			{
-				it->second(e, entityjson);
-			}
+				id_map[tag.index] = e;
+			}	
 		}
 
 		{
@@ -135,16 +128,34 @@ namespace ag
 			}
 		}
 
+		for (auto& entityjson : j["Scene"]["Entities"])
+		{
+			AG_uint id;
+			Helper::load_json(entityjson, "ID", id);
+			Entity e = id_map[id];
+			int node;
+			Helper::load_json(entityjson, "NodeType", node);
+			NodeType type = static_cast<NodeType>(node);
+
+			auto it = NodeFactory::load_map.find(type);
+			if (it != NodeFactory::load_map.end())
+			{
+				it->second(e, entityjson);
+			}
+		}
+
 		if (Engine::is_runtime())
 		{
 			auto view = scene->m_registry.view<Tag>();
 			for (auto entityID : view)
 			{
 				Entity e(entityID);
+				auto& tag = e.get_component<Tag>();
+				AERO_CORE_INFO("Name:{0}", tag.tag);
 				ScriptComponent::load_scripts(e);
 			}
 		}
-
+		id_map.clear();
 		index_map.clear();
 		AERO_CORE_INFO("Scene Loaded Successfully: {0}", scene->get_name());
 		return scene;

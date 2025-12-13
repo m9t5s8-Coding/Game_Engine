@@ -465,7 +465,7 @@ namespace ag
 		if (!e.has_component<Transform>())
 			return;
 
-		const auto& transform = e.get_component<Transform>();
+		const auto& transform = Transform::get_world_transform(e);
 
 		vec2i x_pos = vec2i( view.get_center().x, transform.position.y );
 		vec2i y_pos = vec2i( transform.position.x, view.get_center().y );

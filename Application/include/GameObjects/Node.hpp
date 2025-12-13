@@ -10,3 +10,4 @@
 #include <GameObjects/Node/TextNode.hpp>
 #include <GameObjects/Node/ButtonNode.hpp>
 #include <GameObjects/Node/TextureButton.hpp>
+#include <GameObjects/Node/CollisionShape.hpp>
