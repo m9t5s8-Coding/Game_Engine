@@ -78,7 +78,8 @@ namespace ag
 		ImGuiWindowFlags viewport_flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGui::Begin("ViewPort", nullptr, viewport_flags);
+		//ImGui::Begin("ViewPort", nullptr, viewport_flags);
+		ImGui::Begin("ViewPort");
 		{																								 
 			bool view_hovered = ImGui::IsWindowHovered();
 			if (view_hovered)

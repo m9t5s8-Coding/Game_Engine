@@ -36,8 +36,8 @@ namespace ag
 			return a.index < b.index;
 			});
 
-		auto group = m_registry.group<Tag>();
-		for (auto entityID : group)
+		auto view = m_registry.view<Tag>();
+		for (auto entityID : view)
 		{
 			Entity e{ entityID, this };
 
