@@ -191,6 +191,7 @@ namespace ag
 		vec2f scale = { 1, 1 };
 		//vec2u origin;
 		float rotation = 0.0f;
+		int z_depth = 0;
 
 		static void show_properties(Entity entity)
 		{
@@ -201,6 +202,7 @@ namespace ag
 			UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
 			//UI::draw_vec2("Origin", transform.origin, { 0, 0 });
 			UI::draw_value("Rotation", transform.rotation);
+			ImGui::SliderInt("Z Depth", &transform.z_depth, 0, 5);
 		}
 
 		static json save(Entity entity)
@@ -210,6 +212,7 @@ namespace ag
 			j["Position"] = transform.position.save();
 			j["Scale"] = transform.scale.save();
 			j["Rotation"] = transform.rotation;
+			j["Depth"] = transform.z_depth;
 
 			return j;
 		}
@@ -221,6 +224,7 @@ namespace ag
 			transform.position.load(j["Position"]);
 			transform.scale.load(j["Scale"]);
 			transform.rotation = j["Rotation"].get<float>();
+			Helper::load_json(j, "Depth", transform.z_depth);
 		}
 
 		static Transform get_world_transform(Entity entity)

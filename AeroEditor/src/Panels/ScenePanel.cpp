@@ -1,6 +1,7 @@
 ﻿#include <Panels/ScenePanel.hpp>
 #include <Application/EditorLayer.hpp>
 #include <Node/TileMapNodeFeatures.hpp>
+#include <UI/UI.hpp>
 
 namespace ag
 {
@@ -40,6 +41,7 @@ namespace ag
 
 	void ScenePanel::on_imgui_render()
 	{
+		UI::draw_menu_bar();
 		ImGui::Begin("Scene");
 		draw_scene_top_panel();
 		ImGui::Spacing();
@@ -85,6 +87,20 @@ namespace ag
 						props.ghost_sprite.texture_rect = m_texture_rect;
 						props.display_ghost = true;
 					}*/
+				}
+			}
+			else if (tag.node_type == NodeType::Sprite)
+			{
+				auto& props = m_selected_entity.get_component<SpriteNode::SpriteProp>();
+
+				uint_rect texture_rect;
+				if (props.texture)
+				{
+					if (UI::texture_selector(props.texture, texture_rect))
+					{
+						props.texture_rect = texture_rect;
+						props.size = texture_rect.size;
+					}
 				}
 			}
 		}
@@ -546,8 +562,6 @@ namespace ag
 				auto new_entity = m_scene->duplicate_entity(m_selected_entity);
 				
 				m_selected_entity = new_entity;
-
-
 			}
 			return false;
 		}

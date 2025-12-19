@@ -40,9 +40,19 @@ namespace ag
             return {std::round(x), std::round(y)};
         }
 
+        ImVec2 to_imvec2() const
+        {
+          return ImVec2(x, y);
+        }
+        void to_vec2(const ImVec2& other)
+        {
+          x = other.x;
+          y = other.y;
+        }
+
         template <typename U>
         vec2(const vec2<U> &v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) {}
-
+     
         // Addition
         vec2 operator+(const vec2 &other) const
         {
@@ -166,9 +176,11 @@ namespace ag
         {
           return !(x == static_cast<T>(other.x) && static_cast<int>(y == other.y));
         }
-        vec2 operator=(const ImVec2& other)
+        vec2& operator=(const ImVec2& other)
         {
-          return vec2(x = other.x, y = other.y);
+          x = other.x;
+          y = other.y;
+          return *this;
         }
     };
 

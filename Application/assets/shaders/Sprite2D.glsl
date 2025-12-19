@@ -12,6 +12,7 @@ layout(location = 5) in vec2 a_int_texture_size;
 layout(location = 6) in vec4 a_int_texture_rect;
 layout(location = 7) in int a_int_mode;
 layout(location = 8) in vec2 a_flip;
+layout(location = 9) in float a_depth;
 
 uniform mat3 u_view_matrix;
 uniform mat3 u_screen_matrix;
@@ -48,7 +49,7 @@ void main()
     ndc = u_view_matrix * pos;
   }
 
-  gl_Position = vec4(ndc.xy, 0.0, 1.0);
+  gl_Position = vec4(ndc.xy, a_depth * 2.0 - 1.0, 1.0);
 
 
 

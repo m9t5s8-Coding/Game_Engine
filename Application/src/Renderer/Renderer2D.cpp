@@ -50,6 +50,7 @@ namespace ag
 		vec4f texture_rect;
 		int mode;
 		vec2f flip;
+		float z_depth;
 	};
 
 	struct Text_Instance
@@ -221,7 +222,8 @@ namespace ag
 				 {ShaderDataType::Float2, "a_Texture_Size"},
 				 {ShaderDataType::Float4, "a_TextureRect"},
 				 {ShaderDataType::Int, "a_RenderMode"},
-				 {ShaderDataType::Float2, "a_flip"}
+				 {ShaderDataType::Float2, "a_flip"},
+				 {ShaderDataType::Float, "a_Z_depth"}
 			};
 			s_data->sprite_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Sprite_Instance) * s_data->max_vertices);
 			s_data->sprite_instanced_buffer->set_layout(instance_layout);
@@ -410,6 +412,7 @@ namespace ag
 			instance->mode = (int)sprite.mode;
 			instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
 			instance->flip.y = (sprite.flip_vertical) ? -1.0f : 1.0f;
+			instance->z_depth = static_cast<float>(transform.z_depth) / 10;
 		}
 		s_data->sprite_index++;
 	}

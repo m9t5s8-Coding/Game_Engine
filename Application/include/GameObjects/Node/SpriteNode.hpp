@@ -11,7 +11,7 @@ namespace ag
 	{
 		struct SpriteProp
 		{
-			std::string texture_path = "default.png";
+			std::string texture_path = "";
 			AG_ref<Texture2D> texture;
 			vec2u size;
 			uint_rect texture_rect;
@@ -54,15 +54,7 @@ namespace ag
 		static void create_node(Entity entity)
 		{
 			entity.add_component<Transform>();
-			SpriteProp sprite_;
-			{
-				auto project = Project::get_active_project();
-				std::string texture_path = project->get_directory() + project->get_assets_directory() + "/" + sprite_.texture_path;
-				sprite_.texture = Texture2D::create(texture_path);
-			}
-			sprite_.size = sprite_.texture->get_size();
-			sprite_.texture_rect = uint_rect(0, 0, sprite_.size);
-			entity.add_component<SpriteProp>(sprite_);
+			entity.add_component<SpriteProp>();
 
 		}
 
@@ -139,17 +131,22 @@ namespace ag
 
 							vec2u texture_size = sprite.texture->get_size();
 							sprite.size = texture_size;
-							sprite.texture_rect = {0, 0, sprite.size};
+							sprite.texture_rect.size = texture_size;
+							sprite.texture_rect.position = { 0, 0 };
 						}
 					}
 				}
 				{
-					vec2f texture_size = sprite.texture->get_size();
-					UI::draw_vec2("Size", sprite.size, sprite.texture_rect.size);
-					UI::draw_vec2("Texture Position", sprite.texture_rect.position, vec2f(0, 0));
-					UI::draw_vec2("Texture Size", sprite.texture_rect.size, texture_size);
-					ImGui::Checkbox("Vertical Flip", &sprite.flip_vertical);
-					ImGui::Checkbox("Horizontal Flip", &sprite.flip_horizontal);
+					if (sprite.texture)
+					{
+						vec2f texture_size = sprite.texture->get_size();
+						UI::draw_vec2("Size", sprite.size, sprite.texture_rect.size);
+						UI::draw_vec2("Texture Position", sprite.texture_rect.position);
+						UI::draw_vec2("Texture Size", sprite.texture_rect.size, texture_size);
+						ImGui::Checkbox("Vertical Flip", &sprite.flip_vertical);
+						ImGui::Checkbox("Horizontal Flip", &sprite.flip_horizontal);
+					}
+					
 				}
 				Transform::show_properties(entity);
 
@@ -165,13 +162,15 @@ namespace ag
 		static void draw(Entity entity)
 		{
 			auto is_visible = entity.get_component<Tag>().is_visible;
-			if (!is_visible)
+			auto& s = entity.get_component<SpriteProp>();
+
+			if (!is_visible || !s.texture)
 				return;
 
 
 
 			const auto& transform = Transform::get_world_transform(entity);
-			auto& s = entity.get_component<SpriteProp>();
+			
 			Sprite sprite;
 			sprite.size = s.size;
 

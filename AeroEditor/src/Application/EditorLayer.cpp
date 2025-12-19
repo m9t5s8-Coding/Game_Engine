@@ -3,7 +3,7 @@
 
 namespace ag
 {
-	EditorLayer *EditorLayer::s_instance = nullptr;
+	EditorLayer* EditorLayer::s_instance = nullptr;
 
 	EditorLayer::EditorLayer()
 		: Layer("EditorLayer")
@@ -44,7 +44,7 @@ namespace ag
 		{
 			Application::set_mouse_position(m_viewport_mouse_pos);
 		}
-		
+
 		m_framebuffer->bind();
 		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
 		RenderCommand::clear();
@@ -52,12 +52,12 @@ namespace ag
 		m_view_controller->on_update(ts);
 		m_panel->on_update();
 
-		
+
 		Renderer2D::begin_scene(m_view_controller->get_view(), m_viewport_size);
-		
+
 		editor_things();
 
-		m_scene->on_update(ts);		
+		m_scene->on_update(ts);
 		m_panel->draw_selected_text();
 		Renderer2D::end_scene();
 
@@ -88,7 +88,6 @@ namespace ag
 
 		}
 		ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
-
 		if (opt_fullscreen)
 			ImGui::PopStyleVar(2);
 
@@ -108,7 +107,7 @@ namespace ag
 
 		ImGui::Begin("ViewPort", nullptr, viewport_flags);
 		{
-			
+
 			{
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 				ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
@@ -141,12 +140,12 @@ namespace ag
 						ImGui::PushID(name.c_str());
 						ImGui::BeginGroup();
 
-						if(m_scene == scene)
+						if (m_scene == scene)
 							ImGui::PushStyleColor(ImGuiCol_Button, active_scene);
 						else
 							ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
 
-						if (ImGui::Button( name.c_str(), ImVec2(0, 30)))
+						if (ImGui::Button(name.c_str(), ImVec2(0, 30)))
 						{
 							m_scene = scene;
 							m_scene->set_active_scene(scene);
@@ -167,41 +166,14 @@ namespace ag
 					{
 						m_scenes.erase(scene_to_remove);
 					}
-					
-					
+
+
 					ImGui::SameLine(0, 10);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
 					ImGui::SetWindowFontScale(1.5f);
 					if (ImGui::Button("+", ImVec2(0, 30)))
 					{
-						auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
-						if (!full_path.empty())
-						{
-							auto project = Project::get_active_project();
-							Helper::normalize_path(full_path);
-
-							std::string project_dir = project->get_directory();
-							std::string scene_dir = project->get_scene_directory();
-
-							std::string base_path = project_dir + scene_dir + "/";
-
-							std::string relative_path = full_path;
-							if (relative_path.find(base_path) == 0)
-								relative_path = relative_path.substr(base_path.size());
-
-							Helper::normalize_path(relative_path);
-
-							std::filesystem::path p(full_path);
-							std::string scene_name = p.stem().string();
-							std::string scene_path = "/" + relative_path;
-
-							m_scene = Scene::create(scene_name, scene_path);
-							SaveScene::save_scene(m_scene, full_path);
-							Scene::set_active_scene(m_scene);
-
-							m_scenes[scene_name] = m_scene;
-							m_panel->set_scene(m_scene);
-						}
+						create_new_scene();
 					}
 					ImGui::SetWindowFontScale(1.0f);
 					ImGui::PopStyleVar();
@@ -212,7 +184,7 @@ namespace ag
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 			}
-			
+
 			bool view_hovered = ImGui::IsWindowHovered();
 			if (view_hovered)
 				ImGui::SetWindowFocus();
@@ -226,7 +198,7 @@ namespace ag
 				m_view_controller->on_resize(m_viewport_size);
 				m_view_controller->set_viewport_size(m_viewport_size);
 			}
-			
+
 
 			uint32_t texture_ID = m_framebuffer->get_colorattachment_id();
 			ImGui::Image((void*)(intptr_t)texture_ID, viewport_size, ImVec2(0, 1), ImVec2(1, 0));
@@ -260,10 +232,10 @@ namespace ag
 
 				m_view_controller->set_viewport_mouse(m_viewport_mouse_pos);
 				m_viewport_mouse_pos = Math::screen_to_world(m_viewport_mouse_pos, m_view_controller->get_view().get_float_rect(), m_viewport_size);
-				
+
 				m_panel->set_current_mouse_position(m_viewport_mouse_pos);
 
-				
+
 			}
 		}
 		ImGui::End();
@@ -291,18 +263,12 @@ namespace ag
 		{
 			if (e.get_key_code() == Key::S)
 			{
-				auto project = Project::get_active_project();
-				std::string scene_path = project->get_directory()  + project->get_scene_directory()  + m_scene->get_directory();
-				SaveScene::save_scene(m_scene, scene_path);
+				save_scene();
 			}
 
 			if (e.get_key_code() == Key::O)
 			{
-				auto full_path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
-				Helper::normalize_path(full_path);
-				m_scene = SaveScene::load_scene(full_path);
-				m_scenes[m_scene->get_name()] = m_scene;
-				m_panel->set_scene(m_scene);
+				open_scene();
 			}
 			return false;
 		}
@@ -314,6 +280,58 @@ namespace ag
 		return false;
 	}
 
+	void EditorLayer::create_new_scene()
+	{
+		auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+		if (full_path.empty())
+			return;
+
+		auto project = Project::get_active_project();
+		Helper::normalize_path(full_path);
+
+		std::string project_dir = project->get_directory();
+		std::string scene_dir = project->get_scene_directory();
+
+		std::string base_path = project_dir + scene_dir + "/";
+
+		std::string relative_path = full_path;
+		if (relative_path.find(base_path) == 0)
+			relative_path = relative_path.substr(base_path.size());
+
+		Helper::normalize_path(relative_path);
+
+		std::filesystem::path p(full_path);
+		std::string scene_name = p.stem().string();
+		std::string scene_path = "/" + relative_path;
+
+		m_scene = Scene::create(scene_name, scene_path);
+		SaveScene::save_scene(m_scene, full_path);
+		Scene::set_active_scene(m_scene);
+
+		m_scenes[scene_name] = m_scene;
+		m_panel->set_scene(m_scene);
+
+	}
+
+	void EditorLayer::open_scene()
+	{
+		auto full_path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+		if (full_path.empty())
+			return;
+
+		Helper::normalize_path(full_path);
+		m_scene = SaveScene::load_scene(full_path);
+		m_scenes[m_scene->get_name()] = m_scene;
+		m_panel->set_scene(m_scene);
+	}
+
+	void EditorLayer::save_scene()
+	{
+		auto project = Project::get_active_project();
+		std::string scene_path = project->get_directory() + project->get_scene_directory() + m_scene->get_directory();
+		SaveScene::save_scene(m_scene, scene_path);
+	}
+
 	void EditorLayer::editor_things()
 	{
 		Rectangle x_axis, y_axis;
@@ -321,8 +339,8 @@ namespace ag
 		x_axis.fill_color = Color(255, 107, 107, 200);
 		y_axis.fill_color = Color(78, 205, 196, 200);
 
-		x_axis.size =  vec2f(m_viewport_size.x, 1);
-		y_axis.size =  vec2f(1, m_viewport_size.y);
+		x_axis.size = vec2f(m_viewport_size.x, 1);
+		y_axis.size = vec2f(1, m_viewport_size.y);
 
 		x_axis.mode = RenderMode::Screen;
 		y_axis.mode = RenderMode::Screen;
@@ -330,21 +348,21 @@ namespace ag
 		const auto& view = m_view_controller->get_view();
 		// x axis and y axis
 		{
-			x_axis_transform.position = vec2i( view.get_center().x, 0 );
-			y_axis_transform.position = vec2i( 0, view.get_center().y );
+			x_axis_transform.position = vec2i(view.get_center().x, 0);
+			y_axis_transform.position = vec2i(0, view.get_center().y);
 			x_axis_transform.position = Math::world_to_screen(x_axis_transform.position, view.get_float_rect(), m_viewport_size);
 			y_axis_transform.position = Math::world_to_screen(y_axis_transform.position, view.get_float_rect(), m_viewport_size);
 			Renderer2D::draw_rectangle(y_axis, y_axis_transform);
 			Renderer2D::draw_rectangle(x_axis, x_axis_transform);
 		}
-		
+
 		//Transformation axix
 		{
 			Entity e = m_panel->get_selected_entity();
 			if (e)
 			{
 				TransformSetting t_setting = m_panel->get_transform_setting();
-				
+
 				switch (t_setting)
 				{
 				case ag::TransformSetting::None:
@@ -367,7 +385,7 @@ namespace ag
 				default:
 					break;
 				}
-				
+
 			}
 		}
 
@@ -388,16 +406,16 @@ namespace ag
 					auto& props = entity.get_component<CameraComponent::CameraProps>();
 
 					vec2f top_left = props.view_center - (props.view_size * props.zoom) / 2;
-					
+
 
 					vec2f bottom_right = props.view_center + (props.view_size * props.zoom) / 2;
-					
+
 
 					vec2f top_right = { bottom_right.x, top_left.y };
-					
+
 
 					vec2f bottom_left = { top_left.x, bottom_right.y };
-					
+
 
 					top_left = Math::world_to_screen(top_left, view.get_float_rect(), m_viewport_size);
 					top_right = Math::world_to_screen(top_right, view.get_float_rect(), m_viewport_size);
@@ -420,14 +438,14 @@ namespace ag
 					height.mode = RenderMode::Screen;
 
 					Transform transform;
-					
+
 
 					// Top
-					transform.position = Math::mid_point(top_left , top_right);
+					transform.position = Math::mid_point(top_left, top_right);
 					Renderer2D::draw_rectangle(width, transform);
 
 					// Left
-					transform.position = Math::mid_point(top_left , bottom_left);
+					transform.position = Math::mid_point(top_left, bottom_left);
 					Renderer2D::draw_rectangle(height, transform);
 
 					// Bottom
@@ -467,9 +485,9 @@ namespace ag
 
 		const auto& transform = Transform::get_world_transform(e);
 
-		vec2i x_pos = vec2i( view.get_center().x, transform.position.y );
-		vec2i y_pos = vec2i( transform.position.x, view.get_center().y );
-		 
+		vec2i x_pos = vec2i(view.get_center().x, transform.position.y);
+		vec2i y_pos = vec2i(transform.position.x, view.get_center().y);
+
 		x_axis_transform.position = Math::world_to_screen(x_pos, view.get_float_rect(), m_viewport_size);
 		y_axis_transform.position = Math::world_to_screen(y_pos, view.get_float_rect(), m_viewport_size);
 

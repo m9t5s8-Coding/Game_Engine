@@ -7,9 +7,6 @@
 [submodule "External/imgui"]
 	path = External/imgui
 	url = https://github.com/ocornut/imgui.git
-[submodule "External/glad"]
-	path = External/glad
-	url = https://github.com/Dav1dde/glad.git
 [submodule "External/spdlog"]
 	path = External/spdlog
 	url = https://github.com/gabime/spdlog.git
@@ -23,6 +20,3 @@
 	path = External/lua
 	url = https://github.com/lua/lua.git
 	branch = v5.4
-[submodule "External/box2d"]
-	path = External/box2d
-	url = https://github.com/erincatto/box2d.git
