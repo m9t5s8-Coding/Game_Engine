@@ -88,4 +88,41 @@ namespace ag
     pFileDialog->Release();
     return result;
   }
+
+  void FileDialogs::run_exe(const std::wstring& exe_path)
+  {
+    STARTUPINFOW si{};
+    PROCESS_INFORMATION pi{};
+
+    si.cb = sizeof(si);
+
+    if (!CreateProcessW(
+      exe_path.c_str(),
+      nullptr,        
+      nullptr, nullptr,
+      FALSE,
+      0,
+      nullptr,
+      nullptr,
+      &si,
+      &pi))
+    {
+      MessageBoxA(nullptr, "Failed to launch app", "Error", MB_OK);
+      return;
+    }
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  }
+
+  std::wstring FileDialogs::get_exe_folder()
+  {
+    wchar_t path[MAX_PATH];
+    GetModuleFileNameW(nullptr, path, MAX_PATH);
+
+    std::wstring exePath(path);
+    size_t pos = exePath.find_last_of(L"\\/");
+
+    return (std::wstring::npos == pos) ? L"" : exePath.substr(0, pos);
+  }
 }

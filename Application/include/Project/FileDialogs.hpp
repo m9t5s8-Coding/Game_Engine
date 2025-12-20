@@ -14,5 +14,9 @@ namespace ag
 		static std::string save_file(const char* filter);
 
 		static std::string select_folder(const char* title = "Select Folder");
+
+		static void run_exe(const std::wstring& exe_path);
+
+		static std::wstring get_exe_folder();
 	};
 }

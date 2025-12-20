@@ -46,6 +46,56 @@ namespace ag::UI
         ImGui::EndMenu();
       }
 
+      if (ImGui::BeginMenu("Run"))
+      {
+        if (ImGui::MenuItem("Run Scene"))
+        {
+          auto folder = FileDialogs::get_exe_folder();
+          std::wstring app = folder + L"\\Sandbox.exe";
+
+          FileDialogs::run_exe(app);
+        }
+
+        if (ImGui::MenuItem("Run Current Scene"))
+        {
+          auto scene = Scene::get_active_scene();
+          auto project = Project::get_active_project();
+
+          std::string project_file = project->get_project_file_directory();
+          Helper::makefile_read_only(project_file, false);
+          std::fstream file(project_file);
+          json j;
+          if (!file.is_open())
+          {
+            AERO_CORE_INFO("Cannot Open File {0}", project_file);
+          }
+          file >> j;
+          file.close();
+
+          Helper::save_json(j["Scene"], "Default", scene->get_name());
+          Helper::save_json(j["Scene"], "Default Path", scene->get_directory());
+
+          AERO_CORE_INFO("Scene Name: {0}", scene->get_name());
+          AERO_CORE_INFO("Scene Directory: {0}", scene->get_directory());
+
+          std::ofstream out_file(project_file);
+          if (!out_file.is_open())
+          {
+            AERO_CORE_INFO("Cannot Open File: {0}", project_file);
+          }
+          out_file << j.dump(4);
+          out_file.close();
+          Helper::makefile_read_only(project_file);
+
+          auto folder = FileDialogs::get_exe_folder();
+          std::wstring app = folder + L"\\Sandbox.exe";
+
+          FileDialogs::run_exe(app);
+        }
+        
+        ImGui::EndMenu();
+      }
+
       ImGui::EndMainMenuBar();
     }
 	}

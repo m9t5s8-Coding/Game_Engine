@@ -35,6 +35,7 @@ namespace ag
 		void create_new_scene();
 		void open_scene();
 		void save_scene();
+		void run_runtime();
 
 
 		bool on_key_pressed(KeyPressedEvent& e);

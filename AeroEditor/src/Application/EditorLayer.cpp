@@ -332,6 +332,11 @@ namespace ag
 		SaveScene::save_scene(m_scene, scene_path);
 	}
 
+	void EditorLayer::run_runtime()
+	{
+
+	}
+
 	void EditorLayer::editor_things()
 	{
 		Rectangle x_axis, y_axis;

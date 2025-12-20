@@ -198,7 +198,7 @@ namespace ag
 			Math::meters_to_pixels(position);
 			auto& transform = entity.get_component<Transform>();
 			transform.position = position;
-			transform.rotation = angle;
+			transform.rotation = Math::to_degree(angle);
 			Transform::get_local_transform(entity, transform);
 		}
 
@@ -236,6 +236,7 @@ namespace ag
 			Transform trans = Transform::get_world_transform(entity);
 			Math::pixels_to_meters(trans.position);
 			body_def.position.Set(trans.position.x, trans.position.y);
+			body_def.angle = Math::to_radians(trans.rotation);
 
 			auto scene = Scene::get_active_scene();
 			auto& world = scene->get_world();

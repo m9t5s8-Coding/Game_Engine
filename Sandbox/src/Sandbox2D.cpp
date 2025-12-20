@@ -91,7 +91,7 @@ namespace ag
 			}
 			proj_file >> j;
 			proj_file.close();
-			Helper::load_json(j["Scene"], "Last Loaded Path", scene_path);
+			Helper::load_json(j["Scene"], "Default Path", scene_path);
 			auto& project_directory = project->get_directory();
 			auto& scene_directory = project->get_scene_directory();
 			scene_path = project_directory + scene_directory + scene_path;
@@ -115,6 +115,7 @@ namespace ag
 			m_view_controller = ViewController::create(view_size, props.view_center);
 			ViewController::set_main_controller(m_view_controller);
 			Application::get().get_window().set_size(props.window_size);
+			props.window_size.print();
 			Application::get().get_window().center_window();
 		}
 		

@@ -16,6 +16,26 @@
 namespace ag
 {
 
+	struct Quad_Instance
+	{
+		vec2f size;
+		vec2f position;
+		vec2f origin;
+		float rotation;
+		int mode;
+		int quad_mode;
+
+		float border_thickness;
+		vec4f fill_color;
+		vec4f border_color;
+
+		float corner_radius;
+
+		vec2f texture_size;
+		vec4f texture_rect;
+		vec2f flip;
+	};
+
 	struct Rectangle_Instance
 	{
 		vec2f size;
