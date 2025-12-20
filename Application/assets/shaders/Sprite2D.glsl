@@ -23,22 +23,16 @@ void main()
 {
   
   vec2 origin = vec2(a_int_size.x / 2, a_int_size.y / 2);
-
   float cosA = cos(a_int_rotation);
   float sinA = sin(a_int_rotation);
 
   vec2 local_pos = a_pos * a_int_size;
   local_pos -= origin;
-  
   vec2 rotated;
     rotated.x = local_pos.x * cosA - local_pos.y * sinA;
     rotated.y = local_pos.x * sinA + local_pos.y * cosA;
-
   rotated += a_int_pos;
-
-
   vec3 pos = vec3(rotated, 1.0);
-
   vec3 ndc;
   if(a_int_mode == 0)
   {
@@ -48,10 +42,7 @@ void main()
   {
     ndc = u_view_matrix * pos;
   }
-
   gl_Position = vec4(ndc.xy, a_depth * 2.0 - 1.0, 1.0);
-
-
 
   vec2 tex_local_pos;
   tex_local_pos.x = a_texcoord.x * a_int_texture_rect.z + a_int_texture_rect.x;
@@ -86,10 +77,6 @@ in vec2 tex_coord;
 
 uniform sampler2D u_texture;
 
-float median(float r, float g, float b) 
-{
-    return max(min(r, g), min(max(r, g), b));
-}
 
 void main()
 {

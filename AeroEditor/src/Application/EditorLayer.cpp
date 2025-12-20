@@ -100,12 +100,12 @@ namespace ag
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoBringToFrontOnFocus |
 			ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoScrollWithMouse;
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoDocking;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-
-		ImGui::Begin("ViewPort", nullptr, viewport_flags);
+		static bool show_window = true;
+		ImGui::Begin("ViewPort", &show_window, viewport_flags);
 		{
 
 			{

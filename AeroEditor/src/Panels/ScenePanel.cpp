@@ -385,7 +385,7 @@ namespace ag
 	void ScenePanel::rotate_transform_setting()
 	{
 		auto& rotation = m_selected_entity.get_component<Transform>().rotation;
-		auto& position = m_selected_entity.get_component<Transform>().position;
+		auto position = Transform::get_world_transform(m_selected_entity).position;
 
 		if (!m_rotate_flag)
 		{
@@ -404,6 +404,7 @@ namespace ag
 	void ScenePanel::scale_transform_setting()
 	{
 		auto& transform = m_selected_entity.get_component<Transform>();
+		auto position = Transform::get_world_transform(m_selected_entity).position;
 
 		if (!m_scale_flag)
 		{
@@ -412,8 +413,8 @@ namespace ag
 			m_scale_flag = true;
 		}
 
-		float initial_distance = (m_last_mouse_position - transform.position).length();
-		float current_distance = (m_current_mouse_position - transform.position).length();
+		float initial_distance = (m_last_mouse_position - position).length();
+		float current_distance = (m_current_mouse_position - position).length();
 
 		float scale_ratio = current_distance / std::max(initial_distance, 0.001f);
 

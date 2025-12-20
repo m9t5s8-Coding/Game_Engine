@@ -21,6 +21,7 @@ namespace ag
     virtual void set_int(const std::string &name, int value) const = 0;
     virtual void set_float(const std::string &name, float value) const = 0;
     virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const = 0;
+    virtual void set_int_array(const std::string& name, int* values, AG_uint count) const = 0;
 
     static std::shared_ptr<Shader> create(const std::string &p_shader_path);
     static std::shared_ptr<Shader> create(const std::string& p_name, const std::string &p_shader_path);

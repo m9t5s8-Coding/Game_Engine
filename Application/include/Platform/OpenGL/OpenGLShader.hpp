@@ -31,6 +31,8 @@ namespace ag
     virtual void set_float(const std::string &name, float value) const override;
     virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const override;
 
+    virtual void set_int_array(const std::string& name, int* values, AG_uint count) const override;
+
     void set_color(const std::string &name, const ag::Color &color) const;
     void set_float_rect(const std::string &name, const float_rect &rect) const;
 

@@ -4,7 +4,6 @@
 layout(location = 0) in vec2 a_pos;
 layout(location = 1) in vec2 a_texcoord;
 
-
 layout(location = 2) in vec2 a_int_size;
 layout(location = 3) in vec2 a_int_pos;
 layout(location = 4) in vec2 a_int_texture_size;
@@ -22,10 +21,7 @@ void main()
 {
  text_color = a_int_color; 
 
-  
-
   vec2 local_pos = a_pos * a_int_size;
-  
   
   local_pos += a_int_pos;
 
@@ -44,8 +40,6 @@ void main()
 
   gl_Position = vec4(ndc.xy, 0.0, 1.0);
 
-
-
   vec2 tex_local_pos;
   tex_local_pos.x = a_texcoord.x * a_int_texture_rect.z + a_int_texture_rect.x;
   tex_local_pos.y = a_texcoord.y * a_int_texture_rect.w + a_int_texture_rect.y;
@@ -53,11 +47,7 @@ void main()
   float ndc_tex_x = tex_local_pos.x / a_int_texture_size.x;
   float ndc_tex_y = tex_local_pos.y / a_int_texture_size.y;
 
-  
-
   tex_coord = vec2(ndc_tex_x,ndc_tex_y);
-
-
 
 }
 

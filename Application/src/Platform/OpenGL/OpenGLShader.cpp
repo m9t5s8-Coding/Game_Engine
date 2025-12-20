@@ -229,4 +229,9 @@ namespace ag
   {
     glUniformMatrix3fv(glGetUniformLocation(m_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(p_mat));
   }
+
+  void OpenGLShader::set_int_array(const std::string& name, int* values, AG_uint count) const
+  {
+    glUniform1iv(glGetUniformLocation(m_ID, name.c_str()), count, values);
+  }
 }
