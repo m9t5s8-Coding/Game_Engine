@@ -88,6 +88,7 @@ namespace ag
 				props.body = nullptr;
 			}
 			ScriptComponent::destroy(entity);
+			AERO_CORE_INFO("Entity Deleted");
 			entity.delete_entity();
 		}
 
@@ -113,7 +114,7 @@ namespace ag
 			clone.add_component<CollisionShapeProps>(props);
 			if (!Engine::is_runtime())
 				return;
-			create_body(clone);
+			
 		}
 
 		static json save_json(Entity entity)
@@ -190,7 +191,8 @@ namespace ag
 			ScriptComponent::update(entity, ts);
 			auto& props = entity.get_component<CollisionShapeProps>();
 			if (!props.body)
-				return;
+				create_body(entity);
+
 
 			b2Vec2 pos = props.body->GetPosition();
 			float angle = props.body->GetAngle();

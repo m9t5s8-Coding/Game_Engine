@@ -32,7 +32,7 @@ namespace ag
 
 	enum class NodeType
 	{
-    None = -1,
+		None = -1,
 		Rectangle = 0,
 		Circle = 1,
 		Sprite = 2,
@@ -43,7 +43,7 @@ namespace ag
 		TextNode = 7,
 		Button = 8,
 		TextureButton = 9,
-    CollisionShape = 10
+		CollisionShape = 10
 	};
 
 	enum class RenderLayer
@@ -154,33 +154,25 @@ namespace ag
 			}
 		}
 
-		static void clone(Entity original, Entity duplicate)
+		static void clone(Entity original, Entity duplicate, Entity parent)
 		{
 			const auto& original_tag = original.get_component<Tag>();
 			auto& duplicate_tag = duplicate.get_component<Tag>();
-
 			duplicate_tag.layer = original_tag.layer;
 			duplicate_tag.is_visible = original_tag.is_visible;
-			
-
-			if (original_tag.parent.get_id() != INVALID_ENTITY)
+			if (parent.get_id() != INVALID_ENTITY)
 			{
-				duplicate_tag.parent = original_tag.parent;
-				auto& parent_tag = duplicate_tag.parent.get_component<Tag>();
+				duplicate_tag.parent = parent;
+				auto& parent_tag = parent.get_component<Tag>();
 				parent_tag.children.push_back(duplicate);
 			}
-
 			duplicate_tag.children.clear();
 			auto scene = Scene::get_active_scene();
-			for(auto& children : original_tag.children)
+			for (auto& children : original_tag.children)
 			{
-				auto new_child = scene->duplicate_entity(children);
-
-				auto& new_tag = new_child.get_component<Tag>();
-
-				new_tag.parent = duplicate;
-				duplicate_tag.children.push_back(new_child);
+				scene->duplicate_entity(children, duplicate);
 			}
+
 		}
 	};
 
@@ -201,7 +193,7 @@ namespace ag
 			UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
 			//UI::draw_vec2("Origin", transform.origin, { 0, 0 });
 			UI::draw_value("Rotation", transform.rotation);
-			
+
 		}
 
 		static json save(Entity entity)
@@ -211,7 +203,7 @@ namespace ag
 			j["Position"] = transform.position.save();
 			j["Scale"] = transform.scale.save();
 			j["Rotation"] = transform.rotation;
-			
+
 
 			return j;
 		}
@@ -223,7 +215,7 @@ namespace ag
 			transform.position.load(j["Position"]);
 			transform.scale.load(j["Scale"]);
 			transform.rotation = j["Rotation"].get<float>();
-		
+
 		}
 
 		static Transform get_world_transform(Entity entity)
@@ -327,7 +319,7 @@ namespace ag
 
 		static void create(Entity entity)
 		{
-			if (!entity.has_component<ScriptComponent>() && !Engine::is_runtime())
+			if (!entity.has_component<ScriptComponent>() || !Engine::is_runtime())
 				return;
 			auto& comp = entity.get_component<ScriptComponent>();
 			if (comp.on_create.is_valid())
@@ -351,7 +343,7 @@ namespace ag
 
 		static void destroy(Entity entity)
 		{
-			if (!entity.has_component<ScriptComponent>() && !Engine::is_runtime())
+			if (!entity.has_component<ScriptComponent>() || !Engine::is_runtime())
 				return;
 
 			auto& comp = entity.get_component<ScriptComponent>();
@@ -403,7 +395,7 @@ namespace ag
 
 				if (!e.has_component<Tag>())
 					return {};
-				
+
 				auto& tag = e.get_component<Tag>();
 				for (auto& child : tag.children)
 				{
@@ -468,7 +460,7 @@ namespace ag
 		static vec2f calc_text_size(const Text& text, const vec2f& s)
 		{
 			vec2f scale;
-			scale  = s * (text.font_size / TextLoader::font.em_size);
+			scale = s * (text.font_size / TextLoader::font.em_size);
 			vec2f size = { 0, 0 };
 			float line_height = (TextLoader::font.ascender - TextLoader::font.descender) * TextLoader::font.em_size * scale.y;
 			size.y = line_height;
@@ -493,7 +485,7 @@ namespace ag
 			return size;
 		}
 
-		static vec2f center_text(const Text& text,const Transform& transform)
+		static vec2f center_text(const Text& text, const Transform& transform)
 		{
 			vec2f size = calc_text_size(text, transform.scale);
 			return transform.position - (size * 0.5f);

@@ -135,7 +135,7 @@ namespace ag
 			init(props);
 
 			
-			auto& window = Application::get().get_window();
+			/*auto& window = Application::get().get_window();
 			{
 				bool fullscreen;
 				Helper::load_json(j["Window"], "FullScreen", fullscreen);
@@ -163,7 +163,7 @@ namespace ag
 				vec2u window_size;
 				Helper::load_json(j["Window"], "Size", window_size);
 				window.set_size(window_size);
-			}
+			}*/
 		}
 
 		{

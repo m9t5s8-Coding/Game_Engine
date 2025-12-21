@@ -356,42 +356,18 @@ namespace ag
 			// Position
 			lua.set_function("get_position", [](ag::Entity& entity) -> vec2f
 				{
-					auto type = NodeHelper::get_nodetype(entity);
-					if (type != NodeType::CollisionShape)
-					{
-						Transform::get_world(entity);
-						return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
-					}
-					else
-					{
-						auto& props = entity.get_component<CollisionShape::CollisionShapeProps>();
-						if (!props.body)
-							return vec2f(0, 0);
-						b2Vec2 pos = props.body->GetPosition();
-						vec2f position = vec2f(pos.x, pos.y);
-						Math::meters_to_pixels(position);
-						return position;
-					}
-					return vec2f(0, 0);
+					return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
 				});
 
 			lua.set_function("set_position", [](ag::Entity& entity, const vec2f& position)
 				{
-					auto type = NodeHelper::get_nodetype(entity);
-					if( type != NodeType::CollisionShape)
-					{
-						NodeHelper::set_comp_value(entity, &Transform::position, position);
-					}
-					else
-					{
-						auto& props = entity.get_component<CollisionShape::CollisionShapeProps>();
-						if (props.body_type == BodyType::Static)
-							return;
-						vec2f pos = position;
-						Math::pixels_to_meters(pos);
-						props.body->SetTransform({ pos.x, pos.y }, 0);
-						props.body->SetAwake(true);
-					}
+					NodeHelper::set_comp_value(entity, &Transform::position, position);
+				});
+
+			lua.set_function("move", [](ag::Entity& entity, const vec2f& delta) {
+				auto position =  NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+				position += delta;
+				NodeHelper::set_comp_value(entity, &Transform::position, position);
 				});
 
 
@@ -415,6 +391,8 @@ namespace ag
 				{
 					NodeHelper::set_comp_value(entity, &Transform::rotation, rotation);
 				});
+
+			
 		}
 
 		// Rectangle Node and Circle Node
@@ -617,9 +595,8 @@ namespace ag
 
 
 		lua.set_function("duplicate_entity", [](ag::Entity& entity) -> ag::Entity {
-			auto e = Scene::get_active_scene()->duplicate_entity(entity);
-			auto& transform = e.get_component<Transform>();
-			transform.position.print();
+			auto parent = entity.get_component<Tag>().parent;
+			auto e = Scene::get_active_scene()->duplicate_entity(entity, parent);
 			return e;
 			});
 
@@ -633,9 +610,33 @@ namespace ag
 			if (tag.node_type != NodeType::CollisionShape)
 				return;
 			auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
+			if (!body)
+				return;
+
 			vec2f v = velocity;
 			Math::pixels_to_meters(v);
 			body->SetLinearVelocity(b2Vec2(v.x, v.y));
+			});
+
+		lua.set_function("set_awake", [](ag::Entity& entity, bool awake) {
+			auto type = NodeHelper::get_nodetype(entity);
+			if (type == NodeType::CollisionShape)
+			{
+				auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
+				if (!body)
+					return;
+				body->SetAwake(awake);
+			}
+			});
+
+		lua.set_function("reload_scene", []() {
+			auto scene_path = Scene::get_active_scene()->get_directory();
+			auto project = Project::get_active_project();
+			std::string path = project->get_directory() + project->get_scene_directory() + scene_path;
+
+			auto scene = SaveScene::load_scene(path);
+			Scene::set_active_scene(scene);
+
 			});
 
 	}

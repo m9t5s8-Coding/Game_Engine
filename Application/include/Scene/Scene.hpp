@@ -32,7 +32,7 @@ namespace ag
 		void on_event(Event& event);
 
 		Entity create_entity(const std::string& name, NodeType type, bool is_cloning = false);
-		Entity duplicate_entity(Entity original);
+		Entity duplicate_entity(Entity original, Entity parent);
 
 		void set_name(const std::string& name) { m_name = name; }
 		const std::string& get_name() const { return m_name; }
@@ -61,6 +61,14 @@ namespace ag
 		static void set_active_scene(const AG_ref<Scene>& scene) { s_active_scene = scene; }
 
 		static AG_ref<Scene> create(const std::string& name = "", const std::string& directory = "");
+
+	private:
+		void update_entity_recursive(Entity entity, TimeStamp ts);
+		void update_entity(Entity entity, TimeStamp ts);
+
+		void draw_entity_recursive(Entity entity);
+		void draw_entity(Entity entity);
+
 
 		
 	private:

@@ -89,7 +89,7 @@ namespace ag
 		};
 
 		{
-			s_data->quad_instanced_base = new Quad_Instance[s_data->max_vertices];
+			s_data->quad_instanced_base = new Quad_Instance[s_data->max_shape];
 			s_data->quad_vertex_array = ag::VertexArray::create();
 			BufferLayout layout = {
 					{ShaderDataType::Float2, "a_Position"} };
@@ -117,7 +117,7 @@ namespace ag
 					{ShaderDataType::Float4, "a_TextureRect"},
 					{ShaderDataType::Float2, "a_flip"},
 			};
-			s_data->quad_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Quad_Instance) * s_data->max_vertices);
+			s_data->quad_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Quad_Instance) * s_data->max_shape);
 			s_data->quad_instanced_buffer->set_layout(instance_layout);
 			s_data->quad_vertex_array->add_vertex_buffer(s_data->quad_instanced_buffer, true);
 			s_data->quad_vertex_array->set_index_buffer(indexbuffer);
@@ -130,8 +130,8 @@ namespace ag
 				samplers[i] = i;
 
 			s_data->quad_shader->bind();
-			s_data->quad_shader->set_int_array("u_Textures", samplers, 2);
-
+			s_data->quad_shader->set_int_array("u_textures", samplers, 16);
+			s_data->quad_shader->unbind();
 			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png", false);
 			TextLoader::loadGlyph("assets/textures/atlas.json");
 		}
@@ -203,6 +203,8 @@ namespace ag
 			instance->corner_radius = rect.corner_radius * (transform.scale.x + transform.scale.y) * 0.5;
 		}
 		s_data->quad_index++;
+
+
 	}
 
 	void Renderer2D::draw_circle(const Circle& circle, const Transform& transform)

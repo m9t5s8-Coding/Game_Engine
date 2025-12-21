@@ -44,7 +44,6 @@ namespace ag
 
   void ViewController::on_update(TimeStamp ts)
   {
-    
   }
 
   void ViewController::on_event(Event &e)
@@ -93,7 +92,7 @@ namespace ag
     if (window_size.x == 0 || window_size.y == 0)
       return false;
 
-    m_last_size = window_size;
+    /*m_last_size = window_size;*/
 
     on_resize(window_size);
     return false;

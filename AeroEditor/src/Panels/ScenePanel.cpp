@@ -560,7 +560,8 @@ namespace ag
 		{
 			if (e.get_key_code() == Key::D && m_selected_entity)
 			{
-				auto new_entity = m_scene->duplicate_entity(m_selected_entity);
+				auto parent = m_selected_entity.get_component<Tag>().parent;
+				auto new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
 				
 				m_selected_entity = new_entity;
 			}

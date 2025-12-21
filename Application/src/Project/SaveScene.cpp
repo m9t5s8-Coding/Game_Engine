@@ -151,7 +151,6 @@ namespace ag
 			{
 				Entity e(entityID);
 				auto& tag = e.get_component<Tag>();
-				AERO_CORE_INFO("Name:{0}", tag.tag);
 				ScriptComponent::load_scripts(e);
 			}
 		}
