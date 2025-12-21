@@ -556,7 +556,7 @@ namespace ag
 				});
 
 			lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical) {
-
+				AERO_CORE_INFO("Here cOme");
 				auto type = NodeHelper::get_nodetype(entity);
 				switch (type)
 				{
@@ -565,6 +565,7 @@ namespace ag
 					return;
 
 				case ag::NodeType::AnimatedSprite2D:
+					AERO_CORE_INFO("Here cOme");
 					NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_vertical, vertical);
 					return;
 
@@ -638,6 +639,16 @@ namespace ag
 			Scene::set_active_scene(scene);
 
 			});
+
+		lua.set_function("set_text", [](ag::Entity& entity, const std::string& value) {
+			auto type = NodeHelper::get_nodetype(entity);
+			if (type == NodeType::TextNode)
+			{
+				auto& text = entity.get_component< TextNode::TextProp>().text;
+				text.text = value;
+				AERO_CORE_INFO("Text:{0}", text.text);
+			}
+			});		
 
 	}
 }

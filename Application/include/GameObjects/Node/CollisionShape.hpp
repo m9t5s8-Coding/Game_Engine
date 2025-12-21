@@ -88,7 +88,6 @@ namespace ag
 				props.body = nullptr;
 			}
 			ScriptComponent::destroy(entity);
-			AERO_CORE_INFO("Entity Deleted");
 			entity.delete_entity();
 		}
 
