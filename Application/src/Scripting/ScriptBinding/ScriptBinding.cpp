@@ -619,6 +619,20 @@ namespace ag
 			body->SetLinearVelocity(b2Vec2(v.x, v.y));
 			});
 
+		lua.set_function("set_velocity_x", [](ag::Entity& entity, float velocity) {
+			auto& tag = entity.get_component<Tag>();
+			if (tag.node_type != NodeType::CollisionShape)
+				return;
+			auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
+			if (!body)
+				return;
+
+			float v = velocity;
+			Math::pixels_to_meters(v);
+			body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
+			});
+
+
 		lua.set_function("set_awake", [](ag::Entity& entity, bool awake) {
 			auto type = NodeHelper::get_nodetype(entity);
 			if (type == NodeType::CollisionShape)

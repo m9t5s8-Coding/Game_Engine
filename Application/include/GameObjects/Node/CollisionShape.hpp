@@ -33,6 +33,7 @@ namespace ag
 
 			int group_number = 1;
 			bool collide_with[5] = { true, true, true, true, true };
+			bool fixed_rotation = true;
 
 			static json save(Entity entity)
 			{
@@ -42,6 +43,7 @@ namespace ag
 				Helper::save_json(j, "Shape Type", static_cast<int>(props.type));
 				Helper::save_json(j, "Body Type", static_cast<int>(props.body_type));
 				Helper::save_json(j, "Groud Number", props.group_number);
+				Helper::save_json(j, "Rotation" ,props.fixed_rotation);
 
 				j["Collide With"] = json::array();
 				for (int i = 0; i < 5; i++)
@@ -58,6 +60,7 @@ namespace ag
 				Helper::load_json(j, "Shape Type", props.type);
 				Helper::load_json(j, "Body Type", props.body_type);
 				Helper::load_json(j, "Groud Number", props.group_number);
+				Helper::load_json(j, "Rotation", props.fixed_rotation);
 
 				if (j.contains("Collide With") && j["Collide With"].is_array())
 				{
@@ -105,6 +108,7 @@ namespace ag
 			props.size = original_props.size;
 			props.body_type = original_props.body_type;
 			props.group_number = original_props.group_number;
+			props.fixed_rotation = original_props.fixed_rotation;
 			for (int i = 0; i < 5; i++)
 			{
 				props.collide_with[i] = original_props.collide_with[i];
@@ -177,7 +181,10 @@ namespace ag
 							ImGui::SetItemDefaultFocus();
 					}
 					ImGui::EndCombo();
+
+					
 				}
+				ImGui::Checkbox("Fixed Rotation", &props.fixed_rotation);
 			}
 			Transform::show_properties(entity);
 		}
@@ -238,6 +245,7 @@ namespace ag
 			Math::pixels_to_meters(trans.position);
 			body_def.position.Set(trans.position.x, trans.position.y);
 			body_def.angle = Math::to_radians(trans.rotation);
+			body_def.fixedRotation = props.fixed_rotation;
 
 			auto scene = Scene::get_active_scene();
 			auto& world = scene->get_world();
