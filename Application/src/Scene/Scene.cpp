@@ -14,7 +14,7 @@ namespace ag
 	{
 		if (Engine::is_runtime())
 		{
-			m_world = AG_cscope<b2World>(b2Vec2(0.0f, 28.8f));
+			m_world = AG_cscope<b2World>(b2Vec2(0.0f, 9.8 * 3.333));
 		}
 	}
 
