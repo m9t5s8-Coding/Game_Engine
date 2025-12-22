@@ -33,6 +33,7 @@ namespace ag
 		{
 			vec2u texture_pos;
 			uint_rect texture_rect;
+			bool is_solid;
 
 			static json save(TileTexture texture)
 			{
@@ -40,6 +41,7 @@ namespace ag
 
 				Helper::save_json(j, "Position", texture.texture_pos);
 				Helper::save_json(j, "Texture Rect", texture.texture_rect);
+				Helper::save_json(j, "Solid", texture.is_solid);
 
 				return j;
 			}
@@ -48,6 +50,7 @@ namespace ag
 			{
 				Helper::load_json(j, "Position", texture.texture_pos);
 				Helper::load_json(j, "Texture Rect", texture.texture_rect);
+				Helper::load_json(j, "Solid", texture.is_solid);
 			}
 		};
 

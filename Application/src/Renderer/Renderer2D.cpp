@@ -61,7 +61,7 @@ namespace ag
 		Quad_Instance* quad_instanced_ptr = nullptr;
 
 		View view;
-
+		AG_uint slots;
 	};
 	static Renderer2D_Data* s_data;
 
@@ -74,13 +74,14 @@ namespace ag
 		s_data->max_shape = 10000;
 		s_data->max_vertices = s_data->max_shape * 4;
 		s_data->max_indices = s_data->max_shape * 6;
+		s_data->slots = 2;
 
 
 		AG_uint indices[] = { 0, 1, 2, 0, 2, 3 };
 
 		AG_ref<IndexBuffer> indexbuffer = ag::IndexBuffer::create(indices, 6);
 
-
+		 
 		float vertices[] = {
 			0.f, 0.f,
 			0.f, 1.f,
@@ -125,12 +126,12 @@ namespace ag
 
 			s_data->quad_texture = ag::Texture2D::create("assets/textures/default.png", false);
 
-			int samplers[16];
-			for (int i = 0; i < 16; i++)
+			int samplers[2];
+			for (int i = 0; i < 2; i++)
 				samplers[i] = i;
 
 			s_data->quad_shader->bind();
-			s_data->quad_shader->set_int_array("u_textures", samplers, 16);
+			s_data->quad_shader->set_int_array("u_textures", samplers, 2);
 			s_data->quad_shader->unbind();
 			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png", false);
 			TextLoader::loadGlyph("assets/textures/atlas.json");

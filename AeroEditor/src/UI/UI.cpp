@@ -110,7 +110,7 @@ namespace ag::UI
     
     bool selected = false;
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoDocking;
 
     ImGui::Begin("Texture Selector", nullptr, flags);
     {

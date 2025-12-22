@@ -122,7 +122,7 @@ in vec2 tex_coord;
 flat in int v_type;
 flat in int v_slot;
 
-uniform sampler2D u_textures[16]; // support multiple slots
+uniform sampler2D u_textures[2]; // support multiple slots
 
 float median(float r, float g, float b)
 {

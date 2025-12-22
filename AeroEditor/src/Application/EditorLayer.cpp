@@ -56,9 +56,10 @@ namespace ag
 		Renderer2D::begin_scene(m_view_controller->get_view(), m_viewport_size);
 
 		editor_things();
-
 		m_scene->on_update(ts);
 		m_panel->draw_selected_text();
+
+
 		Renderer2D::end_scene();
 
 		m_framebuffer->unbind();
@@ -88,6 +89,7 @@ namespace ag
 
 		}
 		ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
+
 		if (opt_fullscreen)
 			ImGui::PopStyleVar(2);
 
@@ -95,7 +97,7 @@ namespace ag
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 
-		ImGuiWindowFlags viewport_flags = 
+		ImGuiWindowFlags viewport_flags = ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -104,8 +106,8 @@ namespace ag
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		static bool show_window = true;
-		ImGui::Begin("ViewPort", &show_window, viewport_flags);
+
+		ImGui::Begin("ViewPort", nullptr, viewport_flags);
 		{
 
 			{
@@ -173,7 +175,34 @@ namespace ag
 					ImGui::SetWindowFontScale(1.5f);
 					if (ImGui::Button("+", ImVec2(0, 30)))
 					{
-						create_new_scene();
+						auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+						if (!full_path.empty())
+						{
+							auto project = Project::get_active_project();
+							Helper::normalize_path(full_path);
+
+							std::string project_dir = project->get_directory();
+							std::string scene_dir = project->get_scene_directory();
+
+							std::string base_path = project_dir + scene_dir + "/";
+
+							std::string relative_path = full_path;
+							if (relative_path.find(base_path) == 0)
+								relative_path = relative_path.substr(base_path.size());
+
+							Helper::normalize_path(relative_path);
+
+							std::filesystem::path p(full_path);
+							std::string scene_name = p.stem().string();
+							std::string scene_path = "/" + relative_path;
+
+							m_scene = Scene::create(scene_name, scene_path);
+							SaveScene::save_scene(m_scene, full_path);
+							Scene::set_active_scene(m_scene);
+
+							m_scenes[scene_name] = m_scene;
+							m_panel->set_scene(m_scene);
+						}
 					}
 					ImGui::SetWindowFontScale(1.0f);
 					ImGui::PopStyleVar();
