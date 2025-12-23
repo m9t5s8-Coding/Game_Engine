@@ -25,7 +25,7 @@ namespace ag
 
     ImGui::Begin("Tile Register", nullptr, flags);
     {
-      UI::windowed_titlebar("Texture Selector");
+      //UI::windowed_titlebar("Texture Selector");
 
       if (ImGui::BeginTable("TileEditorTable", 2, ImGuiTableFlags_BordersInner | ImGuiTableFlags_SizingFixedFit))
       {
@@ -124,7 +124,7 @@ namespace ag
 
 		ImGui::Begin("Texture Selector", nullptr, flags);
 		{
-			UI::windowed_titlebar("Texture Selector");
+			//UI::windowed_titlebar("Texture Selector");
 
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50);
 			ImVec2 image_size(texture->get_size().x, texture->get_size().y);

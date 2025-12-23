@@ -1,8 +1,10 @@
 #pragma once
 
-
 #include <spdlog/spdlog.h>
 #include <memory>
+#include <ImGui/ImGuiConsoleSink.hpp>
+#include <functional>
+#include <vector>
 
 namespace ag
 {
@@ -10,31 +12,85 @@ namespace ag
   {
   public:
     static void init();
+    static void init_with_console();
 
-    inline static std::shared_ptr<spdlog::logger> &get_core_logger() { return s_core_logger; }
-    inline static std::shared_ptr<spdlog::logger> &get_client_logger() { return s_client_logger; }
+    inline static std::shared_ptr<spdlog::logger>& get_core_logger() { return s_core_logger; }
+    inline static std::shared_ptr<spdlog::logger>& get_client_logger() { return s_client_logger; }
+
+    // Add log message directly to console
+    static void AddToConsole(const std::string& message, spdlog::level::level_enum level);
+
+    // Draw the console
+    static void draw_console(const char* title = "Console", bool* p_open = nullptr);
+
+    // Get console sink
+    inline static std::shared_ptr<ImGuiConsoleSink> get_console_sink() { return s_console_sink; }
 
   private:
     static std::shared_ptr<spdlog::logger> s_core_logger;
     static std::shared_ptr<spdlog::logger> s_client_logger;
+    static std::shared_ptr<ImGuiConsoleSink> s_console_sink;
   };
 }
 
-//Core log macro
-#define AERO_CORE_ERROR(...) ::ag::Log::get_core_logger()->error(__VA_ARGS__)
-#define AERO_CORE_WARN(...) ::ag::Log::get_core_logger()->warn(__VA_ARGS__)
-#define AERO_CORE_INFO(...) ::ag::Log::get_core_logger()->info(__VA_ARGS__)
-#define AERO_CORE_TRACE(...) ::ag::Log::get_core_logger()->trace(__VA_ARGS__)
-#define AERO_CORE_FATAL(...) ::ag::Log::get_core_logger()->fatal(__VA_ARGS__)
-#define AERO_CORE_ASSERT(x,...) if(!x) ::ag::Log::get_core_logger()->info(__VA_ARGS__)
+#define AERO_CORE_ERROR(...) { \
+  ::ag::Log::get_core_logger()->error(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::err); \
+}
 
-// Client log macro
-#define AERO_ERROR(...) ::ag::Log::get_client_logger()->error(__VA_ARGS__)
-#define AERO_WARN(...) ::ag::Log::get_client_logger()->warn(__VA_ARGS__)
-#define AERO_INFO(...) ::ag::Log::get_client_logger()->info(__VA_ARGS__)
-#define AERO_TRACE(...) ::ag::Log::get_client_logger()->trace(__VA_ARGS__)
-#define AERO_FATAL(...) ::ag::Log::get_client_logger()->fatal(__VA_ARGS__)
-#define AERO_ASSERT(x,...) if(!x) ::ag::Log::get_client_logger()->info(__VA_ARGS__)
+#define AERO_CORE_WARN(...) { \
+  ::ag::Log::get_core_logger()->warn(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::warn); \
+}
+
+#define AERO_CORE_INFO(...) { \
+  ::ag::Log::get_core_logger()->info(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::info); \
+}
+
+#define AERO_CORE_TRACE(...) { \
+  ::ag::Log::get_core_logger()->trace(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::trace); \
+}
+
+#define AERO_CORE_FATAL(...) { \
+  ::ag::Log::get_core_logger()->critical(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::critical); \
+}
+
+#define AERO_CORE_ASSERT(x, ...) if (!x) {\
+  ::ag::Log::get_core_logger()->info(__VA_ARGS__); \
+    ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::info); \
+}
 
 
+// Client log macros
+#define AERO_ERROR(...) { \
+  ::ag::Log::get_client_logger()->error(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::err); \
+}
 
+#define AERO_WARN(...) { \
+  ::ag::Log::get_client_logger()->warn(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::warn); \
+}
+
+#define AERO_INFO(...) { \
+  ::ag::Log::get_client_logger()->info(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::info); \
+}
+
+#define AERO_TRACE(...) { \
+  ::ag::Log::get_client_logger()->trace(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::trace); \
+}
+
+#define AERO_FATAL(...) { \
+  ::ag::Log::get_client_logger()->critical(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::critical); \
+}
+
+#define AERO_ASSERT(x, ...) if (!x) {\
+ ::ag::Log::get_client_logger()->info(__VA_ARGS__); \
+  ::ag::Log::AddToConsole(fmt::format(__VA_ARGS__), spdlog::level::info); \
+}

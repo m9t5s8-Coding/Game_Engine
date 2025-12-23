@@ -6,7 +6,7 @@
 //This is an entry point main program where I can create program by inheriting the application class
 int main(int args, char **argv)
 {
-  ag::Log::init();
+  ag::Log::init_with_console();
   const auto app = ag::create_application();
   app->run();
   delete app;

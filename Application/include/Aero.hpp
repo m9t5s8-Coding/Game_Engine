@@ -10,6 +10,7 @@
 
 #include <Layers/Layer.hpp>
 #include <ImGui/ImGuiLayer.hpp>
+#include <ImGui/ImGuiConsoleSink.hpp>
 
 #include <Math/Math.hpp>
 

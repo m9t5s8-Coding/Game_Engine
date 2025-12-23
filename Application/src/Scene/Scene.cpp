@@ -63,7 +63,7 @@ namespace ag
 		m_to_delete_entity.push_back(entity);
 	}
 
-	//Needed an Parent Child Heirarchy Draw Order
+
 	void Scene::on_update(TimeStamp ts)
 	{
 		if (Engine::is_runtime())

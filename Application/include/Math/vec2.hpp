@@ -14,9 +14,39 @@ namespace ag
         vec2(T x_ = T(), T y_ = T()) : x(x_), y(y_) {}
         vec2(T s_) : x(s_), y(s_) {}
 
-        float length() const
-        {
-          return std::sqrt(x * x + y * y);
+        T length() const {
+          if constexpr (std::is_floating_point_v<T>) {
+            return std::sqrt(x * x + y * y);
+          }
+          else {
+            // For integer types, you might want a different implementation
+            static_assert(std::is_floating_point_v<T>,
+              "length() is only meaningful for floating point types");
+            return T(0); // Fallback
+          }
+        }
+
+        // FIXED: Return vec2<T>&
+        vec2<T>& normalize() {
+          if constexpr (std::is_floating_point_v<T>) {
+            T len = length();
+            if (len > static_cast<T>(0)) {
+              x /= len;
+              y /= len;
+            }
+          }
+          else {
+            // For integer types, normalization doesn't make sense
+            static_assert(std::is_floating_point_v<T>,
+              "normalize() is only valid for floating point types");
+          }
+          return *this;
+        }
+
+        // FIXED: Return vec2<T>
+        vec2<T> normalized() const {
+          vec2<T> result = *this;
+          return result.normalize();
         }
 
         json save() const
@@ -44,6 +74,7 @@ namespace ag
         {
           return ImVec2(x, y);
         }
+        
         void to_vec2(const ImVec2& other)
         {
           x = other.x;

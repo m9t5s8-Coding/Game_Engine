@@ -65,6 +65,7 @@ namespace ag
 		std::vector<Entity> children;
 
 		bool is_visible = true;
+		bool locked = false;
 
 		AG_uint parent_id = INVALID_ENTITY;
 		std::vector<AG_uint> children_id;
@@ -315,6 +316,11 @@ namespace ag
 			{
 				entity.add_component<ScriptComponent>(comp);
 			}
+		}
+
+		static void show_properties(Entity entity)
+		{
+
 		}
 
 		static void create(Entity entity)

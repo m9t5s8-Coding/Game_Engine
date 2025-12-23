@@ -5,31 +5,6 @@ namespace ag
 {
 	EditorLayer* EditorLayer::s_instance = nullptr;
 
-	void PrintRuntimeInfo() {
-#ifdef DISTRIBUTED_BUILD
-		std::cout << "=== DISTRIBUTED BUILD ===" << std::endl;
-#else
-		std::cout << "=== DEVELOPMENT BUILD ===" << std::endl;
-#endif
-
-#ifdef _MT
-#ifdef _DLL
-		std::cout << "Runtime: Dynamic (/MD) - REQUIRES DLLs" << std::endl;
-		std::cout << "Required DLLs: vcruntime140.dll, msvcp140.dll" << std::endl;
-#else
-		std::cout << "Runtime: Static (/MT) - NO DLLs needed!" << std::endl;
-		std::cout << "Distribution: Single .exe file ✓" << std::endl;
-#endif
-#endif
-
-#ifdef NDEBUG
-		std::cout << "Optimization: Release (NDEBUG defined)" << std::endl;
-#else
-		std::cout << "Optimization: Debug" << std::endl;
-#endif
-	}
-
-
 	EditorLayer::EditorLayer()
 		: Layer("EditorLayer")
 	{
@@ -59,7 +34,6 @@ namespace ag
 		// todo
 		m_scenes[m_scene->get_name()] = m_scene;
 
-		PrintRuntimeInfo();
 	}
 
 	void EditorLayer::on_detach()

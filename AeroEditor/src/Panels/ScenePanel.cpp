@@ -5,6 +5,24 @@
 
 namespace ag
 {
+	namespace Icons {
+		constexpr const char* PLUS = "[+]";
+		constexpr const char* SEARCH = "[S]";
+		constexpr const char* FILTER = "[F]";
+		constexpr const char* TRASH = "[X]";
+		constexpr const char* CLONE = "[C]";
+		constexpr const char* EYE = "[O]";
+		constexpr const char* EYE_SLASH = "[0]";
+		constexpr const char* LOCK = "[L]";
+		constexpr const char* UNLOCK = "[U]";
+
+		constexpr const char* EXPAND_ALL = "[>]";
+		constexpr const char* COLLAPSE_ALL = "[v]";
+		constexpr const char* EXPAND = "[>]";
+		constexpr const char* COLLAPSE = "[v]";
+	}
+
+
 	ScenePanel::ScenePanel(const AG_ref<Scene>& scene)
 	{
 		set_scene(scene);
@@ -24,7 +42,7 @@ namespace ag
 
 		m_last_mouse_position = m_current_mouse_position;
 
-
+		
 	}
 
 	void ScenePanel::on_event(Event& e)
@@ -42,7 +60,9 @@ namespace ag
 	void ScenePanel::on_imgui_render()
 	{
 		UI::draw_menu_bar();
-		ImGui::Begin("Scene");
+
+
+		/*ImGui::Begin("Scene");
 		draw_scene_top_panel();
 		ImGui::Spacing();
 
@@ -58,7 +78,8 @@ namespace ag
 
 			}
 		}
-		ImGui::End();
+		ImGui::End();*/
+		draw_scene_hierarchy();
 
 
 		ImGui::Begin("Properties");
@@ -104,6 +125,8 @@ namespace ag
 				}
 			}
 		}
+
+		UI::draw_console();
 	}
 
 	void ScenePanel::draw_node_hierarchy(Entity entity, int level)
@@ -211,6 +234,963 @@ namespace ag
 	}
 
 
+	void ScenePanel::draw_create_object() {
+		if (!m_show_create_panel) return;
+
+		static CreatePanelState state;
+
+		ImGuiWindowFlags window_flags =
+			ImGuiWindowFlags_NoDocking |
+			ImGuiWindowFlags_NoCollapse;
+		//ImGuiWindowFlags_AlwaysAutoResize;
+
+		ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
+		ImGui::Begin("Create Objects", &m_show_create_panel, window_flags);
+
+		// Header with search
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
+		{
+			ImGui::BeginGroup();
+
+			// Search bar
+			ImGui::SetNextItemWidth(-1);
+			ImGui::InputTextWithHint("##search", "Search objects...",
+				state.search_filter.data(), ImGuiInputTextFlags_AutoSelectAll);
+
+			// Quick filter buttons
+			ImGui::BeginGroup();
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 3));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
+
+			if (ImGui::Button("All", ImVec2(80, 0))) {
+				state.show_3d_objects = state.show_lights =
+					state.show_ui = state.show_primitives = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("UI", ImVec2(80, 0))) {
+				state.show_ui = !state.show_ui;
+			}
+
+			ImGui::PopStyleVar(2);
+			ImGui::EndGroup();
+
+			ImGui::EndGroup();
+		}
+		ImGui::PopStyleVar();
+
+		ImGui::Separator();
+
+		// Content area
+		ImGui::BeginChild("ContentArea", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 1.5f));
+		{
+			// Group objects by category
+			std::unordered_map<std::string, std::vector<std::pair<NodeType, std::string>>> categorized_nodes;
+
+			for (const auto& [type, name] : NodeFactory::nodes) {
+				std::string category = categorize_node_type(type);
+				categorized_nodes[category].emplace_back(type, name);
+			}
+
+			// Display categories
+			for (const auto& [category, nodes] : categorized_nodes) {
+				
+				if (!should_show_category(category, state)) continue;
+
+				// Filter by search
+				std::vector<std::pair<NodeType, std::string>> filtered_nodes;
+				for (const auto& [type, name] : nodes) {
+					if (state.search_filter.empty() ||
+						string_contains_case_insensitive(name, state.search_filter)) {
+						filtered_nodes.emplace_back(type, name);
+					}
+				}
+
+				if (filtered_nodes.empty()) continue;
+
+				// Category header
+				bool category_open = ImGui::CollapsingHeader(
+					fmt::format("{} ({})", category, filtered_nodes.size()).c_str(),
+					ImGuiTreeNodeFlags_DefaultOpen);
+
+				if (category_open) {
+					ImGui::Indent(10.0f);
+
+					if (state.show_categories) 
+					{
+						for (const auto& [type, name] : filtered_nodes) 
+						{
+							draw_object_button(type, name, state);
+							ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
+						}
+					}
+					else {
+						
+						for (const auto& [type, name] : filtered_nodes) {
+							draw_object_list_item(type, name, state);
+						}
+					}
+
+					ImGui::Unindent(10.0f);
+					ImGui::Spacing();
+				}
+			}
+		}
+		ImGui::EndChild();
+
+		ImGui::Separator();
+
+		// Footer with selected object info and create button
+		ImGui::BeginChild("FooterArea", ImVec2(0, 80), true);
+		{
+			auto it = NodeFactory::nodes.find(state.selected_prefab);
+
+			if (it != NodeFactory::nodes.end()) {
+				ImGui::Columns(2, "##footer_columns", false);
+				ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() - 120);
+
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.2f, 1.0f), "Selected:");
+				ImGui::SameLine();
+				ImGui::Text("%s", it->second.c_str());
+
+				// Right: Create button
+				ImGui::NextColumn();
+
+				bool can_create = NodeFactory::create_map.find(state.selected_prefab) !=
+					NodeFactory::create_map.end();
+
+				ImGui::BeginDisabled(!can_create);
+
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
+
+				if (ImGui::Button("CREATE", ImVec2(100, 0))) {
+					create_selected_object(state.selected_prefab);
+				}
+
+				ImGui::PopStyleColor(3);
+				ImGui::EndDisabled();
+
+				ImGui::Columns(1);
+
+				// Status message
+				auto now = std::chrono::steady_clock::now();
+				auto time_since_creation = std::chrono::duration_cast<std::chrono::milliseconds>(
+					now - state.last_created_time).count();
+
+				if (time_since_creation < 1500) {
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Created successfully");
+				}
+			}
+			else {
+				// Centered "no selection" message
+				float text_width = ImGui::CalcTextSize("Select an object to begin").x;
+				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - text_width) * 0.5f);
+				ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.5f - ImGui::GetTextLineHeight() * 0.5f);
+				ImGui::TextDisabled("Select an object to begin");
+			}
+		}
+		ImGui::EndChild();
+		ImGui::End();
+	}
+
+
+
+	void ScenePanel::draw_scene_hierarchy() {
+		if (!m_scene) return;
+
+		ImGuiWindowFlags window_flags =
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoScrollbar;
+
+		ImGui::Begin("Scene", nullptr, window_flags);
+
+		//Tool Bar the Bar above the Scene
+		draw_hierarchy_toolbar();
+
+		ImGui::Separator();
+
+
+		if (m_hierarchy_state.show_filter) {
+			draw_hierarchy_filter();
+		}
+
+		// Content area
+
+		const char* child_name = "HierarchyContent";
+		ImGui::BeginChild(child_name, ImVec2(0, 0), true);
+		{
+			// Get all root entities (no parent)
+			auto view = m_scene->m_registry.view<Tag>();
+			std::vector<Entity> root_entities;
+
+			for (auto entity_id : view) {
+				Entity entity(entity_id);
+				auto& tag = entity.get_component<Tag>();
+				if (!tag.parent || tag.parent.get_id() == INVALID_ENTITY) {
+					root_entities.push_back(entity);
+				}
+			}
+
+			// Draw root entities
+			for (auto& entity : root_entities) {
+				draw_entity_node(entity, 0);
+			}
+
+			// Draw unparented entities that might have been filtered
+			if (!m_hierarchy_state.filter_text.empty()) {
+				//draw_filtered_entities();
+			}
+
+			// Handle drag and drop target
+			//handle_drag_drop_target();
+
+			if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				m_selected_entity = Entity{};
+				m_move_flag = false;
+				m_scale_flag = false;
+				m_rotate_flag = false;
+			}
+		}
+		ImGui::EndChild();
+
+		if (ImGui::BeginPopupContextWindow("HierarchyContext", ImGuiPopupFlags_MouseButtonRight)) {
+			draw_hierarchy_context_menu(nullptr);
+			ImGui::EndPopup();
+		}
+
+		ImGui::End();
+	}
+
+	//Draw Entity Node
+	void ScenePanel::draw_entity_node(Entity entity, int level) {
+		if (!entity || !entity.has_component<Tag>()) return;
+
+		auto& tag = entity.get_component<Tag>();
+		EntityID entity_id = entity.get_id();
+
+		// Skip filtered out entities
+		if (m_hierarchy_state.filtered_out_entities.find(entity_id) !=
+			m_hierarchy_state.filtered_out_entities.end()) {
+			return;
+		}
+
+		// Apply filter
+		if (!m_hierarchy_state.filter_text.empty()) {
+			std::string entity_name_lower = tag.tag;
+			std::transform(entity_name_lower.begin(), entity_name_lower.end(),
+				entity_name_lower.begin(), ::tolower);
+			std::string filter_lower = m_hierarchy_state.filter_text;
+			std::transform(filter_lower.begin(), filter_lower.end(),
+				filter_lower.begin(), ::tolower);
+
+			if (entity_name_lower.find(filter_lower) == std::string::npos) {
+				m_hierarchy_state.filtered_out_entities.insert(entity_id);
+				return;
+			}
+		}
+
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
+			ImGuiTreeNodeFlags_SpanAvailWidth |
+			ImGuiTreeNodeFlags_FramePadding;
+
+		bool is_selected = (m_selected_entity == entity);
+		bool is_expanded = m_hierarchy_state.expanded_nodes.find(entity_id) !=
+			m_hierarchy_state.expanded_nodes.end();
+
+		if (is_selected) {
+			flags |= ImGuiTreeNodeFlags_Selected;
+			if (m_hierarchy_state.auto_expand_to_selection && !is_expanded) {
+				flags |= ImGuiTreeNodeFlags_DefaultOpen;
+			}
+		}
+
+		if (tag.children.empty()) {
+			flags |= ImGuiTreeNodeFlags_Leaf;
+		}
+
+		// Push unique ID for this node
+		ImGui::PushID(static_cast<int>(entity_id));
+
+		
+		ImGui::Indent(level * m_hierarchy_state.indent_size);
+		push_entity_style(entity, is_selected);
+
+		// Tree node
+		bool node_open = ImGui::TreeNodeEx("##node", flags, "%s", tag.tag.c_str());
+
+		// Handle interactions
+		handle_entity_interactions(entity);
+
+		bool should_start_drag = ImGui::IsItemActive() &&
+			ImGui::IsMouseDragging(ImGuiMouseButton_Left);
+
+		if (should_start_drag)
+		{
+			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+			{
+				m_hierarchy_state.dragged_entity = entity;
+				ImGui::SetDragDropPayload("ENTITY_NODE", &entity_id, sizeof(EntityID));
+				ImGui::Text("%s", tag.tag.c_str());
+				ImGui::EndDragDropSource();
+			}
+		}
+		else if (m_hierarchy_state.dragged_entity == entity)
+		{
+			if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+			{
+				m_hierarchy_state.dragged_entity = Entity{};
+			}
+		}
+
+
+		// Drag and drop target
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
+			{
+				EntityID dragged_id = *(const EntityID*)payload->Data;
+				if (dragged_id != entity_id)
+				{
+					reparent_entity(dragged_id, entity_id);
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		// Pop style
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar();
+
+		// Draw children if node is open
+		if (node_open)
+		{
+			m_hierarchy_state.expanded_nodes.insert(entity_id);
+
+			for (auto& child : tag.children)
+			{
+				draw_entity_node(child, level + 1);
+			}
+
+			ImGui::TreePop();
+		}
+		else
+		{
+			m_hierarchy_state.expanded_nodes.erase(entity_id);
+		}
+
+		ImGui::Unindent(level * m_hierarchy_state.indent_size);
+
+		ImGui::PopID();
+	}
+
+	//Draw the tool bar
+	void ScenePanel::draw_hierarchy_toolbar() {
+		ImGui::BeginChild("HierarchyToolbar", ImVec2(0, 50), false);
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 8));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
+
+
+			if (draw_toolbar_button(Icons::PLUS, "Create new object")) {
+				m_show_create_panel = true;
+			}
+
+			ImGui::SameLine();
+
+
+			ImGui::BeginDisabled(!m_selected_entity);
+			if (draw_toolbar_button(Icons::TRASH, "Delete selected")) {
+				//delete_selected_entity();
+			}
+			ImGui::EndDisabled();
+
+			ImGui::SameLine();
+
+			// Duplicate button
+			ImGui::BeginDisabled(!m_selected_entity);
+			if (draw_toolbar_button(Icons::CLONE, "Duplicate selected")) {
+				//duplicate_selected_entity();
+			}
+			ImGui::EndDisabled();
+
+			ImGui::SameLine();
+
+			// Filter toggle
+			if (draw_toolbar_button(
+				m_hierarchy_state.show_filter ? Icons::FILTER : Icons::SEARCH,
+				"Toggle filter")) {
+				m_hierarchy_state.show_filter = !m_hierarchy_state.show_filter;
+			}
+
+			ImGui::SameLine();
+
+			// Expand all
+			if (draw_toolbar_button(Icons::EXPAND_ALL, "Expand all")) {
+				expand_all_nodes();
+			}
+
+			ImGui::SameLine();
+
+			// Collapse all
+			if (draw_toolbar_button(Icons::COLLAPSE_ALL, "Collapse all")) {
+				collapse_all_nodes();
+			}
+
+			// Right-aligned buttons
+			ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+
+			// Visibility toggle
+			if (m_selected_entity && m_selected_entity.has_component<Tag>()) {
+				auto& vis = m_selected_entity.get_component<Tag>();
+				if (draw_toolbar_button(
+					vis.is_visible ? Icons::EYE : Icons::EYE_SLASH,
+					vis.is_visible ? "Hide object" : "Show object")) {
+					vis.is_visible = !vis.is_visible;
+				}
+			}
+
+			ImGui::SameLine();
+
+			// Lock toggle
+			if (m_selected_entity && m_selected_entity.has_component<Tag>()) {
+				auto& lock = m_selected_entity.get_component<Tag>();
+				if (draw_toolbar_button(
+					lock.locked ? Icons::LOCK : Icons::UNLOCK,
+					lock.locked ? "Unlock object" : "Lock object")) {
+					lock.locked = !lock.locked;
+				}
+			}
+
+			ImGui::PopStyleVar(2);
+		}
+		ImGui::EndChild();
+	}
+
+	//Draw Filter Box
+	void ScenePanel::draw_hierarchy_filter() {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 4));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
+
+		ImGui::BeginChild("FilterArea", ImVec2(0, 40), false);
+		{
+			// Filter input
+			ImGui::SetNextItemWidth(-1);
+			if (ImGui::InputTextWithHint("##Filter", "Type to filter...",
+				m_hierarchy_state.filter_text.data(),
+				ImGuiInputTextFlags_AutoSelectAll)) {
+				update_filter();
+			}
+
+			// Quick filter buttons
+			if (!m_hierarchy_state.filter_text.empty()) {
+				ImGui::SameLine();
+				if (ImGui::Button("Clear")) {
+					m_hierarchy_state.filter_text.clear();
+					m_hierarchy_state.filtered_out_entities.clear();
+				}
+			}
+		}
+		ImGui::EndChild();
+
+		ImGui::PopStyleVar(2);
+	}
+
+	//Handle Interaction
+	void ScenePanel::handle_entity_interactions(Entity entity) {
+		// Left click (select entity)
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+			select_entity(entity);
+		}
+
+		// Right click (context menu)
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+			ImGui::OpenPopup("EntityContextMenu");
+			m_selected_entity = entity;
+		}
+
+		// Double click - focus entity in viewport
+		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+			//focus_entity_in_viewport(entity);
+		}
+
+		// Context menu
+		if (ImGui::BeginPopup("EntityContextMenu")) {
+			draw_entity_context_menu(entity);
+			ImGui::EndPopup();
+		}
+	}
+
+	void ScenePanel::draw_entity_context_menu(Entity entity) {
+		if (ImGui::MenuItem("Rename", "F2"))
+		{
+			//start_renaming_entity(entity);
+		}
+
+		if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
+		{
+			duplicate_entity();
+		}
+
+		if (ImGui::MenuItem("Delete", "Del"))
+		{
+			delete_entity();
+		}
+
+		if (ImGui::MenuItem("Make Root", "Ctrl+Shift+R"))
+		{
+			make_root_entity();
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::BeginMenu("Create Child")) {
+
+			if (ImGui::MenuItem("Empty")) {
+				//create_child_entity(entity, "Empty", NodeType::Empty);
+			}
+			if (ImGui::MenuItem("Cube")) {
+				//create_child_entity(entity, "Cube", NodeType::Cube);
+			}
+			if (ImGui::MenuItem("Light")) {
+				//create_child_entity(entity, "Light", NodeType::PointLight);
+			}
+			ImGui::EndMenu();
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Copy Path")) {
+			//copy_entity_path(entity);
+		}
+
+		if (ImGui::MenuItem("Find in Project")) {
+			//find_entity_in_project(entity);
+		}
+
+		ImGui::Separator();
+
+		// Component toggles
+		if (entity.has_component<Tag>()) {
+			auto& vis = entity.get_component<Tag>();
+			if (ImGui::MenuItem(vis.is_visible ? "Hide" : "Show")) {
+				vis.is_visible = !vis.is_visible;
+			}
+		}
+
+		if (entity.has_component<Tag>()) {
+			auto& lock = entity.get_component<Tag>();
+			if (ImGui::MenuItem(lock.locked ? "Unlock" : "Lock")) {
+				lock.locked = !lock.locked;
+			}
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Properties", "Alt+Enter")) {
+			// Show properties panel
+		}
+	}
+
+	void ScenePanel::draw_hierarchy_context_menu(Entity* entity) {
+		if (ImGui::MenuItem("Create Empty")) {
+			/*Entity new_entity = m_scene->create_entity("Empty", NodeType::Empty);
+			m_selected_entity = new_entity;*/
+		}
+
+		if (ImGui::MenuItem("Create From Prefab...")) {
+			// Open prefab browser
+		}
+
+		ImGui::Separator();
+
+		//has_clipboard_entity()
+		if (ImGui::MenuItem("Paste", "Ctrl+V", false, false)) {
+			//paste_entity();
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Expand All")) {
+			expand_all_nodes();
+		}
+
+		if (ImGui::MenuItem("Collapse All")) {
+			collapse_all_nodes();
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Show Icons")) {
+			m_hierarchy_state.show_icons = !m_hierarchy_state.show_icons;
+		}
+
+		if (ImGui::MenuItem("Auto-expand to Selection")) {
+			m_hierarchy_state.auto_expand_to_selection = !m_hierarchy_state.auto_expand_to_selection;
+		}
+	}
+
+	// Drawing Each Tool Bar
+	bool ScenePanel::draw_toolbar_button(const char* icon, const char* tooltip) {
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.6f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+
+		ImGui::SetWindowFontScale(1.2f);
+		bool clicked = ImGui::Button(icon, ImVec2(40, 40));
+		ImGui::SetWindowFontScale(1.0f);
+		ImGui::PopStyleColor(3);
+
+		if (tooltip && ImGui::IsItemHovered()) {
+			ImGui::SetTooltip("%s", tooltip);
+		}
+
+		return clicked;
+	}
+
+	void ScenePanel::push_entity_style(Entity entity, bool is_selected) {
+		// Default styles
+		ImVec4 text_color = m_hierarchy_state.default_text_color;
+		ImVec4 bg_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+		float frame_rounding = 2.0f;
+
+		// Selected entity
+		if (is_selected) {
+			bg_color = m_hierarchy_state.selected_color;
+		}
+
+		// Disabled entity
+		if (entity.has_component<Tag>() &&
+			!entity.get_component<Tag>().is_visible) {
+			text_color = m_hierarchy_state.disabled_color;
+		}
+
+		// Prefab instance
+		/*if (entity.has_component<PrefabInstance>()) {
+			text_color = m_hierarchy_state.prefab_color;
+		}*/
+
+		// Locked entity
+		if (entity.has_component<Tag>() &&
+			entity.get_component<Tag>().locked) {
+			text_color = m_hierarchy_state.disabled_color;
+		}
+
+		ImGui::PushStyleColor(ImGuiCol_Text, text_color);
+		ImGui::PushStyleColor(ImGuiCol_Header, bg_color);
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bg_color);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, frame_rounding);
+	}
+
+	std::string ScenePanel::get_icon_for_entity(Entity entity) {
+		if (!entity.has_component<Tag>()) return "?";
+
+		auto& tag = entity.get_component<Tag>();
+
+		switch (tag.node_type) {
+			//case NodeType::Empty: return ICON_FA_CUBE;
+		case NodeType::Camera: return "ICON_FA_VIDEO";
+			//case NodeType::Light: return ICON_FA_LIGHTBULB;
+			//case NodeType::Mesh: return ICON_FA_CUBES;
+		case NodeType::Sprite: return "ICON_FA_IMAGE";
+		case NodeType::TextNode: return "ICON_FA_FONT";
+		case NodeType::Button: return "ICON_FA_MOUSE_POINTER";
+			//case NodeType::AudioSource: return ICON_FA_VOLUME_UP;
+			//case NodeType::ParticleSystem: return ICON_FA_FIRE;
+			//case NodeType::RigidBody: return ICON_FA_WEIGHT;
+			//case NodeType::Collider: return ICON_FA_SHIELD_ALT;
+			//case NodeType::Script: return ICON_FA_CODE;
+			//case NodeType::Canvas: return ICON_FA_LAYER_GROUP;
+		case NodeType::TileMap: return "ICON_FA_TH";
+		default: return "ICON_FA_CUBE";
+		}
+	}
+
+	void ScenePanel::select_entity(Entity entity) {
+		m_selected_entity = entity;
+		m_move_flag = m_scale_flag = m_rotate_flag = false;
+
+		// Handle tilemap specific logic
+		if (m_selected_entity.has_component<Tag>() &&
+			m_selected_entity.get_component<Tag>().node_type == NodeType::TileMap) {
+			auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+			props.display_ghost = true;
+		}
+
+		// Notify selection change
+		//on_entity_selected(entity);
+	}
+
+	void ScenePanel::update_filter() {
+		m_hierarchy_state.filtered_out_entities.clear();
+		if (m_hierarchy_state.filter_text.empty()) return;
+
+		// Filter will be applied in draw_entity_node
+	}
+
+	void ScenePanel::expand_all_nodes() {
+		auto view = m_scene->m_registry.view<Tag>();
+		for (auto entity_id : view) {
+			m_hierarchy_state.expanded_nodes.insert(static_cast<EntityID>(entity_id));
+		}
+	}
+
+	void ScenePanel::collapse_all_nodes() 
+	{
+		m_hierarchy_state.expanded_nodes.clear();
+	}
+
+	void ScenePanel::reparent_entity(EntityID child_id, EntityID new_parent_id)
+	{
+		Entity child(static_cast<entt::entity>(child_id));
+		Entity new_parent(static_cast<entt::entity>(new_parent_id));
+
+		m_hierarchy_state.dragged_entity = Entity{};
+		m_hierarchy_state.drop_target = Entity{};
+
+		if (!child || !new_parent) return;
+
+		auto& child_tag = child.get_component<Tag>();
+		auto& parent_tag = new_parent.get_component<Tag>();
+
+		auto child_transform = Transform::get_world_transform(child);
+
+		// Remove from old parent
+		if (child_tag.parent)
+		{
+			auto& old_parent_tag = child_tag.parent.get_component<Tag>();
+			auto it = std::find(old_parent_tag.children.begin(),
+				old_parent_tag.children.end(), child);
+			if (it != old_parent_tag.children.end())
+			{
+				old_parent_tag.children.erase(it);
+			}
+		}
+
+	
+		child_tag.parent = new_parent;
+		parent_tag.children.push_back(child);
+
+		auto& transform = child.get_component<Transform>();
+		Transform::get_local_transform(child, child_transform);
+
+		AERO_INFO("Reparented {} to {}",
+			child_tag.tag, parent_tag.tag);
+	}
+
+	void ScenePanel::make_root_entity()
+	{
+		if (!m_selected_entity && m_selected_entity.get_id() == INVALID_ENTITY)
+			return;
+
+		auto& tag = m_selected_entity.get_component<Tag>();
+		auto child_transform = Transform::get_world_transform(m_selected_entity);
+
+		if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
+		{
+			auto& parent_tag = tag.parent.get_component<Tag>();
+			auto it = std::find(parent_tag.children.begin(),
+				parent_tag.children.end(), m_selected_entity);
+			if (it != parent_tag.children.end())
+			{
+				parent_tag.children.erase(it);
+			}
+			tag.parent = Entity{};
+		}
+
+		auto& transform = m_selected_entity.get_component<Transform>();
+		Transform::get_local_transform(m_selected_entity, child_transform);
+	}
+
+
+
+
+
+	// Helper functions
+	std::string ScenePanel::categorize_node_type(NodeType type) {
+		switch (type) {
+		case NodeType::Rectangle:
+		case NodeType::Circle:
+		case NodeType::Sprite:
+		case NodeType::AnimatedSprite2D:
+		case NodeType::TextNode:
+			return "Primitives";
+
+		case NodeType::Button:
+		case NodeType::TextureButton:
+			return "UI";
+
+
+		case NodeType::Camera:
+		case NodeType::Scene2D:
+			return "Components";
+
+		default:
+			return "Other";
+		}
+	}
+
+	bool ScenePanel::should_show_category(const std::string& category, const CreatePanelState& state) {
+		if (!state.search_filter.empty()) return true;
+
+		if (category == "Primitives") return state.show_primitives;
+		if (category == "3D Objects") return state.show_3d_objects;
+		if (category == "Lights") return state.show_lights;
+		if (category == "UI") return state.show_ui;
+		if (category == "Empty") return true;
+		if (category == "Components") return true;
+		if (category == "Other") return true;
+
+		return true;
+	}
+
+	void ScenePanel::draw_object_button(NodeType type, const std::string& name, CreatePanelState& state) {
+		ImGui::PushID(static_cast<int>(type));
+
+		const bool is_selected = (state.selected_prefab == type);
+
+		// Button style
+		ImVec4 button_color = is_selected ?
+			ImVec4(0.26f, 0.59f, 0.98f, 0.4f) :
+			ImVec4(0.2f, 0.2f, 0.2f, 0.3f);
+
+		ImGui::PushStyleColor(ImGuiCol_Button, button_color);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.6f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+
+		// Draw button
+		ImVec2 button_size = state.icon_size;
+
+		std::string display_text = name;
+		ImVec2 text_size = ImGui::CalcTextSize(name.c_str());
+		const float max_text_width = button_size.x - 10.0f;
+		if (text_size.x > max_text_width) 
+		{
+			float avg_char_width = text_size.x / display_text.length();
+			int max_chars = static_cast<int>(max_text_width / avg_char_width) - 3;
+			if (max_chars > 3) 
+			{
+				display_text = display_text.substr(0, max_chars) + "...";
+				text_size = ImGui::CalcTextSize(display_text.c_str());
+			}
+		}
+
+		if (ImGui::Button(display_text.c_str(), button_size)) {
+			state.selected_prefab = type;
+		}
+
+		ImGui::PopStyleColor(3);
+
+		
+		if (is_selected) {
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			ImVec2 rect_min = ImGui::GetItemRectMin();
+			ImVec2 rect_max = ImGui::GetItemRectMax();
+
+			draw_list->AddRect(rect_min, rect_max,
+				IM_COL32(100, 200, 255, 255),
+				4.0f, 0, 2.0f);
+		}
+
+
+		// Context menu
+		if (ImGui::BeginPopupContextItem()) {
+			if (ImGui::MenuItem("Select")) {
+				state.selected_prefab = type;
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Create Now")) {
+				create_selected_object(type);
+				m_show_create_panel = false;
+			}
+			ImGui::EndPopup();
+		}
+
+		// Tooltip
+		if (ImGui::IsItemHovered()) {
+			ImGui::BeginTooltip();
+			ImGui::Text("%s", name.c_str());
+			ImGui::TextDisabled("Click to select, Right-click for options");
+			ImGui::EndTooltip();
+		}
+
+		ImGui::PopID();
+	}
+
+	void ScenePanel::draw_object_list_item(NodeType type, const std::string& name, CreatePanelState& state) {
+		const bool is_selected = (state.selected_prefab == type);
+
+		ImGui::PushID(static_cast<int>(type));
+
+		// Selectable item
+		if (ImGui::Selectable(name.c_str(), is_selected)) {
+			state.selected_prefab = type;
+		}
+
+		// Context menu
+		if (ImGui::BeginPopupContextItem()) {
+			if (ImGui::MenuItem("Create")) {
+				create_selected_object(type);
+				m_show_create_panel = false;
+			}
+			ImGui::EndPopup();
+		}
+
+		// Drag and drop support
+		if (ImGui::BeginDragDropSource()) {
+			ImGui::SetDragDropPayload("NODE_TYPE", &type, sizeof(NodeType));
+			ImGui::Text("Create %s", name.c_str());
+			ImGui::EndDragDropSource();
+		}
+
+		ImGui::PopID();
+	}
+
+	void ScenePanel::create_selected_object(NodeType type) {
+		auto it = NodeFactory::nodes.find(type);
+		auto create_it = NodeFactory::create_map.find(type);
+
+		if (it == NodeFactory::nodes.end() || create_it == NodeFactory::create_map.end()) {
+			AERO_WARN("Cannot create object: type {} not registered", static_cast<int>(type));
+			return;
+		}
+
+		// Create the entity
+		Entity new_entity = m_scene->create_entity(it->second, type);
+
+		// Parent to selected entity if one is selected
+		if (m_selected_entity) {
+			auto& selected_tag = m_selected_entity.get_component<Tag>();
+			auto& new_tag = new_entity.get_component<Tag>();
+			new_tag.parent = m_selected_entity;
+			selected_tag.children.push_back(new_entity);
+		}
+
+		// Select the new entity
+		m_selected_entity = new_entity;
+	}
+
+	bool ScenePanel::string_contains_case_insensitive(const std::string& str, const std::string& substr) {
+		if (substr.empty()) return true;
+
+		auto it = std::search(
+			str.begin(), str.end(),
+			substr.begin(), substr.end(),
+			[](char ch1, char ch2) {
+				return std::tolower(ch1) == std::tolower(ch2);
+			}
+		);
+		return it != str.end();
+	}
+
+
+
+
+
+
+
 	void ScenePanel::draw_properties_panel()
 	{
 		auto type = m_selected_entity.get_component<Tag>().node_type;
@@ -219,43 +1199,43 @@ namespace ag
 			it->second(m_selected_entity);
 	}
 
-	void ScenePanel::draw_create_object()
-	{
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
-		ImGui::Begin("Create Objects", &m_show_create_panel, window_flags);
-		static NodeType selectedPrefab = NodeType::Rectangle;
-		NodeType newSelected = selectedPrefab;
+	//void ScenePanel::draw_create_object()
+	//{
+	//	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+	//	ImGui::Begin("Create Objects", &m_show_create_panel, window_flags);
+	//	static NodeType selectedPrefab = NodeType::Rectangle;
+	//	NodeType newSelected = selectedPrefab;
 
-		for (auto& [type, name] : NodeFactory::nodes)
-		{
-			if (ImGui::Selectable(name.c_str(), selectedPrefab == type))
-				newSelected = type;
-			ImGui::Spacing();
-			ImGui::Spacing();
-		}
-		selectedPrefab = newSelected;
-		auto it = NodeFactory::nodes.find(selectedPrefab);
-		if (it != NodeFactory::nodes.end() && NodeFactory::create_map.find(selectedPrefab) != NodeFactory::create_map.end())
-		{
-			if (ImGui::Button("Create Entity"))
-			{
-				Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
+	//	for (auto& [type, name] : NodeFactory::nodes)
+	//	{
+	//		if (ImGui::Selectable(name.c_str(), selectedPrefab == type))
+	//			newSelected = type;
+	//		ImGui::Spacing();
+	//		ImGui::Spacing();
+	//	}
+	//	selectedPrefab = newSelected;
+	//	auto it = NodeFactory::nodes.find(selectedPrefab);
+	//	if (it != NodeFactory::nodes.end() && NodeFactory::create_map.find(selectedPrefab) != NodeFactory::create_map.end())
+	//	{
+	//		if (ImGui::Button("Create Entity"))
+	//		{
+	//			Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
 
-				if (m_selected_entity)
-				{
-					auto& tag = m_selected_entity.get_component<Tag>();
-					auto& new_e_tag = newEntity.get_component<Tag>();
+	//			if (m_selected_entity)
+	//			{
+	//				auto& tag = m_selected_entity.get_component<Tag>();
+	//				auto& new_e_tag = newEntity.get_component<Tag>();
 
-					new_e_tag.parent = m_selected_entity;
-					tag.children.push_back(newEntity);
-				}
+	//				new_e_tag.parent = m_selected_entity;
+	//				tag.children.push_back(newEntity);
+	//			}
 
-				m_selected_entity = newEntity;
-				m_show_create_panel = false;
-			}
-		}
-		ImGui::End();
-	}
+	//			m_selected_entity = newEntity;
+	//			m_show_create_panel = false;
+	//		}
+	//	}
+	//	ImGui::End();
+	//}
 
 	void ScenePanel::draw_selected_text()
 	{
@@ -481,6 +1461,23 @@ namespace ag
 		}
 	}
 
+
+	void ScenePanel::duplicate_entity()
+	{
+		if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY)
+			return;
+
+		auto& parent = m_selected_entity.get_component<Tag>().parent;
+		auto new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
+
+		m_selected_entity = new_entity;
+	}
+	void ScenePanel::delete_entity()
+	{
+		m_scene->destroy_entity(m_selected_entity);
+		m_selected_entity = Entity();
+	}
+
 	void ScenePanel::reset_transform_setting()
 	{
 		m_current_transform_setting = TransformSetting::None;
@@ -558,12 +1555,16 @@ namespace ag
 		bool shift = Keyboard::is_key_pressed(Key::LeftShift) || Keyboard::is_key_pressed(Key::RightShift);
 		if (control)
 		{
-			if (e.get_key_code() == Key::D && m_selected_entity)
+			// Duplicate Entity
+			if (e.get_key_code() == Key::D)
 			{
-				auto parent = m_selected_entity.get_component<Tag>().parent;
-				auto new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
-				
-				m_selected_entity = new_entity;
+				duplicate_entity();
+			}
+
+			// Make Root Entity
+			if (e.get_key_code() == Key::R && shift)
+			{
+				make_root_entity();
 			}
 			return false;
 		}
@@ -585,8 +1586,7 @@ namespace ag
 
 		case Key::Delete:
 		{
-			m_scene->destroy_entity(m_selected_entity);
-			m_selected_entity = Entity();
+			delete_entity();
 			break;
 		}
 

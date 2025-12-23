@@ -9,21 +9,20 @@ add_compile_options(/utf-8)
 
 project("Game_Engine" LANGUAGES C CXX)
 
-# --- Force Distributed configuration for multi-config generators ---
-# First, define ALL possible configurations
+
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel;Distributed" CACHE STRING 
     "Available build types: Debug, Release, RelWithDebInfo, MinSizeRel, Distributed" FORCE)
 
-# If using multi-config generator (Visual Studio), set default to Distributed
+
 if(CMAKE_CONFIGURATION_TYPES)
-    # This ensures Distributed is recognized as a valid configuration
+    
     set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE STRING "" FORCE)
     
-    # Map Distributed to use Release-like settings
+    
     set(CMAKE_CXX_FLAGS_DISTRIBUTED "${CMAKE_CXX_FLAGS_RELEASE} /MT /GL /D DISTRIBUTED_BUILD=1")
     set(CMAKE_C_FLAGS_DISTRIBUTED "${CMAKE_C_FLAGS_RELEASE} /MT /GL /D DISTRIBUTED_BUILD=1")
     
-    # Set output directories - CRITICAL FIX
+   
     foreach(config IN ITEMS Debug Release RelWithDebInfo MinSizeRel Distributed)
         string(TOUPPER ${config} config_upper)
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/bin")
@@ -33,7 +32,7 @@ if(CMAKE_CONFIGURATION_TYPES)
     endforeach()
 endif()
 
-# Set default build type for single-config generators
+
 if(NOT CMAKE_CONFIGURATION_TYPES)
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type" FORCE)
@@ -41,13 +40,13 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel" "Distributed")
 endif()
 
-# --- C++ standard ---
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- MSVC-specific settings ---
+
 if(MSVC)
-    # Default compiler flags for each configuration
+  
     set(CMAKE_CXX_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
     set(CMAKE_C_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
     
@@ -60,17 +59,17 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
     set(CMAKE_C_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
     
-    # DISTRIBUTED: Static linking (/MT)
+  
     set(CMAKE_CXX_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /D DISTRIBUTED_BUILD=1 /GL /Gy /arch:AVX2")
     set(CMAKE_C_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /D DISTRIBUTED_BUILD=1 /GL /Gy")
     
-    # Linker flags for Distributed
+  
     set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTED "/INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF /DEBUG:FULL")
     
     message(STATUS "MSVC: Distributed configuration will use /MT (static runtime)")
 endif()
 
-# --- GLFW configuration ---
+
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -85,7 +84,7 @@ if (MSVC)
     )
 endif()
 
-# --- Lua Library (Built as C) ---
+
 set(LUA_SRC
     "${CMAKE_SOURCE_DIR}/External/lua/lapi.c"
     "${CMAKE_SOURCE_DIR}/External/lua/lauxlib.c"
@@ -144,14 +143,14 @@ target_compile_definitions(lua PRIVATE
     _CRT_SECURE_NO_WARNINGS
 )
 
-# Force static runtime for lua and box2d in Distributed builds
+
 if(MSVC)
     set_target_properties(lua box2d PROPERTIES
         MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
     )
 endif()
 
-# --- External Library (GLAD + ImGui) ---
+
 set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.cpp")
 
 set(IMGUI_SRC
@@ -169,14 +168,14 @@ add_library(External STATIC
     ${IMGUI_SRC}
 )
 
-# Force static runtime for External in Distributed builds
+
 if(MSVC)
     set_target_properties(External PROPERTIES
         MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
     )
 endif()
 
-# Include directories for External
+
 target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/entt/include
     ${CMAKE_SOURCE_DIR}/External/glfw/include
@@ -190,7 +189,7 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/sol2/include
 )
 
-# Add DISTRIBUTED_BUILD definition to External library
+
 target_compile_definitions(External PRIVATE
     GLFW_STATIC
     STB_IMAGE_IMPLEMENTATION
@@ -198,26 +197,26 @@ target_compile_definitions(External PRIVATE
     $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
 )
 
-# --- Application Library ---
+
 file(GLOB_RECURSE APP_SRC 
     "${CMAKE_SOURCE_DIR}/Application/src/*.cpp"
 )
 
 add_library(Application STATIC ${APP_SRC})
 
-# Force static runtime for Application in Distributed builds
+
 if(MSVC)
     set_target_properties(Application PROPERTIES
         MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
     )
 endif()
 
-# Include directories for Application
+
 target_include_directories(Application PUBLIC
     ${CMAKE_SOURCE_DIR}/Application/include
 )
 
-# Link libraries for Application
+
 target_link_libraries(Application PUBLIC 
     lua
     glfw
@@ -225,7 +224,7 @@ target_link_libraries(Application PUBLIC
     External
 )
 
-# System libraries (Windows)
+
 if(WIN32)
     target_link_libraries(Application PRIVATE
         opengl32.lib
@@ -242,41 +241,48 @@ if(WIN32)
     )
 endif()
 
-# Add DISTRIBUTED_BUILD definition to Application
+
 target_compile_definitions(Application PRIVATE 
     GLFW_STATIC
     STB_IMAGE_IMPLEMENTATION
     $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
 )
 
-# --- AeroEditor Executable ---
 file(GLOB_RECURSE AERO_SRC
     "${CMAKE_SOURCE_DIR}/AeroEditor/src/*.cpp"
 )
 
+
+
+
 add_executable(AeroEditor ${AERO_SRC})
 
-# Force static runtime for AeroEditor in Distributed builds
 if(MSVC)
     set_target_properties(AeroEditor PROPERTIES
         MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
     )
 endif()
 
-# Link Application (which brings everything else)
+if(WIN32)
+    target_link_options(AeroEditor PRIVATE
+        "$<$<CONFIG:Distributed>:/SUBSYSTEM:WINDOWS>"
+        "$<$<CONFIG:Distributed>:/ENTRY:mainCRTStartup>"
+    )
+endif()
+
 target_link_libraries(AeroEditor PRIVATE Application)
 
-# Include directories for AeroEditor
+
 target_include_directories(AeroEditor PRIVATE
     ${CMAKE_SOURCE_DIR}/AeroEditor/include
 )
 
-# Add DISTRIBUTED_BUILD definition to AeroEditor
+
 target_compile_definitions(AeroEditor PRIVATE
     $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
 )
 
-# Copy assets
+
 add_custom_command(TARGET AeroEditor POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory 
     "$<TARGET_FILE_DIR:AeroEditor>/assets"
@@ -286,14 +292,16 @@ add_custom_command(TARGET AeroEditor POST_BUILD
     VERBATIM
 )
 
-# --- Sandbox Executable ---
+
 file(GLOB_RECURSE SANDBOX_SRC
     "${CMAKE_SOURCE_DIR}/Sandbox/src/*.cpp"
 )
 
-add_executable(Sandbox ${SANDBOX_SRC})
 
-# Force static runtime for Sandbox in Distributed builds
+
+ add_executable(Sandbox ${SANDBOX_SRC})
+
+
 if(MSVC)
     set_target_properties(Sandbox PROPERTIES
         MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
@@ -301,21 +309,27 @@ if(MSVC)
 endif()
 
 
+if(WIN32)
+    target_link_options(Sandbox PRIVATE
+        "$<$<CONFIG:Distributed>:/SUBSYSTEM:WINDOWS>"
+        "$<$<CONFIG:Distributed>:/ENTRY:mainCRTStartup>"
+    )
+endif()
 
-# Link Application (which brings everything else)
+
+
 target_link_libraries(Sandbox PRIVATE Application)
 
-# Include directories for Sandbox
+
 target_include_directories(Sandbox PRIVATE
     ${CMAKE_SOURCE_DIR}/Sandbox/include
 )
 
-# Add DISTRIBUTED_BUILD definition to Sandbox
 target_compile_definitions(Sandbox PRIVATE
     $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
 )
 
-# Set C++ standard for executables
+
 set_target_properties(AeroEditor Sandbox PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
@@ -325,7 +339,7 @@ target_precompile_headers(Application PUBLIC
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
 
-# Optionally add to executables too
+
 target_precompile_headers(AeroEditor PRIVATE
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
@@ -334,15 +348,3 @@ target_precompile_headers(Sandbox PRIVATE
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
 
-# --- Debug Output ---
-message(STATUS "=== BUILD CONFIGURATION ===")
-message(STATUS "Available configurations: ${CMAKE_CONFIGURATION_TYPES}")
-message(STATUS "Generator: ${CMAKE_GENERATOR}")
-if(MSVC)
-    message(STATUS "Compiler: MSVC")
-    message(STATUS "Distributed build uses: /MT (static runtime)")
-endif()
-message(STATUS "External library links to: lua")
-message(STATUS "Application library links to: glfw, External")
-message(STATUS "AeroEditor links to: Application")
-message(STATUS "Sandbox links to: Application")
