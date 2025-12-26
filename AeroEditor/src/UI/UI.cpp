@@ -340,6 +340,8 @@ namespace ag::UI
           FileDialogs::run_exe(app);
           state.is_running = false;
           }).detach();*/
+
+        FileDialogs::run_exe(app);
       }
 
       if (ImGui::MenuItem("Run Current Scene", "Ctrl+F5", false, !state.is_running)) {
@@ -350,10 +352,7 @@ namespace ag::UI
         auto folder = FileDialogs::get_exe_folder();
         std::wstring app = folder + L"\\Sandbox.exe";
 
-      /*  std::thread([app, &state]() {
-          FileDialogs::run_exe(app);
-          state.is_running = false;
-          }).detach();*/
+        FileDialogs::run_exe(app);
       }
 
       ImGui::EndDisabled();
@@ -558,7 +557,8 @@ namespace ag::UI
   }
 
   // Helper functions
-  void run_current_scene() {
+  void run_current_scene()
+  {
     auto scene = Scene::get_active_scene();
     auto project = Project::get_active_project();
 
@@ -597,6 +597,8 @@ namespace ag::UI
 
       AERO_CORE_INFO("Updated scene for runtime: {}", scene->get_name());
       AERO_CORE_INFO("Scene directory: {}", scene->get_directory());
+
+
 
     }
     catch (const json::exception& e) {

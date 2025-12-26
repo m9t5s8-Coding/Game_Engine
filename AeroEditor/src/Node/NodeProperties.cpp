@@ -152,7 +152,17 @@ namespace ag
 
 			}, true);
 	}
+	void Render2D_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Render2D_Component >("Render2D Component", entity,
+			[](Render2D_Component& props) {
+				UI::draw_vec2("Size", props.size);
 
+				ImGui::Dummy(spacing);
+
+				UI::draw_color("Color", props.color);
+			}, false);
+	}
 
 
 	void NodeProperties::animated_sprite_2D(Entity entity)
@@ -196,14 +206,7 @@ namespace ag
 	{
 		tag(entity);
 		transform(entity);
-		draw_component_node<RectangleNode::Rectangle_Component>("Rectangle", entity,
-			[](RectangleNode::Rectangle_Component& props) {
-				UI::draw_vec2("Size", props.size);
-				
-				ImGui::Dummy(spacing);
-
-				UI::draw_color("Color", props.color);
-			}, false);
+		Render2D_Component::imgui_render(entity);
 
 
 		add_component(entity);

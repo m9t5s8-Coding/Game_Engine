@@ -35,13 +35,13 @@ namespace ag::NodeHelper
 		}
 	}
 
-	template<typename C, typename V>
-	inline static void set_value(ag::Entity& entity, V C::* member_ptr, V& value)
+	template<typename C, typename V, typename S>
+	inline static void set_value(ag::Entity& entity, V C::* member_ptr, S& value)
 	{
 		if (entity.has_component<C>())
 		{
 			const auto& component = entity.get_component<C>();
-			value = component.*member_ptr;
+			value = static_cast<S>(component.*member_ptr);
 		}
 	}
 
@@ -83,16 +83,24 @@ namespace ag::NodeHelper
 		case ag::NodeType::Rectangle:
 			return Node_Capability::RectShape |
 				Node_Capability::Render2D |
+				Node_Capability::Physics2D |
 				Node_Capability::UI;
 
 		case ag::NodeType::Circle:
 			return Node_Capability::CircleShape | 
 				Node_Capability::Render2D | 
+				Node_Capability::Physics2D |
 				Node_Capability::UI;
 
 		case ag::NodeType::Sprite:
+			return Node_Capability::Render2D |
+				Node_Capability::Physics2D |
+				Node_Capability::UI;
+
 		case ag::NodeType::AnimatedSprite2D:
-			return Node_Capability::Render2D;
+			return Node_Capability::Render2D |
+				Node_Capability::Physics2D |
+				Node_Capability::UI;
 
 		case ag::NodeType::Camera:
 		case ag::NodeType::TileMap:

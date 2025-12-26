@@ -26,7 +26,7 @@ namespace ag
   void RectangleNode::create_node(Entity entity)
   {
     entity.add_component<Transform>();
-    entity.add_component<Rectangle_Component>();
+    entity.add_component<Render2D_Component >();
   }
 
   void RectangleNode::delete_node(Entity entity)
@@ -38,12 +38,12 @@ namespace ag
   void RectangleNode::clone_node(Entity original, Entity clone)
   {
     clone.add_component<Transform>(original.get_component<Transform>());
-    clone.add_component<Rectangle_Component>(original.get_component<Rectangle_Component>());
+    
     if (original.has_component<ScriptComponent>())
     {
       clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
     }
-
+    Render2D_Component::clone_entity(original, clone);
     Border_Component::clone_entity(original, clone);
     Corner_Component::clone_entity(original, clone);
     UI_Component::clone_entity(original, clone);
@@ -52,9 +52,9 @@ namespace ag
   json RectangleNode::save_json(Entity entity)
   {
     json j;
-    j["Rectangle"] = Rectangle_Component::save(entity);
     j["Transform"] = Transform::save(entity);
 
+    NodeHelper::save_component<Render2D_Component>(entity,j, "Render2DComponent");
 
     NodeHelper::save_component<ScriptComponent>(entity,j, "ScriptComponent");
     NodeHelper::save_component<Border_Component>(entity,j, "BorderComponent");
@@ -66,9 +66,9 @@ namespace ag
   
   void RectangleNode::load_json(Entity entity, json j)
   {
-    Rectangle_Component::load(entity, j["RectangleProps"]);
     Transform::load(entity, j["Transform"]);
 
+    NodeHelper::load_component<Render2D_Component>(entity, j, "Render2DComponent");
     NodeHelper::load_component<ScriptComponent>(entity, j, "ScriptComponent");
     NodeHelper::load_component<Border_Component>(entity, j, "BorderComponent");
     NodeHelper::load_component<Corner_Component>(entity, j, "CornerComponent");
@@ -94,8 +94,10 @@ namespace ag
     const auto& transform = Transform::get_world_transform(entity);
     auto& rect = entity.get_component<Rectangle_Component>();
     Rectangle rectangle;
-    rectangle.size = rect.size;
-    rectangle.fill_color = rect.color;
+
+    NodeHelper::set_value(entity, &Render2D_Component::size, rectangle.size);
+    NodeHelper::set_value(entity, &Render2D_Component::color, rectangle.fill_color);
+
 
     NodeHelper::set_value(entity, &Border_Component::thickness, rectangle.border_thickness);
     NodeHelper::set_value(entity, &Border_Component::color, rectangle.border_color);

@@ -8,6 +8,54 @@
 
 namespace ag
 {
+
+	struct Render2D_Component
+	{
+		vec2u size;
+		Color color;
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			auto& props = entity.get_component<Render2D_Component >();
+			Helper::save_json(j, "Size", props.size);
+			Helper::save_json(j, "Color", props.color);
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<Render2D_Component >())
+				entity.add_component<Render2D_Component >();
+
+			auto& props = entity.get_component<Render2D_Component >();
+			Helper::load_json(j, "Size", props.size);
+			Helper::load_json(j, "Color", props.color);
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<Render2D_Component >())
+			{
+				clone.add_component<Render2D_Component >(original.get_component<Render2D_Component >());
+			}
+		}
+
+		static bool is_compatible(NodeType type)
+		{
+			auto caps = NodeHelper::get_node_capabilities(type);
+			return NodeHelper::has_capability(caps, Node_Capability::Render2D);
+		}
+
+		static const char* get_name()
+		{
+			return "Render2D Component";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
 	struct Border_Component
 	{
 		float thickness;

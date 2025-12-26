@@ -134,7 +134,7 @@ namespace ag::UI
       // X Component
       if (s_property_style.show_reset_buttons) {
         if (DrawResetButton("X", s_property_style.button_color)) {
-          vec.x = static_cast<decltype(vec.x)>(reset_value.x);
+          vec.x = reset_value.x;
           changed = true;
         }
         ImGui::SameLine();
@@ -153,9 +153,11 @@ namespace ag::UI
 
       // Y Component
       ImGui::SameLine();
-      if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Y", s_property_style.button_color)) {
-          vec.y = static_cast<decltype(vec.y)>(reset_value.y);
+      if (s_property_style.show_reset_buttons)
+      {
+        if (DrawResetButton("Y", s_property_style.button_color))
+        {
+          vec.y = reset_value.y;
           changed = true;
         }
         ImGui::SameLine();
@@ -163,7 +165,7 @@ namespace ag::UI
 
       ImGui::PushItemWidth(input_width);
       ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-      if (ImGui::InputScalar("##Y", data_type, &vec.x))
+      if (ImGui::InputScalar("##Y", data_type, &vec.y))
       {
         changed = true;
       }
