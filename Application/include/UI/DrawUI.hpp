@@ -21,10 +21,8 @@ namespace ag::UI
     struct PropertyStyle {
       ImVec4 label_color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
       ImVec4 value_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-      ImVec4 button_color_x = ImVec4(0.8f, 0.1f, 0.15f, 1.0f);
-      ImVec4 button_color_y = ImVec4(0.2f, 0.7f, 0.2f, 1.0f);
-      ImVec4 button_color_z = ImVec4(0.1f, 0.25f, 0.8f, 1.0f);
-      ImVec4 button_color_w = ImVec4(0.8f, 0.6f, 0.1f, 1.0f);
+      ImVec4 button_color = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+      ImVec4 input_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
       float min_width = 150.0f;
       float speed = 1.0f;
       const char* format = "%.3f";
@@ -135,7 +133,7 @@ namespace ag::UI
 
       // X Component
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("X", s_property_style.button_color_x)) {
+        if (DrawResetButton("X", s_property_style.button_color)) {
           vec.x = static_cast<decltype(vec.x)>(reset_value.x);
           changed = true;
         }
@@ -143,17 +141,20 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.1f, 0.15f, 0.1f));
-      if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, s_property_style.format)) {
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
+
+      if (ImGui::InputScalar("##X", data_type, &vec.x))
+      {
         changed = true;
       }
       ImGui::PopStyleColor();
       ImGui::PopItemWidth();
 
+
       // Y Component
       ImGui::SameLine();
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Y", s_property_style.button_color_y)) {
+        if (DrawResetButton("Y", s_property_style.button_color)) {
           vec.y = static_cast<decltype(vec.y)>(reset_value.y);
           changed = true;
         }
@@ -161,8 +162,9 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.7f, 0.2f, 0.1f));
-      if (DrawDragScalar("##Y", &vec.y, data_type, s_property_style.speed, s_property_style.format)) {
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
+      if (ImGui::InputScalar("##Y", data_type, &vec.x))
+      {
         changed = true;
       }
       ImGui::PopStyleColor();
@@ -211,7 +213,7 @@ namespace ag::UI
       ImGui::PopStyleVar();
       EndProperty();
 
-      ImGui::Spacing();
+      
 
       return changed;
     }
@@ -223,11 +225,11 @@ namespace ag::UI
       BeginProperty(label, tooltip);
 
       const float total_width = ImGui::CalcItemWidth();
-      const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
-      const ImVec2 button_size = { line_height + 3.0f, line_height };
+      const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 3.0f;
+      const ImVec2 button_size = { line_height + 5.0f, line_height };
       const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-      // Calculate input field width
+     
       float input_width = total_width;
       if (s_property_style.show_reset_buttons) {
         input_width = (total_width - (button_size.x * 3.0f) - spacing * 4.0f) / 3.0f;
@@ -252,9 +254,9 @@ namespace ag::UI
 
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 0 });
 
-      // X Component
+     
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("X", s_property_style.button_color_x)) {
+        if (DrawResetButton("X", s_property_style.button_color)) {
           vec.x = static_cast<decltype(vec.x)>(reset_value.x);
           changed = true;
         }
@@ -262,7 +264,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.1f, 0.15f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -272,7 +274,7 @@ namespace ag::UI
       // Y Component
       ImGui::SameLine();
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Y", s_property_style.button_color_y)) {
+        if (DrawResetButton("Y", s_property_style.button_color)) {
           vec.y = static_cast<decltype(vec.y)>(reset_value.y);
           changed = true;
         }
@@ -280,7 +282,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.7f, 0.2f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##Y", &vec.y, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -290,15 +292,15 @@ namespace ag::UI
       // Z Component
       ImGui::SameLine();
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Z", s_property_style.button_color_z)) {
+        if (DrawResetButton("Z", s_property_style.button_color)) {
           vec.z = static_cast<decltype(vec.z)>(reset_value.z);
           changed = true;
         }
-        ImGui::SameLine();
+        
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.25f, 0.8f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##Z", &vec.z, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -345,7 +347,7 @@ namespace ag::UI
       // First row (X, Y)
       // X Component
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("X", s_property_style.button_color_x)) {
+        if (DrawResetButton("X", s_property_style.button_color)) {
           vec.x = static_cast<decltype(vec.x)>(reset_value.x);
           changed = true;
         }
@@ -353,7 +355,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.1f, 0.15f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -363,7 +365,7 @@ namespace ag::UI
       // Y Component
       ImGui::SameLine();
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Y", s_property_style.button_color_y)) {
+        if (DrawResetButton("Y", s_property_style.button_color)) {
           vec.y = static_cast<decltype(vec.y)>(reset_value.y);
           changed = true;
         }
@@ -371,7 +373,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.7f, 0.2f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##Y", &vec.y, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -383,7 +385,7 @@ namespace ag::UI
 
       // Z Component
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("Z", s_property_style.button_color_z)) {
+        if (DrawResetButton("Z", s_property_style.button_color)) {
           vec.z = static_cast<decltype(vec.z)>(reset_value.z);
           changed = true;
         }
@@ -391,7 +393,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.25f, 0.8f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##Z", &vec.z, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -401,7 +403,7 @@ namespace ag::UI
       // W Component
       ImGui::SameLine();
       if (s_property_style.show_reset_buttons) {
-        if (DrawResetButton("W", s_property_style.button_color_w)) {
+        if (DrawResetButton("W", s_property_style.button_color)) {
           vec.w = static_cast<decltype(vec.w)>(reset_value.w);
           changed = true;
         }
@@ -409,7 +411,7 @@ namespace ag::UI
       }
 
       ImGui::PushItemWidth(input_width);
-      ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.6f, 0.1f, 0.1f));
+      ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
       if (DrawDragScalar("##W", &vec.w, data_type, s_property_style.speed, s_property_style.format)) {
         changed = true;
       }
@@ -419,7 +421,7 @@ namespace ag::UI
       ImGui::PopStyleVar();
       EndProperty();
 
-      ImGui::Spacing();
+     
 
       return changed;
     }
@@ -558,7 +560,6 @@ namespace ag::UI
 
       EndProperty();
 
-      ImGui::Spacing();
       return changed;
     }
 
@@ -683,7 +684,6 @@ namespace ag::UI
 
       EndProperty();
 
-      ImGui::Spacing();
       return changed;
     }
 
@@ -712,7 +712,6 @@ namespace ag::UI
 
       EndProperty();
 
-      ImGui::Spacing();
       return changed;
     }
 

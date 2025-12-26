@@ -5,85 +5,23 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-add_compile_options(/utf-8)
-
 project("Game_Engine" LANGUAGES C CXX)
 
-
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel;Distributed" CACHE STRING 
-    "Available build types: Debug, Release, RelWithDebInfo, MinSizeRel, Distributed" FORCE)
-
-
-if(CMAKE_CONFIGURATION_TYPES)
-    
-    set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE STRING "" FORCE)
-    
-    
-    set(CMAKE_CXX_FLAGS_DISTRIBUTED "${CMAKE_CXX_FLAGS_RELEASE} /MT /GL /D DISTRIBUTED_BUILD=1")
-    set(CMAKE_C_FLAGS_DISTRIBUTED "${CMAKE_C_FLAGS_RELEASE} /MT /GL /D DISTRIBUTED_BUILD=1")
-    
-   
-    foreach(config IN ITEMS Debug Release RelWithDebInfo MinSizeRel Distributed)
-        string(TOUPPER ${config} config_upper)
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/bin")
-        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/lib")
-        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/lib")
-        set(CMAKE_PDB_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/pdb")
-    endforeach()
+if(MSVC)
+  add_compile_options(/utf-8)
 endif()
 
-
-if(NOT CMAKE_CONFIGURATION_TYPES)
-    if(NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type" FORCE)
-    endif()
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel" "Distributed")
-endif()
-
-
+# C++ Standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
-if(MSVC)
-  
-    set(CMAKE_CXX_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
-    set(CMAKE_C_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
-    
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Ob2 /D NDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "/MD /O2 /Ob2 /D NDEBUG")
-    
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Zi /O2 /Ob1 /D NDEBUG")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Zi /O2 /Ob1 /D NDEBUG")
-    
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
-    set(CMAKE_C_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
-    
-  
-    set(CMAKE_CXX_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /D DISTRIBUTED_BUILD=1 /GL /Gy /arch:AVX2")
-    set(CMAKE_C_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /D DISTRIBUTED_BUILD=1 /GL /Gy")
-    
-  
-    set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTED "/INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF /DEBUG:FULL")
-    
-    message(STATUS "MSVC: Distributed configuration will use /MT (static runtime)")
-endif()
-
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-
 add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)
-
-if (MSVC)
-    set_target_properties(glfw PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
-endif()
-
 
 set(LUA_SRC
     "${CMAKE_SOURCE_DIR}/External/lua/lapi.c"
@@ -124,32 +62,16 @@ file(GLOB_RECURSE BOX2D_SRC
   "${CMAKE_SOURCE_DIR}/External/box2d/src/*.cpp"
 )
 
-set_source_files_properties(${LUA_SRC} PROPERTIES LANGUAGE C)
-set_source_files_properties(${BOX2D_SRC} PROPERTIES LANGUAGE CXX)
 add_library(lua STATIC ${LUA_SRC})
 add_library(box2d STATIC ${BOX2D_SRC})
-set_target_properties(lua PROPERTIES LINKER_LANGUAGE C)
-set_target_properties(box2d PROPERTIES LINKER_LANGUAGE CXX)
 
-target_include_directories(lua PUBLIC
-    "${CMAKE_SOURCE_DIR}/External/lua"
-)
-target_include_directories(box2d PUBLIC
-    "${CMAKE_SOURCE_DIR}/External/box2d/include"
-)
+target_include_directories(lua PUBLIC "${CMAKE_SOURCE_DIR}/External/lua")
+target_include_directories(box2d PUBLIC "${CMAKE_SOURCE_DIR}/External/box2d/include")
 
 target_compile_definitions(lua PRIVATE
     LUA_COMPAT_5_3
     _CRT_SECURE_NO_WARNINGS
 )
-
-
-if(MSVC)
-    set_target_properties(lua box2d PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
-endif()
-
 
 set(GLAD_SRC "${CMAKE_SOURCE_DIR}/External/glad/glad.cpp")
 
@@ -163,18 +85,7 @@ set(IMGUI_SRC
     "${CMAKE_SOURCE_DIR}/External/imgui/backends/imgui_impl_opengl3.cpp"
 )
 
-add_library(External STATIC 
-    ${GLAD_SRC}
-    ${IMGUI_SRC}
-)
-
-
-if(MSVC)
-    set_target_properties(External PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
-endif()
-
+add_library(External STATIC ${GLAD_SRC} ${IMGUI_SRC})
 
 target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/entt/include
@@ -189,156 +100,71 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/sol2/include
 )
 
-
 target_compile_definitions(External PRIVATE
     GLFW_STATIC
-    STB_IMAGE_IMPLEMENTATION
-    SOL_LUA_VERSION=504
-    $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
+    IMGUI_IMPL_OPENGL_LOADER_GLAD 
 )
 
+target_link_libraries(External PUBLIC glfw)
 
-file(GLOB_RECURSE APP_SRC 
-    "${CMAKE_SOURCE_DIR}/Application/src/*.cpp"
-)
-
-add_library(Application STATIC ${APP_SRC})
-
-
-if(MSVC)
-    set_target_properties(Application PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
+if(WIN32)
+    target_link_libraries(External PRIVATE opengl32.lib)
 endif()
 
+file(GLOB_RECURSE APP_SRC "${CMAKE_SOURCE_DIR}/Application/src/*.cpp")
+add_library(Application STATIC ${APP_SRC})
 
 target_include_directories(Application PUBLIC
     ${CMAKE_SOURCE_DIR}/Application/include
+    ${CMAKE_SOURCE_DIR}/External/box2d/include 
+    ${CMAKE_SOURCE_DIR}/External/lua         
 )
 
-
-target_link_libraries(Application PUBLIC 
+target_link_libraries(Application PUBLIC
     lua
-    glfw
     box2d
     External
 )
 
+target_compile_definitions(Application PRIVATE 
+    STB_IMAGE_IMPLEMENTATION
+)
 
 if(WIN32)
     target_link_libraries(Application PRIVATE
-        opengl32.lib
         user32.lib
         gdi32.lib
         shell32.lib
-        kernel32.lib
-        winspool.lib
-        ole32.lib
-        oleaut32.lib
-        uuid.lib
-        comdlg32.lib
-        advapi32.lib
     )
 endif()
 
-
-target_compile_definitions(Application PRIVATE 
-    GLFW_STATIC
-    STB_IMAGE_IMPLEMENTATION
-    $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
-)
-
-file(GLOB_RECURSE AERO_SRC
-    "${CMAKE_SOURCE_DIR}/AeroEditor/src/*.cpp"
-)
-
-
-
-
+file(GLOB_RECURSE AERO_SRC "${CMAKE_SOURCE_DIR}/AeroEditor/src/*.cpp")
 add_executable(AeroEditor ${AERO_SRC})
-
-if(MSVC)
-    set_target_properties(AeroEditor PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
-endif()
-
-if(WIN32)
-    target_link_options(AeroEditor PRIVATE
-        "$<$<CONFIG:Distributed>:/SUBSYSTEM:WINDOWS>"
-        "$<$<CONFIG:Distributed>:/ENTRY:mainCRTStartup>"
-    )
-endif()
-
-target_link_libraries(AeroEditor PRIVATE Application)
-
 
 target_include_directories(AeroEditor PRIVATE
     ${CMAKE_SOURCE_DIR}/AeroEditor/include
 )
 
-
-target_compile_definitions(AeroEditor PRIVATE
-    $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
-)
-
+target_link_libraries(AeroEditor PRIVATE Application)
 
 add_custom_command(TARGET AeroEditor POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory 
-    "$<TARGET_FILE_DIR:AeroEditor>/assets"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_SOURCE_DIR}/Application/assets"
     "$<TARGET_FILE_DIR:AeroEditor>/assets"
-    VERBATIM
 )
 
-
-file(GLOB_RECURSE SANDBOX_SRC
-    "${CMAKE_SOURCE_DIR}/Sandbox/src/*.cpp"
-)
-
-
-
- add_executable(Sandbox ${SANDBOX_SRC})
-
-
-if(MSVC)
-    set_target_properties(Sandbox PROPERTIES
-        MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Distributed>,MultiThreaded,MultiThreaded$<$<CONFIG:Debug>:Debug>DLL>"
-    )
-endif()
-
-
-if(WIN32)
-    target_link_options(Sandbox PRIVATE
-        "$<$<CONFIG:Distributed>:/SUBSYSTEM:WINDOWS>"
-        "$<$<CONFIG:Distributed>:/ENTRY:mainCRTStartup>"
-    )
-endif()
-
-
-
-target_link_libraries(Sandbox PRIVATE Application)
-
+file(GLOB_RECURSE SANDBOX_SRC "${CMAKE_SOURCE_DIR}/Sandbox/src/*.cpp")
+add_executable(Sandbox ${SANDBOX_SRC})
 
 target_include_directories(Sandbox PRIVATE
     ${CMAKE_SOURCE_DIR}/Sandbox/include
 )
 
-target_compile_definitions(Sandbox PRIVATE
-    $<$<CONFIG:Distributed>:DISTRIBUTED_BUILD=1>
-)
-
-
-set_target_properties(AeroEditor Sandbox PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
-)
+target_link_libraries(Sandbox PRIVATE Application)
 
 target_precompile_headers(Application PUBLIC
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
-
 
 target_precompile_headers(AeroEditor PRIVATE
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
@@ -347,4 +173,3 @@ target_precompile_headers(AeroEditor PRIVATE
 target_precompile_headers(Sandbox PRIVATE
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
-

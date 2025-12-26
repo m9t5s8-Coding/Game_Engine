@@ -51,7 +51,7 @@ void main()
     // Rectangle or circle
     if(a_type == 0 || a_type == 1)
     {
-        vec2 total_size = a_size + vec2(border_size * 2.0);
+        vec2 total_size = max(a_size, a_size + vec2(a_border_thickness * 2.0));
         size = total_size;
         center = total_size * 0.5;
 

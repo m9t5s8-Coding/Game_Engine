@@ -39,6 +39,7 @@
 #include <GameObjects/GameObjects.hpp>
 #include <GameObjects/Node.hpp>
 #include <GameObjects/NodeFactory.hpp>
+#include <GameObjects/Components/Components.hpp>
 
 #include <Project/Project.hpp>
 #include <Project/FileDialogs.hpp>

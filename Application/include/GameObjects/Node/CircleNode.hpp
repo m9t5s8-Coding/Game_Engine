@@ -1,135 +1,27 @@
 #pragma once
 
-#include <Math/Math.hpp>
-#include <Scene/Entity.hpp>
-#include <Renderer/Renderer2D.hpp>
-#include <Scene/SceneComponent.hpp>
+#include <GameObjects/Components/Components.hpp>
 
 namespace ag
 {
 	struct CircleNode
 	{
-		struct CircleProp
+		struct Circle_Component
 		{
-			vec2u size{ 50, 50 };
-			Color fill_color = Color::White;
+			vec2i size{ 100, 100 };
+			Color color = Color::White;
 
-			float border_thickness = 0.0f;
-			Color border_color = Color::White;
-
-
-			static json save(Entity entity)
-			{
-				json j;
-				const auto& props = entity.get_component<CircleProp>();
-				Helper::save_json(j, "Size", props.size);
-				Helper::save_json(j, "Fill Color", props.fill_color);
-				Helper::save_json(j, "Border Color", props.border_color);
-				Helper::save_json(j, "Border Thickness", props.border_thickness);
-
-				return j;
-			}
-
-			static void load(Entity entity, const json& j)
-			{
-				auto& props = entity.get_component<CircleProp>();
-
-				Helper::load_json(j, "Size", props.size);
-				Helper::load_json(j, "Fill Color", props.fill_color);
-				Helper::load_json(j, "Border Color", props.border_color);
-				Helper::load_json(j, "Border Thickness", props.border_thickness);
-
-			}
+			static json save_json(Entity entity);
+			static void load_json(Entity entity, const json& j);
 		};
 
-		static void create_node(Entity entity)
-		{
-			entity.add_component<Transform>();
-			entity.add_component<CircleProp>();
-		}
-
-		static void delete_node(Entity entity)
-		{
-			ScriptComponent::destroy(entity);
-			entity.delete_entity();
-		}
-
-		static void clone_node(Entity original, Entity clone)
-		{
-			clone.add_component<Transform>(original.get_component<Transform>());
-			clone.add_component<CircleProp>(original.get_component<CircleProp>());
-
-			if (original.has_component<ScriptComponent>())
-			{
-				clone.add_component<ScriptComponent>(original.get_component<ScriptComponent>());
-			}
-		}
-
-		static json save_json(Entity entity)
-		{
-			json j;
-			j["CircleProps"] = CircleProp::save(entity);
-			j["Transform"] = Transform::save(entity);
-
-			if (entity.has_component<ScriptComponent>())
-			{
-				j["ScriptComponent"] = ScriptComponent::save_json(entity);
-			}
-
-			return j;
-		}
-
-		static void load_json(Entity entity, const json& j)
-		{
-			CircleProp::load(entity, j["CircleProps"]);
-			Transform::load(entity, j["Transform"]);
-
-			if (j.contains("ScriptComponent"))
-			{
-				ScriptComponent::load_json(entity, j["ScriptComponent"]);
-			}
-		}
-
-		static void show_properties(Entity entity)
-		{
-			{
-				Tag::show_properties(entity);
-				{
-					auto& props = entity.get_component<CircleProp>();
-					UI::draw_vec2("Size", props.size);
-					UI::draw_value("Border Thickness", props.border_thickness);
-					UI::draw_color("Fill Color", props.fill_color);
-					UI::draw_color("Border Color", props.border_color);
-				}
-				Transform::show_properties(entity);
-			}
-		}
-
-		static void update(Entity entity, TimeStamp ts)
-		{
-			ScriptComponent::update(entity, ts);
-
-			auto is_visible = entity.get_component<Tag>().is_visible;
-			if (!is_visible)
-				return;
-		}
-
-		static void draw(Entity entity)
-		{
-			auto is_visible = entity.get_component<Tag>().is_visible;
-			if (!is_visible)
-				return;
-
-			const auto& transform = Transform::get_world_transform(entity);
-			auto& c = entity.get_component<CircleProp>();
-			Circle circle;
-			circle.size = c.size;
-			circle.fill_color = c.fill_color;
-			circle.border_color = c.border_color;
-			circle.border_thickness = c.border_thickness;
-			Renderer2D::draw_circle(circle, transform);
-		}
-
+		static void create_node(Entity entity);
+		static void delete_node(Entity entity);
+		static void clone_node(Entity original, Entity clone);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static void update(Entity entity, TimeStamp ts);
+		static void draw(Entity entity);
 	};
 
 }

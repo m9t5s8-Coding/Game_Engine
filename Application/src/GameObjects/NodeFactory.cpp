@@ -55,17 +55,7 @@ namespace ag
     update_map[NodeType::CollisionShape] = CollisionShape::update;
 
 
-		properties_map[NodeType::Rectangle] = RectangleNode::show_properties;
-		properties_map[NodeType::Circle] = CircleNode::show_properties;
-		properties_map[NodeType::Sprite] = SpriteNode::show_properties;
-		properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
-		properties_map[NodeType::Camera] = CameraComponent::show_properties;
-		properties_map[NodeType::TileMap] = TileMapNode::show_properties;
-		properties_map[NodeType::Scene2D] = Scene2D::show_properties;
-		properties_map[NodeType::TextNode] = TextNode::show_properties;
-		properties_map[NodeType::Button] = ButtonNode::show_properties;
-		properties_map[NodeType::TextureButton] = TextureButton::show_properties;
-    properties_map[NodeType::CollisionShape] = CollisionShape::show_properties;
+	
 
 
 

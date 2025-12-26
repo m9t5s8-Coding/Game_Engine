@@ -46,6 +46,17 @@ namespace ag
 		CollisionShape = 10
 	};
 
+	enum class Node_Capability : uint32_t
+	{
+		None = 0,
+		Render2D = 1 << 0,
+		Physics2D = 1 << 1,
+		Scriptable = 1 << 2,
+		UI = 1 << 3,
+		RectShape = 1 << 4,
+		CircleShape = 1 << 5
+	};
+
 	enum class RenderLayer
 	{
 		BackGround,
@@ -72,8 +83,25 @@ namespace ag
 
 		static void show_properties(Entity entity)
 		{
-			auto& tag = entity.get_component<Tag>();
-			UI::draw_string("Tag", tag.tag);
+			ImGui::PushID("TagComponent");
+			if (ImGui::TreeNodeEx("Tag", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed))
+			{
+				auto& tag = entity.get_component<Tag>();
+				ImGui::Dummy(ImVec2(0, 2));
+
+				UI::draw_string("Tag", tag.tag);
+				ImGui::Dummy(ImVec2(0, 2));
+
+				UI::draw_bool("Visible", tag.is_visible);
+				ImGui::Dummy(ImVec2(0, 2));
+
+				UI::draw_bool("Lock", tag.locked);
+				ImGui::Dummy(ImVec2(0, 2));
+
+
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
 		}
 
 		static json save_json(Entity entity)
@@ -187,14 +215,37 @@ namespace ag
 
 		static void show_properties(Entity entity)
 		{
-			UI::draw_title("Transform");
-			auto& transform = entity.get_component<Transform>();
-			AG_uint id = entity.get_id();
-			UI::draw_vec2("Position", transform.position, { 0, 0 });
-			UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
-			//UI::draw_vec2("Origin", transform.origin, { 0, 0 });
-			UI::draw_value("Rotation", transform.rotation);
+			ImGui::PushID("TransformComponent");
 
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
+			ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 12.0f);
+
+			bool open = ImGui::TreeNodeEx("Transform",
+				ImGuiTreeNodeFlags_DefaultOpen |
+				ImGuiTreeNodeFlags_Framed |
+				ImGuiTreeNodeFlags_SpanAvailWidth);
+
+			if (open)
+			{
+				auto& transform = entity.get_component<Transform>();
+
+				ImGui::Dummy(ImVec2(0, 2));
+				UI::draw_vec2("Position", transform.position, { 0, 0 });
+
+				ImGui::Dummy(ImVec2(0, 2));
+				UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
+
+				ImGui::Dummy(ImVec2(0, 2));
+				UI::draw_value("Rotation", transform.rotation);
+
+
+				ImGui::Dummy(ImVec2(0, 2));
+				ImGui::TreePop();
+			}
+
+			ImGui::PopStyleVar(3);
+			ImGui::PopID();
 		}
 
 		static json save(Entity entity)

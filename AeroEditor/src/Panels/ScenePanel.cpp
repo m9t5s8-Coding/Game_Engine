@@ -1,6 +1,7 @@
 ﻿#include <Panels/ScenePanel.hpp>
 #include <Application/EditorLayer.hpp>
 #include <Node/TileMapNodeFeatures.hpp>
+#include <Node/NodeProperties.hpp>
 #include <UI/UI.hpp>
 
 namespace ag
@@ -26,7 +27,22 @@ namespace ag
 	ScenePanel::ScenePanel(const AG_ref<Scene>& scene)
 	{
 		set_scene(scene);
-	}
+
+		NodeProperties::register_components();
+
+		NodeFactory::properties_map[NodeType::Rectangle] = NodeProperties::rectangle_2D;
+		NodeFactory::properties_map[NodeType::Circle] = NodeProperties::circle_2D;
+		NodeFactory::properties_map[NodeType::Sprite] = SpriteNode::show_properties;
+		NodeFactory::properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
+		NodeFactory::properties_map[NodeType::Camera] = CameraComponent::show_properties;
+		NodeFactory::properties_map[NodeType::TileMap] = TileMapNode::show_properties;
+		NodeFactory::properties_map[NodeType::Scene2D] = Scene2D::show_properties;
+		NodeFactory::properties_map[NodeType::TextNode] = TextNode::show_properties;
+		NodeFactory::properties_map[NodeType::Button] = ButtonNode::show_properties;
+		NodeFactory::properties_map[NodeType::TextureButton] = TextureButton::show_properties;
+		NodeFactory::properties_map[NodeType::CollisionShape] = CollisionShape::show_properties;
+
+	}	
 
 	void ScenePanel::set_scene(const AG_ref<Scene>& scene)
 	{

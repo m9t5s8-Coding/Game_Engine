@@ -31,6 +31,7 @@ namespace ag
 			AERO_CORE_INFO("Invalid Scene");
 		}
 		m_panel = AG_cref<ScenePanel>(m_scene);
+		
 		// todo
 		m_scenes[m_scene->get_name()] = m_scene;
 

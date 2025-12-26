@@ -90,4 +90,7 @@ namespace ag::Helper
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
   }
 
+
+
+
 }

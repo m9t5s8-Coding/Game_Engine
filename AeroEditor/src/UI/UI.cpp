@@ -850,8 +850,7 @@ namespace ag::UI
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar |
       ImGuiWindowFlags_NoScrollWithMouse |
-      ImGuiWindowFlags_NoCollapse |
-      ImGuiWindowFlags_NoMove;
+      ImGuiWindowFlags_NoCollapse;
 
     if (ImGui::Begin("Texture Selector", &window_open, flags)) {
       // Toolbar
@@ -1300,7 +1299,7 @@ namespace ag::UI
 
   void draw_console()
   {
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
 
     ImGui::Begin("Console", nullptr, flags);
     static bool show_console = true;
