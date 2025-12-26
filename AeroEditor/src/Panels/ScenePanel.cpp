@@ -382,6 +382,7 @@ namespace ag
 
 				if (ImGui::Button("CREATE", ImVec2(100, 0))) {
 					create_selected_object(state.selected_prefab);
+
 				}
 
 				ImGui::PopStyleColor(3);
@@ -971,9 +972,11 @@ namespace ag
 		auto& child_tag = child.get_component<Tag>();
 		auto& parent_tag = new_parent.get_component<Tag>();
 
-		auto child_transform = Transform::get_world_transform(child);
+		Transform child_transform;
+		if(child.has_component<Transform>())
+			child_transform = Transform::get_world_transform(child);
 
-		// Remove from old parent
+		
 		if (child_tag.parent)
 		{
 			auto& old_parent_tag = child_tag.parent.get_component<Tag>();
@@ -984,13 +987,15 @@ namespace ag
 				old_parent_tag.children.erase(it);
 			}
 		}
-
-	
 		child_tag.parent = new_parent;
 		parent_tag.children.push_back(child);
 
-		auto& transform = child.get_component<Transform>();
-		Transform::get_local_transform(child, child_transform);
+
+		if(child.has_component<Transform>())
+		{
+			Transform::get_local_transform(child, child_transform);
+		}
+		
 
 		AERO_INFO("Reparented {} to {}",
 			child_tag.tag, parent_tag.tag);
@@ -1017,7 +1022,7 @@ namespace ag
 		}
 
 		auto& transform = m_selected_entity.get_component<Transform>();
-		Transform::get_local_transform(m_selected_entity, child_transform);
+		transform = child_transform;
 	}
 
 
@@ -1186,6 +1191,7 @@ namespace ag
 
 		// Select the new entity
 		m_selected_entity = new_entity;
+		m_show_create_panel = false;
 	}
 
 	bool ScenePanel::string_contains_case_insensitive(const std::string& str, const std::string& substr) {
