@@ -231,7 +231,7 @@ namespace ag
 				sprite.size = props.normal_texture_rect.size;
 			}
 			Renderer2D::set_texture(props.texture);
-			Renderer2D::draw_sprite(sprite, transform);
+			//Renderer2D::draw_sprite(sprite, transform);
 		}
 
 		static bool is_hovered(Entity entity)

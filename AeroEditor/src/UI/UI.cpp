@@ -556,6 +556,175 @@ namespace ag::UI
     handle_dialogs(state);
   }
 
+  void draw_texture(Texture_Component& props)
+  {
+    ImGui::Text("Texture");
+    ImGui::SameLine();
+
+    if (props.texture && !props.path.empty())
+    {
+      ImGui::TextDisabled("(Loaded)");
+    }
+    else if (!props.path.empty())
+    {
+      ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "(Not Loaded)");
+    }
+    else
+    {
+      ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "(No Texture)");
+    }
+
+    ImGui::Spacing();
+
+    if (!props.path.empty()) {
+      ImGui::TextWrapped("Path: %s", props.path.c_str());
+      ImGui::Spacing();
+    }
+
+    // --- Texture Preview ---
+    if (props.texture && !props.path.empty()) {
+      ImGui::Separator();
+      ImGui::Text("Preview:");
+
+      // Calculate aspect ratio preserving size
+      float width = props.texture->get_width();
+      float height = props.texture->get_height();
+      float aspect = width / height;
+
+      ImVec2 preview_size(128.0f, 128.0f);
+      if (aspect > 1.0f) {
+        preview_size.y = 128.0f / aspect;
+      }
+      else {
+        preview_size.x = 128.0f * aspect;
+      }
+
+      // Add padding around the image (frame larger than image)
+      const float padding = 10.0f; // Extra space around image
+      ImVec2 frame_size = ImVec2(preview_size.x + padding * 2,
+        preview_size.y + padding * 2);
+
+      // Center the frame horizontally
+      float available_width = ImGui::GetContentRegionAvail().x;
+      float frame_pos_x = (available_width - frame_size.x) / 2.0f;
+
+      // Create a child frame/group for the image with padding
+      ImGui::BeginChild("TexturePreviewFrame",
+        ImVec2(0, frame_size.y + 5), // Height of frame + spacing
+        false,
+        ImGuiWindowFlags_NoScrollbar);
+
+      // Set cursor to center the frame
+      ImGui::SetCursorPosX(frame_pos_x);
+
+      // Draw a background frame/rectangle
+      ImDrawList* draw_list = ImGui::GetWindowDrawList();
+      ImVec2 frame_min = ImGui::GetCursorScreenPos();
+      ImVec2 frame_max = ImVec2(frame_min.x + frame_size.x,
+        frame_min.y + frame_size.y);
+
+      // Draw background rectangle (slightly darker than window bg)
+      draw_list->AddRectFilled(frame_min, frame_max,
+        ImGui::GetColorU32(ImGuiCol_FrameBg),
+        4.0f); // Rounded corners
+
+      // Draw border
+      draw_list->AddRect(frame_min, frame_max,
+        ImGui::GetColorU32(ImGuiCol_Border),
+        4.0f, 0, 1.5f); // Thicker border
+
+      // Center image inside the frame
+      ImVec2 image_pos = ImVec2(frame_min.x + padding,
+        frame_min.y + padding);
+      ImGui::SetCursorScreenPos(image_pos);
+
+      // Draw the image
+      ImGui::Image((void*)(intptr_t)props.texture->get_texture_id(),
+        preview_size);
+
+      ImGui::EndChild(); // End TexturePreviewFrame
+
+      // Texture info below the frame
+      ImGui::Text("Size: %dx%d",
+        props.texture->get_width(),
+        props.texture->get_height());
+
+      // Texture format/info if available
+      ImGui::SameLine();
+      ImGui::TextDisabled("| %s",
+        std::filesystem::path(props.path).extension().string().c_str());
+
+      ImGui::Spacing();
+      ImGui::Separator();
+    }
+
+    float button_width = ImGui::GetContentRegionAvail().x * 0.48f;
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+    // Load Texture Button
+    if (ImGui::Button("Load Texture", ImVec2(button_width, 0))) {
+      std::string selected_path = FileDialogs::open_file(
+        "Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0"
+      );
+
+      if (!selected_path.empty()) {
+        try {
+          props.path = selected_path;
+          props.texture = NodeHelper::load_texture(props.path);
+        }
+        catch (const std::exception& e)
+        {
+          props.texture.reset();
+          props.path.clear();
+        }
+      }
+    }
+
+    ImGui::SameLine();
+
+    if (!props.path.empty())
+    {
+      if (ImGui::Button("Reload", ImVec2(button_width, 0))) {
+        try {
+          props.texture = NodeHelper::load_texture(props.path);
+        }
+        catch (const std::exception& e) {
+          props.texture.reset();
+        }
+      }
+    }
+    else
+    {
+      if (ImGui::Button("Clear", ImVec2(button_width, 0))) {
+        props.texture.reset();
+        props.path.clear();
+      }
+    }
+
+    ImGui::PopStyleColor(3);
+    ImGui::Spacing();
+
+    // --- Drag and Drop Support ---
+    if (ImGui::BeginDragDropTarget()) {
+      if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+        const char* dropped_path = (const char*)payload->Data;
+
+        std::string extension = std::filesystem::path(dropped_path).extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+        if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+          extension == ".bmp" || extension == ".tga") {
+          props.path = dropped_path;
+          props.texture = NodeHelper::load_texture(props.path);
+        }
+      }
+      ImGui::EndDragDropTarget();
+    }
+  }
+
   // Helper functions
   void run_current_scene()
   {

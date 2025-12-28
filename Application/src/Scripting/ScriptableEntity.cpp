@@ -14,7 +14,6 @@ namespace ag
 		case NodeType::Rectangle:
 		{
 			sol::table rect_table = lua.create_table();
-			auto& rect = m_entity.get_component<RectangleNode::Rectangle_Component>();
 			auto& transform = m_entity.get_component<Transform>();
 
 			return rect_table;

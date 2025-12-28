@@ -6,6 +6,7 @@
 #include <Math/Math.hpp>
 
 class Texture;
+struct Texture_Component;
 namespace ag::UI
 {
 	struct MenuState {
@@ -44,6 +45,8 @@ namespace ag::UI
 		std::string status_message;
 		float status_timer = 0.0f;
 	};
+
+	void draw_texture(Texture_Component& props);
 
 	void draw_menu_bar();
 

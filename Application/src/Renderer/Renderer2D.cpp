@@ -13,8 +13,11 @@
 #include <Math/Math.hpp>
 #include <Renderer/Color.hpp>
 
+#include <GameObjects/Components/Components.hpp>
+
 namespace ag
 {
+	
 	enum class Quad_Type
 	{
 		Rectangle = 0,
@@ -181,7 +184,7 @@ namespace ag
 
 	
 
-	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform& transform)
+	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -208,7 +211,7 @@ namespace ag
 
 	}
 
-	void Renderer2D::draw_circle(const Circle& circle, const Transform& transform)
+	void Renderer2D::draw_circle(const Circle& circle, const Transform_Component& transform)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -232,7 +235,7 @@ namespace ag
 		s_data->quad_index++;
 	}
 
-	void Renderer2D::draw_sprite(const Sprite& sprite, const Transform& transform)
+	void Renderer2D::draw_sprite(const Sprite& sprite, const Transform_Component& transform)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -261,7 +264,7 @@ namespace ag
 		s_data->quad_index++;
 	}
 
-	void Renderer2D::draw_text(const Text& text_string, const Transform& transform)
+	void Renderer2D::draw_text(const Text& text_string, const Transform_Component& transform)
 	{
 		vec2f starting_pos = Text::center_text(text_string, transform);
 		const float scale_x = transform.scale.x * text_string.font_size / TextLoader::font.em_size;

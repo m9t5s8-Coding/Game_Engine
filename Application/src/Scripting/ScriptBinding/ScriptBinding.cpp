@@ -398,40 +398,13 @@ namespace ag
 		// Rectangle Node and Circle Node
 		{
 			// Fill Color
-			lua.set_function("get_fill_color", [](ag::Entity& entity) -> Color {
-				auto node_type = NodeHelper::get_nodetype(entity);
-				switch (node_type)
+			lua.set_function("get_fill_color", [](ag::Entity& entity) -> Color
 				{
-				case ag::NodeType::Rectangle:
-					return NodeHelper::get_comp_value(entity, &RectangleNode::Rectangle_Component::color, Color::Transparent);
-
-				case ag::NodeType::Circle:
-					return NodeHelper::get_comp_value(entity, &CircleNode::Circle_Component::color, Color::Transparent);
-
-				default:
-					return ag::Color::Transparent;
-				}
+					return NodeHelper::get_comp_value(entity, &Render2D_Component::color, Color::Transparent);
 				});
 
 			lua.set_function("set_fill_color", [](ag::Entity& entity, const ag::Color& color) {
-				auto node_type = entity.get_component<Tag>().node_type;
-				switch (node_type)
-				{
-				case ag::NodeType::Rectangle:
-				{
-					NodeHelper::set_comp_value(entity, &RectangleNode::Rectangle_Component::color, color);
-					return;
-				}
-				case ag::NodeType::Circle:
-				{
-					NodeHelper::set_comp_value(entity, &CircleNode::Circle_Component::color, color);
-					return;
-				}
-				default:
-				{
-					return;
-				}
-				}
+				NodeHelper::set_comp_value(entity, &Render2D_Component::color, color);
 				});
 
 
@@ -461,30 +434,10 @@ namespace ag
 			// Sprite Node Rectangle and Circle
 			{
 				lua.set_function("get_size", [](ag::Entity& entity) -> vec2f {
-					auto type = NodeHelper::get_nodetype(entity);
-
-					if (type == NodeType::Rectangle)
-					{
-						return NodeHelper::get_comp_value(entity, &RectangleNode::Rectangle_Component::size, { 0, 0 });
-					}
-					else if (type == NodeType::Circle)
-					{
-						return NodeHelper::get_comp_value(entity, &CircleNode::Circle_Component::size, { 0, 0 });
-					}
-					else if (type == NodeType::Sprite)
-					{
-						return NodeHelper::get_comp_value(entity, &SpriteNode::SpriteProp::size, { 0, 0 });
-					}
-					else if (type == NodeType::AnimatedSprite2D)
-					{
-						auto texture_rect = NodeHelper::get_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::texture_rect, { 0, 0, 0, 0 });
-						return texture_rect.size;
-					}
-					return { 0, 0 };
+					return NodeHelper::get_comp_value(entity, &Render2D_Component::size, { 0, 0 });
 					});
 			}
 
-			//Animated Sprite 2D and Sprite Node
 			{
 
 				lua.set_function("play_animation", [](ag::Entity& entity, const std::string& animation_name) -> bool {
@@ -497,38 +450,13 @@ namespace ag
 					return false;
 					});
 
-				lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical) {
-					auto type = NodeHelper::get_nodetype(entity);
-					switch (type)
+				lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical)
 					{
-					case ag::NodeType::Sprite:
-						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_vertical, vertical);
-						return;
-
-					case ag::NodeType::AnimatedSprite2D:
-						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_vertical, vertical);
-						return;
-
-					default:
-						return;
-					}
+					NodeHelper::set_comp_value(entity, &TextureFlip_Component::vertical, vertical);
 					});
 
 				lua.set_function("flip_horizontal", [](ag::Entity& entity, const bool horizontal) {
-					auto type = NodeHelper::get_nodetype(entity);
-					switch (type)
-					{
-					case ag::NodeType::Sprite:
-						NodeHelper::set_comp_value(entity, &SpriteNode::SpriteProp::flip_horizontal, horizontal);
-						return;
-
-					case ag::NodeType::AnimatedSprite2D:
-						NodeHelper::set_comp_value(entity, &AnimatedSprite2DNode::AnimatedSpriteProps::flip_horizontal, horizontal);
-						return;
-
-					default:
-						return;
-					}
+					NodeHelper::set_comp_value(entity, &TextureFlip_Component::horizontal, horizontal);
 					});
 
 			}

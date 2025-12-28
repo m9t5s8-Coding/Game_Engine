@@ -225,7 +225,7 @@ namespace ag
 				rect.fill_color = Color(0, 255, 255, 40);
 				rect.border_color = Color(255, 0, 255, 255);
 				rect.border_thickness = -1.0f;
-				Renderer2D::draw_rectangle(rect, trans);
+				//Renderer2D::draw_rectangle(rect, trans);
 			}
 		}
 		

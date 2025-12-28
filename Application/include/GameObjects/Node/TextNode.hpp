@@ -110,7 +110,7 @@ namespace ag
       const auto& transform = Transform::get_world_transform(entity);
       auto& props = entity.get_component<TextProp>();
 
-      Renderer2D::draw_text(props.text, transform);
+      //Renderer2D::draw_text(props.text, transform);
     }
 
   };

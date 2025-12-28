@@ -14,6 +14,36 @@ namespace ag::NodeHelper
     return NodeType::None;
 	}
 
+	inline static AG_ref<Texture2D> create_texture(const std::string& path)
+	{
+		auto project = Project::get_active_project();
+		auto& project_path = project->get_directory();
+		auto& assets_path = project->get_assets_directory();
+		std::string new_path = project_path + assets_path + path;
+		auto texture = Texture2D::create(new_path);
+		return texture;
+	}
+
+	inline static AG_ref<Texture2D> load_texture(std::string& path)
+	{
+		auto project = Project::get_active_project();
+
+		Helper::normalize_path(path);
+
+		std::string project_dir = project->get_directory();
+		std::string assets_dir = project->get_assets_directory();
+
+		std::string base_path = project_dir + assets_dir;
+
+		if (path.find(base_path) == 0)
+			path = path.substr(base_path.size());
+
+		Helper::normalize_path(path);
+
+		return create_texture(path);
+	}
+
+
 	//C = Component R = ReturnType  D = DefaultValue
 	template< typename C, typename R, typename D = R>
 	inline static R get_comp_value(ag::Entity& entity, R C::* member_ptr, D default_value = D{})
@@ -46,20 +76,20 @@ namespace ag::NodeHelper
 	}
 
 	template<typename T>
-	void save_component(Entity entity, json& j, const std::string& key)
+	void save_component(Entity entity, json& j)
 	{
 		if (entity.has_component<T>())
 		{
-			j[key] = T::save_json(entity);
+			j[T::get_name()] = T::save_json(entity);
 		}
 	}
 
 	template<typename T>
-	void load_component(Entity entity, const json& j, const std::string& key)
+	void load_component(Entity entity, const json& j)
 	{
-		if (j.contains(key))
+		if (j.contains(T::get_name()))
 		{
-			T::load_json(entity, j[key]);
+			T::load_json(entity, j.at(T::get_name()));
 		}
 	}
 
@@ -84,22 +114,28 @@ namespace ag::NodeHelper
 			return Node_Capability::RectShape |
 				Node_Capability::Render2D |
 				Node_Capability::Physics2D |
+				Node_Capability::Transform |
 				Node_Capability::UI;
 
 		case ag::NodeType::Circle:
 			return Node_Capability::CircleShape | 
 				Node_Capability::Render2D | 
 				Node_Capability::Physics2D |
+				Node_Capability::Transform |
 				Node_Capability::UI;
 
 		case ag::NodeType::Sprite:
 			return Node_Capability::Render2D |
 				Node_Capability::Physics2D |
+				Node_Capability::Texture2D |
+				Node_Capability::Transform |
 				Node_Capability::UI;
 
 		case ag::NodeType::AnimatedSprite2D:
 			return Node_Capability::Render2D |
 				Node_Capability::Physics2D |
+				Node_Capability::Texture2D |
+				Node_Capability::Transform |
 				Node_Capability::UI;
 
 		case ag::NodeType::Camera:

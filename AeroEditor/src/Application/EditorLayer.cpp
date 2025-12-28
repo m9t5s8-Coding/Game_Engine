@@ -371,7 +371,7 @@ namespace ag
 	void EditorLayer::editor_things()
 	{
 		Rectangle x_axis, y_axis;
-		Transform x_axis_transform, y_axis_transform;
+		Transform_Component x_axis_transform, y_axis_transform;
 		x_axis.fill_color = Color(255, 107, 107, 200);
 		y_axis.fill_color = Color(78, 205, 196, 200);
 
@@ -473,7 +473,7 @@ namespace ag
 					width.mode = RenderMode::Screen;
 					height.mode = RenderMode::Screen;
 
-					Transform transform;
+					Transform_Component transform;
 
 
 					// Top
@@ -504,7 +504,7 @@ namespace ag
 		TransformAxis t_axis = m_panel->get_transform_axis();
 
 		Rectangle x_axis, y_axis;
-		Transform x_axis_transform, y_axis_transform;
+		Transform_Component x_axis_transform, y_axis_transform;
 
 		// Axis visual properties
 		x_axis.fill_color = Color(255, 107, 107, 180);
@@ -516,10 +516,10 @@ namespace ag
 		x_axis.mode = RenderMode::Screen;
 		y_axis.mode = RenderMode::Screen;
 
-		if (!e.has_component<Transform>())
+		if (!e.has_component<Transform_Component>())
 			return;
 
-		const auto& transform = Transform::get_world_transform(e);
+		const auto& transform = Transform_Component::get_world_transform(e);
 
 		vec2i x_pos = vec2i(view.get_center().x, transform.position.y);
 		vec2i y_pos = vec2i(transform.position.x, view.get_center().y);

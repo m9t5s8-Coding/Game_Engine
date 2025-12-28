@@ -32,7 +32,7 @@ namespace ag
 
 		NodeFactory::properties_map[NodeType::Rectangle] = NodeProperties::rectangle_2D;
 		NodeFactory::properties_map[NodeType::Circle] = NodeProperties::circle_2D;
-		NodeFactory::properties_map[NodeType::Sprite] = SpriteNode::show_properties;
+		NodeFactory::properties_map[NodeType::Sprite] = NodeProperties::sprite_2D;
 		NodeFactory::properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
 		NodeFactory::properties_map[NodeType::Camera] = CameraComponent::show_properties;
 		NodeFactory::properties_map[NodeType::TileMap] = TileMapNode::show_properties;
@@ -82,11 +82,11 @@ namespace ag
 		draw_scene_top_panel();
 		ImGui::Spacing();
 
-		auto view = m_scene->m_registry.view<Tag>();
+		auto view = m_scene->m_registry.view<Tag_Component>();
 		for (auto entityID : view)
 		{
 			Entity entity(entityID);
-			auto& tag = entity.get_component<Tag>();
+			auto& tag = entity.get_component<Tag_Component>();
 			if (tag.parent.get_id() == INVALID_ENTITY)
 			{
 				draw_node_hierarchy(entity, 0);
@@ -108,7 +108,7 @@ namespace ag
 
 		if (m_selected_entity)
 		{
-			auto& tag = m_selected_entity.get_component<Tag>();
+			auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
 				if (m_selected_entity.has_component<TileMapNode::TileMapProp>())
@@ -128,7 +128,7 @@ namespace ag
 			}
 			else if (tag.node_type == NodeType::Sprite)
 			{
-				auto& props = m_selected_entity.get_component<SpriteNode::SpriteProp>();
+			/*	auto& props = m_selected_entity.get_component<SpriteNode::SpriteProp>();
 
 				uint_rect texture_rect;
 				if (props.texture)
@@ -138,7 +138,7 @@ namespace ag
 						props.texture_rect = texture_rect;
 						props.size = texture_rect.size;
 					}
-				}
+				}*/
 			}
 		}
 
@@ -147,7 +147,7 @@ namespace ag
 
 	void ScenePanel::draw_node_hierarchy(Entity entity, int level)
 	{
-		auto& tag = entity.get_component<Tag>();
+		auto& tag = entity.get_component<Tag_Component>();
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
 		if (m_selected_entity == entity)
@@ -159,7 +159,7 @@ namespace ag
 		ImGui::Indent(level * 10.0f);
 
 		// Draw the tree node
-		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.tag.c_str());
+		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity.get_id(), flags, "%s", tag.name.c_str());
 
 		// Selection
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
@@ -172,9 +172,9 @@ namespace ag
 
 				if (m_selected_entity)
 				{
-					if (m_selected_entity.has_component<Tag>())
+					if (m_selected_entity.has_component<Tag_Component>())
 					{
-						auto& tag = m_selected_entity.get_component<Tag>();
+						auto& tag = m_selected_entity.get_component<Tag_Component>();
 						if (tag.node_type == NodeType::TileMap)
 						{
 							auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
@@ -439,12 +439,12 @@ namespace ag
 		ImGui::BeginChild(child_name, ImVec2(0, 0), true);
 		{
 			// Get all root entities (no parent)
-			auto view = m_scene->m_registry.view<Tag>();
+			auto view = m_scene->m_registry.view<Tag_Component>();
 			std::vector<Entity> root_entities;
 
 			for (auto entity_id : view) {
 				Entity entity(entity_id);
-				auto& tag = entity.get_component<Tag>();
+				auto& tag = entity.get_component<Tag_Component>();
 				if (!tag.parent || tag.parent.get_id() == INVALID_ENTITY) {
 					root_entities.push_back(entity);
 				}
@@ -483,9 +483,9 @@ namespace ag
 
 	//Draw Entity Node
 	void ScenePanel::draw_entity_node(Entity entity, int level) {
-		if (!entity || !entity.has_component<Tag>()) return;
+		if (!entity || !entity.has_component<Tag_Component>()) return;
 
-		auto& tag = entity.get_component<Tag>();
+		auto& tag = entity.get_component<Tag_Component>();
 		EntityID entity_id = entity.get_id();
 
 		// Skip filtered out entities
@@ -496,7 +496,7 @@ namespace ag
 
 		// Apply filter
 		if (!m_hierarchy_state.filter_text.empty()) {
-			std::string entity_name_lower = tag.tag;
+			std::string entity_name_lower = tag.name;
 			std::transform(entity_name_lower.begin(), entity_name_lower.end(),
 				entity_name_lower.begin(), ::tolower);
 			std::string filter_lower = m_hierarchy_state.filter_text;
@@ -536,7 +536,7 @@ namespace ag
 		push_entity_style(entity, is_selected);
 
 		// Tree node
-		bool node_open = ImGui::TreeNodeEx("##node", flags, "%s", tag.tag.c_str());
+		bool node_open = ImGui::TreeNodeEx("##node", flags, "%s", tag.name.c_str());
 
 		// Handle interactions
 		handle_entity_interactions(entity);
@@ -550,7 +550,7 @@ namespace ag
 			{
 				m_hierarchy_state.dragged_entity = entity;
 				ImGui::SetDragDropPayload("ENTITY_NODE", &entity_id, sizeof(EntityID));
-				ImGui::Text("%s", tag.tag.c_str());
+				ImGui::Text("%s", tag.name.c_str());
 				ImGui::EndDragDropSource();
 			}
 		}
@@ -660,20 +660,20 @@ namespace ag
 			ImGui::SameLine(ImGui::GetWindowWidth() - 150);
 
 			// Visibility toggle
-			if (m_selected_entity && m_selected_entity.has_component<Tag>()) {
-				auto& vis = m_selected_entity.get_component<Tag>();
+			if (m_selected_entity && m_selected_entity.has_component<Tag_Component>()) {
+				auto& vis = m_selected_entity.get_component<Tag_Component>();
 				if (draw_toolbar_button(
-					vis.is_visible ? Icons::EYE : Icons::EYE_SLASH,
-					vis.is_visible ? "Hide object" : "Show object")) {
-					vis.is_visible = !vis.is_visible;
+					vis.visible ? Icons::EYE : Icons::EYE_SLASH,
+					vis.visible ? "Hide object" : "Show object")) {
+					vis.visible = !vis.visible;
 				}
 			}
 
 			ImGui::SameLine();
 
 			// Lock toggle
-			if (m_selected_entity && m_selected_entity.has_component<Tag>()) {
-				auto& lock = m_selected_entity.get_component<Tag>();
+			if (m_selected_entity && m_selected_entity.has_component<Tag_Component>()) {
+				auto& lock = m_selected_entity.get_component<Tag_Component>();
 				if (draw_toolbar_button(
 					lock.locked ? Icons::LOCK : Icons::UNLOCK,
 					lock.locked ? "Unlock object" : "Lock object")) {
@@ -790,15 +790,15 @@ namespace ag
 		ImGui::Separator();
 
 		// Component toggles
-		if (entity.has_component<Tag>()) {
-			auto& vis = entity.get_component<Tag>();
-			if (ImGui::MenuItem(vis.is_visible ? "Hide" : "Show")) {
-				vis.is_visible = !vis.is_visible;
+		if (entity.has_component<Tag_Component>()) {
+			auto& vis = entity.get_component<Tag_Component>();
+			if (ImGui::MenuItem(vis.visible ? "Hide" : "Show")) {
+				vis.visible = !vis.visible;
 			}
 		}
 
-		if (entity.has_component<Tag>()) {
-			auto& lock = entity.get_component<Tag>();
+		if (entity.has_component<Tag_Component>()) {
+			auto& lock = entity.get_component<Tag_Component>();
 			if (ImGui::MenuItem(lock.locked ? "Unlock" : "Lock")) {
 				lock.locked = !lock.locked;
 			}
@@ -879,8 +879,8 @@ namespace ag
 		}
 
 		// Disabled entity
-		if (entity.has_component<Tag>() &&
-			!entity.get_component<Tag>().is_visible) {
+		if (entity.has_component<Tag_Component>() &&
+			!entity.get_component<Tag_Component>().visible) {
 			text_color = m_hierarchy_state.disabled_color;
 		}
 
@@ -890,8 +890,8 @@ namespace ag
 		}*/
 
 		// Locked entity
-		if (entity.has_component<Tag>() &&
-			entity.get_component<Tag>().locked) {
+		if (entity.has_component<Tag_Component>() &&
+			entity.get_component<Tag_Component>().locked) {
 			text_color = m_hierarchy_state.disabled_color;
 		}
 
@@ -902,9 +902,9 @@ namespace ag
 	}
 
 	std::string ScenePanel::get_icon_for_entity(Entity entity) {
-		if (!entity.has_component<Tag>()) return "?";
+		if (!entity.has_component<Tag_Component>()) return "?";
 
-		auto& tag = entity.get_component<Tag>();
+		auto& tag = entity.get_component<Tag_Component>();
 
 		switch (tag.node_type) {
 			//case NodeType::Empty: return ICON_FA_CUBE;
@@ -930,8 +930,8 @@ namespace ag
 		m_move_flag = m_scale_flag = m_rotate_flag = false;
 
 		// Handle tilemap specific logic
-		if (m_selected_entity.has_component<Tag>() &&
-			m_selected_entity.get_component<Tag>().node_type == NodeType::TileMap) {
+		if (m_selected_entity.has_component<Tag_Component>() &&
+			m_selected_entity.get_component<Tag_Component>().node_type == NodeType::TileMap) {
 			auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
 			props.display_ghost = true;
 		}
@@ -948,7 +948,7 @@ namespace ag
 	}
 
 	void ScenePanel::expand_all_nodes() {
-		auto view = m_scene->m_registry.view<Tag>();
+		auto view = m_scene->m_registry.view<Tag_Component>();
 		for (auto entity_id : view) {
 			m_hierarchy_state.expanded_nodes.insert(static_cast<EntityID>(entity_id));
 		}
@@ -969,17 +969,17 @@ namespace ag
 
 		if (!child || !new_parent) return;
 
-		auto& child_tag = child.get_component<Tag>();
-		auto& parent_tag = new_parent.get_component<Tag>();
+		auto& child_tag = child.get_component<Tag_Component>();
+		auto& parent_tag = new_parent.get_component<Tag_Component>();
 
-		Transform child_transform;
-		if(child.has_component<Transform>())
-			child_transform = Transform::get_world_transform(child);
+		Transform_Component child_transform;
+		if(child.has_component<Transform_Component>())
+			child_transform = Transform_Component::get_world_transform(child);
 
 		
 		if (child_tag.parent)
 		{
-			auto& old_parent_tag = child_tag.parent.get_component<Tag>();
+			auto& old_parent_tag = child_tag.parent.get_component<Tag_Component>();
 			auto it = std::find(old_parent_tag.children.begin(),
 				old_parent_tag.children.end(), child);
 			if (it != old_parent_tag.children.end())
@@ -991,14 +991,14 @@ namespace ag
 		parent_tag.children.push_back(child);
 
 
-		if(child.has_component<Transform>())
+		if(child.has_component<Transform_Component>())
 		{
-			Transform::get_local_transform(child, child_transform);
+			Transform_Component::get_local_transform(child, child_transform);
 		}
 		
 
 		AERO_INFO("Reparented {} to {}",
-			child_tag.tag, parent_tag.tag);
+			child_tag.name, parent_tag.name);
 	}
 
 	void ScenePanel::make_root_entity()
@@ -1006,12 +1006,12 @@ namespace ag
 		if (!m_selected_entity && m_selected_entity.get_id() == INVALID_ENTITY)
 			return;
 
-		auto& tag = m_selected_entity.get_component<Tag>();
-		auto child_transform = Transform::get_world_transform(m_selected_entity);
+		auto& tag = m_selected_entity.get_component<Tag_Component>();
+		auto child_transform = Transform_Component::get_world_transform(m_selected_entity);
 
 		if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
 		{
-			auto& parent_tag = tag.parent.get_component<Tag>();
+			auto& parent_tag = tag.parent.get_component<Tag_Component>();
 			auto it = std::find(parent_tag.children.begin(),
 				parent_tag.children.end(), m_selected_entity);
 			if (it != parent_tag.children.end())
@@ -1021,7 +1021,7 @@ namespace ag
 			tag.parent = Entity{};
 		}
 
-		auto& transform = m_selected_entity.get_component<Transform>();
+		auto& transform = m_selected_entity.get_component<Transform_Component>();
 		transform = child_transform;
 	}
 
@@ -1183,8 +1183,8 @@ namespace ag
 
 		// Parent to selected entity if one is selected
 		if (m_selected_entity) {
-			auto& selected_tag = m_selected_entity.get_component<Tag>();
-			auto& new_tag = new_entity.get_component<Tag>();
+			auto& selected_tag = m_selected_entity.get_component<Tag_Component>();
+			auto& new_tag = new_entity.get_component<Tag_Component>();
 			new_tag.parent = m_selected_entity;
 			selected_tag.children.push_back(new_entity);
 		}
@@ -1215,7 +1215,7 @@ namespace ag
 
 	void ScenePanel::draw_properties_panel()
 	{
-		auto type = m_selected_entity.get_component<Tag>().node_type;
+		auto type = m_selected_entity.get_component<Tag_Component>().node_type;
 		auto it = NodeFactory::properties_map.find(type);
 		if (it != NodeFactory::properties_map.end())
 			it->second(m_selected_entity);
@@ -1245,8 +1245,8 @@ namespace ag
 
 	//			if (m_selected_entity)
 	//			{
-	//				auto& tag = m_selected_entity.get_component<Tag>();
-	//				auto& new_e_tag = newEntity.get_component<Tag>();
+	//				auto& tag = m_selected_entity.get_component<Tag_Component>();
+	//				auto& new_e_tag = newEntity.get_component<Tag_Component>();
 
 	//				new_e_tag.parent = m_selected_entity;
 	//				tag.children.push_back(newEntity);
@@ -1264,11 +1264,11 @@ namespace ag
 		if (m_selected_entity.get_id() == INVALID_ENTITY)
 			return;
 
-		if (m_selected_entity.has_component<Transform>())
+		if (m_selected_entity.has_component<Transform_Component>())
 		{
-			auto& name = m_selected_entity.get_component<Tag>().tag;
-			auto trans = Transform::get_world_transform(m_selected_entity);
-			Transform transform;
+			auto& name = m_selected_entity.get_component<Tag_Component>().name;
+			auto trans = Transform_Component::get_world_transform(m_selected_entity);
+			Transform_Component transform;
 			transform.position = Math::world_to_screen(trans.position, EditorLayer::get().get_float_rect(), EditorLayer::get().get_viewport_size());
 			Text text;
 			text.text = name;
@@ -1281,7 +1281,7 @@ namespace ag
 
 	void ScenePanel::update_transform_settings()
 	{
-		if (!m_selected_entity || !m_selected_entity.has_component<Transform>())
+		if (!m_selected_entity || !m_selected_entity.has_component<Transform_Component>())
 			return;
 
 		switch (m_current_transform_setting)
@@ -1295,12 +1295,12 @@ namespace ag
 			scale_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_initial_transform.scale = m_selected_entity.get_component<Transform>().scale;
+				m_initial_transform.scale = m_selected_entity.get_component<Transform_Component>().scale;
 				reset_transform_setting();
 			}
 			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
 			{
-				auto& scale = m_selected_entity.get_component<Transform>().scale;
+				auto& scale = m_selected_entity.get_component<Transform_Component>().scale;
 				scale = m_initial_transform.scale;
 				reset_transform_setting();
 			}
@@ -1311,12 +1311,12 @@ namespace ag
 			rotate_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_initial_transform.rotation = m_selected_entity.get_component<Transform>().rotation;
+				m_initial_transform.rotation = m_selected_entity.get_component<Transform_Component>().rotation;
 				reset_transform_setting();
 			}
 			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
 			{
-				auto& rotation = m_selected_entity.get_component<Transform>().rotation;
+				auto& rotation = m_selected_entity.get_component<Transform_Component>().rotation;
 				rotation = m_initial_transform.rotation;
 				reset_transform_setting();
 			}
@@ -1327,23 +1327,23 @@ namespace ag
 			move_transform_setting();
 			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
 			{
-				m_initial_transform.position = m_selected_entity.get_component<Transform>().position;
+				m_initial_transform.position = m_selected_entity.get_component<Transform_Component>().position;
 				reset_transform_setting();
 			}
 			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
 			{
-				auto& position = m_selected_entity.get_component<Transform>().position;
+				auto& position = m_selected_entity.get_component<Transform_Component>().position;
 				position = m_initial_transform.position;
 				reset_transform_setting();
 			}
 			return;
 		}
-		default: AERO_CORE_ERROR("No sucn Transform Setting!"); break;
+		default: AERO_CORE_ERROR("No sucn Transform_Component Setting!"); break;
 		}
 	}
 	void ScenePanel::move_transform_setting()
 	{
-		auto& position = m_selected_entity.get_component<Transform>().position;
+		auto& position = m_selected_entity.get_component<Transform_Component>().position;
 		if (!m_move_flag)
 		{
 			m_initial_transform.position = position;
@@ -1386,8 +1386,8 @@ namespace ag
 	}
 	void ScenePanel::rotate_transform_setting()
 	{
-		auto& rotation = m_selected_entity.get_component<Transform>().rotation;
-		auto position = Transform::get_world_transform(m_selected_entity).position;
+		auto& rotation = m_selected_entity.get_component<Transform_Component>().rotation;
+		auto position = Transform_Component::get_world_transform(m_selected_entity).position;
 
 		if (!m_rotate_flag)
 		{
@@ -1405,8 +1405,8 @@ namespace ag
 	}
 	void ScenePanel::scale_transform_setting()
 	{
-		auto& transform = m_selected_entity.get_component<Transform>();
-		auto position = Transform::get_world_transform(m_selected_entity).position;
+		auto& transform = m_selected_entity.get_component<Transform_Component>();
+		auto position = Transform_Component::get_world_transform(m_selected_entity).position;
 
 		if (!m_scale_flag)
 		{
@@ -1489,7 +1489,7 @@ namespace ag
 		if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY)
 			return;
 
-		auto& parent = m_selected_entity.get_component<Tag>().parent;
+		auto& parent = m_selected_entity.get_component<Tag_Component>().parent;
 		auto new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
 
 		m_selected_entity = new_entity;
@@ -1515,9 +1515,9 @@ namespace ag
 		if (!m_selected_entity)
 			return;
 
-		if (m_selected_entity.has_component<Tag>())
+		if (m_selected_entity.has_component<Tag_Component>())
 		{
-			const auto& tag = m_selected_entity.get_component<Tag>();
+			const auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
 				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
@@ -1621,9 +1621,9 @@ namespace ag
 		if (!m_selected_entity)
 			return false;
 
-		if (m_selected_entity.has_component<Tag>() && EditorLayer::get().is_viewport_hovered())
+		if (m_selected_entity.has_component<Tag_Component>() && EditorLayer::get().is_viewport_hovered())
 		{
-			const auto& tag = m_selected_entity.get_component<Tag>();
+			const auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
 				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();

@@ -261,8 +261,8 @@ namespace ag
         rect.border_color = props.normal_border_color;
         text.text_color = props.normal_text_color;
       }
-      Renderer2D::draw_rectangle(rect, transform);
-      Renderer2D::draw_text(text, transform);
+      //Renderer2D::draw_rectangle(rect, transform);
+      //Renderer2D::draw_text(text, transform);
     }
   };
 

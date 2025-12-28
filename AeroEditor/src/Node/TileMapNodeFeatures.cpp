@@ -43,9 +43,6 @@ namespace ag
         ImVec2 image_size(texture->get_size().x, texture->get_size().y);
         ImGui::Image((void*)texture->get_texture_id(), image_size);
 
-        // ======================
-        //  TILE SELECTION LOGIC
-        // ======================
 
         ImVec2 min = ImGui::GetItemRectMin();
         ImVec2 max = ImGui::GetItemRectMax();
@@ -112,7 +109,6 @@ namespace ag
     }
     ImGui::End();
   }
-
 
 	void TileMapNodeFeatures::texture_selector_gui(const AG_ref<Texture2D>& texture, uint_rect& texture_rect)
 	{

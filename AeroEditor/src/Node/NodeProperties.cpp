@@ -1,5 +1,6 @@
-#include <Node/NodeProperties.hpp>
+﻿#include <Node/NodeProperties.hpp>
 #include <Aero.hpp>
+#include <UI/UI.hpp>
 
 namespace ag
 {
@@ -16,6 +17,9 @@ namespace ag
 		REGISTER_COMPONENT(Corner_Component);
 		REGISTER_COMPONENT(UI_Component);
 	}
+
+
+
 	void NodeProperties::draw_added_components(Entity entity)
 	{
 		for (auto& info : comps)
@@ -95,12 +99,14 @@ namespace ag
 			{
 				if (!info.is_compatible(NodeHelper::get_nodetype(entity)))
 					continue;
+				ImGui::Spacing();
 				if (ImGui::MenuItem(info.name))
 				{
 					info.create(entity); 
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::Spacing();
+				ImGui::Separator();
 			}
 
 			ImGui::EndPopup();
@@ -163,6 +169,85 @@ namespace ag
 				UI::draw_color("Color", props.color);
 			}, false);
 	}
+	void Texture_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Texture_Component>("Texture Component", entity,
+			[](Texture_Component& props)
+			{
+				UI::draw_texture(props);
+				ImGui::Dummy(spacing);
+
+			}, false);
+	}
+	void TextureRect_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<TextureRect_Component>("TextureRect Component", entity,
+			[entity](TextureRect_Component& props) mutable
+			{
+				UI::draw_vec2("Position", props.rect.position);
+				ImGui::Dummy(spacing);
+
+				vec2u reset_value;
+				if (entity.has_component<Texture_Component>())
+				{
+					const auto& texture = entity.get_component<Texture_Component>();
+					reset_value = texture.texture->get_size();
+				}
+				UI::draw_vec2("Size", props.rect.size, reset_value);
+
+			}, true);
+	}
+	void TextureFlip_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<TextureFlip_Component>("TextureFlip Component", entity,
+			[entity](TextureFlip_Component& props) mutable
+			{
+				UI::draw_bool("Horizontal", props.horizontal);
+				ImGui::Dummy(spacing);
+
+				UI::draw_bool("Vertical", props.vertical);
+				ImGui::Dummy(spacing);
+
+			}, true);
+	}
+	void Transform_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Transform_Component>("Transform Component", entity,
+			[](Transform_Component& transform)
+			{
+				UI::draw_vec2("Position", transform.position, { 0, 0 });
+
+				ImGui::Dummy(spacing);
+				UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
+
+				ImGui::Dummy(spacing);
+				UI::draw_value("Rotation", transform.rotation);
+			}, false);
+	}
+	void Tag_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Tag_Component>("Tag_Component", entity,
+			[](Tag_Component& tag)
+			{
+				UI::draw_string("Name", tag.name);
+				ImGui::Dummy(spacing);
+
+				UI::draw_bool("Visible", tag.visible);
+				ImGui::Dummy(spacing);
+
+				UI::draw_bool("Lock", tag.locked);
+			}, false);
+	}
+	void Script_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Script_Component>("Scirpt Component", entity,
+			[](Script_Component& props)
+			{
+				UI::draw_string("Name", props.path);
+
+			}, false);
+	}
+
 
 
 	void NodeProperties::animated_sprite_2D(Entity entity)
@@ -170,6 +255,8 @@ namespace ag
 
 	}
 	
+
+
 	void NodeProperties::button_2D(Entity entity)
 	{
 
@@ -187,16 +274,9 @@ namespace ag
 	
 	void NodeProperties::circle_2D(Entity entity)
 	{
-		tag(entity);
-		transform(entity);
-		draw_component_node<CircleNode::Circle_Component>("Circle", entity,
-			[](CircleNode::Circle_Component& props)
-			{
-				UI::draw_vec2("Size", props.size);
-				ImGui::Dummy(spacing);
-
-				UI::draw_color("Color", props.color);
-			}, false);
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		Render2D_Component::imgui_render(entity);
 
 		add_component(entity);
 		draw_added_components(entity);
@@ -204,10 +284,9 @@ namespace ag
 	
 	void NodeProperties::rectangle_2D(Entity entity)
 	{
-		tag(entity);
-		transform(entity);
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
 		Render2D_Component::imgui_render(entity);
-
 
 		add_component(entity);
 		draw_added_components(entity);
@@ -220,7 +299,13 @@ namespace ag
 	
 	void NodeProperties::sprite_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		Texture_Component::imgui_render(entity);
 
+
+		add_component(entity);
+		draw_added_components(entity);
 	}
 	
 	void NodeProperties::text_2D(Entity entity)

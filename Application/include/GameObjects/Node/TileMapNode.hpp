@@ -222,12 +222,12 @@ namespace ag
 
 				trans.position = (position * props.size) + props.size / 2 + props.offset;
 
-        Renderer2D::draw_sprite(sprite, trans);
+        //Renderer2D::draw_sprite(sprite, trans);
 			}
 			if (props.display_ghost)
 			{
 				trans.position = (props.ghost_sprite_position * props.size) + props.size / 2 + props.offset;
-				Renderer2D::draw_sprite(props.ghost_sprite, trans);
+				//Renderer2D::draw_sprite(props.ghost_sprite, trans);
 			}
 		}
 	};

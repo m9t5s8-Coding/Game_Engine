@@ -9,7 +9,8 @@
 
 namespace ag
 {
-
+  struct Transform_Component;
+  struct Text;
   class Renderer2D
   {
   public:
@@ -25,10 +26,10 @@ namespace ag
     static void start_batch();
     static void set_texture(const AG_ref<Texture> &texture);
 
-    static void draw_rectangle(const Rectangle& rect, const Transform& transform);
-    static void draw_circle(const Circle& circle, const Transform& transform);
-    static void draw_sprite(const Sprite& sprite, const Transform& transform);
-    static void draw_text(const Text& text, const Transform& transform);
+    static void draw_rectangle(const Rectangle& rect, const Transform_Component& transform);
+    static void draw_circle(const Circle& circle, const Transform_Component& transform);
+    static void draw_sprite(const Sprite& sprite, const Transform_Component& transform);
+    static void draw_text(const Text& text, const Transform_Component& transform);
 
   };
 }

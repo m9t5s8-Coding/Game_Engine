@@ -351,7 +351,7 @@ namespace ag
 			sprite.size = s.texture_rect.size;
 			sprite.flip_horizontal = s.flip_horizontal;
 			sprite.flip_vertical = s.flip_vertical;
-			Renderer2D::draw_sprite(sprite, transform);
+			//Renderer2D::draw_sprite(sprite, transform);
 		}
 
 		static bool play_animation(Entity entity, const std::string& anim_name)
