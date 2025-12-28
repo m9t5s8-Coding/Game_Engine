@@ -16,6 +16,9 @@ namespace ag
 		REGISTER_COMPONENT(Border_Component);
 		REGISTER_COMPONENT(Corner_Component);
 		REGISTER_COMPONENT(UI_Component);
+		REGISTER_COMPONENT(TextureRect_Component);
+		REGISTER_COMPONENT(TextureFlip_Component);
+		REGISTER_COMPONENT(Script_Component);
 	}
 
 
@@ -100,6 +103,7 @@ namespace ag
 				if (!info.is_compatible(NodeHelper::get_nodetype(entity)))
 					continue;
 				ImGui::Spacing();
+				
 				if (ImGui::MenuItem(info.name))
 				{
 					info.create(entity); 
@@ -172,9 +176,9 @@ namespace ag
 	void Texture_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Texture_Component>("Texture Component", entity,
-			[](Texture_Component& props)
+			[entity](Texture_Component& props)
 			{
-				UI::draw_texture(props);
+				UI::draw_texture(entity);
 				ImGui::Dummy(spacing);
 
 			}, false);
@@ -226,7 +230,7 @@ namespace ag
 	}
 	void Tag_Component::imgui_render(Entity entity)
 	{
-		NodeProperties::draw_component_node<Tag_Component>("Tag_Component", entity,
+		NodeProperties::draw_component_node<Tag_Component>("Tag Component", entity,
 			[](Tag_Component& tag)
 			{
 				UI::draw_string("Name", tag.name);
@@ -245,7 +249,7 @@ namespace ag
 			{
 				UI::draw_string("Name", props.path);
 
-			}, false);
+			}, true);
 	}
 
 
@@ -284,6 +288,7 @@ namespace ag
 	
 	void NodeProperties::rectangle_2D(Entity entity)
 	{
+		
 		Tag_Component::imgui_render(entity);
 		Transform_Component::imgui_render(entity);
 		Render2D_Component::imgui_render(entity);

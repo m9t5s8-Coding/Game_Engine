@@ -25,7 +25,7 @@ namespace ag
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
 		Entity entity(m_registry.create());
-
+		
 		Tag_Component tag;
 		tag.name = name;
 		tag.index = m_next_index++;

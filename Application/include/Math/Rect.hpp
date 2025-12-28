@@ -45,6 +45,7 @@ namespace ag
           other.w = size.y;
         }
 
+
         bool intersects(const  rect& other) const
         {
           return  (position.x < other.position.x + other.size.x ) &&

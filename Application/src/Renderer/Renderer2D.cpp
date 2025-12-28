@@ -127,7 +127,6 @@ namespace ag
 			s_data->quad_vertex_array->set_index_buffer(indexbuffer);
 			s_data->quad_shader = ag::Shader::create("assets/shaders/Quad.glsl");
 
-			s_data->quad_texture = ag::Texture2D::create("assets/textures/default.png", false);
 
 			int samplers[2];
 			for (int i = 0; i < 2; i++)
@@ -253,9 +252,18 @@ namespace ag
 			instance->quad_mode = static_cast<int>(Quad_Type::Sprite);
 			instance->texture_slot = 1;
 
-
-			instance->texture_size = s_data->quad_texture->get_size();
-			sprite.texture_rect.to_vec4(instance->texture_rect);
+			if (s_data->quad_texture)
+			{
+				instance->texture_size = s_data->quad_texture->get_size();
+				sprite.texture_rect.to_vec4(instance->texture_rect);
+				if (sprite.texture_rect.size == 0)
+				{
+					instance->texture_rect.z = instance->texture_size.x;
+					instance->texture_rect.w = instance->texture_size.y;
+				}
+				
+			}
+			
 
 
 			instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
@@ -336,7 +344,10 @@ namespace ag
 
 		
 		s_data->text_texture->bind(0);
-		s_data->quad_texture->bind(1);
+		if (s_data->quad_texture)
+		{
+			s_data->quad_texture->bind(1);
+		}
 		Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, s_data->quad_index);
 
 		s_data->quad_index = 0;

@@ -556,8 +556,10 @@ namespace ag::UI
     handle_dialogs(state);
   }
 
-  void draw_texture(Texture_Component& props)
+  void draw_texture(Entity entity)
   {
+    auto& props = entity.get_component<Texture_Component>();
+
     ImGui::Text("Texture");
     ImGui::SameLine();
 
@@ -674,6 +676,11 @@ namespace ag::UI
         try {
           props.path = selected_path;
           props.texture = NodeHelper::load_texture(props.path);
+          if (entity.has_component<Render2D_Component>())
+          {
+            auto& render = entity.get_component<Render2D_Component>();
+            render.size = props.texture->get_size();
+          }
         }
         catch (const std::exception& e)
         {

@@ -495,6 +495,7 @@ namespace ag
 		static bool is_compatible(NodeType type)
 		{
 			auto caps = NodeHelper::get_node_capabilities(type);
+			//AERO_CORE_INFO("Node Type:{0}", static_cast<int>(type));
 			return NodeHelper::has_capability(caps, Node_Capability::RectShape);
 		}
 

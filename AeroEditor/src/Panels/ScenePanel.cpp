@@ -611,7 +611,8 @@ namespace ag
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
 
 
-			if (draw_toolbar_button(Icons::PLUS, "Create new object")) {
+			if (draw_toolbar_button(Icons::PLUS, "Create new object"))
+			{
 				m_show_create_panel = true;
 			}
 
@@ -1169,7 +1170,8 @@ namespace ag
 		ImGui::PopID();
 	}
 
-	void ScenePanel::create_selected_object(NodeType type) {
+	void ScenePanel::create_selected_object(NodeType type)
+	{
 		auto it = NodeFactory::nodes.find(type);
 		auto create_it = NodeFactory::create_map.find(type);
 
@@ -1180,9 +1182,9 @@ namespace ag
 
 		// Create the entity
 		Entity new_entity = m_scene->create_entity(it->second, type);
-
 		// Parent to selected entity if one is selected
-		if (m_selected_entity) {
+		if (m_selected_entity)
+		{
 			auto& selected_tag = m_selected_entity.get_component<Tag_Component>();
 			auto& new_tag = new_entity.get_component<Tag_Component>();
 			new_tag.parent = m_selected_entity;
@@ -1215,10 +1217,12 @@ namespace ag
 
 	void ScenePanel::draw_properties_panel()
 	{
-		auto type = m_selected_entity.get_component<Tag_Component>().node_type;
-		auto it = NodeFactory::properties_map.find(type);
+		const auto& tag = m_selected_entity.get_component<Tag_Component>();
+
+		auto it = NodeFactory::properties_map.find(tag.node_type);
 		if (it != NodeFactory::properties_map.end())
 			it->second(m_selected_entity);
+			
 	}
 
 	//void ScenePanel::draw_create_object()
