@@ -1,6 +1,5 @@
 ﻿#include <Panels/ScenePanel.hpp>
 #include <Application/EditorLayer.hpp>
-#include <Node/TileMapNodeFeatures.hpp>
 #include <Node/NodeProperties.hpp>
 #include <UI/UI.hpp>
 
@@ -33,16 +32,16 @@ namespace ag
 		NodeFactory::properties_map[NodeType::Rectangle] = NodeProperties::rectangle_2D;
 		NodeFactory::properties_map[NodeType::Circle] = NodeProperties::circle_2D;
 		NodeFactory::properties_map[NodeType::Sprite] = NodeProperties::sprite_2D;
-		NodeFactory::properties_map[NodeType::AnimatedSprite2D] = AnimatedSprite2DNode::show_properties;
-		NodeFactory::properties_map[NodeType::Camera] = CameraComponent::show_properties;
-		NodeFactory::properties_map[NodeType::TileMap] = TileMapNode::show_properties;
-		NodeFactory::properties_map[NodeType::Scene2D] = Scene2D::show_properties;
+		NodeFactory::properties_map[NodeType::AnimatedSprite2D] = NodeProperties::animated_sprite_2D;
+		NodeFactory::properties_map[NodeType::Camera] = NodeProperties::camera_2D;
+		NodeFactory::properties_map[NodeType::TileMap] = NodeProperties::tilemap_2D;
+		NodeFactory::properties_map[NodeType::Scene2D] = NodeProperties::scene_2D;
 		NodeFactory::properties_map[NodeType::TextNode] = TextNode::show_properties;
 		NodeFactory::properties_map[NodeType::Button] = ButtonNode::show_properties;
 		NodeFactory::properties_map[NodeType::TextureButton] = TextureButton::show_properties;
 		NodeFactory::properties_map[NodeType::CollisionShape] = CollisionShape::show_properties;
 
-	}	
+	}
 
 	void ScenePanel::set_scene(const AG_ref<Scene>& scene)
 	{
@@ -58,7 +57,7 @@ namespace ag
 
 		m_last_mouse_position = m_current_mouse_position;
 
-		
+
 	}
 
 	void ScenePanel::on_event(Event& e)
@@ -98,10 +97,7 @@ namespace ag
 		draw_scene_hierarchy();
 
 
-		ImGui::Begin("Properties");
-		if (m_selected_entity)
-			draw_properties_panel();
-		ImGui::End();
+		draw_properties_panel();
 
 		if (m_show_create_panel)
 			draw_create_object();
@@ -111,11 +107,11 @@ namespace ag
 			auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
-				if (m_selected_entity.has_component<TileMapNode::TileMapProp>())
+				if (m_selected_entity.has_component<Tile_Component>())
 				{
-					auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+					auto& props = m_selected_entity.get_component<Tile_Component>();
 					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
-					TileMapNodeFeatures::register_tile(m_selected_entity);
+					//TileMapNodeFeatures::register_tile(m_selected_entity);
 
 					/*m_is_texture_selected = (texture_selector(props.texture, props.size, m_texture_rect));
 					if (m_is_texture_selected)
@@ -128,17 +124,23 @@ namespace ag
 			}
 			else if (tag.node_type == NodeType::Sprite)
 			{
-			/*	auto& props = m_selected_entity.get_component<SpriteNode::SpriteProp>();
-
-				uint_rect texture_rect;
-				if (props.texture)
+				if (m_selected_entity.has_component<TextureRect_Component>())
 				{
-					if (UI::texture_selector(props.texture, texture_rect))
+					auto& rects = m_selected_entity.get_component<TextureRect_Component>();
+					auto& sizes = m_selected_entity.get_component<Render2D_Component>();
+					auto& texture = m_selected_entity.get_component<Texture_Component>().texture;
+
+					uint_rect texture_rect;
+					if (texture)
 					{
-						props.texture_rect = texture_rect;
-						props.size = texture_rect.size;
+						if (UI::texture_selector(texture, texture_rect))
+						{
+							rects.rect = texture_rect;
+							sizes.size = texture_rect.size;
+						}
 					}
-				}*/
+				}
+				
 			}
 		}
 
@@ -169,20 +171,6 @@ namespace ag
 				m_move_flag = false;
 				m_scale_flag = false;
 				m_rotate_flag = false;
-
-				if (m_selected_entity)
-				{
-					if (m_selected_entity.has_component<Tag_Component>())
-					{
-						auto& tag = m_selected_entity.get_component<Tag_Component>();
-						if (tag.node_type == NodeType::TileMap)
-						{
-							auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-							props.display_ghost = false;
-						}
-					}
-				}
-
 			}
 			m_selected_entity = entity;
 		}
@@ -309,7 +297,7 @@ namespace ag
 
 			// Display categories
 			for (const auto& [category, nodes] : categorized_nodes) {
-				
+
 				if (!should_show_category(category, state)) continue;
 
 				// Filter by search
@@ -331,16 +319,16 @@ namespace ag
 				if (category_open) {
 					ImGui::Indent(10.0f);
 
-					if (state.show_categories) 
+					if (state.show_categories)
 					{
-						for (const auto& [type, name] : filtered_nodes) 
+						for (const auto& [type, name] : filtered_nodes)
 						{
 							draw_object_button(type, name, state);
 							ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
 						}
 					}
 					else {
-						
+
 						for (const auto& [type, name] : filtered_nodes) {
 							draw_object_list_item(type, name, state);
 						}
@@ -531,7 +519,7 @@ namespace ag
 		// Push unique ID for this node
 		ImGui::PushID(static_cast<int>(entity_id));
 
-		
+
 		ImGui::Indent(level * m_hierarchy_state.indent_size);
 		push_entity_style(entity, is_selected);
 
@@ -930,12 +918,12 @@ namespace ag
 		m_selected_entity = entity;
 		m_move_flag = m_scale_flag = m_rotate_flag = false;
 
-		// Handle tilemap specific logic
-		if (m_selected_entity.has_component<Tag_Component>() &&
-			m_selected_entity.get_component<Tag_Component>().node_type == NodeType::TileMap) {
-			auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-			props.display_ghost = true;
-		}
+		//// Handle tilemap specific logic
+		//if (m_selected_entity.has_component<Tag_Component>() &&
+		//	m_selected_entity.get_component<Tag_Component>().node_type == NodeType::TileMap) {
+		//	auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
+		//	props.display_ghost = true;
+		//}
 
 		// Notify selection change
 		//on_entity_selected(entity);
@@ -955,7 +943,7 @@ namespace ag
 		}
 	}
 
-	void ScenePanel::collapse_all_nodes() 
+	void ScenePanel::collapse_all_nodes()
 	{
 		m_hierarchy_state.expanded_nodes.clear();
 	}
@@ -974,10 +962,10 @@ namespace ag
 		auto& parent_tag = new_parent.get_component<Tag_Component>();
 
 		Transform_Component child_transform;
-		if(child.has_component<Transform_Component>())
+		if (child.has_component<Transform_Component>())
 			child_transform = Transform_Component::get_world_transform(child);
 
-		
+
 		if (child_tag.parent)
 		{
 			auto& old_parent_tag = child_tag.parent.get_component<Tag_Component>();
@@ -992,11 +980,11 @@ namespace ag
 		parent_tag.children.push_back(child);
 
 
-		if(child.has_component<Transform_Component>())
+		if (child.has_component<Transform_Component>())
 		{
 			Transform_Component::get_local_transform(child, child_transform);
 		}
-		
+
 
 		AERO_INFO("Reparented {} to {}",
 			child_tag.name, parent_tag.name);
@@ -1088,11 +1076,11 @@ namespace ag
 		std::string display_text = name;
 		ImVec2 text_size = ImGui::CalcTextSize(name.c_str());
 		const float max_text_width = button_size.x - 10.0f;
-		if (text_size.x > max_text_width) 
+		if (text_size.x > max_text_width)
 		{
 			float avg_char_width = text_size.x / display_text.length();
 			int max_chars = static_cast<int>(max_text_width / avg_char_width) - 3;
-			if (max_chars > 3) 
+			if (max_chars > 3)
 			{
 				display_text = display_text.substr(0, max_chars) + "...";
 				text_size = ImGui::CalcTextSize(display_text.c_str());
@@ -1105,7 +1093,7 @@ namespace ag
 
 		ImGui::PopStyleColor(3);
 
-		
+
 		if (is_selected) {
 			ImDrawList* draw_list = ImGui::GetWindowDrawList();
 			ImVec2 rect_min = ImGui::GetItemRectMin();
@@ -1217,12 +1205,15 @@ namespace ag
 
 	void ScenePanel::draw_properties_panel()
 	{
-		const auto& tag = m_selected_entity.get_component<Tag_Component>();
-
-		auto it = NodeFactory::properties_map.find(tag.node_type);
-		if (it != NodeFactory::properties_map.end())
-			it->second(m_selected_entity);
-			
+		ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoScrollbar);
+		if (m_selected_entity)
+		{
+			const auto& tag = m_selected_entity.get_component<Tag_Component>();
+			auto it = NodeFactory::properties_map.find(tag.node_type);
+			if (it != NodeFactory::properties_map.end())
+				it->second(m_selected_entity);
+		}
+		ImGui::End();
 	}
 
 	//void ScenePanel::draw_create_object()
@@ -1519,33 +1510,6 @@ namespace ag
 		if (!m_selected_entity)
 			return;
 
-		if (m_selected_entity.has_component<Tag_Component>())
-		{
-			const auto& tag = m_selected_entity.get_component<Tag_Component>();
-			if (tag.node_type == NodeType::TileMap)
-			{
-				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-				if (EditorLayer::get().is_viewport_hovered())
-				{
-					if (props.display_ghost)
-					{
-						vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
-						vec2i tile_pos = {
-							(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
-							(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
-						};
-
-						props.ghost_sprite.texture_rect = m_texture_rect;
-						props.ghost_sprite_position = tile_pos;
-						props.ghost_sprite.size = props.size;
-					}
-				}
-				else
-				{
-					props.ghost_sprite.size = { 0, 0 };
-				}
-			}
-		}
 	}
 
 	bool ScenePanel::texture_selector(const AG_ref<Texture2D>& texture, const vec2u& tile_size, uint_rect& texture_rect)
@@ -1630,34 +1594,30 @@ namespace ag
 			const auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
-				auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-				if (props.display_ghost)
-				{
-					vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
-					vec2i tile_pos = {
-						(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
-						(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
-					};
+				if (!m_selected_entity.has_component<Tile_Component>())
+					return false;
+				auto& props = m_selected_entity.get_component<Tile_Component>();
 
-					if (e.get_mouse_button() == Button::ButtonLeft)
+				vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
+				vec2i tile_pos = {
+					(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
+					(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
+				};
+
+				if (e.get_mouse_button() == Button::ButtonLeft)
+				{
+					props.placed_tiles[tile_pos] = m_tile_id;
+				}
+				else if (e.get_mouse_button() == Button::ButtonRight)
+				{
+					if (props.placed_tiles.contains(tile_pos))
 					{
-						TileMapNode::Tile tile;
-						//tile.position = tile_pos;
-						//tile.texture_rect = m_texture_rect;
-						props.tiles[tile_pos] = tile;
-					}
-					else if (e.get_mouse_button() == Button::ButtonRight)
-					{
-						if (props.tiles.contains(tile_pos))
+						auto it = props.placed_tiles.find(tile_pos);
+						if (it != props.placed_tiles.end())
 						{
-							auto it = props.tiles.find(tile_pos);
-							if (it != props.tiles.end())
-							{
-								props.tiles.erase(it);
-							}
+							props.placed_tiles.erase(it);
 						}
 					}
-
 				}
 			}
 		}

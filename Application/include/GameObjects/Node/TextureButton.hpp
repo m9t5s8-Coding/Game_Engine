@@ -4,6 +4,7 @@
 #include <Scene/Entity.hpp>
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <Core/Application.hpp>
 
 namespace ag
 {

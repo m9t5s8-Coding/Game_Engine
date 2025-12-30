@@ -199,7 +199,7 @@ namespace ag
 			instance->mode = static_cast<int>(rect.mode);
 			instance->quad_mode = static_cast<int>(Quad_Type::Rectangle);
 
-			instance->border_thickness = rect.border_thickness * (transform.scale.x + transform.scale.y) * 0.5;
+			instance->border_thickness = rect.border_thickness * transform.scale.average();
 			rect.fill_color.normalize_color(instance->fill_color);
 			rect.border_color.normalize_color(instance->border_color);
 			
@@ -226,7 +226,7 @@ namespace ag
 			instance->quad_mode = static_cast<int>(Quad_Type::Circle);
 
 
-			instance->border_thickness = circle.border_thickness;
+			instance->border_thickness = circle.border_thickness * transform.scale.average();
 			circle.fill_color.normalize_color(instance->fill_color);
 			circle.border_color.normalize_color(instance->border_color);
 			

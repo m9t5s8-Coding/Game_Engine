@@ -3,6 +3,7 @@
 #include <Scene/Entity.hpp>
 #include <GameObjects/NodeFactory.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <GameObjects/Components/Components.hpp>
 #include <Helper.hpp>
 
 namespace fs = std::filesystem;
@@ -20,7 +21,7 @@ namespace ag
 		j["Scene"]["Entities"] = json::array();
 
 
-		auto view = scene->m_registry.view<Tag>();
+		auto view = scene->m_registry.view<Tag_Component>();
 		if (!view.empty())
 		{
 			for (auto entityID : view)
@@ -30,12 +31,12 @@ namespace ag
 
 				Entity e(entityID);
 
-				if (!e.has_component<Tag>())
+				if (!e.has_component<Tag_Component>())
 					continue;
 
-				const auto& tag = e.get_component<Tag>();
+				const auto& tag = e.get_component<Tag_Component>();
 
-				json entityjson = Tag::save_json(e);
+				json entityjson = Tag_Component::save_json(e);
 				if (!entityjson.is_object())
 				{
 					entityjson = json::object();
@@ -105,26 +106,26 @@ namespace ag
 			{
 				int node;
 				Helper::load_json(entityjson, "NodeType", node);
-				Helper::load_json(entityjson, "Tag", tag);
+				Helper::load_json(entityjson, "Tag_Component", tag);
 
 				type = static_cast<NodeType>(node);
 			}
 			Entity e = scene->create_entity(tag, type);
 
-			Tag::load_json(e, entityjson);
+			Tag_Component::load_json(e, entityjson);
 			{
-				auto& tag = e.get_component<Tag>();
+				auto& tag = e.get_component<Tag_Component>();
 				scene->set_next_index(std::max(scene->get_index(), tag.index + 1));
 				id_map[tag.index] = e;
 			}	
 		}
 
 		{
-			auto view = scene->m_registry.view<Tag>();
+			auto view = scene->m_registry.view<Tag_Component>();
 			for (auto entityID : view)
 			{
 				Entity e(entityID);
-				Tag::load_children(e);
+				Tag_Component::load_children(e);
 			}
 		}
 
@@ -146,11 +147,11 @@ namespace ag
 
 		if (Engine::is_runtime())
 		{
-			auto view = scene->m_registry.view<Tag>();
+			auto view = scene->m_registry.view<Tag_Component>();
 			for (auto entityID : view)
 			{
 				Entity e(entityID);
-				auto& tag = e.get_component<Tag>();
+				auto& tag = e.get_component<Tag_Component>();
 				ScriptComponent::load_scripts(e);
 			}
 		}

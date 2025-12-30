@@ -57,7 +57,8 @@ namespace ag
 		RectShape = 1 << 4,
 		CircleShape = 1 << 5,
 		Texture2D = 1 << 6,
-		Transform = 1 << 7
+		Transform = 1 << 7,
+		Camera = 1 << 8
 	};
 
 	enum class RenderLayer

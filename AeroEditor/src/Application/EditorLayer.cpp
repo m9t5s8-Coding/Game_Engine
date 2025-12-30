@@ -428,23 +428,22 @@ namespace ag
 		// Camera
 		{
 			auto scene = Scene::get_active_scene();
-			const auto& entities = scene->m_registry.view<Tag>();
+			const auto& entities = scene->m_registry.view<Camera_Component>();
 			for (auto& entityID : entities)
 			{
 				Entity entity(entityID);
-				auto& type = entity.get_component<Tag>().node_type;
+				auto& type = entity.get_component<Tag_Component>().node_type;
 
 				if (type != NodeType::Camera)
 					continue;
 
-				if (entity.has_component<CameraComponent::CameraProps>())
+				if (entity.has_component<Camera_Component>())
 				{
-					auto& props = entity.get_component<CameraComponent::CameraProps>();
+					auto& props = entity.get_component<Camera_Component>();
 
-					vec2f top_left = props.view_center - (props.view_size * props.zoom) / 2;
+					vec2f top_left = props.center - (props.size) / 2;
 
-
-					vec2f bottom_right = props.view_center + (props.view_size * props.zoom) / 2;
+					vec2f bottom_right = props.center + (props.size) / 2;
 
 
 					vec2f top_right = { bottom_right.x, top_left.y };

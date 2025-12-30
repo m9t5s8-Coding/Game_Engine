@@ -82,9 +82,9 @@ namespace ag
 		ImGui::SetCursorPosX(button_x);
 
 
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f)); 
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
 
 		if (ImGui::Button("Add Component", ImVec2(button_width, 30)))
@@ -95,7 +95,7 @@ namespace ag
 
 		ImGui::PopStyleColor(3);
 
-		
+
 		if (ImGui::BeginPopup("AddComponentModal"))
 		{
 			for (auto& info : comps)
@@ -103,10 +103,10 @@ namespace ag
 				if (!info.is_compatible(NodeHelper::get_nodetype(entity)))
 					continue;
 				ImGui::Spacing();
-				
+
 				if (ImGui::MenuItem(info.name))
 				{
-					info.create(entity); 
+					info.create(entity);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::Spacing();
@@ -251,31 +251,84 @@ namespace ag
 
 			}, true);
 	}
+	void Camera_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Camera_Component>("Camera Component", entity,
+			[](Camera_Component& props)
+			{
+				UI::draw_vec2("Size", props.size, { 1280, 720 });
+
+				ImGui::Dummy(spacing);
+				UI::draw_vec2("Center", props.center, props.size / 2 );
+
+			}, false);
+	}
+	void Window_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Window_Component>("Window Component", entity,
+			[](Window_Component& props)
+			{
+				UI::draw_vec2("Size", props.size, { 1280, 720 });
+
+			}, true);
+	}
+	void Animation_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Animation_Component>("Animation Component", entity,
+			[entity](Animation_Component& anim)
+			{
+				UI::draw_animation(entity);
+			}, false);
+	}
+	void Tile_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Tile_Component>("Tile Component", entity,
+			[entity](Tile_Component& tile)
+			{
+				UI::draw_vec2("Size", tile.size, { 32, 32 });
+
+				ImGui::Dummy(spacing);
+				UI::draw_vec2("Offset", tile.offset, { 0, 0 });
+
+			}, false);
+	}
+
+
 
 
 
 	void NodeProperties::animated_sprite_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		Texture_Component::imgui_render(entity);
+		Animation_Component::imgui_render(entity);
 
+
+		add_component(entity);
+		draw_added_components(entity);
 	}
-	
-
 
 	void NodeProperties::button_2D(Entity entity)
 	{
 
 	}
-	
+
 	void NodeProperties::camera_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Camera_Component::imgui_render(entity);
 
+
+		add_component(entity);
+		draw_added_components(entity);
 	}
-	
+
 	void NodeProperties::character_body_2D(Entity entity)
 	{
 
 	}
-	
+
 	void NodeProperties::circle_2D(Entity entity)
 	{
 		Tag_Component::imgui_render(entity);
@@ -285,10 +338,10 @@ namespace ag
 		add_component(entity);
 		draw_added_components(entity);
 	}
-	
+
 	void NodeProperties::rectangle_2D(Entity entity)
 	{
-		
+
 		Tag_Component::imgui_render(entity);
 		Transform_Component::imgui_render(entity);
 		Render2D_Component::imgui_render(entity);
@@ -296,12 +349,16 @@ namespace ag
 		add_component(entity);
 		draw_added_components(entity);
 	}
-	
+
 	void NodeProperties::scene_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
 
+		add_component(entity);
+		draw_added_components(entity);
 	}
-	
+
 	void NodeProperties::sprite_2D(Entity entity)
 	{
 		Tag_Component::imgui_render(entity);
@@ -312,19 +369,25 @@ namespace ag
 		add_component(entity);
 		draw_added_components(entity);
 	}
-	
+
 	void NodeProperties::text_2D(Entity entity)
 	{
 
 	}
-	
+
 	void NodeProperties::texture_button_2D(Entity entity)
 	{
 
 	}
-	
+
 	void NodeProperties::tilemap_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Texture_Component::imgui_render(entity);
+		Tile_Component::imgui_render(entity);
 
+
+		add_component(entity);
+		draw_added_components(entity);
 	}
 }

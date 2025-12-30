@@ -4,10 +4,11 @@
 #include <Scene/Entity.hpp>
 #include <Scene/SceneComponent.hpp>
 #include <GameObjects/GameObjects.hpp>
+#include <Renderer/Renderer2D.hpp>
 
 namespace ag
 {
-	//Tag Component
+	// Tag Component
 	struct Tag_Component
 	{
 		std::string name;
@@ -112,7 +113,6 @@ namespace ag
 			{
 				scene->duplicate_entity(children, duplicate);
 			}
-
 		}
 
 		static bool is_compatible(NodeType type)
@@ -200,7 +200,7 @@ namespace ag
 		static void get_local_transform(Entity entity, const Transform_Component& world_transform)
 		{
 			auto& transform = entity.get_component<Transform_Component>();
-			auto& tag = entity.get_component<Tag>();
+			auto& tag = entity.get_component<Tag_Component>();
 
 			if (tag.parent.get_id() != INVALID_ENTITY)
 			{
@@ -319,26 +319,25 @@ namespace ag
 			auto project = Project::get_active_project();
 			std::string full_path = project->get_directory() + project->get_scripts_directory() + comp.path;
 
-			comp.env.get().set_function("get_entity", [entity]() -> Entity {
-				return entity;
-				});
+			comp.env.get().set_function("get_entity", [entity]() -> Entity
+				{ return entity; });
 
-			comp.env.get().set_function("get_children", [](ag::Entity& e, const std::string& name) -> Entity {
-
-				if (!e.has_component<Tag_Component>())
-					return {};
-
-				auto& tag = e.get_component<Tag_Component>();
-				for (auto& child : tag.children)
+			comp.env.get().set_function("get_children", [](ag::Entity& e, const std::string& name) -> Entity
 				{
-					auto& child_tag = child.get_component<Tag>();
-					if (child_tag.tag == name)
+
+					if (!e.has_component<Tag_Component>())
+						return {};
+
+					auto& tag = e.get_component<Tag_Component>();
+					for (auto& child : tag.children)
 					{
-						return child;
+						auto& child_tag = child.get_component<Tag>();
+						if (child_tag.tag == name)
+						{
+							return child;
+						}
 					}
-				}
-				return {};
-				});
+					return {}; });
 
 			ScriptManager::load_script(full_path, comp.env);
 			comp.on_create.set_function(comp.env, "on_create");
@@ -347,7 +346,7 @@ namespace ag
 			comp.on_event.set_function(comp.env, "on_event");
 			create(entity);
 		}
-	
+
 		static bool is_compatible(NodeType type)
 		{
 			return true;
@@ -357,10 +356,9 @@ namespace ag
 		{
 			return "Script";
 		}
-	
+
 		static void imgui_render(Entity entity);
 	};
-
 
 	struct Render2D_Component
 	{
@@ -382,7 +380,7 @@ namespace ag
 			if (!entity.has_component<Render2D_Component>())
 				entity.add_component<Render2D_Component>();
 
-			auto& props = entity.get_component<Render2D_Component >();
+			auto& props = entity.get_component<Render2D_Component>();
 			Helper::load_json(j, "Size", props.size);
 			Helper::load_json(j, "Color", props.color);
 		}
@@ -391,7 +389,7 @@ namespace ag
 		{
 			if (original.has_component<Render2D_Component>())
 			{
-				clone.add_component<Render2D_Component >(original.get_component<Render2D_Component >());
+				clone.add_component<Render2D_Component>(original.get_component<Render2D_Component>());
 			}
 		}
 
@@ -479,7 +477,7 @@ namespace ag
 			if (!entity.has_component<Corner_Component>())
 				entity.add_component<Corner_Component>();
 
-			auto& props = entity.get_component < Corner_Component>();
+			auto& props = entity.get_component<Corner_Component>();
 			Helper::load_json(j, "Corner", props.corner);
 			Helper::load_json(j, "Uniform", props.uniform);
 		}
@@ -495,7 +493,7 @@ namespace ag
 		static bool is_compatible(NodeType type)
 		{
 			auto caps = NodeHelper::get_node_capabilities(type);
-			//AERO_CORE_INFO("Node Type:{0}", static_cast<int>(type));
+			// AERO_CORE_INFO("Node Type:{0}", static_cast<int>(type));
 			return NodeHelper::has_capability(caps, Node_Capability::RectShape);
 		}
 
@@ -621,7 +619,6 @@ namespace ag
 
 			auto& props = entity.get_component<TextureRect_Component>();
 			Helper::load_json(j, "Rect", props.rect);
-
 		}
 
 		static void clone_entity(Entity original, Entity clone)
@@ -670,7 +667,6 @@ namespace ag
 			auto& props = entity.get_component<TextureFlip_Component>();
 			Helper::load_json(j, "Horizontal", props.horizontal);
 			Helper::load_json(j, "Vertical", props.vertical);
-
 		}
 
 		static void clone_entity(Entity original, Entity clone)
@@ -695,10 +691,446 @@ namespace ag
 		static void imgui_render(Entity entity);
 	};
 
+	struct Camera_Component
+	{
+		vec2f size = { 1280.0f, 720.0f };
+		vec2f center;
+
+		static json save_json(Entity entity)
+		{
+			json j;
+
+			auto& props = entity.get_component<Camera_Component>();
+			Helper::save_json(j, "Size", props.size);
+			Helper::save_json(j, "Center", props.center);
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<Camera_Component>())
+				entity.add_component<Camera_Component>();
+
+			auto& props = entity.get_component<Camera_Component>();
+			Helper::load_json(j, "Size", props.size);
+			Helper::load_json(j, "Center", props.center);
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<Camera_Component>())
+			{
+				clone.add_component<Camera_Component>(original.get_component<Camera_Component>());
+			}
+		}
+
+		static bool is_compatible(NodeType type)
+		{
+			auto caps = NodeHelper::get_node_capabilities(type);
+			return NodeHelper::has_capability(caps, Node_Capability::Camera);
+		}
+
+		static const char* get_name()
+		{
+			return "Camera";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+	struct Window_Component
+	{
+		vec2f size = { 1280.0f, 720.0f };
+
+		static json save_json(Entity entity)
+		{
+			json j;
+
+			auto& props = entity.get_component<Window_Component>();
+			Helper::save_json(j, "Size", props.size);
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<Window_Component>())
+				entity.add_component<Window_Component>();
+
+			auto& props = entity.get_component<Window_Component>();
+			Helper::load_json(j, "Size", props.size);
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<Window_Component>())
+			{
+				clone.add_component<Window_Component>(original.get_component<Window_Component>());
+			}
+		}
+
+		static bool is_compatible(NodeType type)
+		{
+			auto caps = NodeHelper::get_node_capabilities(type);
+			return NodeHelper::has_capability(caps, Node_Capability::Camera);
+		}
+
+		static const char* get_name()
+		{
+			return "Window";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+	struct Frame
+	{
+		uint_rect frame_rect;
+	};
+
+	struct Animation
+	{
+		std::string name;
+		float fps = 0;
+		bool loop = true;
+		bool ping_pong = false;
+		std::vector<Frame> frames;
+
+		static json save_json(const Animation& animation)
+		{
+			json j;
+			Helper::save_json(j, "Name", animation.name);
+			Helper::save_json(j, "FPS", animation.fps);
+			Helper::save_json(j, "PingPong", animation.ping_pong);
+			Helper::save_json(j, "Loop", animation.loop);
+			j["Frames"] = json::array();
+			for (const auto& frame : animation.frames)
+			{
+				json frame_json;
+				Helper::save_json(frame_json, "Rect", frame.frame_rect);
+				j["Frames"].push_back(frame_json);
+			}
+			return j;
+		}
+
+		static Animation load_json(const json& j)
+		{
+			Animation animation;
+			Helper::load_json(j, "Name", animation.name);
+			Helper::load_json(j, "FPS", animation.fps);
+			Helper::load_json(j, "PingPong", animation.ping_pong);
+			Helper::load_json(j, "Loop", animation.loop);
+			if (j.contains("Frames") && j["Frames"].is_array())
+			{
+				for (const json& frame_json : j["Frames"])
+				{
+					Frame frame;
+					Helper::load_json(frame_json, "Rect", frame.frame_rect);
+					animation.frames.push_back(frame);
+				}
+			}
+			return animation;
+		}
+	};
+
+	struct Animation_Component
+	{
+		std::unordered_map<std::string, Animation> animations;
+		std::string current_animation = "";
+		int current_frame = 0;
+		bool playing = true;
+		float timer = 0.0f;
+		bool current_animation_completed = false;
+		uint_rect rect;
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			auto& props = entity.get_component<Animation_Component>();
+			Helper::save_json(j, "Current", props.current_animation);
+			Helper::save_json(j, "Playing", props.playing);
+
+			j["Animations"] = json::object();
+			for (const auto& [name, animation] : props.animations)
+			{
+				j["Animations"][name] = Animation::save_json(animation);
+			}
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<Animation_Component>())
+				entity.add_component<Animation_Component>();
+
+			auto& props = entity.get_component<Animation_Component>();
+			Helper::load_json(j, "Current", props.current_animation);
+			Helper::load_json(j, "Playing", props.playing);
+
+			if (j.contains("Animations") && j["Animations"].is_object())
+			{
+				props.animations.clear();
+
+				for (const auto& [name, animation_json] : j["Animations"].items())
+				{
+					Animation animation = Animation::load_json(animation_json);
+					props.animations[name] = animation;
+				}
+			}
+		}
+	
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<Animation_Component>())
+			{
+				clone.add_component<Animation_Component>(original.get_component<Animation_Component>());
+			}
+		}
+	
+		static void update(Entity entity, TimeStamp ts)
+		{
+			if (!entity.has_component<Animation_Component>())
+				return;
+			float dt = ts.get_seconds();
+
+			auto& props = entity.get_component<Animation_Component>();
+
+			if (!entity.has_component<Texture_Component>())
+				return;
+
+			if (props.current_animation.empty())
+			{
+				auto& texture = entity.get_component<Texture_Component>();
+				if(texture.texture)
+				{
+					props.rect = { 0, 0, texture.texture->get_size() };
+				}
+				return;
+			}
+
+		
+
+			auto it = props.animations.find(props.current_animation);
+			if (props.animations.find(props.current_animation) == props.animations.end())
+			{
+				auto& texture = entity.get_component<Texture_Component>();
+				if (texture.texture)
+				{
+					props.rect = { 0, 0, texture.texture->get_size() };
+				}
+				return;
+			}
+
+			Animation& anim = it->second;
+
+			if (!props.playing)
+			{
+				props.rect = anim.frames[props.current_frame].frame_rect;
+				return;
+			}
+
+			if (anim.frames.empty())
+			{
+				auto& texture = entity.get_component<Texture_Component>();
+				props.rect = { 0, 0, texture.texture->get_size() };
+				return;
+			}
+
+			if (props.current_frame < 0 || props.current_frame >= anim.frames.size())
+				props.current_frame = 0;
+
+			Frame& current_frame = anim.frames[props.current_frame];
+
+			props.timer += dt;
+
+			float duration = 1.0f / anim.fps;
+			if (props.timer >= duration)
+			{
+				props.timer -= duration;
+				props.current_frame++;
+				if (props.current_frame >= anim.frames.size())
+				{
+					if (anim.loop)
+					{
+						props.current_frame = 0;
+						props.current_animation_completed = true;
+					}
+					else
+					{
+						props.current_frame = anim.frames.size() - 1;
+						props.playing = false;
+						props.current_animation_completed = true;
+					}
+				}
+			}
+
+			if (props.current_animation_completed && anim.loop)
+			{
+				props.current_animation_completed = false;
+			}
+
+			props.rect = anim.frames[props.current_frame].frame_rect;
+		}
+
+		static const char* get_name()
+		{
+			return "Animations";
+		}
+
+		static bool play_animation(Entity entity, const std:: string& name)
+		{
+			if (!entity.has_component<Animation_Component>())
+				return false;
+
+			auto& anim = entity.get_component<Animation_Component>();
+
+			if (anim.animations.find(name) == anim.animations.end())
+				return false;
+			else
+			{
+				anim.current_animation = name;
+				anim.current_frame = 0;
+				anim.timer - 0.0f;
+				anim.current_animation_completed = false;
+			}
+
+		}
+
+		static void imgui_render(Entity entity);
+	};
 
 
 
+	struct Tile_Defination
+	{
+		uint_rect texture_rect;
+		bool is_solid = false;
 
+		static json save_json(const Tile_Defination& def)
+		{
+			json j;
+			Helper::save_json(j, "Rect", def.texture_rect);
+			Helper::save_json(j, "Solid", def.is_solid);
+
+			return j;
+		}
+
+		static void load_json(Tile_Defination& def, const json& j)
+		{
+			Helper::load_json(j, "Rect", def.texture_rect);
+			Helper::load_json(j, "Solid", def.is_solid);
+		}
+	};
+	struct Tile_Component
+	{
+		vec2f size = { 32, 32 };
+		vec2f offset;
+
+		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
+		std::unordered_map<vec2i, vec2u, vec2_hash<int>> placed_tiles;
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			auto& tileset = entity.get_component<Tile_Component>();
+			Helper::save_json(j, "Size", tileset.size);
+			Helper::save_json(j, "Offset", tileset.offset);
+
+			for (const auto& [id, def] : tileset.tile_definitions)
+			{
+				std::string key = std::to_string(id.x) + "," + std::to_string(id.y);
+				j["Definitions"][key] = Tile_Defination::save_json(def);
+			}
+
+			for (const auto& [grid, id] : tileset.placed_tiles)
+			{
+				std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
+				Helper::save_json(j["Grid"], key, id);
+			}
+
+			return j;
+		}
+		
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<Tile_Component>())
+				entity.add_component<Tile_Component>();
+
+			auto& tileset = entity.get_component<Tile_Component>();
+			Helper::load_json(j, "Size", tileset.size);
+			Helper::load_json(j, "Offset", tileset.offset);
+
+			if (j.contains("Definitions"))
+			{
+				for (auto& [key, def_json] :j["Definations"].items())
+				{
+					Tile_Defination def;
+					Tile_Defination::load_json(def, def_json);
+
+					vec2u id;
+					sscanf(key.c_str(), "%u,%u", &id.x, &id.y);
+					tileset.tile_definitions[id] = def;
+				}
+			}
+			
+			if (j.contains("Grid"))
+			{
+				for (auto& [key, id_json] : j["Grid"].items())
+				{
+					
+					vec2u tile_id;
+					Helper::load_json(j["Grid"], id_json, tile_id);
+
+					vec2u pos;
+					sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
+					tileset.placed_tiles[pos] = tile_id;
+				}
+			}
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<Tile_Component>())
+			{
+				clone.add_component<Tile_Component>(original.get_component<Tile_Component>());
+			}
+		}
+
+		static void draw(Entity entity)
+		{
+			if (!entity.has_component<Tile_Component>())
+				return;
+
+			auto& props = entity.get_component<Tile_Component>();
+			Transform_Component trans;
+
+			Sprite sprite;
+			sprite.size = props.size;
+
+			for (const auto& [position, id] : props.placed_tiles)
+			{
+				auto tex_it = props.tile_definitions.find(id);
+				if (tex_it == props.tile_definitions.end())
+				{
+					continue;
+				}
+				const Tile_Defination& def = tex_it->second;
+				sprite.texture_rect = def.texture_rect;
+
+				trans.position = (position * props.size) + props.size / 2 + props.offset;
+
+				Renderer2D::draw_sprite(sprite, trans);
+			}
+		}
+	
+		static const char* get_name()
+		{
+			return "TileSet";
+		}
+	
+		static void imgui_render(Entity entity);
+	};
 
 
 	struct Text

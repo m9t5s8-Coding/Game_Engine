@@ -9,10 +9,10 @@ namespace ag
 		entity.add_component<Transform_Component>();
 		entity.add_component<Render2D_Component>();
 	}
-	
+
 	void CircleNode::delete_node(Entity entity)
 	{
-		ScriptComponent::destroy(entity);
+		Script_Component::destroy(entity);
 		entity.delete_entity();
 	}
 
@@ -28,7 +28,7 @@ namespace ag
 	json CircleNode::save_json(Entity entity)
 	{
 		json j;
-		
+
 		NodeHelper::save_component<Transform_Component>(entity, j);
 		NodeHelper::save_component<Render2D_Component>(entity, j);
 		NodeHelper::save_component<Script_Component>(entity, j);
@@ -37,7 +37,7 @@ namespace ag
 
 		return j;
 	}
-	
+
 	void CircleNode::load_json(Entity entity, const json& j)
 	{
 

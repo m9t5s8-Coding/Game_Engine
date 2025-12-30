@@ -47,6 +47,10 @@ namespace ag::UI
 	};
 
 	void draw_texture(Entity entity);
+	void draw_animation(Entity entity);
+	void draw_tilemap_register(Entity entity);
+
+	void custom_popup(const std::string& popup_id,const std::string& popup_name, std::function<void()> draw_content, std::function<void()> close);
 
 	void draw_menu_bar();
 
@@ -81,7 +85,6 @@ namespace ag::UI
 	void render_status_bar(Selector& state);
 
 	void render_selection_info(const uint_rect& texture_rect);
-
 
 
 	void draw_console();

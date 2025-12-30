@@ -4,7 +4,7 @@
 
 namespace ag
 {
-	struct AnimatedSpriteNode
+	struct CameraNode
 	{
 		static void create_node(Entity entity);
 		static void delete_node(Entity entity);

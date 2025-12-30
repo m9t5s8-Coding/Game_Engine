@@ -13,7 +13,7 @@ namespace ag
   
   void SpriteNode::delete_node(Entity entity)
   {
-    ScriptComponent::destroy(entity);
+    Script_Component::destroy(entity);
     entity.delete_entity();
   }
   

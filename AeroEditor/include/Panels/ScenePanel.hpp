@@ -146,6 +146,7 @@ namespace ag
 
     uint_rect m_texture_rect;
     bool m_is_texture_selected;
+    vec2u m_tile_id;
 
     bool m_move_flag = false;
     bool m_scale_flag = false;

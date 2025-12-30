@@ -27,7 +27,8 @@ namespace ag
 		template <typename T>
 		T& get_component()
 		{
-			return m_scene->m_registry.get<T>(m_entity_handler);
+			if (has_component<T>())
+				return m_scene->m_registry.get<T>(m_entity_handler);
 		}
 
 		template <typename T>

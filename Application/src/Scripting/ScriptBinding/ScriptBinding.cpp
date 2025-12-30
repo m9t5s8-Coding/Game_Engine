@@ -124,8 +124,9 @@ namespace ag
 
 				if (type == NodeType::Camera)
 				{
-					const auto& props = entity.get_component<CameraComponent::CameraProps>();
-					float_rect window_rect = { props.view_center - props.view_size / 2, props.view_size * props.zoom };
+					const auto& props = entity.get_component<Camera_Component>();
+					//float_rect window_rect = { props.center - props.size / 2, props.size * props.zoom };
+					float_rect window_rect = { props.center - props.size / 2, props.size };
 					vec2f screen_pos = ag::Mouse::get_mouse_position();
 					vec2f window_size = Application::get().get_window().get_size();
 					return Math::screen_to_world(screen_pos, window_rect, window_size);
@@ -445,7 +446,8 @@ namespace ag
 					auto type = NodeHelper::get_nodetype(entity);
 					if (type == NodeType::AnimatedSprite2D)
 					{
-						return AnimatedSprite2DNode::play_animation(entity, animation_name);
+						//return AnimatedSpriteNode::play_animation(entity, animation_name);
+						return true;
 					}
 					return false;
 					});

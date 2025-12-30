@@ -19,14 +19,13 @@ namespace ag
             return std::sqrt(x * x + y * y);
           }
           else {
-            // For integer types, you might want a different implementation
+          
             static_assert(std::is_floating_point_v<T>,
               "length() is only meaningful for floating point types");
-            return T(0); // Fallback
+            return T(0);
           }
         }
 
-        // FIXED: Return vec2<T>&
         vec2<T>& normalize() {
           if constexpr (std::is_floating_point_v<T>) {
             T len = length();
@@ -36,14 +35,17 @@ namespace ag
             }
           }
           else {
-            // For integer types, normalization doesn't make sense
             static_assert(std::is_floating_point_v<T>,
               "normalize() is only valid for floating point types");
           }
           return *this;
         }
 
-        // FIXED: Return vec2<T>
+        float average() const
+        {
+          return static_cast<float>((x + y) * 0.5);
+        }
+
         vec2<T> normalized() const {
           vec2<T> result = *this;
           return result.normalize();

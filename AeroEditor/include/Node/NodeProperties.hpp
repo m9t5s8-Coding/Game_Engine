@@ -36,94 +36,115 @@ namespace ag
 		static void tilemap_2D(Entity entity);
 
 
-		template<typename T>
-		static bool draw_component_node(const std::string& name, Entity entity,
-			std::function<void(T&)> draw_content,
-			bool can_remove = false)
-		{
-			if (!entity.has_component<T>()) return false;
+    template<typename T>
+    static bool draw_component_node(const std::string& name, Entity entity,
+      std::function<void(T&)> draw_content,
+      bool can_remove = false)
+    {
+      if (!entity.has_component<T>()) return false;
 
-			ImGui::PushID(name.c_str());
+      ImGui::PushID(name.c_str());
 
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
-			ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 12.0f);
+      
 
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen |
-				ImGuiTreeNodeFlags_Framed |
-				ImGuiTreeNodeFlags_SpanAvailWidth |
-				ImGuiTreeNodeFlags_AllowItemOverlap;
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
+      ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 12.0f);
 
-			bool open = ImGui::TreeNodeEx(name.c_str(), flags);
-			bool remove = false;
+      ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen |
+        ImGuiTreeNodeFlags_Framed |
+        ImGuiTreeNodeFlags_SpanAvailWidth |
+        ImGuiTreeNodeFlags_AllowItemOverlap;
 
-			if (can_remove)
-			{
-				ImGui::SameLine(ImGui::GetContentRegionAvail().x - 25.0f);
+      float start_x = ImGui::GetCursorPosX();
+      float available_width = ImGui::GetContentRegionAvail().x;
 
-				// Style the remove button
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+      bool open = ImGui::TreeNodeEx(name.c_str(), flags);
+      bool remove = false;
 
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
+      if (can_remove)
+      {
+        float button_width = 26.0f;
+        float button_x = start_x + available_width - button_width - ImGui::GetStyle().FramePadding.x * 2;
 
-				if (ImGui::Button(" X ", ImVec2(50, 28)))
-				{
-					ImGui::OpenPopup("ConfirmRemove##Component");
-				}
+        // Save cursor position
+        float saved_cursor_y = ImGui::GetCursorPosY();
+        float saved_cursor_x = ImGui::GetCursorPosX();
 
-				ImGui::PopStyleVar(2);
-				ImGui::PopStyleColor(3);
+        // Draw a dummy at the button position first to extend boundaries
+        ImGui::SetCursorPosX(button_x);
+        ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
+        ImGui::Dummy(ImVec2(button_width * 2.0f, 28));
 
-				// Confirmation popup
-				if (ImGui::BeginPopup("ConfirmRemove##Component"))
-				{
-					ImGui::Text("Remove component!");
-					ImGui::Dummy(ImVec2(0, 3));
-					ImGui::Text("%s", name.c_str());
-					ImGui::Separator();
+        // Now set cursor back for the actual button
+        ImGui::SetCursorPosX(button_x);
+        ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
 
-					if (ImGui::Button("Yes", ImVec2(50, 0)))
-					{
-						remove = true;
-						ImGui::CloseCurrentPopup();
-					}
+        // Style the remove button
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-					ImGui::SameLine();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
 
-					if (ImGui::Button("No", ImVec2(50, 0)))
-					{
-						ImGui::CloseCurrentPopup();
-					}
+        if (ImGui::Button(" X ", ImVec2(button_width * 2.0f, 28)))
+        {
+          ImGui::OpenPopup("ConfirmRemove##Component");
+        }
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor(3);
 
-					ImGui::EndPopup();
-				}
-			}
+        // Restore cursor position for tree content
+        ImGui::SetCursorPosY(saved_cursor_y);
+        ImGui::SetCursorPosX(saved_cursor_x);
+
+        // Confirmation popup
+        if (ImGui::BeginPopup("ConfirmRemove##Component"))
+        {
+          ImGui::Text("Remove component!");
+          ImGui::Dummy(ImVec2(0, 3));
+          ImGui::Text("%s", name.c_str());
+          ImGui::Separator();
+
+          if (ImGui::Button("Yes", ImVec2(50, 0)))
+          {
+            remove = true;
+            ImGui::CloseCurrentPopup();
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::Button("No", ImVec2(50, 0)))
+          {
+            ImGui::CloseCurrentPopup();
+          }
+
+          ImGui::EndPopup();
+        }
+      }
+
+      if (open)
+      {
+        auto& component = entity.get_component<T>();
+        draw_content(component);
+        ImGui::TreePop();
+      }
+
+      ImGui::PopStyleVar(3);
+      ImGui::PopID();
+
+      if (remove)
+      {
+        entity.remove_component<T>();
+      }
+
+      return open;
+    }
+	
 
 
-
-			if (open)
-			{
-				auto& component = entity.get_component<T>();
-				draw_content(component);
-				ImGui::TreePop();
-			}
-
-			ImGui::PopStyleVar(3);
-			ImGui::PopID();
-
-			if (remove)
-			{
-				entity.remove_component<T>();
-			}
-
-			return open;
-		}
-
-		
-	private:
+private:
 
 		
 		inline static std::vector<Component_Info> comps;
