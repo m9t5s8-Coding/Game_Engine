@@ -16,6 +16,7 @@ namespace ag
 	{
 		Texture_Component::clone_entity(original, clone);
 		Tile_Component::clone_entity(original, clone);
+		TileSet_Component::clone_entity(original, clone);
 		Script_Component::clone_entity(original, clone);
 	}
 	json TileMapNode::save_json(Entity entity)
@@ -24,6 +25,7 @@ namespace ag
 
 		NodeHelper::save_component<Texture_Component>(entity, j);
 		NodeHelper::save_component<Tile_Component>(entity, j);
+		NodeHelper::save_component<TileSet_Component>(entity, j);
 		NodeHelper::save_component<Script_Component>(entity, j);
 
 		return j;
@@ -31,7 +33,8 @@ namespace ag
 	void TileMapNode::load_json(Entity entity, const json& j)
 	{
 		NodeHelper::load_component<Texture_Component>(entity, j);
-		//NodeHelper::load_component<Tile_Component>(entity, j);
+		NodeHelper::load_component<Tile_Component>(entity, j);
+		NodeHelper::load_component<TileSet_Component>(entity, j);
 		NodeHelper::load_component<Script_Component>(entity, j);
 	}
 	void TileMapNode::update(Entity entity, TimeStamp ts)
@@ -46,6 +49,6 @@ namespace ag
 		if (entity.has_component<Texture_Component>())
 			Renderer2D::set_texture(entity.get_component<Texture_Component>().texture);
 
-		Tile_Component::draw(entity);
+		TileSet_Component::draw(entity);
 	}
 }

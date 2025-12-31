@@ -14,6 +14,9 @@ namespace ag
         vec2(T x_ = T(), T y_ = T()) : x(x_), y(y_) {}
         vec2(T s_) : x(s_), y(s_) {}
 
+        vec2<T>(const ImVec2& v) : x(v.x), y(v.y) {}
+
+
         T length() const {
           if constexpr (std::is_floating_point_v<T>) {
             return std::sqrt(x * x + y * y);
@@ -84,7 +87,9 @@ namespace ag
         }
 
         template <typename U>
-        vec2(const vec2<U> &v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) {}
+        vec2(const vec2<U> &v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) 
+        {
+        }
      
         // Addition
         vec2 operator+(const vec2 &other) const
@@ -204,6 +209,11 @@ namespace ag
           if( x > other.x) return false;
           return y < other.y;
         }
+        bool operator>(const vec2<T>& other) const
+        {
+          return x > other.x || y > other.y;
+        }
+
 
         bool operator!=(const ImVec2& other) const
         {

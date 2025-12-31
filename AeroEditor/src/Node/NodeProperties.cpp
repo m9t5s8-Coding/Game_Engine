@@ -15,9 +15,14 @@ namespace ag
 		comps.clear();
 		REGISTER_COMPONENT(Border_Component);
 		REGISTER_COMPONENT(Corner_Component);
-		REGISTER_COMPONENT(UI_Component);
+		
 		REGISTER_COMPONENT(TextureRect_Component);
 		REGISTER_COMPONENT(TextureFlip_Component);
+
+		REGISTER_COMPONENT(TileSet_Component);
+
+
+		REGISTER_COMPONENT(UI_Component);
 		REGISTER_COMPONENT(Script_Component);
 	}
 
@@ -292,7 +297,15 @@ namespace ag
 
 			}, false);
 	}
+	void TileSet_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<TileSet_Component>("TileSet Component", entity,
+			[entity](TileSet_Component& tile)
+			{
+				UI::draw_tilemap_register(entity);
 
+			}, true);
+	}
 
 
 

@@ -26,6 +26,12 @@ namespace ag::Helper
   }
 
   template <typename T>
+  inline void load_json(const json& j, vec2<T>& value)
+  {
+     value.load(j);
+  }
+
+  template <typename T>
   inline void load_json(const json& j, const std::string& key, rect<T>& value)
   {
     if (j.contains(key))

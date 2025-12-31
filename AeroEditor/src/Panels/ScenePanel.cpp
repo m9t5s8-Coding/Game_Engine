@@ -110,6 +110,13 @@ namespace ag
 				if (m_selected_entity.has_component<Tile_Component>())
 				{
 					auto& props = m_selected_entity.get_component<Tile_Component>();
+					vec2u tile_id = m_tile_id;
+					if (UI::draw_tilemap_selector(m_selected_entity, m_tile_id))
+					{
+						m_tile_id = tile_id;
+						AERO_CORE_INFO("True");
+						m_tile_id.print();
+					}
 					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
 					//TileMapNodeFeatures::register_tile(m_selected_entity);
 
@@ -124,7 +131,7 @@ namespace ag
 			}
 			else if (tag.node_type == NodeType::Sprite)
 			{
-				if (m_selected_entity.has_component<TextureRect_Component>())
+				/*if (m_selected_entity.has_component<TextureRect_Component>())
 				{
 					auto& rects = m_selected_entity.get_component<TextureRect_Component>();
 					auto& sizes = m_selected_entity.get_component<Render2D_Component>();
@@ -139,8 +146,9 @@ namespace ag
 							sizes.size = texture_rect.size;
 						}
 					}
-				}
-				
+				}*/
+				uint_rect texture_rect;
+				UI::texture_selector(m_selected_entity, texture_rect);
 			}
 		}
 
@@ -1594,9 +1602,10 @@ namespace ag
 			const auto& tag = m_selected_entity.get_component<Tag_Component>();
 			if (tag.node_type == NodeType::TileMap)
 			{
-				if (!m_selected_entity.has_component<Tile_Component>())
+				if (!m_selected_entity.has_component<Tile_Component>() || !m_selected_entity.has_component<TileSet_Component>())
 					return false;
 				auto& props = m_selected_entity.get_component<Tile_Component>();
+				auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
 
 				vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
 				vec2i tile_pos = {
@@ -1606,16 +1615,16 @@ namespace ag
 
 				if (e.get_mouse_button() == Button::ButtonLeft)
 				{
-					props.placed_tiles[tile_pos] = m_tile_id;
+					tile_set.placed_tiles[tile_pos] = m_tile_id;
 				}
 				else if (e.get_mouse_button() == Button::ButtonRight)
 				{
-					if (props.placed_tiles.contains(tile_pos))
+					if (tile_set.placed_tiles.contains(tile_pos))
 					{
-						auto it = props.placed_tiles.find(tile_pos);
-						if (it != props.placed_tiles.end())
+						auto it = tile_set.placed_tiles.find(tile_pos);
+						if (it != tile_set.placed_tiles.end())
 						{
-							props.placed_tiles.erase(it);
+							tile_set.placed_tiles.erase(it);
 						}
 					}
 				}

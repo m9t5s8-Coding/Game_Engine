@@ -1022,13 +1022,11 @@ namespace ag
 			Helper::load_json(j, "Solid", def.is_solid);
 		}
 	};
+
 	struct Tile_Component
 	{
 		vec2f size = { 32, 32 };
 		vec2f offset;
-
-		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
-		std::unordered_map<vec2i, vec2u, vec2_hash<int>> placed_tiles;
 
 		static json save_json(Entity entity)
 		{
@@ -1037,21 +1035,9 @@ namespace ag
 			Helper::save_json(j, "Size", tileset.size);
 			Helper::save_json(j, "Offset", tileset.offset);
 
-			for (const auto& [id, def] : tileset.tile_definitions)
-			{
-				std::string key = std::to_string(id.x) + "," + std::to_string(id.y);
-				j["Definitions"][key] = Tile_Defination::save_json(def);
-			}
-
-			for (const auto& [grid, id] : tileset.placed_tiles)
-			{
-				std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
-				Helper::save_json(j["Grid"], key, id);
-			}
-
 			return j;
 		}
-		
+
 		static void load_json(Entity entity, const json& j)
 		{
 			if (!entity.has_component<Tile_Component>())
@@ -1060,33 +1046,6 @@ namespace ag
 			auto& tileset = entity.get_component<Tile_Component>();
 			Helper::load_json(j, "Size", tileset.size);
 			Helper::load_json(j, "Offset", tileset.offset);
-
-			if (j.contains("Definitions"))
-			{
-				for (auto& [key, def_json] :j["Definations"].items())
-				{
-					Tile_Defination def;
-					Tile_Defination::load_json(def, def_json);
-
-					vec2u id;
-					sscanf(key.c_str(), "%u,%u", &id.x, &id.y);
-					tileset.tile_definitions[id] = def;
-				}
-			}
-			
-			if (j.contains("Grid"))
-			{
-				for (auto& [key, id_json] : j["Grid"].items())
-				{
-					
-					vec2u tile_id;
-					Helper::load_json(j["Grid"], id_json, tile_id);
-
-					vec2u pos;
-					sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
-					tileset.placed_tiles[pos] = tile_id;
-				}
-			}
 		}
 
 		static void clone_entity(Entity original, Entity clone)
@@ -1097,21 +1056,97 @@ namespace ag
 			}
 		}
 
+		static const char* get_name()
+		{
+			return "Tile";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+	struct TileSet_Component
+	{
+		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
+		std::unordered_map<vec2i, vec2u, vec2_hash<int>> placed_tiles;
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			auto& tileset = entity.get_component<TileSet_Component>();
+
+			for (const auto& [id, def] : tileset.tile_definitions)
+			{
+				std::string key = std::to_string(id.x) + "," + std::to_string(id.y);
+				j["Definations"][key] = Tile_Defination::save_json(def);
+			}
+
+			for (const auto& [grid, id] : tileset.placed_tiles)
+			{
+				std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
+				Helper::save_json(j["Grid"], key, id);
+			}
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<TileSet_Component>())
+				entity.add_component<TileSet_Component>();
+
+			auto& tileset = entity.get_component<TileSet_Component>();
+
+
+			if (j.contains("Definations"))
+			{
+				for (auto& [key, def_json] : j["Definations"].items())
+				{
+					Tile_Defination def;
+					Tile_Defination::load_json(def, def_json);
+
+					vec2u id;
+					sscanf(key.c_str(), "%u,%u", &id.x, &id.y);
+					tileset.tile_definitions[id] = def;
+				}
+			}
+
+			if (j.contains("Grid"))
+			{
+				for (auto& [key, id_json] : j["Grid"].items())
+				{
+					vec2u tile_id;
+					Helper::load_json(id_json, tile_id);
+					vec2u pos;
+					sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
+					tileset.placed_tiles[pos] = tile_id;
+				}
+			}
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<TileSet_Component>())
+			{
+				clone.add_component<TileSet_Component>(original.get_component<TileSet_Component>());
+			}
+		}
+
 		static void draw(Entity entity)
 		{
-			if (!entity.has_component<Tile_Component>())
+			if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>())
 				return;
 
+			auto& tile_set = entity.get_component<TileSet_Component>();
 			auto& props = entity.get_component<Tile_Component>();
 			Transform_Component trans;
 
 			Sprite sprite;
 			sprite.size = props.size;
-
-			for (const auto& [position, id] : props.placed_tiles)
+			
+			for (const auto& [position, id] : tile_set.placed_tiles)
 			{
-				auto tex_it = props.tile_definitions.find(id);
-				if (tex_it == props.tile_definitions.end())
+				auto tex_it = tile_set.tile_definitions.find(id);
+				if (tex_it == tile_set.tile_definitions.end())
 				{
 					continue;
 				}
@@ -1123,14 +1158,22 @@ namespace ag
 				Renderer2D::draw_sprite(sprite, trans);
 			}
 		}
-	
+
 		static const char* get_name()
 		{
 			return "TileSet";
 		}
-	
+
+		static bool is_compatible(NodeType type)
+		{
+			auto caps = NodeHelper::get_node_capabilities(type);
+			return NodeHelper::has_capability(caps, Node_Capability::TileMap);
+		}
+
 		static void imgui_render(Entity entity);
 	};
+
+	
 
 
 	struct Text

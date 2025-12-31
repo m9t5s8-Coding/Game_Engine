@@ -46,9 +46,21 @@ namespace ag::UI
 		float status_timer = 0.0f;
 	};
 
+	struct Model
+	{
+		std::string name;
+		std::string id;
+		vec2f size;
+	};
+
+
+
 	void draw_texture(Entity entity);
 	void draw_animation(Entity entity);
 	void draw_tilemap_register(Entity entity);
+	bool texture_selector(Entity entity, uint_rect& texture_rect);
+
+	bool draw_tilemap_selector(Entity entity, vec2u& id);
 
 	void custom_popup(const std::string& popup_id,const std::string& popup_name, std::function<void()> draw_content, std::function<void()> close);
 

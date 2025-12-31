@@ -84,6 +84,8 @@ namespace ag::NodeHelper
 		case ag::NodeType::Camera:
 			return Node_Capability::Camera;
 		case ag::NodeType::TileMap:
+			return Node_Capability::TileMap;
+
 		case ag::NodeType::Scene2D:
 		case ag::NodeType::TextNode:
 		case ag::NodeType::Button:

@@ -81,6 +81,19 @@ namespace ag::Math
     return screen;
   }
 
+  inline vec2f world_size_to_screen_size(const vec2f& world_size, const vec2f& view_size, const vec2f& size)
+  {
+    return {
+        (world_size.x / view_size.x) * size.x,
+        (world_size.y / view_size.y) * size.y
+    };
+  }
+
+  inline float_rect get_float_rect(const vec2f& view_size, const vec2f& view_center)
+  {
+    return float_rect(view_center - view_size / 2, view_size);
+  }
+
   inline float pixels_to_meters(float pixels)
   {
     return pixels / PPM;
