@@ -1885,15 +1885,21 @@ namespace ag::UI
 							}
 							auto& tile_set = entity.get_component<TileSet_Component>();
 							vec2u size = tile_size;
+							tile_set.tile_definitions.clear();
 							for (const auto& ids : selected_tiles)
 							{
 								Tile_Defination def;
-								ids.print();
 
 								def.texture_rect = { ids * size, size };
 								def.is_solid = false;
 								tile_set.tile_definitions[ids] = def;
 							}
+							if (!selected_tiles.empty())
+							{
+								tile_set.is_tile_registered = true;
+								tile_set.tile_changed = true;
+							}
+								
 							show_register = false;
 							selected_tiles.clear();
 							ImGui::CloseCurrentPopup();
@@ -1927,19 +1933,26 @@ namespace ag::UI
 		static bool is_dragging = false;
 		static vec2f tile_size = { 32, 32 };
 		static bool selected = false;
-		if (e.get_id() != entity.get_id())
+		if (entity.has_component<TileSet_Component>())
 		{
-			if (entity.has_component<TileSet_Component>())
+			auto& tile_set = entity.get_component<TileSet_Component>();
+			if (!tile_set.is_tile_registered)
 			{
+				return false;
+			}
+			if (tile_set.tile_changed)
+			{
+				registered_tiles.clear();
 				selected = false;
-				const auto& tile_def = entity.get_component<TileSet_Component>().tile_definitions;
+				const auto& tile_def = tile_set.tile_definitions;
 				for (const auto& [id, def] : tile_def)
 				{
 					registered_tiles.push_back(id);
 				}
+				tile_set.tile_changed = false;
+				AERO_CORE_INFO("Tile Changed");
 			}
-			else
-				return false;
+			
 		}
 		if (!entity.has_component<Tile_Component>() || !entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture)
 			return false;
@@ -2122,8 +2135,9 @@ namespace ag::UI
 		static vec2f starting_pos;
 		static vec2f end_pos;
 		static bool is_dragging = false;
-		
+
 		static bool selected = false;
+		static bool selection_finished = false;
 		static vec2f tile_size = { 16.0f, 16.0f };
 		static bool is_selecting = false;
 
@@ -2204,7 +2218,7 @@ namespace ag::UI
 						vec2f offset = world_before_zoom - world_after_zoom;
 						view_center += offset;
 					}
-					
+
 
 
 
@@ -2239,16 +2253,28 @@ namespace ag::UI
 					if (is_hovered && ImGui::IsMouseClicked(0))
 					{
 						is_selecting = true;
+						selection_finished = false;
 						vec2f world_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+						AERO_CORE_INFO("World Position");
+						world_pos.print();
 						vec2f local = world_pos - image_pos;
-
+						AERO_CORE_INFO("Local Position");
+						local.print();
 						vec2f image_size_pixel = texture_size;
+						AERO_CORE_INFO("Image Size in Pixel");
+						image_size_pixel.print();
 						vec2f pixel_world_size = screen_size / image_size_pixel;
+						AERO_CORE_INFO("Pixel World Size");
+						pixel_world_size.print();
+
 
 						local.x = std::floor(local.x / pixel_world_size.x) * pixel_world_size.x;
 						local.y = std::floor(local.y / pixel_world_size.y) * pixel_world_size.y;
-
+						AERO_CORE_INFO("Local Position");
+						local.print();
 						starting_pos = image_pos + local;
+						AERO_CORE_INFO("Starting Position");
+						starting_pos.print();
 					}
 
 					if (is_hovered && ImGui::IsMouseDown(0))
@@ -2262,9 +2288,9 @@ namespace ag::UI
 							IM_COL32(255, 255, 255, 100)
 						);
 					}
-					else if(!ImGui::IsMouseDown(0))
+					else if (!ImGui::IsMouseDown(0))
 					{
-						if(is_selecting)
+						if (is_selecting)
 							end_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
 
 						is_selecting = false;

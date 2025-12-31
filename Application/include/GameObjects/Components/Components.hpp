@@ -1068,11 +1068,15 @@ namespace ag
 	{
 		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
 		std::unordered_map<vec2i, vec2u, vec2_hash<int>> placed_tiles;
+		bool is_tile_registered = false;
+		bool tile_changed = false;
 
 		static json save_json(Entity entity)
 		{
 			json j;
 			auto& tileset = entity.get_component<TileSet_Component>();
+			if(!tileset.tile_definitions.empty())
+				Helper::save_json(j, "Registered", tileset.is_tile_registered);
 
 			for (const auto& [id, def] : tileset.tile_definitions)
 			{
@@ -1108,6 +1112,7 @@ namespace ag
 					sscanf(key.c_str(), "%u,%u", &id.x, &id.y);
 					tileset.tile_definitions[id] = def;
 				}
+				
 			}
 
 			if (j.contains("Grid"))
@@ -1121,6 +1126,10 @@ namespace ag
 					tileset.placed_tiles[pos] = tile_id;
 				}
 			}
+
+			Helper::load_json(j, "Registered", tileset.is_tile_registered);
+			if(!tileset.tile_definitions.empty())
+				tileset.tile_changed = true;
 		}
 
 		static void clone_entity(Entity original, Entity clone)
