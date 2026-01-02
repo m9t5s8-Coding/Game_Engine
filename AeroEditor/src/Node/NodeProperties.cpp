@@ -21,8 +21,12 @@ namespace ag
 
 		REGISTER_COMPONENT(TileSet_Component);
 
+		REGISTER_COMPONENT(Window_Component);
+
 
 		REGISTER_COMPONENT(UI_Component);
+
+		REGISTER_COMPONENT(PhysicsBody_Component);
 		REGISTER_COMPONENT(Script_Component);
 	}
 
@@ -41,35 +45,7 @@ namespace ag
 
 
 
-	void NodeProperties::tag(Entity entity)
-	{
-		draw_component_node<Tag>("Tag", entity,
-			[](Tag& tag)
-			{
 
-				UI::draw_string("Tag", tag.tag);
-				ImGui::Dummy(spacing);
-
-				UI::draw_bool("Visible", tag.is_visible);
-				ImGui::Dummy(spacing);
-
-				UI::draw_bool("Lock", tag.locked);
-			}, false);
-	}
-	void NodeProperties::transform(Entity entity)
-	{
-		draw_component_node<Transform>("Transform", entity,
-			[](Transform& transform)
-			{
-				UI::draw_vec2("Position", transform.position, { 0, 0 });
-
-				ImGui::Dummy(spacing);
-				UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
-
-				ImGui::Dummy(spacing);
-				UI::draw_value("Rotation", transform.rotation);
-			}, false);
-	}
 
 
 
@@ -138,7 +114,7 @@ namespace ag
 
 				ImGui::Dummy(spacing);
 				UI::draw_color("Color", props.color);
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Corner_Component::imgui_render(Entity entity)
@@ -151,7 +127,7 @@ namespace ag
 				ImGui::Dummy(spacing);
 
 				UI::draw_value("Corner", props.corner, 0.0f);
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void UI_Component::imgui_render(Entity entity)
@@ -164,7 +140,7 @@ namespace ag
 				options.push_back("World");
 
 				UI::draw_enum("Mode", props.mode, options);
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Render2D_Component::imgui_render(Entity entity)
@@ -176,6 +152,7 @@ namespace ag
 				ImGui::Dummy(spacing);
 
 				UI::draw_color("Color", props.color);
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Texture_Component::imgui_render(Entity entity)
@@ -203,7 +180,7 @@ namespace ag
 					reset_value = texture.texture->get_size();
 				}
 				UI::draw_vec2("Size", props.rect.size, reset_value);
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void TextureFlip_Component::imgui_render(Entity entity)
@@ -231,6 +208,7 @@ namespace ag
 
 				ImGui::Dummy(spacing);
 				UI::draw_value("Rotation", transform.rotation);
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Tag_Component::imgui_render(Entity entity)
@@ -245,15 +223,16 @@ namespace ag
 				ImGui::Dummy(spacing);
 
 				UI::draw_bool("Lock", tag.locked);
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Script_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Script_Component>("Scirpt Component", entity,
-			[](Script_Component& props)
+			[entity](Script_Component& props) mutable
 			{
-				UI::draw_string("Name", props.path);
-
+				UI::draw_script_selector(entity);
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Camera_Component::imgui_render(Entity entity)
@@ -265,7 +244,7 @@ namespace ag
 
 				ImGui::Dummy(spacing);
 				UI::draw_vec2("Center", props.center, props.size / 2 );
-
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Window_Component::imgui_render(Entity entity)
@@ -274,7 +253,7 @@ namespace ag
 			[](Window_Component& props)
 			{
 				UI::draw_vec2("Size", props.size, { 1280, 720 });
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Animation_Component::imgui_render(Entity entity)
@@ -283,6 +262,7 @@ namespace ag
 			[entity](Animation_Component& anim)
 			{
 				UI::draw_animation(entity);
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Tile_Component::imgui_render(Entity entity)
@@ -294,7 +274,7 @@ namespace ag
 
 				ImGui::Dummy(spacing);
 				UI::draw_vec2("Offset", tile.offset, { 0, 0 });
-
+				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void TileSet_Component::imgui_render(Entity entity)
@@ -303,10 +283,63 @@ namespace ag
 			[entity](TileSet_Component& tile)
 			{
 				UI::draw_tilemap_register(entity);
-
+				ImGui::Dummy(spacing);
 			}, true);
 	}
+	void PhysicsBody_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<PhysicsBody_Component>("PhysicsBody Component", entity,
+			[](PhysicsBody_Component& props)
+			{
+				std::vector<std::string> options;
+				options.push_back("Dynamic");
+				options.push_back("Static");
+				options.push_back("Kinematic");
 
+				UI::draw_enum("Body Type", props.body_type, options);
+				ImGui::Dummy(spacing);
+
+				UI::draw_bool("Rotation", props.rotation);
+				ImGui::Dummy(spacing);
+			}, true);
+		CollisionShape_Component::imgui_render(entity);
+	}
+	void CollisionShape_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<CollisionShape_Component>("CollisionShape Component", entity,
+			[](CollisionShape_Component& props)
+			{
+				std::vector<std::string> options;
+				options.push_back("Rectangle");
+				options.push_back("Circle");
+
+				UI::draw_enum("Shape Type", props.shape_type, options);
+				ImGui::Dummy(spacing);
+				switch (props.shape_type)
+				{
+				case ShapeType::Rectangle:
+					UI::draw_vec2("Size", props.size);
+					break;
+				case ShapeType::Circle:
+					UI::draw_value("Radius", props.radius);
+					break;
+				default:
+					UI::draw_vec2("Size", props.size);
+					break;
+				}
+				ImGui::Dummy(spacing);
+				ImGui::SliderInt("Group Number", &props.group, 1, 5);
+				ImGui::Dummy(spacing);
+				ImGui::Text("Collides With:");
+				for (int i = 0; i < 5; i++)
+				{
+					char label[16];
+					sprintf(label, "Group %d", i + 1);
+					ImGui::Checkbox(label, &props.collide_with[i]);
+				}
+				ImGui::Dummy(spacing);
+			}, false);
+	}
 
 
 

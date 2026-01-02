@@ -31,11 +31,17 @@ namespace ag
 		float_rect get_float_rect() { return m_view_controller->get_view().get_float_rect(); }
 		vec2f get_viewport_size() { return m_viewport_size; }
 
+		View& get_view() { return m_view_controller->get_view(); }
+
+
 		void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) { m_scenes[scene_name] = scene; m_panel->set_scene(scene); }
 		void create_new_scene();
 		void open_scene();
 		void save_scene();
 		void run_runtime();
+
+
+		void load_texture(Entity entity);
 
 
 		bool on_key_pressed(KeyPressedEvent& e);

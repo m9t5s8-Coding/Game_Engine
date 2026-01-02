@@ -10,179 +10,144 @@ namespace ag::UI
 	{
 		if (!ImGui::BeginMainMenuBar()) return;
 
-		// Static state for menu items
-		static MenuState state;
 
 		// File Menu
 		if (ImGui::BeginMenu("File")) {
 			// New Scene
-			if (ImGui::MenuItem("New Scene", "Ctrl+N")) {
-				/*if (EditorLayer::get().has_unsaved_changes()) {
-					state.show_new_scene_dialog = true;
-				}
-				else {
-					EditorLayer::get().create_new_scene();
-				}*/
+			if (ImGui::MenuItem("New Scene", "Ctrl+N"))
+			{
+				EditorLayer::get().create_new_scene();
 			}
 
 			// Open Scene
-			if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {
+			if (ImGui::MenuItem("Open Scene", "Ctrl+O"))
+			{
 				EditorLayer::get().open_scene();
 			}
 
 			// Recent Scenes submenu
 			if (ImGui::BeginMenu("Recent Scenes")) {
-				/*auto recent_scenes = EditorLayer::get().get_recent_scenes();
-				if (recent_scenes.empty()) {
-					ImGui::MenuItem("No recent scenes", nullptr, false, false);
-				}
-				else {
-					for (const auto& scene : recent_scenes) {
-						if (ImGui::MenuItem(scene.filename().string().c_str())) {
-							EditorLayer::get().load_scene(scene.string());
-						}
-					}
-					ImGui::Separator();
-					if (ImGui::MenuItem("Clear Recent List")) {
-						EditorLayer::get().clear_recent_scenes();
-					}
-				}*/
+
 				ImGui::EndMenu();
 			}
 
 			ImGui::Separator();
 
 			// Save Scene
-			if (ImGui::MenuItem("Save Scene", "Ctrl+S")) {
+			if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
+			{
 				EditorLayer::get().save_scene();
 			}
 
 			// Save Scene As
-			if (ImGui::MenuItem("Save Scene As...", "Ctrl+Shift+S")) {
-				state.show_save_as_dialog = true;
+			if (ImGui::MenuItem("Save Scene As Default", "Ctrl+Shift+S"))
+			{
+				//EditorLayer::get().save_scene_as_default();
 			}
 
 			// Save All
-			if (ImGui::MenuItem("Save All", "Ctrl+Alt+S")) {
-				//EditorLayer::get().save_all();
+			if (ImGui::MenuItem("Save All", "Ctrl+Alt+S"))
+			{
+				// EditorLayer::get().save_all_scene();
 			}
 
 			ImGui::Separator();
 
 			// Project submenu
-			if (ImGui::BeginMenu("Project")) {
-				if (ImGui::MenuItem("New Project...")) {
-					// Project creation logic
+			if (ImGui::BeginMenu("Project"))
+			{
+				if (ImGui::MenuItem("New Project..."))
+				{
 				}
-				if (ImGui::MenuItem("Open Project...")) {
-					// Project opening logic
+				if (ImGui::MenuItem("Open Project..."))
+				{
 				}
-				if (ImGui::MenuItem("Project Settings")) {
-					state.show_project_settings = true;
+				if (ImGui::MenuItem("Project Settings"))
+				{
+					//state.show_project_settings = true;
 				}
 				ImGui::EndMenu();
 			}
 
 			ImGui::Separator();
-
-			// Import/Export
-			if (ImGui::BeginMenu("Import")) {
-				if (ImGui::MenuItem("FBX Model...")) {
-					// Import FBX
-				}
-				if (ImGui::MenuItem("GLTF/GLB Model...")) {
-					// Import GLTF
-				}
-				if (ImGui::MenuItem("Texture...")) {
-					// Import texture
-				}
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Export")) {
-				if (ImGui::MenuItem("Scene as FBX...")) {
-					// Export scene
-				}
-				if (ImGui::MenuItem("Selected Objects...")) {
-					// Export selection
-				}
-				ImGui::EndMenu();
-			}
 
 			ImGui::Separator();
 
 			// Exit
-			if (ImGui::MenuItem("Exit", "Alt+F4")) {
+			if (ImGui::MenuItem("Exit", "Alt+F4"))
+			{
 				//EditorLayer::get().try_exit();
 			}
 
 			ImGui::EndMenu();
 		}
 
-		// Edit Menu
+
 		if (ImGui::BeginMenu("Edit")) {
 			//bool can_undo = EditorLayer::get().can_undo();
 			//bool can_redo = EditorLayer::get().can_redo();
 			bool can_redo = false;
 			bool can_undo = false;
 
-			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, can_undo)) {
+			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, can_undo))
+			{
 				//EditorLayer::get().undo();
 			}
 
-			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, can_redo)) {
+			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, can_redo))
+			{
 				//EditorLayer::get().redo();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Cut", "Ctrl+X")) {
+			if (ImGui::MenuItem("Cut", "Ctrl+X"))
+			{
 				//EditorLayer::get().cut_selection();
 			}
 
-			if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+			if (ImGui::MenuItem("Copy", "Ctrl+C"))
+			{
 				//EditorLayer::get().copy_selection();
 			}
 
-			if (ImGui::MenuItem("Paste", "Ctrl+V")) {
+			if (ImGui::MenuItem("Paste", "Ctrl+V"))
+			{
 				//EditorLayer::get().paste();
 			}
 
-			if (ImGui::MenuItem("Duplicate", "Ctrl+D")) {
+			if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
+			{
 				//EditorLayer::get().duplicate_selection();
 			}
 
-			if (ImGui::MenuItem("Delete", "Del")) {
+			if (ImGui::MenuItem("Delete", "Del"))
+			{
 				//EditorLayer::get().delete_selection();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Select All", "Ctrl+A")) {
+			if (ImGui::MenuItem("Select All", "Ctrl+A"))
+			{
 				//EditorLayer::get().select_all();
 			}
 
-			if (ImGui::MenuItem("Deselect All", "Ctrl+Shift+A")) {
+			if (ImGui::MenuItem("Deselect All", "Ctrl+Shift+A"))
+			{
 				//EditorLayer::get().deselect_all();
 			}
 
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Find", "Ctrl+F")) {
-				//EditorLayer::get().show_find_dialog();
-			}
-
-			if (ImGui::MenuItem("Replace", "Ctrl+H")) {
-				//EditorLayer::get().show_replace_dialog();
-			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Editor Settings")) {
-				state.show_editor_settings = true;
+			if (ImGui::MenuItem("Editor Settings"))
+			{
+				//state.show_editor_settings = true;
 			}
 
-			if (ImGui::MenuItem("Preferences", "Ctrl+,")) {
+			if (ImGui::MenuItem("Preferences", "Ctrl+,"))
+			{
 				//EditorLayer::get().show_preferences();
 			}
 
@@ -190,63 +155,46 @@ namespace ag::UI
 		}
 
 		// View Menu
-		if (ImGui::BeginMenu("View")) {
-			static bool show_scene = true;
-			static bool show_inspector = true;
-			static bool show_hierarchy = true;
-			static bool show_console = true;
-			static bool show_project = true;
-			static bool show_stats = false;
-			static bool show_debug = false;
+		if (ImGui::BeginMenu("View"))
+		{
 
-			if (ImGui::MenuItem("Scene", nullptr, &show_scene)) {
+			if (ImGui::MenuItem("Scene", nullptr, &show_panels.scene_panel))
+			{
 				//EditorLayer::get().toggle_window("Scene", show_scene);
 			}
 
-			if (ImGui::MenuItem("Inspector", nullptr, &show_inspector)) {
+			if (ImGui::MenuItem("Properties", nullptr, &show_panels.properties_panel))
+			{
 				//EditorLayer::get().toggle_window("Inspector", show_inspector);
 			}
 
-			if (ImGui::MenuItem("Hierarchy", nullptr, &show_hierarchy)) {
-				//EditorLayer::get().toggle_window("Hierarchy", show_hierarchy);
-			}
-
-			if (ImGui::MenuItem("Project Browser", nullptr, &show_project)) {
-				//EditorLayer::get().toggle_window("Project", show_project);
-			}
-
-			if (ImGui::MenuItem("Console", nullptr, &show_console)) {
+			if (ImGui::MenuItem("Console", nullptr, &show_panels.console_panel))
+			{
 				//EditorLayer::get().toggle_window("Console", show_console);
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Statistics", nullptr, &show_stats)) {
-				//EditorLayer::get().toggle_window("Statistics", show_stats);
-			}
-
-			if (ImGui::MenuItem("Debug Tools", nullptr, &show_debug)) {
-				//EditorLayer::get().toggle_window("Debug", show_debug);
-			}
-
-			ImGui::Separator();
-
 			if (ImGui::BeginMenu("Layouts")) {
-				if (ImGui::MenuItem("Default Layout")) {
+				if (ImGui::MenuItem("Default Layout"))
+				{
 					//EditorLayer::get().load_layout("default");
 				}
 
-				if (ImGui::MenuItem("Programming Layout")) {
+				if (ImGui::MenuItem("Programming Layout"))
+				{
 					//EditorLayer::get().load_layout("programming");
 				}
 
-				if (ImGui::MenuItem("Design Layout")) {
+				if (ImGui::MenuItem("Design Layout"))
+				{
 					//EditorLayer::get().load_layout("design");
 				}
 
 				ImGui::Separator();
 
-				if (ImGui::MenuItem("Save Current Layout...")) {
+				if (ImGui::MenuItem("Save Current Layout..."))
+				{
 					//EditorLayer::get().save_current_layout();
 				}
 
@@ -255,7 +203,8 @@ namespace ag::UI
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Fullscreen", "F11")) {
+			if (ImGui::MenuItem("Fullscreen", "F11"))
+			{
 				//EditorLayer::get().toggle_fullscreen();
 			}
 
@@ -263,206 +212,52 @@ namespace ag::UI
 		}
 
 		// Create Menu
-		if (ImGui::BeginMenu("Create")) {
-			if (ImGui::BeginMenu("3D Objects")) {
-				if (ImGui::MenuItem("Cube")) {
-					//EditorLayer::get().create_cube();
+		if (ImGui::BeginMenu("Create"))
+		{
+			if (ImGui::BeginMenu("2D Nodes"))
+			{
+				if (ImGui::MenuItem("Scene2D"))
+				{
+					//EditorLayer::get().create_scene2d();
 				}
-				if (ImGui::MenuItem("Sphere")) {
-					//EditorLayer::get().create_sphere();
+				if (ImGui::MenuItem("Rectangle"))
+				{
+					//EditorLayer::get().create_rectangle();
 				}
-				if (ImGui::MenuItem("Plane")) {
-					//EditorLayer::get().create_plane();
+				if (ImGui::MenuItem("Circle"))
+				{
+					//EditorLayer::get().create_circle();
 				}
-				if (ImGui::MenuItem("Cylinder")) {
-					//EditorLayer::get().create_cylinder();
-				}
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Lights")) {
-				if (ImGui::MenuItem("Directional Light")) {
-					//EditorLayer::get().create_directional_light();
-				}
-				if (ImGui::MenuItem("Point Light")) {
-					//EditorLayer::get().create_point_light();
-				}
-				if (ImGui::MenuItem("Spot Light")) {
-					//EditorLayer::get().create_spot_light();
+				if (ImGui::MenuItem("Sprite"))
+				{
+					//EditorLayer::get().create_sprite();
 				}
 				ImGui::EndMenu();
 			}
-
-			if (ImGui::BeginMenu("UI")) {
-				if (ImGui::MenuItem("Canvas")) {
-					//EditorLayer::get().create_canvas();
-				}
-				if (ImGui::MenuItem("Button")) {
-					//EditorLayer::get().create_button();
-				}
-				if (ImGui::MenuItem("Text")) {
-					//EditorLayer::get().create_text();
-				}
-				ImGui::EndMenu();
-			}
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Empty Object")) {
-				//EditorLayer::get().create_empty_object();
-			}
-
-			if (ImGui::MenuItem("Camera")) {
-				//EditorLayer::get().create_camera();
-			}
-
 			ImGui::EndMenu();
 		}
 
 		// Run Menu
-		if (ImGui::BeginMenu("Run")) {
-			auto now = std::chrono::steady_clock::now();
-			auto since_last_run = std::chrono::duration_cast<std::chrono::seconds>(
-				now - state.last_run_time).count();
-
-			// Run buttons with status
-			ImGui::BeginDisabled(state.is_running);
-
-			if (ImGui::MenuItem("Run Scene", "F5", false, !state.is_running)) {
-				state.is_running = true;
-				state.last_run_time = now;
-
-				auto folder = FileDialogs::get_exe_folder();
-				std::wstring app = folder + L"\\Sandbox.exe";
-
-				// Run in a separate thread to avoid blocking
-				/*std::thread([app, &state]() {
-					FileDialogs::run_exe(app);
-					state.is_running = false;
-					}).detach();*/
-
-				FileDialogs::run_exe(app);
-			}
-
-			if (ImGui::MenuItem("Run Current Scene", "Ctrl+F5", false, !state.is_running)) {
-				run_current_scene();
-				state.is_running = true;
-				state.last_run_time = now;
-
+		if (ImGui::BeginMenu("Run"))
+		{
+			if (ImGui::MenuItem("Run Default Scene", "F5", false))
+			{
 				auto folder = FileDialogs::get_exe_folder();
 				std::wstring app = folder + L"\\Sandbox.exe";
 
 				FileDialogs::run_exe(app);
 			}
 
-			ImGui::EndDisabled();
+			if (ImGui::MenuItem("Run Current Scene", "Ctrl+F5", false))
+			{
+				auto folder = FileDialogs::get_exe_folder();
+				std::wstring app = folder + L"\\Sandbox.exe";
 
-			// Stop button
-			ImGui::BeginDisabled(!state.is_running);
-			if (ImGui::MenuItem("Stop", "Shift+F5", false, state.is_running)) {
-				//EditorLayer::get().stop_running_scene();
-				state.is_running = false;
+				FileDialogs::run_exe(app);
 			}
-			ImGui::EndDisabled();
-
-			ImGui::Separator();
-
-			// Build options
-			if (ImGui::BeginMenu("Build")) {
-				if (ImGui::MenuItem("Build Project")) {
-					//EditorLayer::get().build_project();
-				}
-
-				if (ImGui::MenuItem("Build and Run")) {
-					//EditorLayer::get().build_and_run();
-				}
-
-				ImGui::Separator();
-
-				if (ImGui::MenuItem("Build Settings...")) {
-					//EditorLayer::get().show_build_settings();
-				}
-
-				ImGui::EndMenu();
-			}
-
-			// Debug options
-			if (ImGui::BeginMenu("Debug")) {
-				if (ImGui::MenuItem("Attach Debugger", "F6")) {
-					//EditorLayer::get().attach_debugger();
-				}
-
-				if (ImGui::MenuItem("Step Over", "F10")) {
-					//EditorLayer::get().debug_step_over();
-				}
-
-				if (ImGui::MenuItem("Step Into", "F11")) {
-					//EditorLayer::get().debug_step_into();
-				}
-
-				ImGui::EndMenu();
-			}
-
-			ImGui::Separator();
-
-			// Simulation controls
-			if (ImGui::MenuItem("Play", "Ctrl+P")) {
-				//EditorLayer::get().play_scene();
-			}
-
-			if (ImGui::MenuItem("Pause", "Ctrl+Shift+P")) {
-				//EditorLayer::get().pause_scene();
-			}
-
-			if (ImGui::MenuItem("Stop Simulation", "Ctrl+Alt+P")) {
-				//EditorLayer::get().stop_simulation();
-			}
-
 			ImGui::EndMenu();
 		}
 
-		// Tools Menu
-		if (ImGui::BeginMenu("Tools")) {
-			if (ImGui::MenuItem("Texture Packer")) {
-				//EditorLayer::get().show_texture_packer();
-			}
-
-			if (ImGui::MenuItem("Shader Editor")) {
-				//EditorLayer::get().show_shader_editor();
-			}
-
-			if (ImGui::MenuItem("Material Editor")) {
-				//EditorLayer::get().show_material_editor();
-			}
-
-			if (ImGui::MenuItem("Animation Editor")) {
-				//EditorLayer::get().show_animation_editor();
-			}
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Asset Browser")) {
-				//EditorLayer::get().show_asset_browser();
-			}
-
-			if (ImGui::MenuItem("Scene Manager")) {
-				//EditorLayer::get().show_scene_manager();
-			}
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Profiler")) {
-				//EditorLayer::get().show_profiler();
-			}
-
-			if (ImGui::MenuItem("Memory Viewer")) {
-				//EditorLayer::get().show_memory_viewer();
-			}
-
-			ImGui::EndMenu();
-		}
-
-		// Window Menu (alternative to View for window management)
 		if (ImGui::BeginMenu("Window")) {
 			if (ImGui::MenuItem("Minimize", "Ctrl+M")) {
 				//EditorLayer::get().minimize_window();
@@ -471,44 +266,32 @@ namespace ag::UI
 			if (ImGui::MenuItem("Maximize", "Ctrl+Shift+M")) {
 				//EditorLayer::get().maximize_window();
 			}
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Bring All to Front")) {
-				//EditorLayer::get().bring_all_to_front();
-			}
-
-			if (ImGui::MenuItem("Reset Window Positions")) {
-				//EditorLayer::get().reset_window_positions();
-			}
-
 			ImGui::EndMenu();
 		}
 
 		// Help Menu
 		if (ImGui::BeginMenu("Help")) {
-			if (ImGui::MenuItem("Documentation", "F1")) {
+			if (ImGui::MenuItem("Documentation", "F1"))
+			{
 				//EditorLayer::get().open_documentation();
 			}
 
-			if (ImGui::MenuItem("Keyboard Shortcuts")) {
-				state.show_shortcuts_dialog = true;
+			if (ImGui::MenuItem("Keyboard Shortcuts"))
+			{
+				//state.show_shortcuts_dialog = true;
 			}
-
-			if (ImGui::MenuItem("Tutorials")) {
-				//EditorLayer::get().open_tutorials();
-			}
-
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Check for Updates")) {
+			if (ImGui::MenuItem("Check for Updates"))
+			{
 				//EditorLayer::get().check_for_updates();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("About")) {
-				state.show_about_dialog = true;
+			if (ImGui::MenuItem("About"))
+			{
+				//state.show_about_dialog = true;
 			}
 
 			ImGui::EndMenu();
@@ -516,149 +299,212 @@ namespace ag::UI
 
 		// Status info on the right
 		ImGui::SameLine(ImGui::GetWindowWidth() - 300);
-
-		// Show running status
-		//if (state.is_running) {
-		//  float time_running = std::chrono::duration<float>(
-		//    std::chrono::steady_clock::now() - state.last_run_time).count();
-
-		//  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),
-		//    //ICON_FA_PLAY " Running (%.1fs)", time_running);
-		//}
-		//else if (since_last_run < 5) {
-		//  ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
-		//    //ICON_FA_STOP " Last run: %.0fs ago", since_last_run);
-		//}
-
-		// Show scene info
-		auto scene = Scene::get_active_scene();
-		if (scene && !state.is_running) {
-			ImGui::SameLine();
-			std::string scene_name = scene->get_name();
-			if (scene_name.empty()) scene_name = "Untitled";
-
-			/*if (EditorLayer::get().has_unsaved_changes()) {
-				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
-					ICON_FA_FILE " %s*", scene_name.c_str());
-			}
-			else {
-				ImGui::TextDisabled(ICON_FA_FILE " %s", scene_name.c_str());
-			}*/
-		}
-
 		// Show FPS
 		ImGui::SameLine();
 		ImGui::TextDisabled("FPS: %.1f", ImGui::GetIO().Framerate);
 
 		ImGui::EndMainMenuBar();
 
-		// Handle dialogs
-		handle_dialogs(state);
 	}
+
+
 
 	void draw_texture(Entity entity)
 	{
+		if (!entity.has_component<Texture_Component>())
+			return;
+
 		auto& props = entity.get_component<Texture_Component>();
 
 		ImGui::Text("Texture");
 		ImGui::SameLine();
 
-		if (props.texture && !props.path.empty())
+		ImGui::Separator();
+
+		float width;
+		float height;
+		if (props.texture)
 		{
-			ImGui::TextDisabled("(Loaded)");
-		}
-		else if (!props.path.empty())
-		{
-			ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "(Not Loaded)");
+			width = props.texture->get_width();
+			height = props.texture->get_height();
 		}
 		else
 		{
-			ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "(No Texture)");
+			width = 128.0f;
+			height = 64.0f;
 		}
+		float aspect = width / height;
+		ImVec2 preview_size(128.0f, 128.0f);
+		if (aspect > 1.0f)
+			preview_size.y = 128.0f / aspect;
+		else
+			preview_size.x = 128.0f * aspect;
 
-		ImGui::Spacing();
+		const float padding = 10.0f;
+		ImVec2 frame_size = ImVec2(preview_size.x + padding * 2,
+			preview_size.y + padding * 2);
 
-		if (!props.path.empty()) {
-			ImGui::TextWrapped("Path: %s", props.path.c_str());
-			ImGui::Spacing();
-		}
+		float available_width = ImGui::GetContentRegionAvail().x;
+		float frame_pos_x = (available_width - frame_size.x) / 2.0f;
 
-		// --- Texture Preview ---
-		if (props.texture && !props.path.empty()) {
-			ImGui::Separator();
-			ImGui::Text("Preview:");
-
-			// Calculate aspect ratio preserving size
-			float width = props.texture->get_width();
-			float height = props.texture->get_height();
-			float aspect = width / height;
-
-			ImVec2 preview_size(128.0f, 128.0f);
-			if (aspect > 1.0f) {
-				preview_size.y = 128.0f / aspect;
-			}
-			else {
-				preview_size.x = 128.0f * aspect;
-			}
-
-			// Add padding around the image (frame larger than image)
-			const float padding = 10.0f; // Extra space around image
-			ImVec2 frame_size = ImVec2(preview_size.x + padding * 2,
-				preview_size.y + padding * 2);
-
-			// Center the frame horizontally
-			float available_width = ImGui::GetContentRegionAvail().x;
-			float frame_pos_x = (available_width - frame_size.x) / 2.0f;
-
-			// Create a child frame/group for the image with padding
-			ImGui::BeginChild("TexturePreviewFrame",
-				ImVec2(0, frame_size.y + 5), // Height of frame + spacing
-				false,
-				ImGuiWindowFlags_NoScrollbar);
-
-			// Set cursor to center the frame
+		ImGui::BeginChild("TexturePreviewFrame",
+			ImVec2(0, frame_size.y + 5),
+			false,
+			ImGuiWindowFlags_NoScrollbar);
+		{
 			ImGui::SetCursorPosX(frame_pos_x);
 
-			// Draw a background frame/rectangle
 			ImDrawList* draw_list = ImGui::GetWindowDrawList();
 			ImVec2 frame_min = ImGui::GetCursorScreenPos();
 			ImVec2 frame_max = ImVec2(frame_min.x + frame_size.x,
 				frame_min.y + frame_size.y);
 
-			// Draw background rectangle (slightly darker than window bg)
+
 			draw_list->AddRectFilled(frame_min, frame_max,
 				ImGui::GetColorU32(ImGuiCol_FrameBg),
-				4.0f); // Rounded corners
+				4.0f);
 
-			// Draw border
 			draw_list->AddRect(frame_min, frame_max,
 				ImGui::GetColorU32(ImGuiCol_Border),
-				4.0f, 0, 1.5f); // Thicker border
+				4.0f, 0, 1.5f);
 
-			// Center image inside the frame
-			ImVec2 image_pos = ImVec2(frame_min.x + padding,
-				frame_min.y + padding);
-			ImGui::SetCursorScreenPos(image_pos);
+			ImVec2 image_min = ImVec2(frame_min.x + padding, frame_min.y + padding);
+			ImVec2 image_max = ImVec2(image_min.x + preview_size.x, image_min.y + preview_size.y);
 
-			// Draw the image
-			ImGui::Image((void*)(intptr_t)props.texture->get_texture_id(),
-				preview_size);
+			ImGui::SetCursorScreenPos(image_min);
 
-			ImGui::EndChild(); // End TexturePreviewFrame
+			ImGui::InvisibleButton("##TextureDropTarget", preview_size);
 
-			// Texture info below the frame
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (ImGui::IsMouseHoveringRect(image_min, image_max))
+				{
+					draw_list->AddRect(image_min, image_max,
+						ImGui::GetColorU32(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)),
+						4.0f, 0, 2.0f);
+
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM");
+					if (payload)
+					{
+						const char* dropped_path = (const char*)payload->Data;
+
+						std::string extension = std::filesystem::path(dropped_path).extension().string();
+						std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+						if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+							extension == ".bmp" || extension == ".tga" || extension == ".hdr")
+						{
+							props.path = dropped_path;
+							try
+							{
+								props.path = dropped_path;
+								props.texture = NodeHelper::load_texture(props.path);
+							}
+							catch (const std::exception& e)
+							{
+								props.texture.reset();
+							}
+						}
+					}
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_FILENAME"))
+					{
+						const char* dropped_path = (const char*)payload->Data;
+
+						std::string extension = std::filesystem::path(dropped_path).extension().string();
+						std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+						if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+							extension == ".bmp" || extension == ".tga" || extension == ".hdr")
+						{
+							props.path = dropped_path;
+							try
+							{
+								props.texture = NodeHelper::load_texture(props.path);
+							}
+							catch (const std::exception& e)
+							{
+								props.texture.reset();
+							}
+						}
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+			}
+
+
+
+			if (props.texture)
+			{
+				ImGui::SetCursorScreenPos(image_min);
+				ImGui::Image((void*)(intptr_t)props.texture->get_texture_id(),
+					preview_size);
+
+				if (!props.texture && ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("Drop texture here");
+				}
+			}
+			else
+			{
+				// Draw a placeholder when no texture is loaded
+				ImGui::SetCursorScreenPos(image_min);
+
+				// Draw a checkerboard pattern as placeholder
+				const float checker_size = 16.0f;
+				const ImU32 col1 = ImGui::GetColorU32(ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+				const ImU32 col2 = ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+
+				for (float y = 0; y < preview_size.y; y += checker_size)
+				{
+					for (float x = 0; x < preview_size.x; x += checker_size)
+					{
+						bool is_dark = ((int)(x / checker_size) + (int)(y / checker_size)) % 2 == 0;
+						draw_list->AddRectFilled(
+							ImVec2(image_min.x + x, image_min.y + y),
+							ImVec2(image_min.x + x + checker_size, image_min.y + y + checker_size),
+							is_dark ? col1 : col2
+						);
+					}
+				}
+
+				// Draw a centered "+" icon or text
+				const char* drop_text = "Drop Texture Here";
+				ImVec2 text_size = ImGui::CalcTextSize(drop_text);
+				ImVec2 text_pos = ImVec2(
+					image_min.x + (preview_size.x - text_size.x) * 0.5f,
+					image_min.y + (preview_size.y - text_size.y) * 0.5f
+				);
+
+				// Draw text with shadow for better visibility
+				draw_list->AddText(ImVec2(text_pos.x + 1, text_pos.y + 1),
+					ImGui::GetColorU32(ImVec4(0, 0, 0, 0.5f)), drop_text);
+				draw_list->AddText(text_pos, ImGui::GetColorU32(ImVec4(1, 1, 1, 0.8f)), drop_text);
+			}
+
+		}
+		ImGui::EndChild();
+		if (props.texture)
+		{
 			ImGui::Text("Size: %dx%d",
 				props.texture->get_width(),
 				props.texture->get_height());
 
-			// Texture format/info if available
 			ImGui::SameLine();
 			ImGui::TextDisabled("| %s",
 				std::filesystem::path(props.path).extension().string().c_str());
-
-			ImGui::Spacing();
-			ImGui::Separator();
 		}
+		else if (!props.path.empty())
+		{
+			ImGui::TextColored(ImVec4(1, 0.5f, 0.5f, 1), "Failed to load: %s",
+				std::filesystem::path(props.path).filename().string().c_str());
+		}
+		else
+		{
+			ImGui::TextDisabled("No texture loaded");
+		}
+		ImGui::Spacing();
+		ImGui::Separator();
 
 		float button_width = ImGui::GetContentRegionAvail().x * 0.48f;
 
@@ -666,28 +512,9 @@ namespace ag::UI
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-		// Load Texture Button
-		if (ImGui::Button("Load Texture", ImVec2(button_width, 0))) {
-			std::string selected_path = FileDialogs::open_file(
-				"Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0"
-			);
-
-			if (!selected_path.empty()) {
-				try {
-					props.path = selected_path;
-					props.texture = NodeHelper::load_texture(props.path);
-					if (entity.has_component<Render2D_Component>())
-					{
-						auto& render = entity.get_component<Render2D_Component>();
-						render.size = props.texture->get_size();
-					}
-				}
-				catch (const std::exception& e)
-				{
-					props.texture.reset();
-					props.path.clear();
-				}
-			}
+		if (ImGui::Button("Load Texture", ImVec2(button_width, 0)))
+		{
+			EditorLayer::get().load_texture(entity);
 		}
 
 		ImGui::SameLine();
@@ -695,10 +522,12 @@ namespace ag::UI
 		if (!props.path.empty())
 		{
 			if (ImGui::Button("Reload", ImVec2(button_width, 0))) {
-				try {
+				try
+				{
 					props.texture = NodeHelper::load_texture(props.path);
 				}
-				catch (const std::exception& e) {
+				catch (const std::exception& e)
+				{
 					props.texture.reset();
 				}
 			}
@@ -714,23 +543,124 @@ namespace ag::UI
 		ImGui::PopStyleColor(3);
 		ImGui::Spacing();
 
-		// --- Drag and Drop Support ---
-		if (ImGui::BeginDragDropTarget()) {
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
-				const char* dropped_path = (const char*)payload->Data;
 
-				std::string extension = std::filesystem::path(dropped_path).extension().string();
-				std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 
-				if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
-					extension == ".bmp" || extension == ".tga") {
-					props.path = dropped_path;
-					props.texture = NodeHelper::load_texture(props.path);
+	}
+
+
+	void content_browser()
+	{
+		static std::filesystem::path currentDirectory = ".";
+		static std::filesystem::path selectedFile;
+		static std::vector<std::filesystem::directory_entry> files;
+
+		ImGui::Begin("Content Browser");
+
+		// Navigation bar
+		if (ImGui::Button("<") && currentDirectory.has_parent_path()) {
+			currentDirectory = currentDirectory.parent_path();
+			files.clear();
+		}
+		ImGui::SameLine();
+
+		if (ImGui::Button("Refresh")) {
+			files.clear();
+		}
+		ImGui::SameLine();
+
+		// Current path display
+		ImGui::Text("%s", currentDirectory.string().c_str());
+		ImGui::Separator();
+
+		// Refresh directory listing
+		if (files.empty()) {
+			try {
+				for (const auto& entry : std::filesystem::directory_iterator(currentDirectory)) {
+					files.push_back(entry);
+				}
+				std::sort(files.begin(), files.end(),
+					[](const auto& a, const auto& b) {
+						if (a.is_directory() && !b.is_directory()) return true;
+						if (!a.is_directory() && b.is_directory()) return false;
+						return a.path().filename() < b.path().filename();
+					});
+			}
+			catch (const std::exception& e) {
+				ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error: %s", e.what());
+			}
+		}
+
+		// File list
+		ImGui::BeginChild("FileList", ImVec2(0, 0), true);
+
+		for (size_t i = 0; i < files.size(); i++) {
+			const auto& entry = files[i];
+			auto path = entry.path();
+			auto filename = path.filename().string();
+			bool isDirectory = entry.is_directory();
+			bool isSelected = (selectedFile == path);
+
+			ImGui::PushID(i);
+
+			// Create selectable item with icon
+			std::string displayText = (isDirectory ? "📁 " : "📄 ") + filename;
+
+			if (ImGui::Selectable(displayText.c_str(), isSelected)) {
+				selectedFile = path;
+				if (ImGui::IsMouseDoubleClicked(0) && isDirectory) {
+					currentDirectory = path;
+					files.clear();
+					selectedFile.clear();
 				}
 			}
-			ImGui::EndDragDropTarget();
+
+			// --- DRAG SOURCE: Make files draggable ---
+			if (!isDirectory && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+				std::string filePath = path.string();
+				ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM",
+					filePath.c_str(),
+					filePath.size() + 1);
+
+				ImGui::Text("📄 %s", filename.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			// Tooltip
+			if (ImGui::IsItemHovered()) {
+				ImGui::BeginTooltip();
+				ImGui::Text("Path: %s", path.string().c_str());
+				if (!isDirectory) {
+					ImGui::Text("Size: %.2f KB", entry.file_size() / 1024.0f);
+					ImGui::Text("Extension: %s", path.extension().string().c_str());
+
+					// Image file hint
+					std::string ext = path.extension().string();
+					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+					if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+						ext == ".bmp" || ext == ".tga" || ext == ".hdr") {
+						ImGui::TextColored(ImVec4(0, 1, 0, 1), "✓ Drag to texture slot");
+					}
+				}
+				ImGui::EndTooltip();
+			}
+
+			ImGui::PopID();
 		}
+
+		ImGui::EndChild();
+		ImGui::End();
 	}
+
+
+
+
+
+
+
+
+
+
+
 
 	void draw_animation(Entity entity)
 	{
@@ -1899,7 +1829,7 @@ namespace ag::UI
 								tile_set.is_tile_registered = true;
 								tile_set.tile_changed = true;
 							}
-								
+
 							show_register = false;
 							selected_tiles.clear();
 							ImGui::CloseCurrentPopup();
@@ -1952,7 +1882,7 @@ namespace ag::UI
 				tile_set.tile_changed = false;
 				AERO_CORE_INFO("Tile Changed");
 			}
-			
+
 		}
 		if (!entity.has_component<Tile_Component>() || !entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture)
 			return false;
@@ -2127,16 +2057,20 @@ namespace ag::UI
 
 	}
 
+
+
+
+
 	bool texture_selector(Entity entity, uint_rect& texture_rect)
 	{
 		static bool window_open = true;
 		static vec2f current_mouse_pos;
 		static vec2f last_mouse_pos;
-		static vec2f starting_pos;
-		static vec2f end_pos;
+		static vec2f starting_pixel;
+		static vec2f ending_pixel;
 		static bool is_dragging = false;
 
-		static bool selected = false;
+		bool selected = false;
 		static bool selection_finished = false;
 		static vec2f tile_size = { 16.0f, 16.0f };
 		static bool is_selecting = false;
@@ -2160,7 +2094,7 @@ namespace ag::UI
 			{
 				ImGui::BeginChild("TextureContainer", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 				{
-					static vec2f view_size = ImGui::GetContentRegionAvail();
+					static vec2f view_size = ImGui::GetWindowSize();
 					static vec2f view_center;
 					static vec2f window_size = ImGui::GetWindowSize();
 					{// On Resize
@@ -2176,7 +2110,6 @@ namespace ag::UI
 
 					vec2f mouse_screen = ImGui::GetMousePos();
 					vec2f child_pos = ImGui::GetWindowPos();
-					vec2f child_size = ImGui::GetWindowSize();
 
 					current_mouse_pos = mouse_screen - child_pos;
 
@@ -2187,11 +2120,15 @@ namespace ag::UI
 						container_start_pos.to_imvec2(),
 						(container_start_pos + container).to_imvec2());
 
+					vec2f image_pos = vec2f(0, 0) - texture_size * 0.5f;
+					vec2f padding = { 10.0f, 10.0f };
+
 					if (is_hovering_container && ImGui::IsMouseClicked(2))
 					{
 						is_dragging = true;
 						last_mouse_pos = current_mouse_pos;
 					}
+
 					if (is_dragging)
 					{
 						if (ImGui::IsMouseDown(2))
@@ -2199,7 +2136,6 @@ namespace ag::UI
 							vec2f start = Math::screen_to_world(last_mouse_pos, Math::get_float_rect(view_size, view_center), container);
 							vec2f end = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
 							vec2f delta = start - end;
-
 							view_center += delta;
 							last_mouse_pos = current_mouse_pos;
 						}
@@ -2214,93 +2150,187 @@ namespace ag::UI
 						float scale_factor = (ImGui::GetIO().MouseWheel > 0) ? 0.9f : 1.1f;
 						vec2f world_before_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
 						view_size *= scale_factor;
-						vec2f world_after_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-						vec2f offset = world_before_zoom - world_after_zoom;
-						view_center += offset;
+						if (view_size < texture_size)
+						{
+							vec2f world_after_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+							vec2f offset = world_before_zoom - world_after_zoom;
+							view_center += offset;
+						}
+						else
+						{
+							view_center = vec2f();
+						}
 					}
 
+					{
+						vec2f half_view = view_size * 0.5f;
+						if (view_size.x < texture_size.x + padding.x)
+						{
+							float min_x = image_pos.x - padding.x + half_view.x;
+							float max_x = image_pos.x + texture_size.x + padding.x - half_view.x;
+							view_center.x = std::clamp(view_center.x, min_x, max_x);
+						}
+						else
+						{
+							view_center.x = image_pos.x + texture_size.x * 0.5f;
+						}
 
+						if (view_size.y < texture_size.y + padding.y)
+						{
+							float min_y = image_pos.y - padding.y + half_view.y;
+							float max_y = image_pos.y + texture_size.y + padding.y - half_view.y;
+							view_center.y = std::clamp(view_center.y, min_y, max_y);
+						}
+						else
+						{
+							view_center.y = image_pos.y + texture_size.y * 0.5f;
+						}
+					}
 
-
-					vec2f image_pos = vec2f(0, 0) - texture_size * 0.5f;
 					vec2f screen_pos = Math::world_to_screen(image_pos, Math::get_float_rect(view_size, view_center), container);
 					vec2f screen_size = Math::world_size_to_screen_size(texture_size, view_size, container);
 					ImGui::SetCursorPos(screen_pos.to_imvec2());
-					ImGui::Image(texture_id, screen_size.to_imvec2());
-					bool is_hovered = ImGui::IsItemHovered();
-					ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
 					vec2f window_pos = ImGui::GetWindowPos();
 					screen_pos += window_pos;
-					vec2i total_dim = texture_size / tile_size;
-					for (int x = 0; x <= total_dim.x; x++)
-					{// Vertical
-						float px = screen_pos.x + x * tile_size.x * (screen_size.x / texture_size.x);
-						draw_list->AddLine(ImVec2(px, screen_pos.y),
-							ImVec2(px, screen_pos.y + screen_size.y),
-							IM_COL32(255, 255, 255, 100), 2.0f);
-					}
+					ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-					for (int y = 0; y <= total_dim.y; y++)
-					{// Horizontal
-						float py = screen_pos.y + y * tile_size.y * (screen_size.y / texture_size.y);
-						draw_list->AddLine(
-							ImVec2(screen_pos.x, py),
-							ImVec2(screen_pos.x + screen_size.x, py),
-							IM_COL32(255, 255, 255, 100), 2.0f);
-					}
+					vec2f padding_size = Math::world_size_to_screen_size(padding, view_size, container);
+					draw_list->AddRectFilled(
+						(screen_pos - padding_size).to_imvec2(),
+						(screen_pos + screen_size + padding_size).to_imvec2(),
+						IM_COL32(50, 50, 50, 200)
+					);
+
+					ImGui::Image(texture_id, screen_size.to_imvec2());
+					bool is_hovered = ImGui::IsItemHovered();
+
+					draw_list->AddRectFilled(
+						screen_pos.to_imvec2(),
+						(screen_pos + screen_size).to_imvec2(),
+						IM_COL32(0, 0, 0, 50)
+					);
 
 					if (is_hovered && ImGui::IsMouseClicked(0))
 					{
 						is_selecting = true;
 						selection_finished = false;
 						vec2f world_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-						AERO_CORE_INFO("World Position");
-						world_pos.print();
 						vec2f local = world_pos - image_pos;
-						AERO_CORE_INFO("Local Position");
-						local.print();
-						vec2f image_size_pixel = texture_size;
-						AERO_CORE_INFO("Image Size in Pixel");
-						image_size_pixel.print();
-						vec2f pixel_world_size = screen_size / image_size_pixel;
-						AERO_CORE_INFO("Pixel World Size");
-						pixel_world_size.print();
-
-
-						local.x = std::floor(local.x / pixel_world_size.x) * pixel_world_size.x;
-						local.y = std::floor(local.y / pixel_world_size.y) * pixel_world_size.y;
-						AERO_CORE_INFO("Local Position");
-						local.print();
-						starting_pos = image_pos + local;
-						AERO_CORE_INFO("Starting Position");
-						starting_pos.print();
+						starting_pixel = local;
+						starting_pixel.floor();
 					}
-
 					if (is_hovered && ImGui::IsMouseDown(0))
 					{
-						vec2f current = current_mouse_pos;
+						{
+							vec2f world_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+							vec2f local = world_pos - image_pos;
+							ending_pixel = local;
+							ending_pixel.floor();
+						}
 
-						vec2f start = Math::world_to_screen(starting_pos, Math::get_float_rect(view_size, view_center), container);
-						draw_list->AddRectFilled(
-							(window_pos + start).to_imvec2(),
-							(window_pos + current).to_imvec2(),
-							IM_COL32(255, 255, 255, 100)
-						);
-					}
-					else if (!ImGui::IsMouseDown(0))
-					{
-						if (is_selecting)
-							end_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+						vec2f start_pos{
+								(std::min(starting_pixel.x, ending_pixel.x)),
+								(std::min(starting_pixel.y, ending_pixel.y))
+						};
+						vec2f end_pos{
+								(std::max(starting_pixel.x, ending_pixel.x)) + 1.0f,
+								(std::max(starting_pixel.y, ending_pixel.y)) + 1.0f
+						};
 
-						is_selecting = false;
+						vec2f start = Math::world_to_screen(start_pos + image_pos, Math::get_float_rect(view_size, view_center), container);
+						vec2f end = Math::world_to_screen(end_pos + image_pos, Math::get_float_rect(view_size, view_center), container);
 
-						vec2f start = Math::world_to_screen(starting_pos, Math::get_float_rect(view_size, view_center), container);
-						vec2f end = Math::world_to_screen(end_pos, Math::get_float_rect(view_size, view_center), container);
-						draw_list->AddRectFilled(
+						vec2f uv0 = starting_pixel / texture_size;
+						vec2f uv1 = (ending_pixel + 1.0f) / texture_size;
+
+						vec2f uv_min{
+								std::min(uv0.x, uv1.x),
+								std::min(uv0.y, uv1.y)
+						};
+						vec2f uv_max{
+								std::max(uv0.x, uv1.x),
+								std::max(uv0.y, uv1.y)
+						};
+
+						draw_list->AddImage(
+							texture_id,
 							(window_pos + start).to_imvec2(),
 							(window_pos + end).to_imvec2(),
-							IM_COL32(255, 255, 255, 100)
+							uv_min.to_imvec2(),
+							uv_max.to_imvec2()
+						);
+
+						draw_list->AddRect(
+							(window_pos + start).to_imvec2(),
+							(window_pos + end).to_imvec2(),
+							IM_COL32(255, 255, 255, 200)
+						);
+
+					}
+					else if (!ImGui::IsMouseDown(0) && is_selecting)
+					{
+						{
+							selection_finished = true;
+							vec2f world_pos = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+							vec2f local = world_pos - image_pos;
+							ending_pixel = local;
+							ending_pixel.floor();
+							is_selecting = false;
+
+							vec2f start_pos{
+								(std::min(starting_pixel.x, ending_pixel.x)),
+								(std::min(starting_pixel.y, ending_pixel.y))
+							};
+							vec2f end_pos{
+									(std::max(starting_pixel.x, ending_pixel.x)) + 1.0f,
+									(std::max(starting_pixel.y, ending_pixel.y)) + 1.0f
+							};
+
+							texture_rect.position = start_pos;
+							texture_rect.size = end_pos - start_pos;
+							selected = true;
+						}
+
+					}
+					else if (!ImGui::IsMouseDown(0) && selection_finished)
+					{
+						vec2f start_pos{
+								(std::min(starting_pixel.x, ending_pixel.x)),
+								(std::min(starting_pixel.y, ending_pixel.y))
+						};
+						vec2f end_pos{
+								(std::max(starting_pixel.x, ending_pixel.x)) + 1.0f,
+								(std::max(starting_pixel.y, ending_pixel.y)) + 1.0f
+						};
+
+						vec2f start = Math::world_to_screen(start_pos + image_pos, Math::get_float_rect(view_size, view_center), container);
+						vec2f end = Math::world_to_screen(end_pos + image_pos, Math::get_float_rect(view_size, view_center), container);
+
+						vec2f uv0 = starting_pixel / texture_size;
+						vec2f uv1 = (ending_pixel + 1.0f) / texture_size;
+
+						vec2f uv_min{
+								std::min(uv0.x, uv1.x),
+								std::min(uv0.y, uv1.y)
+						};
+						vec2f uv_max{
+								std::max(uv0.x, uv1.x),
+								std::max(uv0.y, uv1.y)
+						};
+
+						draw_list->AddImage(
+							texture_id,
+							(window_pos + start).to_imvec2(),
+							(window_pos + end).to_imvec2(),
+							uv_min.to_imvec2(),
+							uv_max.to_imvec2()
+						);
+
+						draw_list->AddRect(
+							(window_pos + start).to_imvec2(),
+							(window_pos + end).to_imvec2(),
+							IM_COL32(255, 255, 255, 200)
 						);
 					}
 
@@ -2316,6 +2346,203 @@ namespace ag::UI
 	}
 
 
+
+
+
+
+
+	void draw_script_selector(Entity entity)
+	{
+		if (!entity.has_component<Script_Component>())
+			return;
+
+		static bool show_create_model = false;
+
+		auto& props = entity.get_component<Script_Component>();
+
+		if (!props.path.empty())
+		{
+			ImGui::Text("Script:%s", props.path.c_str());
+
+		}
+		ImGui::Dummy(ImVec2(0, 10));
+		float button_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f;
+		if (ImGui::Button("Create New", ImVec2(button_width, 0)))
+		{
+			show_create_model = true;
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Add Existing", ImVec2(button_width, 0)))
+		{
+			auto full_path = FileDialogs::open_file("Lua Scripts(*.lua)\0 * .lua\0All Files(*.*)\0 * .*\0");
+			if (!full_path.empty())
+			{
+				auto project = Project::get_active_project();
+				Helper::normalize_path(full_path);
+
+				std::string project_dir = project->get_directory();
+				std::string script_dir = project->get_scripts_directory();
+
+				std::string base_path = project_dir + script_dir + "/";
+
+				std::string relative_path = full_path;
+				if (relative_path.find(base_path) == 0)
+					relative_path = relative_path.substr(base_path.size());
+
+				Helper::normalize_path(relative_path);
+
+				std::filesystem::path p(full_path);
+				std::string script_path = "/" + relative_path;
+
+				if (!entity.has_component<Script_Component>())
+				{
+					Script_Component comp;
+					comp.path = script_path;
+					entity.add_component<Script_Component>(comp);
+				}
+				else
+				{
+					auto& comp = entity.get_component<Script_Component>();
+					comp.path = script_path;
+				}
+			}
+		}
+
+		ImGui::Dummy(ImVec2(0, 5));
+
+		draw_create_script_model(show_create_model, entity);
+	}
+	void draw_create_script_model(bool& show_model, Entity entity)
+	{
+		if (!show_model)
+			return;
+		static std::string new_script_name;
+
+		ImGui::OpenPopup("Create New Script");
+		custom_popup("Create New Script", "Create New Script",
+			[&]() mutable
+			{
+				draw_string("Script Name", new_script_name);
+
+				float button_width = (ImGui::GetContentRegionAvail().x - 10.0f) * 0.5f;
+
+				if (ImGui::Button("Create Script"))
+				{
+					if (!new_script_name.empty())
+					{
+						auto project = Project::get_active_project();
+						std::string script_path = "/" + new_script_name + ".lua";
+						std::string full_path = project->get_directory() + project->get_scripts_directory() + script_path;
+
+						std::ofstream file(full_path);
+						if (file.is_open())
+						{
+							file << "--- " << new_script_name << ".lua ---\n\n";
+							file << "local entity = get_entity()\n\n";
+							file << "function on_create()\n";
+							file << "  aero_print(\"Entity Created\")\n";
+							file << "end\n\n";
+							file << "function on_update(dt)\n";
+							file << "  aero_print(\"Entity Updated\")\n";
+							file << "end\n\n";
+							file << "function on_delete()\n";
+							file << "  aero_print(\"Entity Deleted\")\n";
+							file << "end\n\n";
+							file << "function on_event(event)\n";
+							file << "  aero_print(\"Entity Events\")\n";
+							file << "end\n\n";
+						}
+						file.close();
+						auto& comps = entity.get_component<Script_Component>();
+						comps.path = script_path;
+						show_model = false;
+					}
+				}
+				ImGui::SameLine(0, 10.0f);
+				if (ImGui::Button("Cancel"))
+				{
+					show_model = false;
+				}
+			},
+
+			[&]() mutable
+			{
+				show_model = false;
+			});
+	}
+
+	void custom_popup(PopUpModel& model)
+	{
+		ImGuiWindowFlags flag = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove;
+
+		ImVec4 original_dim_color = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
+
+		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
+
+
+
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+
+
+		ImGui::SetNextWindowPos(ImVec2(center.x - model.window_size.x * 0.5f,
+			center.y - model.window_size.y * 0.5f),
+			ImGuiCond_Appearing);
+		ImGui::SetNextWindowSize(model.window_size.to_imvec2(), ImGuiCond_Appearing);
+
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
+
+		if (ImGui::BeginPopupModal(model.id.c_str(), NULL, flag))
+		{
+			ImVec2 window_pos = ImGui::GetWindowPos();
+			ImVec2 window_size = ImGui::GetWindowSize();
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+			float title_bar_height = 40.0f;
+			ImU32 title_bar_color = IM_COL32(50, 50, 50, 255);
+
+			draw_list->AddRectFilled(
+				window_pos,
+				ImVec2(window_pos.x + window_size.x, window_pos.y + title_bar_height),
+				title_bar_color
+			);
+			ImGui::SetWindowFontScale(1.2f);
+			ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
+			ImGui::TextColored(ImVec4(1, 1, 1, 1), model.name.c_str());
+
+			float close_button_size = title_bar_height - 10;
+			ImGui::SetCursorPos(ImVec2(
+				window_size.x - close_button_size - 5,
+				(title_bar_height - close_button_size) * 0.5f
+			));
+
+
+			ImGui::SetCursorPos(ImVec2(window_size.x - 60, 0));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+
+			if (ImGui::Button(" X ", ImVec2(60, 40)))
+			{
+				model.on_close();
+			}
+			ImGui::SetWindowFontScale(1.0f);
+			ImGui::PopStyleColor(3);
+
+			ImGui::SetCursorPosY(title_bar_height + 5);
+			ImGui::Dummy(ImVec2(0.0f, 0.0f));
+
+			model.draw_content();
+
+			ImGui::EndPopup();
+		}
+
+		ImGui::PopStyleColor(2);
+
+		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
+	}
 
 	void custom_popup(const std::string& popup_id, const std::string& popup_name, std::function<void()> draw_content, std::function<void()> close)
 	{
@@ -2390,7 +2617,6 @@ namespace ag::UI
 		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
 	}
 
-
 	// Helper functions
 	void run_current_scene()
 	{
@@ -2441,698 +2667,6 @@ namespace ag::UI
 		}
 
 	}
-
-	void handle_dialogs(MenuState& state) {
-		// New Scene dialog
-		if (state.show_new_scene_dialog) {
-			ImGui::OpenPopup("New Scene");
-			state.show_new_scene_dialog = false;
-		}
-
-		if (ImGui::BeginPopupModal("New Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGui::Text("You have unsaved changes. Save before creating new scene?");
-			ImGui::Separator();
-
-			if (ImGui::Button("Save and New")) {
-				EditorLayer::get().save_scene();
-				EditorLayer::get().create_new_scene();
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Discard and New")) {
-				EditorLayer::get().create_new_scene();
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Cancel")) {
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-
-		// Save As dialog
-		if (state.show_save_as_dialog) {
-			auto result = FileDialogs::save_file("Aero Scene (*.aero)\0*.aero\0");
-			if (!result.empty()) {
-				/* EditorLayer::get().save_scene_as(result);*/
-			}
-			state.show_save_as_dialog = false;
-		}
-
-		// About dialog
-		if (state.show_about_dialog) {
-			ImGui::OpenPopup("About");
-			state.show_about_dialog = false;
-		}
-
-		if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGui::Text("Aero Engine Editor");
-			ImGui::Text("Version 1.0.0");
-			ImGui::Separator();
-			ImGui::Text("A modern game engine editor");
-			ImGui::Text("Built with C++20, OpenGL, and Dear ImGui");
-			ImGui::Separator();
-
-			if (ImGui::Button("Close")) {
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-
-		// Shortcuts dialog
-		if (state.show_shortcuts_dialog) {
-			ImGui::OpenPopup("Keyboard Shortcuts");
-			state.show_shortcuts_dialog = false;
-		}
-
-		if (ImGui::BeginPopupModal("Keyboard Shortcuts", nullptr,
-			ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-			ImGui::BeginTable("shortcuts", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingFixedFit);
-
-			ImGui::TableSetupColumn("Action");
-			ImGui::TableSetupColumn("Shortcut");
-			ImGui::TableHeadersRow();
-
-			// File shortcuts
-			add_shortcut_row("New Scene", "Ctrl+N");
-			add_shortcut_row("Open Scene", "Ctrl+O");
-			add_shortcut_row("Save Scene", "Ctrl+S");
-			add_shortcut_row("Save Scene As", "Ctrl+Shift+S");
-			add_shortcut_row("Exit", "Alt+F4");
-
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn(); ImGui::Text("Edit");
-			ImGui::TableNextColumn(); ImGui::Text("");
-
-			add_shortcut_row("Undo", "Ctrl+Z");
-			add_shortcut_row("Redo", "Ctrl+Y");
-			add_shortcut_row("Cut", "Ctrl+X");
-			add_shortcut_row("Copy", "Ctrl+C");
-			add_shortcut_row("Paste", "Ctrl+V");
-			add_shortcut_row("Delete", "Del");
-
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn(); ImGui::Text("Run");
-			ImGui::TableNextColumn(); ImGui::Text("");
-
-			add_shortcut_row("Run Scene", "F5");
-			add_shortcut_row("Run Current Scene", "Ctrl+F5");
-			add_shortcut_row("Stop", "Shift+F5");
-			add_shortcut_row("Play Simulation", "Ctrl+P");
-
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn(); ImGui::Text("View");
-			ImGui::TableNextColumn(); ImGui::Text("");
-
-			add_shortcut_row("Toggle Fullscreen", "F11");
-			add_shortcut_row("Toggle Scene View", "F2");
-			add_shortcut_row("Toggle Inspector", "F3");
-
-			ImGui::EndTable();
-
-			ImGui::Separator();
-
-			if (ImGui::Button("Close")) {
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-	}
-
-	void add_shortcut_row(const char* action, const char* shortcut) {
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("%s", action);
-		ImGui::TableNextColumn();
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "%s", shortcut);
-	}
-
-	/*void draw_menu_bar()
-	{
-		if (ImGui::BeginMainMenuBar())
-		{
-			if (ImGui::BeginMenu("File"))
-			{
-				if (ImGui::MenuItem("New Scene", "Ctrl + N"))
-				{
-					EditorLayer::get().create_new_scene();
-				}
-				if (ImGui::MenuItem("Open Scene", "Ctrl + O"))
-				{
-					EditorLayer::get().open_scene();
-				}
-				if (ImGui::MenuItem("Save Scene", "Ctrl + S"))
-				{
-					EditorLayer::get().save_scene();
-				}
-				if (ImGui::MenuItem("Save Scene As", "Ctrl + Shift + S"))
-				{
-
-				}
-				ImGui::Separator();
-				if (ImGui::MenuItem("Exit")) {}
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Edit"))
-			{
-				ImGui::MenuItem("Undo");
-				ImGui::MenuItem("Redo");
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("View"))
-			{
-				ImGui::MenuItem("Scene");
-				ImGui::MenuItem("Inspector");
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Run"))
-			{
-				if (ImGui::MenuItem("Run Scene"))
-				{
-					auto folder = FileDialogs::get_exe_folder();
-					std::wstring app = folder + L"\\Sandbox.exe";
-
-					FileDialogs::run_exe(app);
-				}
-
-				if (ImGui::MenuItem("Run Current Scene"))
-				{
-					auto scene = Scene::get_active_scene();
-					auto project = Project::get_active_project();
-
-					std::string project_file = project->get_project_file_directory();
-					Helper::makefile_read_only(project_file, false);
-					std::fstream file(project_file);
-					json j;
-					if (!file.is_open())
-					{
-						AERO_CORE_INFO("Cannot Open File {0}", project_file);
-					}
-					file >> j;
-					file.close();
-
-					Helper::save_json(j["Scene"], "Default", scene->get_name());
-					Helper::save_json(j["Scene"], "Default Path", scene->get_directory());
-
-					AERO_CORE_INFO("Scene Name: {0}", scene->get_name());
-					AERO_CORE_INFO("Scene Directory: {0}", scene->get_directory());
-
-					std::ofstream out_file(project_file);
-					if (!out_file.is_open())
-					{
-						AERO_CORE_INFO("Cannot Open File: {0}", project_file);
-					}
-					out_file << j.dump(4);
-					out_file.close();
-					Helper::makefile_read_only(project_file);
-
-					auto folder = FileDialogs::get_exe_folder();
-					std::wstring app = folder + L"\\Sandbox.exe";
-
-					FileDialogs::run_exe(app);
-				}
-
-				ImGui::EndMenu();
-			}
-
-			ImGui::EndMainMenuBar();
-		}
-	}*/
-
-	bool texture_selector(const AG_ref<Texture>& texture, uint_rect& texture_rect) {
-		static Selector state;
-
-		static bool window_open = true;
-		bool selected = false;
-
-		if (!texture) return false;
-
-		// Initialize safe area if texture size is known
-		if (state.safe_area.size.x == 0 && texture->get_size().x > 0) {
-			auto tex_size = texture->get_size();
-			state.safe_area = {
-					{50, 50},
-					{tex_size.x - 100, tex_size.y - 100}
-			};
-			state.aspect_ratio = static_cast<float>(tex_size.x) / tex_size.y;
-		}
-
-		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoScrollWithMouse |
-			ImGuiWindowFlags_NoCollapse;
-
-		if (ImGui::Begin("Texture Selector", &window_open, flags)) {
-			// Toolbar
-			ImGui::BeginGroup();
-			{
-				// Zoom controls
-				ImGui::PushItemWidth(80.0f);
-				if (ImGui::SliderFloat("Zoom", &state.zoom, state.min_zoom, state.max_zoom, "%.2fx")) {
-					state.zoom = std::clamp(state.zoom, state.min_zoom, state.max_zoom);
-				}
-				ImGui::PopItemWidth();
-
-				ImGui::SameLine();
-				if (ImGui::Button("Reset##zoom")) {
-					state.zoom = 1.0f;
-					state.pan_offset;
-				}
-
-				ImGui::SameLine();
-				ImGui::Checkbox("Grid", &state.show_grid);
-
-				ImGui::SameLine();
-				if (ImGui::Checkbox("Pixel Grid", &state.show_pixel_grid)) {
-					if (state.show_pixel_grid) {
-						state.grid_size = 1;
-					}
-					else {
-						state.grid_size = 32;
-					}
-				}
-
-				ImGui::SameLine();
-				ImGui::Checkbox("Safe Area", &state.show_safe_area);
-
-				ImGui::SameLine();
-				ImGui::Checkbox("Lock Aspect", &state.lock_aspect_ratio);
-
-				ImGui::SameLine();
-				if (ImGui::Button("Clear##selection")) {
-					state.has_selection = false;
-					state.selecting = false;
-				}
-			}
-			ImGui::EndGroup();
-
-			ImGui::Separator();
-
-			// Image display area
-			{
-				ImGui::BeginChild("ImageArea", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 2),
-					true, ImGuiWindowFlags_NoScrollbar);
-
-				const vec2f tex_size = texture->get_size();
-				const vec2f image_size = vec2f(tex_size.x * state.zoom, tex_size.y * state.zoom);
-				const vec2f available_size = { ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-
-				// Calculate centered position with pan offset
-				vec2f center = available_size * 0.5f + state.pan_offset;
-				vec2f offset = center - (image_size * 0.5f);
-
-				ImGui::SetCursorPos(offset.to_imvec2());
-
-				// Get image screen coordinates
-				const vec2f image_min = { ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y };
-				const vec2f image_max = image_min + image_size;
-
-				ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-				// Draw background
-				draw_list->AddRectFilled(image_min.to_imvec2(), image_max.to_imvec2(),
-					IM_COL32(40, 40, 40, 255));
-
-				// Draw grid if enabled
-				if (state.show_grid && state.zoom > 0.5f) {
-					draw_grid(draw_list, image_min, image_max, tex_size, state.zoom,
-						state.grid_size, state.show_pixel_grid);
-				}
-
-				// Draw safe area if enabled
-				if (state.show_safe_area) {
-					draw_safe_area(draw_list, image_min, image_max, tex_size,
-						state.zoom, state.safe_area);
-				}
-
-				// Draw texture
-				ImGui::Image((void*)texture->get_texture_id(), image_size.to_imvec2());
-
-				// Handle mouse interactions
-				handle_mouse_interactions(image_min, image_max, tex_size, state);
-
-				// Draw selection rectangle
-				if (state.selecting || state.has_selection) {
-					draw_selection(draw_list, state, image_min, image_max, tex_size);
-				}
-
-				// Draw info overlay
-				draw_info_overlay(draw_list, image_min, tex_size, state, available_size);
-
-				// Convert selection to texture coordinates if complete
-				if (state.has_selection && !state.selecting) {
-					selected = convert_selection_to_rect(state, image_min, image_max,
-						tex_size, texture_rect);
-					if (selected) {
-						state.status_message = fmt::format("Selected: {}x{} at ({}, {})",
-							texture_rect.size.x,
-							texture_rect.size.y,
-							texture_rect.position.x,
-							texture_rect.position.y);
-						state.status_timer = 3.0f;
-					}
-					state.has_selection = false;
-				}
-
-				ImGui::EndChild();
-			}
-
-			// Status bar
-			render_status_bar(state);
-
-			// Selection info panel
-			if (selected) {
-				render_selection_info(texture_rect);
-			}
-		}
-		ImGui::End();
-
-		return selected;
-	}
-
-	void draw_grid(ImDrawList* draw_list, const vec2f& image_min, const vec2f& image_max,
-		const vec2f& tex_size, float zoom, int grid_size, bool pixel_grid) {
-		const ImU32 grid_color = IM_COL32(60, 60, 60, 150);
-		const ImU32 major_grid_color = IM_COL32(80, 80, 80, 200);
-		const float grid_spacing = grid_size * zoom;
-
-		if (grid_spacing < 2.0f) return;
-
-		// Vertical lines
-		for (float x = image_min.x + grid_spacing; x < image_max.x; x += grid_spacing) {
-			bool is_major = (static_cast<int>((x - image_min.x) / grid_spacing) % 8 == 0);
-			draw_list->AddLine(ImVec2(x, image_min.y), ImVec2(x, image_max.y),
-				is_major ? major_grid_color : grid_color, 1.0f);
-		}
-
-		// Horizontal lines
-		for (float y = image_min.y + grid_spacing; y < image_max.y; y += grid_spacing) {
-			bool is_major = (static_cast<int>((y - image_min.y) / grid_spacing) % 8 == 0);
-			draw_list->AddLine(ImVec2(image_min.x, y), ImVec2(image_max.x, y),
-				is_major ? major_grid_color : grid_color, 1.0f);
-		}
-
-		// Pixel grid (only at high zoom)
-		if (pixel_grid && zoom > 4.0f) {
-			const ImU32 pixel_grid_color = IM_COL32(100, 100, 100, 80);
-			const float pixel_spacing = zoom;
-
-			for (float x = image_min.x + pixel_spacing; x < image_max.x; x += pixel_spacing) {
-				draw_list->AddLine(ImVec2(x, image_min.y), ImVec2(x, image_max.y),
-					pixel_grid_color, 0.5f);
-			}
-			for (float y = image_min.y + pixel_spacing; y < image_max.y; y += pixel_spacing) {
-				draw_list->AddLine(ImVec2(image_min.x, y), ImVec2(image_max.x, y),
-					pixel_grid_color, 0.5f);
-			}
-		}
-	}
-
-	void draw_safe_area(ImDrawList* draw_list, const vec2f& image_min, const vec2f& image_max,
-		const vec2f& tex_size, float zoom, const uint_rect& safe_area) {
-		if (safe_area.size.x == 0 || safe_area.size.y == 0) return;
-
-		vec2f safe_min = image_min + vec2f(safe_area.position.x * zoom,
-			safe_area.position.y * zoom);
-		vec2f safe_max = safe_min + vec2f(safe_area.size.x * zoom,
-			safe_area.size.y * zoom);
-
-		// Clamp to image bounds
-		safe_min.x = std::clamp(safe_min.x, image_min.x, image_max.x);
-		safe_min.y = std::clamp(safe_min.y, image_min.y, image_max.y);
-		safe_max.x = std::clamp(safe_max.x, image_min.x, image_max.x);
-		safe_max.y = std::clamp(safe_max.y, image_min.y, image_max.y);
-
-		draw_list->AddRect(safe_min.to_imvec2(), safe_max.to_imvec2(),
-			IM_COL32(255, 50, 50, 100), 0.0f, 0, 2.0f);
-
-		// Label
-		ImVec2 text_pos = ImVec2(safe_min.x + 5, safe_min.y + 5);
-		draw_list->AddText(text_pos, IM_COL32(255, 100, 100, 200), "Safe Area");
-	}
-
-	void handle_mouse_interactions(const vec2f& image_min, const vec2f& image_max,
-		const vec2f& tex_size, Selector& state) {
-		bool is_hovered = ImGui::IsItemHovered();
-		bool is_window_hovered = ImGui::IsWindowHovered();
-		ImGuiIO& io = ImGui::GetIO();
-
-		// Zoom with mouse wheel
-		if (is_hovered && io.MouseWheel != 0.0f) {
-			vec2f mouse_pos = { io.MousePos.x, io.MousePos.y };
-			vec2f image_rel_before = (mouse_pos - image_min) / state.zoom;
-
-			float new_zoom = state.zoom + io.MouseWheel * state.zoom_speed;
-			new_zoom = std::clamp(new_zoom, state.min_zoom, state.max_zoom);
-
-			if (state.zoom != new_zoom) {
-				// Zoom towards mouse position
-				vec2f image_rel_after = (mouse_pos - image_min) / new_zoom;
-				vec2f zoom_offset = (image_rel_before - image_rel_after) * new_zoom;
-				state.pan_offset += zoom_offset;
-
-				state.zoom = new_zoom;
-			}
-		}
-
-		// Pan with middle mouse button
-		if (is_window_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
-			state.panning = true;
-			state.drag_start = { io.MousePos.x, io.MousePos.y };
-		}
-
-		if (state.panning) {
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
-				state.drag_current = { io.MousePos.x, io.MousePos.y };
-				vec2f delta = state.drag_current - state.drag_start;
-				state.pan_offset += delta;
-				state.drag_start = state.drag_current;
-			}
-			else {
-				state.panning = false;
-			}
-		}
-
-		// Selection with left mouse button
-		if (is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-			state.selecting = true;
-			state.has_selection = false;
-			state.select_start = { io.MousePos.x, io.MousePos.y };
-			state.select_end = state.select_start;
-		}
-
-		if (state.selecting) {
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-				state.select_end = { io.MousePos.x, io.MousePos.y };
-
-				// Apply aspect ratio lock
-				if (state.lock_aspect_ratio) {
-					vec2f delta = state.select_end - state.select_start;
-					if (std::abs(delta.x) > std::abs(delta.y)) {
-						delta.y = delta.x / state.aspect_ratio;
-					}
-					else {
-						delta.x = delta.y * state.aspect_ratio;
-					}
-					state.select_end = state.select_start + delta;
-				}
-			}
-			else {
-				state.selecting = false;
-				state.has_selection = true;
-			}
-		}
-	}
-
-	void draw_selection(ImDrawList* draw_list, Selector& state, const vec2f& image_min,
-		const vec2f& image_max, const vec2f& tex_size) {
-		vec2f sel_min(std::min(state.select_start.x, state.select_end.x),
-			std::min(state.select_start.y, state.select_end.y));
-		vec2f sel_max(std::max(state.select_start.x, state.select_end.x),
-			std::max(state.select_start.y, state.select_end.y));
-
-		// Clamp to image bounds
-		sel_min.x = std::clamp(sel_min.x, image_min.x, image_max.x);
-		sel_min.y = std::clamp(sel_min.y, image_min.y, image_max.y);
-		sel_max.x = std::clamp(sel_max.x, image_min.x, image_max.x);
-		sel_max.y = std::clamp(sel_max.y, image_min.y, image_max.y);
-
-		// Draw selection rectangle
-		draw_list->AddRect(sel_min.to_imvec2(), sel_max.to_imvec2(),
-			IM_COL32(255, 200, 0, 255), 0.0f, 0, 2.0f);
-
-		// Draw resize handles
-		if (state.selecting) {
-			const float handle_size = 6.0f;
-			const ImU32 handle_color = IM_COL32(255, 255, 255, 255);
-
-			// Four corners
-			draw_list->AddCircleFilled(sel_min.to_imvec2(), handle_size, handle_color);
-			draw_list->AddCircleFilled(ImVec2(sel_max.x, sel_min.y), handle_size, handle_color);
-			draw_list->AddCircleFilled(ImVec2(sel_min.x, sel_max.y), handle_size, handle_color);
-			draw_list->AddCircleFilled(sel_max.to_imvec2(), handle_size, handle_color);
-		}
-
-		// Draw dimensions text
-		vec2f pixel_min = (sel_min - image_min) / state.zoom;
-		vec2f pixel_max = (sel_max - image_min) / state.zoom;
-		int width = static_cast<int>(pixel_max.x - pixel_min.x);
-		int height = static_cast<int>(pixel_max.y - pixel_min.y);
-
-		std::string dim_text = fmt::format("{} x {}", width, height);
-		ImVec2 text_size = ImGui::CalcTextSize(dim_text.c_str());
-		ImVec2 text_pos = ImVec2((sel_min.x + sel_max.x - text_size.x) * 0.5f,
-			sel_min.y - text_size.y - 5);
-
-		if (text_pos.y > image_min.y) {
-			draw_list->AddRectFilled(text_pos,
-				ImVec2(text_pos.x + text_size.x + 4,
-					text_pos.y + text_size.y + 4),
-				IM_COL32(0, 0, 0, 180));
-			draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), dim_text.c_str());
-		}
-	}
-
-	void draw_info_overlay(ImDrawList* draw_list, const vec2f& image_min,
-		const vec2f& tex_size, Selector& state, const vec2f& available_size) {
-		if (!ImGui::IsItemHovered()) return;
-
-		ImGuiIO& io = ImGui::GetIO();
-		vec2f mouse_pos = { io.MousePos.x, io.MousePos.y };
-
-		// Only show pixel info when over the image
-		if (mouse_pos.x >= image_min.x && mouse_pos.x < image_min.x + tex_size.x * state.zoom &&
-			mouse_pos.y >= image_min.y && mouse_pos.y < image_min.y + tex_size.y * state.zoom) {
-
-			// Convert to pixel coordinates
-			vec2f pixel_pos = (mouse_pos - image_min) / state.zoom;
-			int pixel_x = static_cast<int>(std::floor(pixel_pos.x));
-			int pixel_y = static_cast<int>(std::floor(pixel_pos.y));
-
-			// Clamp to texture bounds
-			pixel_x = std::clamp(pixel_x, 0, static_cast<int>(tex_size.x) - 1);
-			pixel_y = std::clamp(pixel_y, 0, static_cast<int>(tex_size.y) - 1);
-
-			// Draw pixel info
-			std::string pixel_info = fmt::format("Pixel: ({}, {})", pixel_x, pixel_y);
-			ImVec2 text_size = ImGui::CalcTextSize(pixel_info.c_str());
-			ImVec2 text_pos = ImVec2(available_size.x - text_size.x - 10, 10);
-
-			draw_list->AddRectFilled(text_pos,
-				ImVec2(text_pos.x + text_size.x + 8,
-					text_pos.y + text_size.y + 8),
-				IM_COL32(0, 0, 0, 180));
-			draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), pixel_info.c_str());
-		}
-	}
-
-	bool convert_selection_to_rect(Selector& state, const vec2f& image_min, const vec2f& image_max,
-		const vec2f& tex_size, uint_rect& texture_rect) {
-		vec2f sel_min(std::min(state.select_start.x, state.select_end.x),
-			std::min(state.select_start.y, state.select_end.y));
-		vec2f sel_max(std::max(state.select_start.x, state.select_end.x),
-			std::max(state.select_start.y, state.select_end.y));
-
-		// Clamp to image bounds
-		sel_min.x = std::clamp(sel_min.x, image_min.x, image_max.x);
-		sel_min.y = std::clamp(sel_min.y, image_min.y, image_max.y);
-		sel_max.x = std::clamp(sel_max.x, image_min.x, image_max.x);
-		sel_max.y = std::clamp(sel_max.y, image_min.y, image_max.y);
-
-		// Convert to pixel coordinates
-		vec2f pixel_min = (sel_min - image_min) / state.zoom;
-		vec2f pixel_max = (sel_max - image_min) / state.zoom;
-
-		// Pixel-perfect rounding
-		uint32_t x0 = static_cast<uint32_t>(std::floor(pixel_min.x));
-		uint32_t y0 = static_cast<uint32_t>(std::floor(pixel_min.y));
-		uint32_t x1 = static_cast<uint32_t>(std::ceil(pixel_max.x));
-		uint32_t y1 = static_cast<uint32_t>(std::ceil(pixel_max.y));
-
-		// Clamp to texture bounds
-		x0 = std::min(x0, static_cast<uint32_t>(tex_size.x) - 1);
-		y0 = std::min(y0, static_cast<uint32_t>(tex_size.y) - 1);
-		x1 = std::min(x1, static_cast<uint32_t>(tex_size.x));
-		y1 = std::min(y1, static_cast<uint32_t>(tex_size.y));
-
-		uint32_t width = x1 - x0;
-		uint32_t height = y1 - y0;
-
-		const uint32_t min_size = 1; // Minimum 1x1 pixel selection
-
-		if (width >= min_size && height >= min_size) {
-			texture_rect.position.x = x0;
-			texture_rect.position.y = y0;
-			texture_rect.size.x = width;
-			texture_rect.size.y = height;
-			return true;
-		}
-
-		return false;
-	}
-
-	void render_status_bar(Selector& state) {
-		ImGui::BeginChild("StatusBar", ImVec2(0, 0), true);
-
-		// Texture info
-		//ImGui::Text("Texture: %dx%d",
-		//  static_cast<int>(tex_size.x),
-		//  static_cast<int>(tex_size.y));
-
-		//ImGui::SameLine(ImGui::GetWindowWidth() - 200);
-
-		//// Selection info
-		//if (state.has_selection || state.selecting) {
-		//  vec2f pixel_min = (sel_min - image_min) / state.zoom;
-		//  vec2f pixel_max = (sel_max - image_min) / state.zoom;
-		//  int width = static_cast<int>(pixel_max.x - pixel_min.x);
-		//  int height = static_cast<int>(pixel_max.y - pixel_min.y);
-		//  ImGui::Text("Selection: %dx%d", width, height);
-		//}
-		//else {
-		//  ImGui::TextDisabled("No selection");
-		//}
-
-		//// Status message with timer
-		//if (state.status_timer > 0.0f) {
-		//  state.status_timer -= ImGui::GetIO().DeltaTime;
-		//  ImGui::SameLine();
-		//  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%s", state.status_message.c_str());
-		//}
-
-		ImGui::EndChild();
-	}
-
-	void render_selection_info(const uint_rect& texture_rect) {
-		if (ImGui::CollapsingHeader("Selection Details", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::Text("Position: (%d, %d)", texture_rect.position.x, texture_rect.position.y);
-			ImGui::Text("Size: %dx%d", texture_rect.size.x, texture_rect.size.y);
-			ImGui::Text("Area: %d pixels", texture_rect.size.x * texture_rect.size.y);
-
-			// Aspect ratio
-			float aspect = static_cast<float>(texture_rect.size.x) / texture_rect.size.y;
-			ImGui::Text("Aspect Ratio: %.2f:1", aspect);
-
-			// Common resolutions
-			ImGui::Separator();
-			ImGui::Text("Common Sizes:");
-			if (texture_rect.size == vec2u(16, 16)) ImGui::TextDisabled("  16x16 - Icon");
-			if (texture_rect.size == vec2u(32, 32)) ImGui::TextDisabled("  32x32 - Small Icon");
-			if (texture_rect.size == vec2u(64, 64)) ImGui::TextDisabled("  64x64 - Medium Icon");
-			if (texture_rect.size == vec2u(128, 128)) ImGui::TextDisabled("  128x128 - Large Icon");
-			if (texture_rect.size == vec2u(256, 256)) ImGui::TextDisabled("  256x256 - Texture");
-			if (texture_rect.size == vec2u(512, 512)) ImGui::TextDisabled("  512x512 - HD Texture");
-			if (texture_rect.size == vec2u(1024, 1024)) ImGui::TextDisabled("  1024x1024 - Full HD");
-		}
-	}
-
 
 	void draw_console()
 	{

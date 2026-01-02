@@ -60,7 +60,7 @@ namespace ag
 		editor_things();
 		m_scene->on_update(ts);
 		m_panel->draw_selected_text();
-
+		m_panel->draw_collision_shapes();
 
 		Renderer2D::end_scene();
 
@@ -531,5 +531,33 @@ namespace ag
 
 		if (t_axis == TransformAxis::None || t_axis == TransformAxis::Y)
 			Renderer2D::draw_rectangle(y_axis, y_axis_transform);
+	}
+
+
+	void EditorLayer::load_texture(Entity entity)
+	{
+		std::string selected_path = FileDialogs::open_file(
+			"Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0"
+		);
+		auto& props = entity.get_component<Texture_Component>();
+
+		if (!selected_path.empty())
+		{
+			try
+			{
+				props.path = selected_path;
+				props.texture = NodeHelper::load_texture(props.path);
+				if (entity.has_component<Render2D_Component>())
+				{
+					auto& render = entity.get_component<Render2D_Component>();
+					render.size = props.texture->get_size();
+				}
+			}
+			catch (const std::exception& e)
+			{
+				props.texture.reset();
+				props.path.clear();
+			}
+		}
 	}
 }

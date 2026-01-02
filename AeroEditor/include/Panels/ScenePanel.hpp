@@ -87,7 +87,7 @@ namespace ag
     void draw_properties_panel();
     void draw_create_object();
     void draw_selected_text();
-     
+    void draw_collision_shapes();
 
     void set_current_mouse_position(const vec2f& position) { m_current_mouse_position = position; }
     void update_transform_settings();
@@ -152,7 +152,7 @@ namespace ag
     bool m_scale_flag = false;
     bool m_rotate_flag = false;
 
-    Transform m_initial_transform;
+    Transform_Component m_initial_transform;
     TransformSetting m_current_transform_setting = TransformSetting::None;
     TransformAxis m_current_transform_axis = TransformAxis::None;
   };

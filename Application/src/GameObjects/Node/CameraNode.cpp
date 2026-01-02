@@ -4,7 +4,7 @@ namespace ag
 {
 	void CameraNode::create_node(Entity entity)
 	{
-		entity.add_component<Camera_Component>();
+		Camera_Component::add_component(entity);
 	}
 	void CameraNode::delete_node(Entity entity)
 	{
@@ -21,13 +21,14 @@ namespace ag
     json j;
     NodeHelper::save_component<Camera_Component>(entity, j);
     NodeHelper::save_component<Script_Component>(entity, j);
-
+		NodeHelper::save_component<Window_Component>(entity, j);
     return j;
 	}
 	void CameraNode::load_json(Entity entity, const json& j)
 	{
     NodeHelper::load_component<Camera_Component>(entity, j);
     NodeHelper::load_component<Script_Component>(entity, j);
+		NodeHelper::load_component<Window_Component>(entity, j);
 	}
 	void CameraNode::update(Entity entity, TimeStamp ts)
 	{

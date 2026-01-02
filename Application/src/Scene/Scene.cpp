@@ -178,14 +178,11 @@ namespace ag
 
 	void Scene::on_event(Event& event)
 	{
-		auto view = m_registry.view<Tag_Component>();
+		auto view = m_registry.view<Script_Component>();
 		for (auto entityID : view)
 		{
 			Entity entity(entityID);
-			if (entity.has_component<ScriptComponent>())
-			{
-				ScriptComponent::event(entity, event);
-			}
+			Script_Component::event(entity, event);
 		}
 	}
 

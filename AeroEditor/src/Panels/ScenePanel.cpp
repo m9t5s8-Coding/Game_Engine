@@ -36,10 +36,9 @@ namespace ag
 		NodeFactory::properties_map[NodeType::Camera] = NodeProperties::camera_2D;
 		NodeFactory::properties_map[NodeType::TileMap] = NodeProperties::tilemap_2D;
 		NodeFactory::properties_map[NodeType::Scene2D] = NodeProperties::scene_2D;
-		NodeFactory::properties_map[NodeType::TextNode] = TextNode::show_properties;
-		NodeFactory::properties_map[NodeType::Button] = ButtonNode::show_properties;
-		NodeFactory::properties_map[NodeType::TextureButton] = TextureButton::show_properties;
-		NodeFactory::properties_map[NodeType::CollisionShape] = CollisionShape::show_properties;
+		//NodeFactory::properties_map[NodeType::TextNode] = TextNode::show_properties;
+		//NodeFactory::properties_map[NodeType::Button] = ButtonNode::show_properties;
+		//NodeFactory::properties_map[NodeType::TextureButton] = TextureButton::show_properties;
 
 	}
 
@@ -75,7 +74,7 @@ namespace ag
 	void ScenePanel::on_imgui_render()
 	{
 		UI::draw_menu_bar();
-
+		UI::content_browser();
 
 		/*ImGui::Begin("Scene");
 		draw_scene_top_panel();
@@ -131,7 +130,7 @@ namespace ag
 			}
 			else if (tag.node_type == NodeType::Sprite)
 			{
-				/*if (m_selected_entity.has_component<TextureRect_Component>())
+				if (m_selected_entity.has_component<TextureRect_Component>())
 				{
 					auto& rects = m_selected_entity.get_component<TextureRect_Component>();
 					auto& sizes = m_selected_entity.get_component<Render2D_Component>();
@@ -140,15 +139,13 @@ namespace ag
 					uint_rect texture_rect;
 					if (texture)
 					{
-						if (UI::texture_selector(texture, texture_rect))
+						if (UI::texture_selector(m_selected_entity, texture_rect))
 						{
 							rects.rect = texture_rect;
 							sizes.size = texture_rect.size;
 						}
 					}
-				}*/
-				uint_rect texture_rect;
-				UI::texture_selector(m_selected_entity, texture_rect);
+				}
 			}
 		}
 
@@ -1282,6 +1279,59 @@ namespace ag
 		}
 	}
 
+	void ScenePanel::draw_collision_shapes()
+	{
+		const auto& view = m_scene->get_view<CollisionShape_Component>();
+		const auto& camera = EditorLayer::get().get_view();
+		auto viewport_size = EditorLayer::get().get_viewport_size();
+		Rectangle rect;
+		Circle circle;
+		for (auto id : view)
+		{
+			Entity e(id);
+			auto& shapes = e.get_component<CollisionShape_Component>();
+			auto transform = Transform_Component::get_world_transform(e);
+			transform.position = Math::world_to_screen(transform.position, camera.get_float_rect(), viewport_size);
+			switch (shapes.shape_type)
+			{
+			case ShapeType::Rectangle:
+			{
+				auto rect_size = Math::world_size_to_screen_size(shapes.size, camera.get_size(), viewport_size);
+				rect.size = rect_size;
+				rect.mode = RenderMode::Screen;
+				rect.fill_color = Color(80, 180, 255, 40);
+				rect.border_color = Color(30, 140, 230, 220);
+				rect.border_thickness = -3.0f;
+				Renderer2D::draw_rectangle(rect, transform);
+				break;
+			}
+			case ShapeType::Circle:
+			{
+				auto circle_size = Math::world_size_to_screen_size({ shapes.radius * 2,shapes.radius * 2 }, camera.get_size(), viewport_size);
+				circle.size = circle_size;
+				rect.mode = RenderMode::Screen;
+				circle.fill_color = Color(80, 180, 255, 40);
+				circle.border_color = Color(30, 140, 230, 220);
+				circle.border_thickness = -3.0f;
+				Renderer2D::draw_circle(circle, transform);
+				break;
+			}
+			default:
+			{
+				auto rect_size = Math::world_size_to_screen_size(shapes.size, camera.get_size(), viewport_size);
+				rect.size = rect_size;
+				rect.mode = RenderMode::Screen;
+				rect.fill_color = Color(80, 180, 255, 40);
+				rect.border_color = Color(30, 140, 230, 220);
+				rect.border_thickness = -3.0f;
+				Renderer2D::draw_rectangle(rect, transform);
+				break;
+			}
+			}
+
+		}
+	}
+
 	void ScenePanel::update_transform_settings()
 	{
 		if (!m_selected_entity || !m_selected_entity.has_component<Transform_Component>())
@@ -1472,16 +1522,16 @@ namespace ag
 			std::filesystem::path p(full_path);
 			std::string script_path = "/" + relative_path;
 
-			if (!m_selected_entity.has_component<ScriptComponent>())
+			if (!m_selected_entity.has_component<Script_Component>())
 			{
-				ScriptComponent comp;
-				comp.script_path = script_path;
-				m_selected_entity.add_component<ScriptComponent>(comp);
+				Script_Component comp;
+				comp.path = script_path;
+				m_selected_entity.add_component<Script_Component>(comp);
 			}
 			else
 			{
-				auto& comp = m_selected_entity.get_component<ScriptComponent>();
-				comp.script_path = script_path;
+				auto& comp = m_selected_entity.get_component<Script_Component>();
+				comp.path = script_path;
 			}
 		}
 	}

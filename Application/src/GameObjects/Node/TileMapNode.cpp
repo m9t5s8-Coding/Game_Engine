@@ -4,8 +4,8 @@ namespace ag
 {
 	void TileMapNode::create_node(Entity entity)
 	{
-		entity.add_component<Texture_Component>();
-		entity.add_component<Tile_Component>();
+		Texture_Component::add_component(entity);
+		Tile_Component::add_component(entity);
 	}
 	void TileMapNode::delete_node(Entity entity)
 	{
@@ -39,6 +39,7 @@ namespace ag
 	}
 	void TileMapNode::update(Entity entity, TimeStamp ts)
 	{
+		TileSet_Component::update(entity);
 		Script_Component::update(entity, ts);
 	}
 	void TileMapNode::draw(Entity entity)

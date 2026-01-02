@@ -22,6 +22,17 @@ namespace ag
 		AG_uint parent_id = INVALID_ENTITY;
 		std::vector<AG_uint> children_id;
 
+		static void add_component(Entity entity)
+		{
+
+		}
+
+		static void remove_component(Entity entity)
+		{
+
+		}
+
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -134,6 +145,16 @@ namespace ag
 		vec2f scale = { 1.0f, 1.0f };
 		float rotation = 0.0f;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Transform_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Transform_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -221,6 +242,23 @@ namespace ag
 		LuaFunc on_destroy;
 		LuaFunc on_event;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Script_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			auto& comp = entity.get_component<Script_Component>();
+			comp.env.get().clear();
+			comp.on_create = LuaFunc();
+			comp.on_update = LuaFunc();
+			comp.on_destroy = LuaFunc();
+			comp.on_event = LuaFunc();
+
+			entity.remove_component<Script_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -233,7 +271,7 @@ namespace ag
 
 		static void load_json(Entity entity, const json& j)
 		{
-			if (entity.has_component<Script_Component>())
+			if (!entity.has_component<Script_Component>())
 				entity.add_component<Script_Component>();
 
 			auto& props = entity.get_component<Script_Component>();
@@ -331,8 +369,8 @@ namespace ag
 					auto& tag = e.get_component<Tag_Component>();
 					for (auto& child : tag.children)
 					{
-						auto& child_tag = child.get_component<Tag>();
-						if (child_tag.tag == name)
+						auto& child_tag = child.get_component<Tag_Component>();
+						if (child_tag.name == name)
 						{
 							return child;
 						}
@@ -364,6 +402,17 @@ namespace ag
 	{
 		vec2u size = { 100, 100 };
 		Color color = Color::White;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Render2D_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Render2D_Component>();
+		}
+
 
 		static json save_json(Entity entity)
 		{
@@ -411,6 +460,16 @@ namespace ag
 	{
 		float thickness;
 		Color color;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Border_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Border_Component>();
+		}
 
 		static json save_json(Entity entity)
 		{
@@ -461,6 +520,16 @@ namespace ag
 		float corner;
 		bool uniform = true;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Corner_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<Corner_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -509,6 +578,17 @@ namespace ag
 	{
 		RenderMode mode = RenderMode::World;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<UI_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<UI_Component>();
+		}
+
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -554,6 +634,16 @@ namespace ag
 	{
 		std::string path;
 		AG_ref<Texture2D> texture;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Texture_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Texture_Component>();
+		}
 
 		static json save_json(Entity entity)
 		{
@@ -602,6 +692,16 @@ namespace ag
 	{
 		uint_rect rect;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<TextureRect_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<TextureRect_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -647,6 +747,16 @@ namespace ag
 	{
 		bool horizontal = false;
 		bool vertical = false;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<TextureFlip_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<TextureFlip_Component>();
+		}
 
 		static json save_json(Entity entity)
 		{
@@ -696,6 +806,16 @@ namespace ag
 		vec2f size = { 1280.0f, 720.0f };
 		vec2f center;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Camera_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Camera_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -742,6 +862,16 @@ namespace ag
 	struct Window_Component
 	{
 		vec2f size = { 1280.0f, 720.0f };
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Window_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<Window_Component>();
+		}
 
 		static json save_json(Entity entity)
 		{
@@ -844,6 +974,16 @@ namespace ag
 		bool current_animation_completed = false;
 		uint_rect rect;
 
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Animation_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<Animation_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
@@ -879,7 +1019,7 @@ namespace ag
 				}
 			}
 		}
-	
+
 		static void clone_entity(Entity original, Entity clone)
 		{
 			if (original.has_component<Animation_Component>())
@@ -887,7 +1027,7 @@ namespace ag
 				clone.add_component<Animation_Component>(original.get_component<Animation_Component>());
 			}
 		}
-	
+
 		static void update(Entity entity, TimeStamp ts)
 		{
 			if (!entity.has_component<Animation_Component>())
@@ -902,14 +1042,14 @@ namespace ag
 			if (props.current_animation.empty())
 			{
 				auto& texture = entity.get_component<Texture_Component>();
-				if(texture.texture)
+				if (texture.texture)
 				{
 					props.rect = { 0, 0, texture.texture->get_size() };
 				}
 				return;
 			}
 
-		
+
 
 			auto it = props.animations.find(props.current_animation);
 			if (props.animations.find(props.current_animation) == props.animations.end())
@@ -978,7 +1118,7 @@ namespace ag
 			return "Animations";
 		}
 
-		static bool play_animation(Entity entity, const std:: string& name)
+		static bool play_animation(Entity entity, const std::string& name)
 		{
 			if (!entity.has_component<Animation_Component>())
 				return false;
@@ -1005,7 +1145,7 @@ namespace ag
 	struct Tile_Defination
 	{
 		uint_rect texture_rect;
-		bool is_solid = false;
+		bool is_solid = true;
 
 		static json save_json(const Tile_Defination& def)
 		{
@@ -1027,6 +1167,16 @@ namespace ag
 	{
 		vec2f size = { 32, 32 };
 		vec2f offset;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<Tile_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<Tile_Component>();
+		}
 
 		static json save_json(Entity entity)
 		{
@@ -1071,11 +1221,23 @@ namespace ag
 		bool is_tile_registered = false;
 		bool tile_changed = false;
 
+		b2Body* body = nullptr;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<TileSet_Component>();
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.add_component<TileSet_Component>();
+		}
+
 		static json save_json(Entity entity)
 		{
 			json j;
 			auto& tileset = entity.get_component<TileSet_Component>();
-			if(!tileset.tile_definitions.empty())
+			if (!tileset.tile_definitions.empty())
 				Helper::save_json(j, "Registered", tileset.is_tile_registered);
 
 			for (const auto& [id, def] : tileset.tile_definitions)
@@ -1112,7 +1274,7 @@ namespace ag
 					sscanf(key.c_str(), "%u,%u", &id.x, &id.y);
 					tileset.tile_definitions[id] = def;
 				}
-				
+
 			}
 
 			if (j.contains("Grid"))
@@ -1128,7 +1290,7 @@ namespace ag
 			}
 
 			Helper::load_json(j, "Registered", tileset.is_tile_registered);
-			if(!tileset.tile_definitions.empty())
+			if (!tileset.tile_definitions.empty())
 				tileset.tile_changed = true;
 		}
 
@@ -1138,6 +1300,14 @@ namespace ag
 			{
 				clone.add_component<TileSet_Component>(original.get_component<TileSet_Component>());
 			}
+		}
+
+		static void update(Entity entity)
+		{
+			if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>() || !Engine::is_runtime())
+				return;
+
+			create_body(entity);
 		}
 
 		static void draw(Entity entity)
@@ -1151,7 +1321,7 @@ namespace ag
 
 			Sprite sprite;
 			sprite.size = props.size;
-			
+
 			for (const auto& [position, id] : tile_set.placed_tiles)
 			{
 				auto tex_it = tile_set.tile_definitions.find(id);
@@ -1180,9 +1350,343 @@ namespace ag
 		}
 
 		static void imgui_render(Entity entity);
+
+		static void create_body(Entity entity)
+		{
+			auto& props = entity.get_component<TileSet_Component>();
+			if (props.body)
+				return;
+
+			auto& tile = entity.get_component<Tile_Component>();
+
+
+			b2BodyDef body_def;
+			body_def.type = b2_staticBody;
+			body_def.position.Set(0.0f, 0.0f);
+
+			auto scene = Scene::get_active_scene();
+			auto& world = scene->get_world();
+			props.body = world.CreateBody(&body_def);
+
+			for (const auto& [pos, id] : props.placed_tiles)
+			{
+				/*auto tex_it = props.tile_definitions.find(id);
+				if (tex_it == props.tile_definitions.end())
+				{
+					continue;
+				}
+				const Tile_Defination& def = tex_it->second;
+				if (def.is_solid)
+				{*/
+				vec2f position = (pos * tile.size) + tile.size / 2 + tile.offset;
+				Math::pixels_to_meters(position);
+				b2PolygonShape shape;
+				vec2f size = tile.size;
+				Math::pixels_to_meters(size);
+				shape.SetAsBox(size.x / 2, size.y / 2, { position.x, position.y }, 0.0f);
+
+				b2FixtureDef fixture_def;
+				fixture_def.shape = &shape;
+				fixture_def.density = 0.0f;
+				fixture_def.friction = 0.5f;
+				fixture_def.restitution = 0.1f;
+
+				props.body->CreateFixture(&fixture_def);
+				//}
+			}
+		}
 	};
 
-	
+	enum class ShapeType
+	{
+		Rectangle = 0,
+		Circle = 1
+	};
+	enum class BodyType
+	{
+		Dynamic = 0,
+		Static = 1,
+		Kinematic = 2
+	};
+
+	struct CollisionShape_Component
+	{
+		ShapeType shape_type = ShapeType::Rectangle;
+
+		vec2f size = { 100, 100 };
+		float radius = 50.0f;
+
+		int group = 1;
+		bool collide_with[5] = { true, true, true, true, true };
+
+		static void add_component(Entity entity)
+		{
+			CollisionShape_Component shape;
+			if (entity.has_component<TextureRect_Component>())
+			{
+				auto& comps = entity.get_component<TextureRect_Component>();
+				shape.size = comps.rect.size;
+			}
+			else if (entity.has_component<Render2D_Component>())
+			{
+				auto& props = entity.get_component<Render2D_Component>();
+				shape.size = props.size;
+			}
+			entity.add_component<CollisionShape_Component>(shape);
+		}
+
+		static void remove_component(Entity entity)
+		{
+			entity.remove_component<CollisionShape_Component>();
+		}
+
+		static json save_json(Entity entity)
+		{
+			json j;
+
+			const auto& shape = entity.get_component<CollisionShape_Component>();
+
+			Helper::save_json(j, "ShapeType", (int)shape.shape_type);
+			Helper::save_json(j, "Size", shape.size);
+			Helper::save_json(j, "Radius", shape.radius);
+			Helper::save_json(j, "Group", shape.group);
+			j["Collide"] = json::array();
+			for (int i = 0; i < 5; i++)
+				j["Collide"].push_back(shape.collide_with[i]);
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<CollisionShape_Component>())
+				entity.add_component<CollisionShape_Component>();
+
+			auto& shape = entity.get_component<CollisionShape_Component>();
+
+			Helper::load_json(j, "ShapeType", shape.shape_type);
+			Helper::load_json(j, "Size", shape.size);
+			Helper::load_json(j, "Radius", shape.radius);
+			Helper::load_json(j, "Group", shape.group);
+			if (j.contains("Collide") && j["Collide"].is_array())
+			{
+				for (int i = 0; i < 5 && i < j["Collide"].size(); i++)
+					shape.collide_with[i] = j["Collide"][i].get<bool>();
+			}
+
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (original.has_component<CollisionShape_Component>())
+				clone.add_component<CollisionShape_Component>(original.get_component<CollisionShape_Component>());
+		}
+
+		static const char* get_name()
+		{
+			return "CollisionShape";
+		}
+
+		static bool is_compatible(NodeType type)
+		{
+			return true;
+		}
+
+
+		static void imgui_render(Entity entity);
+
+	};
+
+
+	struct PhysicsBody_Component
+	{
+		b2Body* body = nullptr;
+		BodyType body_type = BodyType::Dynamic;
+
+		bool rotation = false;
+
+		static void add_component(Entity entity)
+		{
+			entity.add_component<PhysicsBody_Component>();
+			{
+				CollisionShape_Component::add_component(entity);
+			}
+		}
+
+		static void remove_component(Entity entity)
+		{
+			if (entity.has_component<PhysicsBody_Component>())
+			{
+				auto& props = entity.get_component<PhysicsBody_Component>();
+				if (props.body)
+				{
+					auto scene = Scene::get_active_scene();
+					auto& world = scene->get_world();
+					world.DestroyBody(props.body);
+					props.body = nullptr;
+				}
+				entity.remove_component<PhysicsBody_Component>();
+			}
+			entity.remove_component<CollisionShape_Component>();
+		}
+
+		static json save_json(Entity entity)
+		{
+			json j;
+			auto& props = entity.get_component<PhysicsBody_Component>();
+			Helper::save_json(j, "Body", static_cast<int>(props.body_type));
+			Helper::save_json(j, "Rotation", props.rotation);
+
+			NodeHelper::save_component<CollisionShape_Component>(entity, j);
+
+			return j;
+		}
+
+		static void load_json(Entity entity, const json& j)
+		{
+			if (!entity.has_component<PhysicsBody_Component>())
+				entity.add_component<PhysicsBody_Component>();
+
+			auto& props = entity.get_component<PhysicsBody_Component>();
+			Helper::load_json(j, "Body", props.body_type);
+			Helper::load_json(j, "Rotation", props.rotation);
+
+			NodeHelper::load_component<CollisionShape_Component>(entity, j);
+		}
+
+		static void clone_entity(Entity original, Entity clone)
+		{
+			if (!original.has_component<PhysicsBody_Component>())
+				return;
+			const auto& props = original.get_component<PhysicsBody_Component>();
+			PhysicsBody_Component comps;
+			comps.body_type = props.body_type;
+			comps.rotation = props.rotation;
+
+			clone.add_component<PhysicsBody_Component>(comps);
+
+			CollisionShape_Component::clone_entity(original, clone);
+		}
+
+		static void delete_entity(Entity entity)
+		{
+			if (!entity.has_component<PhysicsBody_Component>())
+				return;
+
+			auto& props = entity.get_component<PhysicsBody_Component>();
+			if (props.body)
+			{
+				auto scene = Scene::get_active_scene();
+				auto& world = scene->get_world();
+				world.DestroyBody(props.body);
+				props.body = nullptr;
+			}
+		}
+
+		static void update_entity(Entity entity)
+		{
+			if (!entity.has_component<PhysicsBody_Component>() || !entity.has_component<Transform_Component>() || !Engine::is_runtime())
+				return;
+
+			auto& props = entity.get_component<PhysicsBody_Component>();
+			if (!props.body)
+				create_body(entity);
+
+			float angle = props.body->GetAngle();
+			vec2f position = props.body->GetPosition();
+			Math::meters_to_pixels(position);
+			auto& transform = entity.get_component<Transform_Component>();
+			transform.position = position;
+			transform.rotation = Math::to_degree(angle);
+			Transform_Component::get_local_transform(entity, transform);
+		}
+
+		static const char* get_name()
+		{
+			return "PhysicsBody";
+		}
+
+		static bool is_compatible(NodeType type)
+		{
+			auto caps = NodeHelper::get_node_capabilities(type);
+			return NodeHelper::has_capability(caps, Node_Capability::Physics2D);
+		}
+
+		static void create_body(Entity entity)
+		{
+			if (!entity.has_component<PhysicsBody_Component>() || !entity.has_component<Transform_Component>() || !entity.has_component<CollisionShape_Component>())
+				return;
+
+			auto& props = entity.get_component<PhysicsBody_Component>();
+			auto& shapes = entity.get_component<CollisionShape_Component>();
+			if (props.body)
+				return;
+
+			b2BodyDef body_def;
+			switch (props.body_type)
+			{
+			case BodyType::Dynamic: body_def.type = b2_dynamicBody; break;
+			case BodyType::Static: body_def.type = b2_staticBody; break;
+			case BodyType::Kinematic: body_def.type = b2_kinematicBody; break;
+			default: body_def.type = b2_dynamicBody; break;
+			}
+
+			Transform_Component trans = Transform_Component::get_world_transform(entity);
+
+			Math::pixels_to_meters(trans.position);
+			body_def.position.Set(trans.position.x, trans.position.y);
+			body_def.angle = Math::to_radians(trans.rotation);
+			body_def.fixedRotation = !props.rotation;
+
+			auto scene = Scene::get_active_scene();
+			auto& world = scene->get_world();
+			props.body = world.CreateBody(&body_def);
+
+
+
+			vec2f size = shapes.size * trans.scale;
+			Math::pixels_to_meters(size);
+			b2PolygonShape shape_box;
+			shape_box.SetAsBox(size.x / 2, size.y / 2);
+
+			b2FixtureDef fixture_def;
+			fixture_def.shape = &shape_box;
+			fixture_def.isSensor = false;
+
+			if (props.body_type == BodyType::Dynamic)
+				fixture_def.density = 1.0f;
+			else
+				fixture_def.density = 0.0f;
+
+			fixture_def.friction = 0.0f;
+
+			b2Fixture* fixture = props.body->CreateFixture(&fixture_def);
+
+			if (fixture)
+			{
+				b2Filter filter;
+				filter.categoryBits = 1 << (shapes.group - 1);
+				filter.maskBits = 0;
+
+				for (int i = 0; i < 5; i++)
+				{
+					if (shapes.collide_with[i])
+						filter.maskBits |= 1 << i;
+				}
+
+				fixture->SetFilterData(filter);
+			}
+
+
+			props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
+
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+
+
 
 
 	struct Text

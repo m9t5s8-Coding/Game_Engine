@@ -147,12 +147,11 @@ namespace ag
 
 		if (Engine::is_runtime())
 		{
-			auto view = scene->m_registry.view<Tag_Component>();
+			auto view = scene->m_registry.view<Script_Component>();
 			for (auto entityID : view)
 			{
 				Entity e(entityID);
-				auto& tag = e.get_component<Tag_Component>();
-				ScriptComponent::load_scripts(e);
+				Script_Component::load_scripts(e);
 			}
 		}
 		id_map.clear();

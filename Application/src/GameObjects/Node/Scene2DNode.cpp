@@ -5,7 +5,7 @@ namespace ag
 {
 	void Scene2DNode::create_node(Entity entity)
 	{
-		entity.add_component<Transform_Component>();
+		Transform_Component::add_component(entity);
 	}
 
 	void Scene2DNode::delete_node(Entity entity)

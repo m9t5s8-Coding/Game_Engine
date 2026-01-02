@@ -40,6 +40,7 @@ namespace ag
 	void Sandbox2D::on_event(Event& event)
 	{
 		m_scene->on_event(event);
+		//m_view_controller->on_event(event);
 	}
 
 	std::string Sandbox2D::get_appdata_path()
@@ -101,22 +102,23 @@ namespace ag
 		m_scene = SaveScene::load_scene(scene_path);
 		Scene::set_active_scene(m_scene);
 
-		auto entities = m_scene->get_view<CameraComponent::CameraProps>();
+		auto entities = m_scene->get_view<Camera_Component>();
 		for (auto entityID : entities)
 		{
 			Entity entity(entityID);
-			auto& props = entity.get_component<CameraComponent::CameraProps>();
-			if (!props.is_active)
-				continue;
+			auto& props = entity.get_component<Camera_Component>();
 
 			auto& view = m_view_controller->get_view();
-			vec2f view_size = props.view_size * props.zoom;
+			vec2f view_size = props.size;
 
-			m_view_controller = ViewController::create(view_size, props.view_center);
+			m_view_controller = ViewController::create(view_size, props.center);
 			ViewController::set_main_controller(m_view_controller);
-			Application::get().get_window().set_size(props.window_size);
-			props.window_size.print();
-			Application::get().get_window().center_window();
+			if(entity.has_component<Window_Component>())
+			{
+				auto& props = entity.get_component<Window_Component>();
+				Application::get().get_window().set_size(props.size);
+				Application::get().get_window().center_window();
+			}
 		}
 		
 	}

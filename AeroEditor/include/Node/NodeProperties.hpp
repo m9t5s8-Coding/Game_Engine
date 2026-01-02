@@ -18,8 +18,6 @@ namespace ag
 		static void register_components();
 
 
-		static void tag(Entity entity);
-		static void transform(Entity entity);
 		static void add_component(Entity entity);
 
 
@@ -136,7 +134,7 @@ namespace ag
 
       if (remove)
       {
-        entity.remove_component<T>();
+        T::remove_component(entity);
       }
 
       return open;
@@ -156,7 +154,7 @@ private:
 		{
 			if (!entity.has_component<T>())
 			{
-				entity.add_component<T>();
+        T::add_component(entity);
 			}
 		}
 

@@ -2,6 +2,7 @@
 
 #include <Apch.hpp>
 #include <imgui.h>
+#include "box2d/box2d.h"
 
 namespace ag
 {
@@ -15,7 +16,7 @@ namespace ag
         vec2(T s_) : x(s_), y(s_) {}
 
         vec2<T>(const ImVec2& v) : x(v.x), y(v.y) {}
-
+        vec2<T>(const b2Vec2& v) : x(v.x), y(v.y) {}
 
         T length() const {
           if constexpr (std::is_floating_point_v<T>) {
@@ -52,6 +53,17 @@ namespace ag
         vec2<T> normalized() const {
           vec2<T> result = *this;
           return result.normalize();
+        }
+
+        void ceil()
+        {
+          x = std::ceil(x);
+          y = std::ceil(y);
+        }
+        void floor()
+        {
+          x = std::floor(x);
+          y = std::floor(y);
         }
 
         json save() const
@@ -205,9 +217,7 @@ namespace ag
 
         bool operator<(const vec2<T> &other) const
         {
-          if( x < other.x ) return true;
-          if( x > other.x) return false;
-          return y < other.y;
+          return x < other.x || y < other.y;
         }
         bool operator>(const vec2<T>& other) const
         {

@@ -5,15 +5,15 @@ namespace ag
 {
   void AnimatedSpriteNode::create_node(Entity entity)
   {
-    entity.add_component<Texture_Component>();
-    entity.add_component<Transform_Component>();
-    //entity.add_component<Render2D_Component>();
-    entity.add_component<Animation_Component>();
+    Transform_Component::add_component(entity);
+    Texture_Component::add_component(entity);
+    Animation_Component::add_component(entity);
   }
 
   void AnimatedSpriteNode::delete_node(Entity entity)
   {
     Script_Component::destroy(entity);
+    PhysicsBody_Component::delete_entity(entity);
     entity.delete_entity();
   }
   void AnimatedSpriteNode::clone_node(Entity original, Entity clone)
@@ -25,6 +25,7 @@ namespace ag
 
     Script_Component::clone_entity(original, clone);
     TextureFlip_Component::clone_entity(original, clone);
+    PhysicsBody_Component::clone_entity(original, clone);
   }
   json AnimatedSpriteNode::save_json(Entity entity)
   {
@@ -37,6 +38,8 @@ namespace ag
 
     NodeHelper::save_component<Script_Component>(entity, j);
     NodeHelper::save_component<TextureFlip_Component>(entity, j);
+    NodeHelper::save_component<PhysicsBody_Component>(entity, j);
+
     return j;
   }
   void AnimatedSpriteNode::load_json(Entity entity, const json &j)
@@ -48,10 +51,13 @@ namespace ag
 
     NodeHelper::load_component<Script_Component>(entity, j);
     NodeHelper::load_component<TextureFlip_Component>(entity, j);
+    NodeHelper::load_component<PhysicsBody_Component>(entity, j);
   }
   void AnimatedSpriteNode::update(Entity entity, TimeStamp ts)
   {
     Animation_Component::update(entity, ts);
+    PhysicsBody_Component::update_entity(entity);
+    Script_Component::update(entity, ts);
   }
   void AnimatedSpriteNode::draw(Entity entity)
   {

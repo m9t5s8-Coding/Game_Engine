@@ -344,11 +344,11 @@ namespace ag
 		{
 			// Visibility
 			lua.set_function("is_visible", [](ag::Entity& entity) -> bool {
-				return NodeHelper::get_comp_value(entity, &Tag::is_visible, true);
+				return NodeHelper::get_comp_value(entity, &Tag_Component::visible, true);
 				});
 
 			lua.set_function("set_visible", [](ag::Entity& entity, const bool visible) {
-				NodeHelper::set_comp_value(entity, &Tag::is_visible, visible);
+				NodeHelper::set_comp_value(entity, &Tag_Component::visible, visible);
 				});
 		}
 
@@ -357,40 +357,40 @@ namespace ag
 			// Position
 			lua.set_function("get_position", [](ag::Entity& entity) -> vec2f
 				{
-					return NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+					return NodeHelper::get_comp_value(entity, &Transform_Component::position, vec2f(0, 0));
 				});
 
 			lua.set_function("set_position", [](ag::Entity& entity, const vec2f& position)
 				{
-					NodeHelper::set_comp_value(entity, &Transform::position, position);
+					NodeHelper::set_comp_value(entity, &Transform_Component::position, position);
 				});
 
 			lua.set_function("move", [](ag::Entity& entity, const vec2f& delta) {
-				auto position = NodeHelper::get_comp_value(entity, &Transform::position, vec2f(0, 0));
+				auto position = NodeHelper::get_comp_value(entity, &Transform_Component::position, vec2f(0, 0));
 				position += delta;
-				NodeHelper::set_comp_value(entity, &Transform::position, position);
+				NodeHelper::set_comp_value(entity, &Transform_Component::position, position);
 				});
 
 
 			// Scale
 			lua.set_function("get_scale", [](ag::Entity& entity) -> vec2f {
-				return NodeHelper::get_comp_value(entity, &Transform::scale, vec2f(1, 1));
+				return NodeHelper::get_comp_value(entity, &Transform_Component::scale, vec2f(1, 1));
 				});
 
 			lua.set_function("set_scale", [](ag::Entity& entity, const vec2f& scale) {
-				NodeHelper::set_comp_value(entity, &Transform::scale, scale);
+				NodeHelper::set_comp_value(entity, &Transform_Component::scale, scale);
 				});
 
 
 			//Rotation
 			lua.set_function("get_rotation", [](ag::Entity& entity) -> float
 				{
-					return NodeHelper::get_comp_value(entity, &Transform::rotation, 0.0f);
+					return NodeHelper::get_comp_value(entity, &Transform_Component::rotation, 0.0f);
 				});
 
 			lua.set_function("set_rotation", [](ag::Entity& entity, const float rotation)
 				{
-					NodeHelper::set_comp_value(entity, &Transform::rotation, rotation);
+					NodeHelper::set_comp_value(entity, &Transform_Component::rotation, rotation);
 				});
 
 
@@ -404,7 +404,8 @@ namespace ag
 					return NodeHelper::get_comp_value(entity, &Render2D_Component::color, Color::Transparent);
 				});
 
-			lua.set_function("set_fill_color", [](ag::Entity& entity, const ag::Color& color) {
+			lua.set_function("set_fill_color", [](ag::Entity& entity, const ag::Color& color)
+				{
 				NodeHelper::set_comp_value(entity, &Render2D_Component::color, color);
 				});
 
@@ -434,22 +435,25 @@ namespace ag
 
 			// Sprite Node Rectangle and Circle
 			{
-				lua.set_function("get_size", [](ag::Entity& entity) -> vec2f {
+				lua.set_function("get_size", [](ag::Entity& entity) -> vec2f
+					{
 					return NodeHelper::get_comp_value(entity, &Render2D_Component::size, { 0, 0 });
+					});
+
+				lua.set_function("set_size", [](ag::Entity& entity, const vec2f& size) {
+					NodeHelper::set_comp_value(entity, &Render2D_Component::size, vec2u(size));
 					});
 			}
 
 			{
 
 				lua.set_function("play_animation", [](ag::Entity& entity, const std::string& animation_name) -> bool {
-
-					auto type = NodeHelper::get_nodetype(entity);
-					if (type == NodeType::AnimatedSprite2D)
+					if (entity.has_component<Animation_Component>())
 					{
-						//return AnimatedSpriteNode::play_animation(entity, animation_name);
-						return true;
+						Animation_Component::play_animation(entity, animation_name);
 					}
-					return false;
+					else
+						return false;
 					});
 
 				lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical)
@@ -466,7 +470,7 @@ namespace ag
 
 
 			lua.set_function("duplicate_entity", [](ag::Entity& entity) -> ag::Entity {
-				auto parent = entity.get_component<Tag>().parent;
+				auto& parent = entity.get_component<Tag_Component>().parent;
 				auto e = Scene::get_active_scene()->duplicate_entity(entity, parent);
 				return e;
 				});
@@ -476,38 +480,38 @@ namespace ag
 				scene->destroy_entity(entity);
 				});
 
-			lua.set_function("set_velocity", [](ag::Entity& entity, const vec2f& velocity) {
-				auto& tag = entity.get_component<Tag>();
-				if (tag.node_type != NodeType::CollisionShape)
-					return;
-				auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
-				if (!body)
-					return;
 
-				vec2f v = velocity;
-				Math::pixels_to_meters(v);
-				body->SetLinearVelocity(b2Vec2(v.x, v.y));
+			lua.set_function("set_velocity", [](ag::Entity& entity, const vec2f& velocity) {
+				if (entity.has_component<PhysicsBody_Component>())
+				{
+					auto& body = entity.get_component<PhysicsBody_Component>().body;
+					if (!body)
+						return;
+
+					vec2f v = velocity;
+					Math::pixels_to_meters(v);
+					body->SetLinearVelocity(b2Vec2(v.x, v.y));
+				}
 				});
 
 			lua.set_function("set_velocity_x", [](ag::Entity& entity, float velocity) {
-				auto& tag = entity.get_component<Tag>();
-				if (tag.node_type != NodeType::CollisionShape)
-					return;
-				auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
-				if (!body)
-					return;
+				if (entity.has_component<PhysicsBody_Component>())
+				{
+					auto& body = entity.get_component<PhysicsBody_Component>().body;
+					if (!body)
+						return;
 
-				float v = velocity;
-				Math::pixels_to_meters(v);
-				body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
+					float v = velocity;
+					Math::pixels_to_meters(v);
+					body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
+				}
 				});
 
 
 			lua.set_function("set_awake", [](ag::Entity& entity, bool awake) {
-				auto type = NodeHelper::get_nodetype(entity);
-				if (type == NodeType::CollisionShape)
+				if (entity.has_component<PhysicsBody_Component>())
 				{
-					auto& body = entity.get_component<CollisionShape::CollisionShapeProps>().body;
+					auto& body = entity.get_component<PhysicsBody_Component>().body;
 					if (!body)
 						return;
 					body->SetAwake(awake);
@@ -528,9 +532,8 @@ namespace ag
 				auto type = NodeHelper::get_nodetype(entity);
 				if (type == NodeType::TextNode)
 				{
-					auto& text = entity.get_component< TextNode::TextProp>().text;
-					text.text = value;
-					AERO_CORE_INFO("Text:{0}", text.text);
+					//auto& text = entity.get_component< TextNode::TextProp>().text;
+					//text.text = value;
 				}
 				});
 

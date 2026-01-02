@@ -6,14 +6,15 @@ namespace ag
 
   void SpriteNode::create_node(Entity entity)
   {
-    entity.add_component<Transform_Component>();
-    entity.add_component<Render2D_Component>();
-    entity.add_component<Texture_Component>();
+    Transform_Component::add_component(entity);
+    Render2D_Component::add_component(entity);
+    Texture_Component::add_component(entity);
   }
   
   void SpriteNode::delete_node(Entity entity)
   {
     Script_Component::destroy(entity);
+    PhysicsBody_Component::delete_entity(entity);
     entity.delete_entity();
   }
   
@@ -26,9 +27,10 @@ namespace ag
     TextureFlip_Component::clone_entity(original, clone);
     TextureRect_Component::clone_entity(original, clone);
 
+    UI_Component::clone_entity(original, clone);
+    PhysicsBody_Component::clone_entity(original, clone);
     Script_Component::clone_entity(original, clone);
 
-    UI_Component::clone_entity(original, clone);
   }
   
   json SpriteNode::save_json(Entity entity)
@@ -45,6 +47,8 @@ namespace ag
     NodeHelper::save_component<Script_Component>(entity, j);
 
     NodeHelper::save_component<UI_Component>(entity, j);
+    NodeHelper::save_component<PhysicsBody_Component>(entity, j);
+
     return j;
   }
   
@@ -60,10 +64,12 @@ namespace ag
     NodeHelper::load_component<Script_Component>(entity, j);
 
     NodeHelper::load_component<UI_Component>(entity, j);
+    NodeHelper::load_component<PhysicsBody_Component>(entity, j);
   }
   
   void SpriteNode::update(Entity entity, TimeStamp ts)
   {
+    PhysicsBody_Component::update_entity(entity);
     Script_Component::update(entity, ts);
   }
   

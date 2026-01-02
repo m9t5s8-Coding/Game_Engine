@@ -8,7 +8,18 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-
+enum class Direction
+{
+  None,
+  Left,
+  Right,
+  Up,
+  Down,
+  UpLeft,
+  UpRight,
+  DownLeft,
+  DownRight
+};
 namespace ag::Math
 {
   constexpr float PI = 3.14159265359f;
@@ -87,6 +98,24 @@ namespace ag::Math
         (world_size.x / view_size.x) * size.x,
         (world_size.y / view_size.y) * size.y
     };
+  }
+
+  inline Direction get_direction(const vec2f& a, const vec2f& b)
+  {
+    vec2f d = b - a;
+    if (d.x == 0 && d.y == 0)
+      return Direction::None;
+
+    if (d.x > 0 && d.y > 0) return Direction::DownRight;
+    if (d.x < 0 && d.y > 0) return Direction::DownLeft;
+    if (d.x > 0 && d.y < 0) return Direction::UpRight;
+    if (d.x < 0 && d.y < 0) return Direction::UpLeft;
+    if (d.x > 0) return Direction::Right;
+    if (d.x < 0) return Direction::Left;
+    if (d.y > 0) return Direction::Down;
+    if (d.y < 0) return Direction::Up;
+
+    return Direction::None;
   }
 
   inline float_rect get_float_rect(const vec2f& view_size, const vec2f& view_center)

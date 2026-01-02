@@ -23,10 +23,9 @@ namespace ag
 		create_map[NodeType::Camera] = CameraNode::create_node;
 		create_map[NodeType::TileMap] = TileMapNode::create_node;
 		create_map[NodeType::Scene2D] = Scene2DNode::create_node;
-		create_map[NodeType::TextNode] = TextNode::create_node;
-		create_map[NodeType::Button] = ButtonNode::create_node;
-		create_map[NodeType::TextureButton] = TextureButton::create_node;
-		create_map[NodeType::CollisionShape] = CollisionShape::create_node;
+		//create_map[NodeType::TextNode] = TextNode::create_node;
+		//create_map[NodeType::Button] = ButtonNode::create_node;
+		//create_map[NodeType::TextureButton] = TextureButton::create_node;
 
 
 		// Draw Function
@@ -37,10 +36,9 @@ namespace ag
 		draw_map[NodeType::Camera] = CameraNode::draw;
 		draw_map[NodeType::TileMap] = TileMapNode::draw;
 		draw_map[NodeType::Scene2D] = Scene2DNode::draw;
-		draw_map[NodeType::TextNode] = TextNode::draw;
-		draw_map[NodeType::Button] = ButtonNode::draw;
-		draw_map[NodeType::TextureButton] = TextureButton::draw;
-    draw_map[NodeType::CollisionShape] = CollisionShape::draw;
+		//draw_map[NodeType::TextNode] = TextNode::draw;
+		//draw_map[NodeType::Button] = ButtonNode::draw;
+		//draw_map[NodeType::TextureButton] = TextureButton::draw;
 
 		update_map[NodeType::Rectangle] = RectangleNode::update;
 		update_map[NodeType::Circle] = CircleNode::update;
@@ -49,10 +47,9 @@ namespace ag
 		update_map[NodeType::Camera] = CameraNode::update;
 		update_map[NodeType::TileMap] = TileMapNode::update;
 		update_map[NodeType::Scene2D] = Scene2DNode::update;
-		update_map[NodeType::TextNode] = TextNode::update;
-		update_map[NodeType::Button] = ButtonNode::update;
-		update_map[NodeType::TextureButton] = TextureButton::update;
-    update_map[NodeType::CollisionShape] = CollisionShape::update;
+		//update_map[NodeType::TextNode] = TextNode::update;
+		//update_map[NodeType::Button] = ButtonNode::update;
+		//update_map[NodeType::TextureButton] = TextureButton::update;
 
 
 	
@@ -66,10 +63,9 @@ namespace ag
 		clone_map[NodeType::Camera] = CameraNode::clone_node;
 		clone_map[NodeType::TileMap] = TileMapNode::clone_node;
 		clone_map[NodeType::Scene2D] = Scene2DNode::clone_node;
-		clone_map[NodeType::TextNode] = TextNode::clone_node;
-		clone_map[NodeType::Button] = ButtonNode::clone_node;
-		clone_map[NodeType::TextureButton] = TextureButton::clone_node;
-    clone_map[NodeType::CollisionShape] = CollisionShape::clone_node;
+		//clone_map[NodeType::TextNode] = TextNode::clone_node;
+		//clone_map[NodeType::Button] = ButtonNode::clone_node;
+		//clone_map[NodeType::TextureButton] = TextureButton::clone_node;
 
 
 		save_map[NodeType::Rectangle] = RectangleNode::save_json;
@@ -79,10 +75,9 @@ namespace ag
 		save_map[NodeType::Camera] = CameraNode::save_json;
 		save_map[NodeType::TileMap] = TileMapNode::save_json;
 		save_map[NodeType::Scene2D] = Scene2DNode::save_json;
-		save_map[NodeType::TextNode] = TextNode::save_json;
-		save_map[NodeType::Button] = ButtonNode::save_json;
-		save_map[NodeType::TextureButton] = TextureButton::save_json;
-    save_map[NodeType::CollisionShape] = CollisionShape::save_json;
+		//save_map[NodeType::TextNode] = TextNode::save_json;
+		//save_map[NodeType::Button] = ButtonNode::save_json;
+		//save_map[NodeType::TextureButton] = TextureButton::save_json;
 
 
 		load_map[NodeType::Rectangle] = RectangleNode::load_json;
@@ -92,10 +87,9 @@ namespace ag
 		load_map[NodeType::Camera] = CameraNode::load_json;
 		load_map[NodeType::TileMap] = TileMapNode::load_json;
 		load_map[NodeType::Scene2D] = Scene2DNode::load_json;
-		load_map[NodeType::TextNode] = TextNode::load_json;
-		load_map[NodeType::Button] = ButtonNode::load_json;
-		load_map[NodeType::TextureButton] = TextureButton::load_json;
-    load_map[NodeType::CollisionShape] = CollisionShape::load_json;
+		//load_map[NodeType::TextNode] = TextNode::load_json;
+		//load_map[NodeType::Button] = ButtonNode::load_json;
+		//load_map[NodeType::TextureButton] = TextureButton::load_json;
 
 
 		clear_map[NodeType::Rectangle] = RectangleNode::delete_node;
@@ -105,10 +99,9 @@ namespace ag
 		clear_map[NodeType::Camera] = CameraNode::delete_node;
 		clear_map[NodeType::TileMap] = TileMapNode::delete_node;
 		clear_map[NodeType::Scene2D] = Scene2DNode::delete_node;
-		clear_map[NodeType::TextNode] = TextNode::delete_node;
-		clear_map[NodeType::Button] = ButtonNode::delete_node;
-		clear_map[NodeType::TextureButton] = TextureButton::delete_node;
-    clear_map[NodeType::CollisionShape] = CollisionShape::delete_node;
+		//clear_map[NodeType::TextNode] = TextNode::delete_node;
+		//clear_map[NodeType::Button] = ButtonNode::delete_node;
+		//clear_map[NodeType::TextureButton] = TextureButton::delete_node;
 
 
 		nodes[NodeType::Rectangle] = "Rectangle2D";
@@ -118,10 +111,9 @@ namespace ag
 		nodes[NodeType::Camera] = "Camera2D";
 		nodes[NodeType::TileMap] = "MapLayer2D";
 		nodes[NodeType::Scene2D] = "Scene2D";
-		nodes[NodeType::TextNode] = "Text2D";
-		nodes[NodeType::Button] = "Button2D";
-		nodes[NodeType::TextureButton] = "TextureButton2D";
-		nodes[NodeType::CollisionShape] = "CollisionShape2D";
+		//nodes[NodeType::TextNode] = "Text2D";
+		//nodes[NodeType::Button] = "Button2D";
+		//nodes[NodeType::TextureButton] = "TextureButton2D";
 
 	}
 
