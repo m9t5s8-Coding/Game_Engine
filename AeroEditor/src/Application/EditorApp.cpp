@@ -39,7 +39,7 @@ namespace ag
 
 			in_file.close();
 
-			Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+			//Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
 
 			std::ofstream out_file(AppSettings::get_settings_path());
 			out_file << j.dump(4);

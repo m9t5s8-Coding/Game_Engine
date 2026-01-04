@@ -1,5 +1,6 @@
 #include <GameObjects/NodeFactory.hpp>
 #include <GameObjects/Node.hpp>
+#include <Scene/SceneComponent.hpp>
 
 namespace ag
 {

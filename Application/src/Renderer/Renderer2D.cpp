@@ -36,7 +36,7 @@ namespace ag
 		int texture_slot;
 
 		float border_thickness;
-		vec4f fill_color;
+		vec4f fill_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 		vec4f border_color;
 
 		float corner_radius;
@@ -251,6 +251,7 @@ namespace ag
 			instance->mode = static_cast<int>(sprite.mode);
 			instance->quad_mode = static_cast<int>(Quad_Type::Sprite);
 			instance->texture_slot = 1;
+			sprite.fill_color.normalize_color(instance->fill_color);
 
 			if (s_data->quad_texture)
 			{

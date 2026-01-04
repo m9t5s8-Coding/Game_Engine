@@ -1,5 +1,7 @@
 #include <GameObjects/Node/SpriteNode.hpp>
 #include <Renderer/Renderer2D.hpp>
+#include <Scene/SceneComponent.hpp>
+#include <GameObjects/GameObjects.hpp>
 
 namespace ag
 {

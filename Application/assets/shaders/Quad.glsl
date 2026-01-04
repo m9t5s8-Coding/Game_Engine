@@ -177,7 +177,9 @@ void main()
     else if(v_type == 2)
     {
         // Sprite
-        FragColor = texture(u_textures[v_slot], tex_coord);
+        vec4 color = texture(u_textures[v_slot], tex_coord);
+        color.a *= fill_color.a;
+        FragColor = color;
     }
     else if(v_type == 3)
     {

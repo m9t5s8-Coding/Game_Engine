@@ -14,6 +14,7 @@
 #include <array>
 #include <algorithm>
 #include <type_traits>
+#include <limits>
 
 #include <Core/Log.hpp>
 #include <Core/Core.hpp>

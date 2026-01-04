@@ -1,4 +1,5 @@
 ﻿#include <Application/EditorLayer.hpp>
+#include <UI/StyleScope.hpp>
 #include <algorithm>
 
 namespace ag
@@ -31,7 +32,7 @@ namespace ag
 			AERO_CORE_INFO("Invalid Scene");
 		}
 		m_panel = AG_cref<ScenePanel>(m_scene);
-		
+
 		// todo
 		m_scenes[m_scene->get_name()] = m_scene;
 
@@ -44,7 +45,7 @@ namespace ag
 	void EditorLayer::on_update(TimeStamp ts)
 	{
 		{
-			Application::set_mouse_position(m_viewport_mouse_pos);
+			Application::set_mouse_position(m_current_mouse_pos);
 		}
 
 		m_framebuffer->bind();
@@ -61,35 +62,58 @@ namespace ag
 		m_scene->on_update(ts);
 		m_panel->draw_selected_text();
 		m_panel->draw_collision_shapes();
-
+		m_panel->draw_tilemap_ghosts();
 		Renderer2D::end_scene();
 
 		m_framebuffer->unbind();
 
+		m_last_mouse_pos = m_current_mouse_pos;
 	}
+
+
+
+
 
 	void EditorLayer::on_imgui_render()
 	{
+		if (begin_dockspace_window())
+		{
+			if (begin_viewport_window())
+			{
+				render_toolbar();
+				render_settings();
+				render_viewport_content();
+			}
+			end_viewport_window();
+
+			m_panel->on_imgui_render();
+		}
+		end_dockspace_window();
+	}
+
+	bool EditorLayer::begin_dockspace_window()
+	{
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen = true;
-		static bool opt_padding = false;
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
 		if (opt_fullscreen)
 		{
 			ImGuiViewport* viewport = ImGui::GetMainViewport();
 			ImGui::SetNextWindowPos(viewport->WorkPos);
 			ImGui::SetNextWindowSize(viewport->WorkSize);
 			ImGui::SetNextWindowViewport(viewport->ID);
+
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
 			window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 		}
+
 		ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
 
 		if (opt_fullscreen)
@@ -98,7 +122,16 @@ namespace ag
 		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
+		return true;
+	}
 
+	void EditorLayer::end_dockspace_window()
+	{
+		ImGui::End();
+	}
+
+	bool EditorLayer::begin_viewport_window()
+	{
 		ImGuiWindowFlags viewport_flags = ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoResize |
@@ -106,176 +139,663 @@ namespace ag
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		StyleScope style;
+		style.push_style_var(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		style.push_style_var(ImGuiStyleVar_WindowRounding, 0.0f);
 
-		ImGui::Begin("ViewPort", nullptr, viewport_flags);
+		return ImGui::Begin("ViewPort", nullptr, viewport_flags);
+	}
+
+	void EditorLayer::end_viewport_window()
+	{
+		ImGui::End();
+	}
+
+	void EditorLayer::render_toolbar()
+	{
+		StyleScope outer_style;
+		outer_style.push_style_var(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+		if (ImGui::BeginChild("SceneBar", ImVec2(0, 40), false, flags))
 		{
+			render_scene_buttons();
+			render_add_scene_button();
+		}
+		ImGui::EndChild();
+	}
 
+	void EditorLayer::render_settings()
+	{
+		StyleScope outer_style;
+		outer_style.push_style_var(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGui::Separator();
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+		if (ImGui::BeginChild("Toolbar", ImVec2(0, 40), false, flags))
+		{
+			auto entity = m_panel->get_selected_entity();
+			NodeType type = NodeType::None;
+			if (entity && entity.get_id() != INVALID_ENTITY && entity.has_component<Tag_Component>())
 			{
-				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-				ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-				ImGui::BeginChild("Toolbar", ImVec2(0, 40), false, flags);
+				type = entity.get_component<Tag_Component>().node_type;
+			}
+			if(type != NodeType::TileMap)
+			{
+				render_settings_button();
+			}
+			else
+			{
+				render_paint_settings_button();
+			}
+		}
+		ImGui::EndChild();
+	}
+
+	void EditorLayer::render_scene_buttons()
+	{
+		StyleScope style;
+		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
+		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+
+		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+		ImVec4 active_scene_color = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
+
+		{
+			StyleScope button_style;
+			button_style.push_style_color(ImGuiCol_Button, bg_color);
+			button_style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
+			button_style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
+			button_style.push_style_color(ImGuiCol_Text, text_color);
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
+
+			bool is_first = true;
+			std::string scene_to_remove;
+
+			for (auto& [name, scene] : m_scenes)
+			{
+				if (!is_first) ImGui::SameLine(0, 10);
+				is_first = false;
+
+				ImGui::PushID(name.c_str());
+				ImGui::BeginGroup();
+
+				// Scene button
 				{
-					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
-					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+					StyleScope scene_button_style;
+					scene_button_style.push_style_color(ImGuiCol_Button,
+						(m_scene == scene) ? active_scene_color : bg_color);
 
-					ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-					ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-					ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-					ImVec4 active_scene = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
-
-					ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bg_hovered);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
-					ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-
-					ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
-					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
-
-					bool is_first = true;
-					std::string scene_to_remove;
-					for (auto& [name, scene] : m_scenes)
+					if (ImGui::Button(name.c_str(), ImVec2(0, 30)))
 					{
-						if (!is_first)
-							ImGui::SameLine(0, 10);
-
-						is_first = false;
-						ImGui::PushID(name.c_str());
-						ImGui::BeginGroup();
-
-						if (m_scene == scene)
-							ImGui::PushStyleColor(ImGuiCol_Button, active_scene);
-						else
-							ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
-
-						if (ImGui::Button(name.c_str(), ImVec2(0, 30)))
-						{
-							m_scene = scene;
-							m_scene->set_active_scene(scene);
-							m_panel->set_scene(scene);
-						}
-						ImGui::PopStyleColor();
-						ImGui::SameLine(0, 1);
-						if (ImGui::Button("x", ImVec2(0, 30)))
-						{
-							// cross button
-							scene_to_remove = name;
-						}
-						ImGui::EndGroup();
-						ImGui::PopID();
+						set_active_scene(scene);
 					}
-
-					if (!scene_to_remove.empty())
-					{
-						m_scenes.erase(scene_to_remove);
-					}
-
-
-					ImGui::SameLine(0, 10);
-					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
-					ImGui::SetWindowFontScale(1.5f);
-					if (ImGui::Button("+", ImVec2(0, 30)))
-					{
-						auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
-						if (!full_path.empty())
-						{
-							auto project = Project::get_active_project();
-							Helper::normalize_path(full_path);
-
-							std::string project_dir = project->get_directory();
-							std::string scene_dir = project->get_scene_directory();
-
-							std::string base_path = project_dir + scene_dir + "/";
-
-							std::string relative_path = full_path;
-							if (relative_path.find(base_path) == 0)
-								relative_path = relative_path.substr(base_path.size());
-
-							Helper::normalize_path(relative_path);
-
-							std::filesystem::path p(full_path);
-							std::string scene_name = p.stem().string();
-							std::string scene_path = "/" + relative_path;
-
-							m_scene = Scene::create(scene_name, scene_path);
-							SaveScene::save_scene(m_scene, full_path);
-							Scene::set_active_scene(m_scene);
-
-							m_scenes[scene_name] = m_scene;
-							m_panel->set_scene(m_scene);
-						}
-					}
-					ImGui::SetWindowFontScale(1.0f);
-					ImGui::PopStyleVar();
-
-					ImGui::PopStyleColor(4);
-					ImGui::PopStyleVar(2);
 				}
-				ImGui::EndChild();
-				ImGui::PopStyleVar();
+
+				// Close button
+				ImGui::SameLine(0, 1);
+				if (ImGui::Button("x", ImVec2(0, 30)))
+				{
+					scene_to_remove = name;
+				}
+
+				ImGui::EndGroup();
+				ImGui::PopID();
 			}
 
-			bool view_hovered = ImGui::IsWindowHovered();
-			if (view_hovered)
-				ImGui::SetWindowFocus();
-			Application::get().get_imgui_layer()->block_events(!view_hovered);
-			ImVec2 viewport_size = ImGui::GetContentRegionAvail();
-			if (viewport_size.x > 0 && viewport_size.y > 0 &&
-				(m_viewport_size.x != viewport_size.x || m_viewport_size.y != viewport_size.y))
+			if (!scene_to_remove.empty())
 			{
-				m_viewport_size = viewport_size;
+				handle_scene_deletion(scene_to_remove);
+			}
+		}
+	}
+
+	void EditorLayer::render_add_scene_button()
+	{
+		ImGui::SameLine(0, 10);
+
+		{
+			StyleScope style;
+			style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
+
+			ImGui::SetWindowFontScale(1.5f);
+			if (ImGui::Button("+", ImVec2(0, 30)))
+			{
+				auto full_path = FileDialogs::save_file(
+					"AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+
+				if (!full_path.empty())
+				{
+					handle_scene_creation(full_path);
+				}
+			}
+			ImGui::SetWindowFontScale(1.0f);
+		}
+	}
+
+
+
+
+	void  EditorLayer::render_paint_settings_button()
+	{
+		float toolbar_height = ImGui::GetWindowHeight();
+		float button_height = 30.0f;
+		float vertical_padding = (toolbar_height - button_height) * 0.5f;
+		ImGui::SetCursorPosY(vertical_padding);
+
+		float available_width = ImGui::GetContentRegionAvail().x;
+
+		float group_spacing = 40.0f;
+
+		float paint_group_width = calculate_paint_group_width();
+		//float axis_group_width = calculate_axis_group_width();
+
+		float total_width = paint_group_width;
+		float start_x = (available_width - total_width) * 0.5f;
+
+		ImGui::SetCursorPosX(start_x);
+		render_paint_settings_group();
+
+		/*ImGui::SameLine(0, group_spacing);
+		render_axis_constraints_group();*/
+	}
+
+	void EditorLayer::render_settings_button()
+	{
+		float toolbar_height = ImGui::GetWindowHeight();
+		float button_height = 30.0f;
+		float vertical_padding = (toolbar_height - button_height) * 0.5f;
+		ImGui::SetCursorPosY(vertical_padding);
+
+		float available_width = ImGui::GetContentRegionAvail().x;
+
+		float group_spacing = 40.0f;
+
+		float transform_group_width = calculate_transform_group_width();
+		float axis_group_width = calculate_axis_group_width();
+
+		float total_width = transform_group_width + group_spacing + axis_group_width;
+		float start_x = (available_width - total_width) * 0.5f;
+
+		ImGui::SetCursorPosX(start_x);
+		render_transform_tools_group();
+
+		ImGui::SameLine(0, group_spacing);
+		render_axis_constraints_group();
+	}
+
+
+
+
+
+	void EditorLayer::render_transform_tools_group()
+	{
+		StyleScope style;
+		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
+		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+
+		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+		ImVec4 active_color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f);
+		ImVec4 disabled_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+		ImVec4 disabled_text_color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+
+		style.push_style_color(ImGuiCol_Button, bg_color);
+		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
+		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
+		style.push_style_color(ImGuiCol_Text, text_color);
+
+		bool has_selection = m_panel && m_panel->selected_has_transform();
+
+		// Move button
+		render_transform_button("G", "Grab ( G )", TransformSetting::Move, !has_selection);
+		ImGui::SameLine(0, 8);
+
+		// Rotate button  
+		render_transform_button("R", "Rotate ( R )", TransformSetting::Rotate, !has_selection);
+		ImGui::SameLine(0, 8);
+
+		// Scale button
+		render_transform_button("S", "Scale ( S )", TransformSetting::Scale, !has_selection);
+	}
+
+	void EditorLayer::render_axis_constraints_group()
+	{
+		StyleScope style;
+		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
+		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+
+		// Colors
+		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+		ImVec4 active_color = ImVec4(0.8f, 0.2f, 0.2f, 1.0f); // Red for active constraint
+		ImVec4 disabled_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+
+		style.push_style_color(ImGuiCol_Button, bg_color);
+		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
+		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
+		style.push_style_color(ImGuiCol_Text, text_color);
+
+
+		auto current_transform_mode = m_panel->get_transform_setting();
+		bool can_constrain = current_transform_mode != TransformSetting::None &&
+			m_panel && m_panel->selected_has_transform();
+
+		render_axis_button("X", "Along X - axis ( X )", TransformAxis::X, !can_constrain);
+		ImGui::SameLine(0, 5);
+
+		render_axis_button("Y", "Along Y - axis ( Y )", TransformAxis::Y, !can_constrain);
+		ImGui::SameLine(0, 5);
+	}
+
+	void EditorLayer::render_paint_settings_group()
+	{
+		StyleScope style;
+		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
+		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
+
+		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+		ImVec4 active_color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f);
+
+		style.push_style_color(ImGuiCol_Button, bg_color);
+		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
+		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
+		style.push_style_color(ImGuiCol_Text, text_color);
+
+
+		// Move button
+		render_paint_button("P", "Paint", TileMap_Paint_Settings::Paint);
+		ImGui::SameLine(0, 8);
+
+		// Rotate button  
+		render_paint_button("L", "Line", TileMap_Paint_Settings::Line);
+		ImGui::SameLine(0, 8);
+
+		render_paint_button("R", "Rectangle", TileMap_Paint_Settings::Rectangle);
+		ImGui::SameLine(0, 8);
+
+		render_paint_button("F", "Fill", TileMap_Paint_Settings::Fill);
+
+	}
+
+	void EditorLayer::render_transform_button(const char* label, const char* shortcut, TransformSetting mode, bool disabled)
+	{
+		auto current_transform_mode = m_panel->get_transform_setting();
+		bool is_active = (current_transform_mode == mode);
+
+		if (disabled)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+			ImGui::BeginDisabled();
+		}
+
+		if (is_active && !disabled)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+		}
+
+		std::string button_label = label;
+		ImVec2 button_size = ImVec2(60, 30);
+
+		if (ImGui::Button(button_label.c_str(), button_size))
+		{
+			if (!disabled)
+			{
+				set_transform_mode(mode);
+			}
+		}
+
+		// Tooltip with shortcut
+		if (ImGui::IsItemHovered() && !disabled)
+		{
+			ImGui::SetTooltip("%s", shortcut);
+		}
+
+		// Pop styles
+		if (is_active && !disabled)
+		{
+			ImGui::PopStyleColor();
+		}
+
+		if (disabled)
+		{
+			ImGui::EndDisabled();
+			ImGui::PopStyleVar();
+		}
+	}
+
+	void EditorLayer::render_axis_button(const char* label, const char* shortcut, TransformAxis axis, bool disabled)
+	{
+		auto current_axis = m_panel->get_transform_axis();
+		bool is_active = current_axis == axis;
+
+		if (disabled)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+			ImGui::BeginDisabled();
+		}
+
+		
+		if (is_active && !disabled)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+		}
+
+	
+		ImVec2 button_size = ImVec2(50, 30); 
+
+		ImGui::Button(label, button_size);
+
+		if (ImGui::IsItemClicked() && !disabled)
+		{
+			set_axis_mode(axis);
+		}
+
+		if (ImGui::IsItemHovered() && !disabled)
+		{
+			ImGui::SetTooltip("%s", shortcut);
+		}
+
+		if (is_active && !disabled)
+		{
+			ImGui::PopStyleColor();
+		}
+
+		if (disabled)
+		{
+			ImGui::EndDisabled();
+			ImGui::PopStyleVar();
+		}
+	}
+
+	void EditorLayer::render_paint_button(const char* label, const char* shortcut, TileMap_Paint_Settings mode)
+	{
+		auto current_mode = m_panel->get_paint_settings();
+		bool is_active = current_mode == mode;
+
+		if (is_active)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+		}
+
+
+		ImVec2 button_size = ImVec2(50, 30);
+
+		ImGui::Button(label, button_size);
+
+		if (ImGui::IsItemClicked())
+		{
+			set_paint_mode(mode);
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("%s", shortcut);
+		}
+
+		if (is_active)
+		{
+			ImGui::PopStyleColor();
+		}
+	}
+
+	float EditorLayer::calculate_transform_group_width() const
+	{
+		const float button_width = 60.0f; 
+		const float spacing = 10.0f;
+		const int button_count = 3; 
+
+		return (button_count * button_width) + ((button_count - 1) * spacing);
+	}
+
+	float EditorLayer::calculate_axis_group_width() const
+	{
+		const float button_width = 50.0f;
+		const float spacing = 8.0f;
+		const int button_count = 2; 
+
+		return (button_count * button_width) + ((button_count - 1) * spacing);
+	}
+
+	float EditorLayer::calculate_paint_group_width() const
+	{
+		const float button_width = 60.0f;
+		const float spacing = 10.0f;
+		const int button_count = 4;
+
+		return (button_count * button_width) + ((button_count - 1) * spacing);
+	}
+
+	const char* EditorLayer::axis_to_string(TransformAxis axis) const
+	{
+		switch (axis) {
+		case TransformAxis::X: return "X";
+		case TransformAxis::Y: return "Y";
+		default: return "";
+		}
+	}
+
+	void EditorLayer::set_transform_mode(TransformSetting mode)
+	{
+
+		// Update scene panel
+		if (m_panel) {
+			switch (mode) {
+			case TransformSetting::Move:
+				m_panel->set_transform_setting(TransformSetting::Move);
+				break;
+			case TransformSetting::Rotate:
+				m_panel->set_transform_setting(TransformSetting::Rotate);
+				break;
+			case TransformSetting::Scale:
+				m_panel->set_transform_setting(TransformSetting::Scale);
+				break;
+			case TransformSetting::None:
+				m_panel->set_transform_setting(TransformSetting::None);
+				break;
+			}
+		}
+	}
+
+	void EditorLayer::set_axis_mode(TransformAxis axis)
+	{
+		if (m_panel)
+		{
+			switch (axis)
+			{
+			case TransformAxis::X:
+				AERO_CORE_INFO("Switched to X axis");
+				m_panel->set_transform_axis(TransformAxis::X);
+				break;
+			case TransformAxis::Y:
+				m_panel->set_transform_axis(TransformAxis::Y);
+				break;
+			case TransformAxis::None:
+				m_panel->set_transform_axis(TransformAxis::None);
+				break;
+			}
+		}
+	}
+
+	void EditorLayer::set_paint_mode(TileMap_Paint_Settings mode)
+	{
+		if (m_panel)
+		{
+			m_panel->set_paint_settings(mode);
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+	void EditorLayer::handle_scene_creation(std::string& full_path)
+	{
+		auto project = Project::get_active_project();
+		if (!project) return;
+
+		Helper::normalize_path(full_path);
+
+		std::string project_dir = project->get_directory();
+		std::string scene_dir = project->get_scene_directory();
+		std::string base_path = project_dir + scene_dir + "/";
+
+		std::string relative_path = full_path;
+		if (relative_path.find(base_path) == 0)
+			relative_path = relative_path.substr(base_path.size());
+
+		Helper::normalize_path(relative_path);
+
+		std::filesystem::path p(full_path);
+		std::string scene_name = p.stem().string();
+		std::string scene_path = "/" + relative_path;
+
+		m_scene = Scene::create(scene_name, scene_path);
+		if (!m_scene)
+		{
+			AERO_CORE_ERROR("Failed to create scene: {}", scene_name);
+			return;
+		}
+
+		SaveScene::save_scene(m_scene, full_path);
+		Scene::set_active_scene(m_scene);
+
+		m_scenes[scene_name] = m_scene;
+		m_panel->set_scene(m_scene);
+	}
+
+	void EditorLayer::handle_scene_deletion(const std::string& scene_name)
+	{
+		auto it = m_scenes.find(scene_name);
+		if (it == m_scenes.end()) return;
+
+		// If deleting active scene, switch to another or nullptr
+		if (it->second == m_scene)
+		{
+			// Try to find another scene
+			for (auto& [name, scene] : m_scenes)
+			{
+				if (name != scene_name)
+				{
+					set_active_scene(scene);
+					break;
+				}
+			}
+
+			// If no other scenes, set to nullptr
+			if (m_scenes.size() == 1)
+			{
+				m_scene = nullptr;
+				m_panel->set_scene(nullptr);
+			}
+		}
+
+		m_scenes.erase(it);
+	}
+
+	void EditorLayer::set_active_scene(AG_ref<Scene> scene)
+	{
+		m_scene = scene;
+		if (m_scene)
+		{
+			m_scene->set_active_scene(scene);
+		}
+		m_panel->set_scene(scene);
+	}
+
+	void EditorLayer::render_viewport_content()
+	{
+		handle_viewport_interaction();
+
+		// Render framebuffer
+		if (m_framebuffer)
+		{
+			uint32_t texture_ID = m_framebuffer->get_colorattachment_id();
+			ImVec2 viewport_size = ImGui::GetContentRegionAvail();
+
+			ImGui::Image((void*)(intptr_t)texture_ID, viewport_size, ImVec2(0, 1), ImVec2(1, 0));
+			if (ImGui::IsItemHovered())
+			{
+				m_viewport_hovered = true;
+			}
+			else
+			{
+				m_viewport_hovered = false;
+			}
+			update_mouse_position();
+		}
+	}
+
+	void EditorLayer::handle_viewport_interaction()
+	{
+		bool view_hovered = ImGui::IsWindowHovered();
+		if (view_hovered)
+			ImGui::SetWindowFocus();
+
+		Application::get().get_imgui_layer()->block_events(!view_hovered);
+
+		// Handle viewport resize
+		ImVec2 viewport_size = ImGui::GetContentRegionAvail();
+		if (viewport_size.x > 0 && viewport_size.y > 0 &&
+			(m_viewport_size.x != viewport_size.x || m_viewport_size.y != viewport_size.y))
+		{
+			m_viewport_size = viewport_size;
+
+			if (m_framebuffer)
 				m_framebuffer->resize(m_viewport_size);
+
+			if (m_view_controller)
+			{
 				m_view_controller->on_resize(m_viewport_size);
 				m_view_controller->set_viewport_size(m_viewport_size);
 			}
-
-
-			uint32_t texture_ID = m_framebuffer->get_colorattachment_id();
-			ImGui::Image((void*)(intptr_t)texture_ID, viewport_size, ImVec2(0, 1), ImVec2(1, 0));
-			{
-				ImVec2 img_pos = ImGui::GetItemRectMin();
-				ImVec2 mouse = ImGui::GetMousePos();
-				m_viewport_hovered = ImGui::IsItemHovered();
-				ImGuiIO& io = ImGui::GetIO();
-
-				m_viewport_mouse_pos = { mouse.x - img_pos.x, mouse.y - img_pos.y };
-
-				//if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
-				//{
-				//	if (m_viewport_mouse_pos.x < 0)
-				//		m_viewport_mouse_pos.x = m_viewport_size.x - 1;
-				//	else if (m_viewport_mouse_pos.x > m_viewport_size.x)
-				//		m_viewport_mouse_pos.x = 1;
-
-				//	// vertical wrap
-				//	if (m_viewport_mouse_pos.y < 0)
-				//		m_viewport_mouse_pos.y = m_viewport_size.y - 1;
-				//	else if (m_viewport_mouse_pos.y > m_viewport_size.y)
-				//		m_viewport_mouse_pos.y = 1;
-
-				//	// Update actual ImGui mouse
-				//	io.MousePos.x = img_pos.x + m_viewport_mouse_pos.x;
-				//	io.MousePos.y = img_pos.y + m_viewport_mouse_pos.y;
-
-				//}
-
-
-				m_view_controller->set_viewport_mouse(m_viewport_mouse_pos);
-				m_viewport_mouse_pos = Math::screen_to_world(m_viewport_mouse_pos, m_view_controller->get_view().get_float_rect(), m_viewport_size);
-
-				m_panel->set_current_mouse_position(m_viewport_mouse_pos);
-
-
-			}
 		}
-		ImGui::End();
-		ImGui::PopStyleVar(2);
-
-		m_panel->on_imgui_render();
-
-		ImGui::End();
 	}
+
+	void EditorLayer::update_mouse_position()
+	{
+		ImVec2 img_pos = ImGui::GetItemRectMin();
+		ImVec2 mouse = ImGui::GetMousePos();
+		m_viewport_hovered = ImGui::IsItemHovered();
+
+		m_current_mouse_pos = { mouse.x - img_pos.x, mouse.y - img_pos.y };
+
+		if (m_view_controller)
+		{
+			m_view_controller->set_viewport_mouse(m_current_mouse_pos);
+
+			// Convert screen to world coordinates
+			m_current_mouse_pos = Math::screen_to_world(
+				m_current_mouse_pos,
+				m_view_controller->get_view().get_float_rect(),
+				m_viewport_size
+			);
+		}
+
+		if (m_panel)
+		{
+			m_panel->set_current_mouse_position(m_current_mouse_pos);
+		}
+	}
+
+
+
+
+
+
 
 	void EditorLayer::on_event(ag::Event& e)
 	{
@@ -495,6 +1015,43 @@ namespace ag
 			}
 		}
 
+
+		// Tile Map Node
+		{
+			if (m_panel->has_selected_entity())
+			{
+				auto selected_entity = m_panel->get_selected_entity();
+				auto type = NodeHelper::get_nodetype(selected_entity);
+				if (type == NodeType::TileMap && selected_entity.has_component<Texture_Component>() &&
+					selected_entity.has_component<TileSet_Component>() && selected_entity.has_component<Tile_Component>())
+				{
+					auto tile_id = m_panel->get_tile_id();
+					auto& tile_set = selected_entity.get_component<TileSet_Component>();
+
+					auto def = tile_set.tile_definitions.find(tile_id);
+					if (def != tile_set.tile_definitions.end())
+					{
+						auto texture_rect = def->second.texture_rect;
+						auto& props = selected_entity.get_component<Tile_Component>();
+						Sprite sprite;
+						sprite.size = texture_rect.size;
+						sprite.texture_rect = texture_rect;
+						sprite.fill_color.a = 100;
+
+						Transform_Component trans;
+						vec2i current_tile = {
+								(int)std::floor((m_current_mouse_pos.x - props.offset.x) / props.size.x),
+								(int)std::floor((m_current_mouse_pos.y - props.offset.y) / props.size.y)
+						};
+
+						trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
+
+						Renderer2D::set_texture(selected_entity.get_component<Texture_Component>().texture);
+						Renderer2D::draw_sprite(sprite, trans);
+					}
+				}
+			}
+		}
 	}
 
 	void EditorLayer::draw_transform_settings(Entity e)
@@ -560,4 +1117,7 @@ namespace ag
 			}
 		}
 	}
+
+	
 }
+ 

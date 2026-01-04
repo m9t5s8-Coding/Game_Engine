@@ -72,7 +72,7 @@ namespace ag
 	struct Rectangle
 	{
 		vec2f size;
-		Color fill_color;
+		Color fill_color = Color::White;
 		float border_thickness = 0.0f;
 		float corner_radius = 0.0f;
 		Color border_color;
@@ -82,7 +82,7 @@ namespace ag
 	struct Circle
 	{
 		vec2f size;
-		Color fill_color;
+		Color fill_color = Color::White;
 		float border_thickness = 0.0f;
 		Color border_color;
 		RenderMode mode = RenderMode::World;
@@ -92,6 +92,7 @@ namespace ag
 	{
 		vec2f size;
 		uint_rect texture_rect;
+		Color fill_color = Color::White;
 		RenderMode mode = RenderMode::World;
 		bool flip_horizontal = false;
 		bool flip_vertical = false;

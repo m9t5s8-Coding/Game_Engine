@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <imgui.h>
 #include <string>
@@ -6,6 +6,7 @@
 #include <Math/Math.hpp>
 #include <Scene/Entity.hpp>
 #include <Core/Application.hpp>
+#include <UI/Icons.hpp>
 
 
 namespace ag::UI
@@ -69,7 +70,12 @@ namespace ag::UI
 		bool is_dragging = false;
 	};
 
-
+	enum class FileFilter {
+		All,
+		Images,
+		Scripts,
+		Assets
+	};
 
 
 	void draw_texture(Entity entity);
@@ -79,7 +85,12 @@ namespace ag::UI
 	void draw_animation(Entity entity);
 	void draw_tilemap_register(Entity entity);
 	bool texture_selector(Entity entity, uint_rect& texture_rect);
+
 	void content_browser();
+	bool is_right_file(const std::filesystem::path& path);
+	bool is_image(const std::filesystem::path& path);
+	void draw_folder_node(const std::filesystem::path& directory);
+
 	void draw_script_selector(Entity entity);
 	void draw_create_script_model(bool& show_model, Entity entity);
 

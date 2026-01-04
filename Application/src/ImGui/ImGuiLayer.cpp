@@ -26,32 +26,77 @@ namespace ag
   {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     (void)io;
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    io.Fonts->AddFontFromFileTTF("assets/fonts/font.ttf", 20.0f);
-    io.Fonts->AddFontFromFileTTF("assets/fonts/font.ttf", 28.0f);
+    ImFontConfig font_cfg;
+    font_cfg.PixelSnapH = true;
+
+    ImFont* main_font = io.Fonts->AddFontFromFileTTF(
+      "assets/fonts/font.ttf",
+      20.0f,
+      &font_cfg
+    );
+
+    ImFont* large_font = io.Fonts->AddFontFromFileTTF(
+      "assets/fonts/font.ttf",
+      28.0f,
+      &font_cfg
+    );
+
+    ImFontConfig icon_cfg;
+    icon_cfg.MergeMode = true;        
+    icon_cfg.PixelSnapH = true;
+    icon_cfg.GlyphMinAdvanceX = 20.0f;  
+
+    static const ImWchar icon_ranges[] = {
+        0xf000, 0xf8ff, 
+        0
+    };
+
+    io.Fonts->AddFontFromFileTTF(
+      "assets/fonts/fa-solid-900.ttf",
+      20.0f,           
+      &icon_cfg,
+      icon_ranges
+    );
+
+   
+    ImFontConfig large_icon_cfg;
+    large_icon_cfg.MergeMode = true;
+    large_icon_cfg.PixelSnapH = true;
+    large_icon_cfg.GlyphMinAdvanceX = 28.0f;
+
+    io.Fonts->AddFontFromFileTTF(
+      "assets/fonts/fa-solid-900.ttf",
+      28.0f,          
+      &large_icon_cfg,
+      icon_ranges
+    );
+
+
+
+    io.FontDefault = main_font;  
 
     ImGui::StyleColorsDark();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
-        ImGuiStyle &style = ImGui::GetStyle();
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+      ImGuiStyle& style = ImGui::GetStyle();
+      style.WindowRounding = 0.0f;
+      style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    Application &app = Application::get();
-    GLFWwindow *window = static_cast<GLFWwindow *>(app.get_window().get_native_window());
+    Application& app = Application::get();
+    GLFWwindow* window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 450");
   }
-
   void ImGuiLayer::on_detach()
   {
     ImGui_ImplOpenGL3_Shutdown();

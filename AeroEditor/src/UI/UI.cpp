@@ -2,6 +2,8 @@
 #include <Aero.hpp>
 #include <Application/EditorLayer.hpp>
 #include <Panels/ScenePanel.hpp>
+#include <windows.h> 
+#include <shellapi.h>
 
 namespace ag::UI
 {
@@ -250,6 +252,7 @@ namespace ag::UI
 
 			if (ImGui::MenuItem("Run Current Scene", "Ctrl+F5", false))
 			{
+				run_current_scene();
 				auto folder = FileDialogs::get_exe_folder();
 				std::wstring app = folder + L"\\Sandbox.exe";
 
@@ -259,11 +262,13 @@ namespace ag::UI
 		}
 
 		if (ImGui::BeginMenu("Window")) {
-			if (ImGui::MenuItem("Minimize", "Ctrl+M")) {
+			if (ImGui::MenuItem("Minimize", "Ctrl+M"))
+			{
 				//EditorLayer::get().minimize_window();
 			}
 
-			if (ImGui::MenuItem("Maximize", "Ctrl+Shift+M")) {
+			if (ImGui::MenuItem("Maximize", "Ctrl+Shift+M"))
+			{
 				//EditorLayer::get().maximize_window();
 			}
 			ImGui::EndMenu();
@@ -547,113 +552,99 @@ namespace ag::UI
 
 	}
 
-
 	void content_browser()
 	{
-		static std::filesystem::path currentDirectory = ".";
-		static std::filesystem::path selectedFile;
-		static std::vector<std::filesystem::directory_entry> files;
+		auto project = Project::get_active_project();
+		std::filesystem::path root = project->get_directory();
 
 		ImGui::Begin("Content Browser");
 
-		// Navigation bar
-		if (ImGui::Button("<") && currentDirectory.has_parent_path()) {
-			currentDirectory = currentDirectory.parent_path();
-			files.clear();
-		}
-		ImGui::SameLine();
+		draw_folder_node(root);
 
-		if (ImGui::Button("Refresh")) {
-			files.clear();
-		}
-		ImGui::SameLine();
+		ImGui::End();
+	}
+	bool is_right_file(const std::filesystem::path& path)
+	{
+		std::string ext = path.extension().string();
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-		// Current path display
-		ImGui::Text("%s", currentDirectory.string().c_str());
-		ImGui::Separator();
+		return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
+			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".aeroscene" || ext == ".lua";
+	}
+	bool is_image(const std::filesystem::path& path)
+	{
+		std::string ext = path.extension().string();
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-		// Refresh directory listing
-		if (files.empty()) {
-			try {
-				for (const auto& entry : std::filesystem::directory_iterator(currentDirectory)) {
-					files.push_back(entry);
+		return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
+			ext == ".tiff" || ext == ".tif" || ext == ".webp";
+	}
+	void draw_folder_node(const std::filesystem::path& directory)
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(directory))
+		{
+			const auto& path = entry.path();
+			std::string name = path.filename().string();
+
+			ImGui::PushID(path.string().c_str());
+
+			if (entry.is_directory())
+			{
+				ImGuiTreeNodeFlags flags =
+					ImGuiTreeNodeFlags_OpenOnArrow |
+					ImGuiTreeNodeFlags_SpanAvailWidth;
+
+				bool open = ImGui::TreeNodeEx(
+					(std::string(ICON_FOLDER) + " " + name).c_str(),
+					flags
+				);
+
+				// Right-click folder
+				if (ImGui::BeginPopupContextItem())
+				{
+					ImGui::MenuItem("Open");
+					ImGui::MenuItem("Rename");
+					ImGui::MenuItem("Delete");
+					ImGui::EndPopup();
 				}
-				std::sort(files.begin(), files.end(),
-					[](const auto& a, const auto& b) {
-						if (a.is_directory() && !b.is_directory()) return true;
-						if (!a.is_directory() && b.is_directory()) return false;
-						return a.path().filename() < b.path().filename();
-					});
-			}
-			catch (const std::exception& e) {
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error: %s", e.what());
-			}
-		}
 
-		// File list
-		ImGui::BeginChild("FileList", ImVec2(0, 0), true);
-
-		for (size_t i = 0; i < files.size(); i++) {
-			const auto& entry = files[i];
-			auto path = entry.path();
-			auto filename = path.filename().string();
-			bool isDirectory = entry.is_directory();
-			bool isSelected = (selectedFile == path);
-
-			ImGui::PushID(i);
-
-			// Create selectable item with icon
-			std::string displayText = (isDirectory ? "📁 " : "📄 ") + filename;
-
-			if (ImGui::Selectable(displayText.c_str(), isSelected)) {
-				selectedFile = path;
-				if (ImGui::IsMouseDoubleClicked(0) && isDirectory) {
-					currentDirectory = path;
-					files.clear();
-					selectedFile.clear();
+				if (open)
+				{
+					draw_folder_node(path);   // recursion
+					ImGui::TreePop();
 				}
 			}
+			else if (is_right_file(path))
+			{
+				ImGui::Selectable((std::string(ICON_FOLDER) + " " + name).c_str());
 
-			// --- DRAG SOURCE: Make files draggable ---
-			if (!isDirectory && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-				std::string filePath = path.string();
-				ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM",
-					filePath.c_str(),
-					filePath.size() + 1);
-
-				ImGui::Text("📄 %s", filename.c_str());
-				ImGui::EndDragDropSource();
-			}
-
-			// Tooltip
-			if (ImGui::IsItemHovered()) {
-				ImGui::BeginTooltip();
-				ImGui::Text("Path: %s", path.string().c_str());
-				if (!isDirectory) {
-					ImGui::Text("Size: %.2f KB", entry.file_size() / 1024.0f);
-					ImGui::Text("Extension: %s", path.extension().string().c_str());
-
-					// Image file hint
-					std::string ext = path.extension().string();
-					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-					if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
-						ext == ".bmp" || ext == ".tga" || ext == ".hdr") {
-						ImGui::TextColored(ImVec4(0, 1, 0, 1), "✓ Drag to texture slot");
-					}
+				// Right-click file
+				if (ImGui::BeginPopupContextItem())
+				{
+					ImGui::MenuItem("Open");
+					ImGui::MenuItem("Delete");
+					ImGui::EndPopup();
 				}
-				ImGui::EndTooltip();
+
+				// Drag & drop
+				if (ImGui::BeginDragDropSource())
+				{
+					std::string p = path.string();
+					ImGui::SetDragDropPayload(
+						"CONTENT_BROWSER_ITEM",
+						p.c_str(),
+						p.size() + 1
+					);
+					ImGui::Text("%s", name.c_str());
+					ImGui::EndDragDropSource();
+				}
 			}
 
 			ImGui::PopID();
 		}
-
-		ImGui::EndChild();
-		ImGui::End();
 	}
-
-
-
-
 
 
 
@@ -1875,9 +1866,11 @@ namespace ag::UI
 				registered_tiles.clear();
 				selected = false;
 				const auto& tile_def = tile_set.tile_definitions;
+
 				for (const auto& [id, def] : tile_def)
 				{
 					registered_tiles.push_back(id);
+					tile_size = def.texture_rect.size;
 				}
 				tile_set.tile_changed = false;
 				AERO_CORE_INFO("Tile Changed");

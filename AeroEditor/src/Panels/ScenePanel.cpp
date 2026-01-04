@@ -54,9 +54,16 @@ namespace ag
 		update_tilemap();
 
 
+		if (has_selected_entity())
+		{
+			if (m_selected_entity.has_component<Tag_Component>() && EditorLayer::get().is_viewport_hovered())
+			{
+				const auto& tag = m_selected_entity.get_component<Tag_Component>();
+				if (tag.node_type == NodeType::TileMap)
+					tile_map_draw();
+			}
+		}
 		m_last_mouse_position = m_current_mouse_position;
-
-
 	}
 
 	void ScenePanel::on_event(Event& e)
@@ -854,7 +861,8 @@ namespace ag
 		ImGui::SetWindowFontScale(1.0f);
 		ImGui::PopStyleColor(3);
 
-		if (tooltip && ImGui::IsItemHovered()) {
+		if (tooltip && ImGui::IsItemHovered())
+		{
 			ImGui::SetTooltip("%s", tooltip);
 		}
 
@@ -1334,65 +1342,91 @@ namespace ag
 
 	void ScenePanel::update_transform_settings()
 	{
-		if (!m_selected_entity || !m_selected_entity.has_component<Transform_Component>())
+		if (!m_selected_entity || !m_selected_entity.has_component<Transform_Component>() || !EditorLayer::get().is_viewport_hovered())
 			return;
+
+		static bool was_left_pressed = false;
+		static bool was_right_pressed = false;
+
+		bool is_left_pressed = Mouse::is_mouse_pressed(Button::ButtonLeft);
+		bool is_right_pressed = Mouse::is_mouse_pressed(Button::ButtonRight);
+
+		bool left_clicked = !was_left_pressed && is_left_pressed;
+		bool right_clicked = !was_right_pressed && is_right_pressed;
+
+		bool left_released = was_left_pressed && !is_left_pressed;
+		bool right_released = was_right_pressed && !is_right_pressed;
 
 		switch (m_current_transform_setting)
 		{
 		case ag::TransformSetting::None:
 		{
-			return;
+			break;
 		}
 		case ag::TransformSetting::Scale:
 		{
-			scale_transform_setting();
-			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
+			if (is_left_pressed)
+			{
+				scale_transform_setting();
+			}
+			else if (left_released)
 			{
 				m_initial_transform.scale = m_selected_entity.get_component<Transform_Component>().scale;
 				reset_transform_setting();
 			}
-			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+
+			if (right_clicked)
 			{
 				auto& scale = m_selected_entity.get_component<Transform_Component>().scale;
 				scale = m_initial_transform.scale;
 				reset_transform_setting();
 			}
-			return;
+			break;
 		}
 		case ag::TransformSetting::Rotate:
 		{
-			rotate_transform_setting();
-			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
+			if (is_left_pressed)
 			{
-				m_initial_transform.rotation = m_selected_entity.get_component<Transform_Component>().rotation;
-				reset_transform_setting();
+				rotate_transform_setting();
 			}
-			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+			else if (left_released)
+			{
+				reset_transform_setting();
+				m_initial_transform.rotation = m_selected_entity.get_component<Transform_Component>().rotation;
+			}
+
+			if (right_clicked)
 			{
 				auto& rotation = m_selected_entity.get_component<Transform_Component>().rotation;
 				rotation = m_initial_transform.rotation;
 				reset_transform_setting();
 			}
-			return;
+			break;
 		}
 		case ag::TransformSetting::Move:
 		{
-			move_transform_setting();
-			if (Mouse::is_mouse_pressed(Button::ButtonLeft))
+			if (is_left_pressed)
+			{
+				move_transform_setting();
+			}
+			else if (left_released)
 			{
 				m_initial_transform.position = m_selected_entity.get_component<Transform_Component>().position;
 				reset_transform_setting();
 			}
-			else if (Mouse::is_mouse_pressed(Button::ButtonRight))
+
+			if (right_clicked)
 			{
 				auto& position = m_selected_entity.get_component<Transform_Component>().position;
 				position = m_initial_transform.position;
 				reset_transform_setting();
 			}
-			return;
+			break;
 		}
 		default: AERO_CORE_ERROR("No sucn Transform_Component Setting!"); break;
 		}
+		was_left_pressed = is_left_pressed;
+		was_right_pressed = is_right_pressed;
 	}
 	void ScenePanel::move_transform_setting()
 	{
@@ -1646,42 +1680,268 @@ namespace ag
 	{
 		if (!m_selected_entity)
 			return false;
+		return false;
+	}
 
-		if (m_selected_entity.has_component<Tag_Component>() && EditorLayer::get().is_viewport_hovered())
+
+
+
+
+
+
+
+
+
+
+
+	void ScenePanel::tile_map_draw()
+	{
+		if (!m_selected_entity.has_component<Tile_Component>() || !m_selected_entity.has_component<TileSet_Component>())
+			return;
+
+		static bool dragging = false;
+		static vec2i start_tile;
+		static vec2i previous_tile = { std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+
+		bool is_left = Mouse::is_mouse_pressed(Button::ButtonLeft);
+		bool is_right = Mouse::is_mouse_pressed(Button::ButtonRight);
+
+		auto& props = m_selected_entity.get_component<Tile_Component>();
+		auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
+
+		if ((!is_left && !is_right) || (is_left && is_right))
 		{
-			const auto& tag = m_selected_entity.get_component<Tag_Component>();
-			if (tag.node_type == NodeType::TileMap)
+			start_tile = vec2i();
+			if (dragging)
 			{
-				if (!m_selected_entity.has_component<Tile_Component>() || !m_selected_entity.has_component<TileSet_Component>())
-					return false;
-				auto& props = m_selected_entity.get_component<Tile_Component>();
-				auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
-
-				vec2f mouse_position = EditorLayer::get().get_viewport_mouse_position();
-				vec2i tile_pos = {
-					(int)std::floor((mouse_position.x - props.offset.x) / props.size.x),
-					(int)std::floor((mouse_position.y - props.offset.y) / props.size.y)
-				};
-
-				if (e.get_mouse_button() == Button::ButtonLeft)
+				for (const auto& [position, id] : temp_tiles)
 				{
-					tile_set.placed_tiles[tile_pos] = m_tile_id;
+					paint_eraser_tiles_helper(tile_set, position);
 				}
-				else if (e.get_mouse_button() == Button::ButtonRight)
+			}
+			dragging = false;
+			temp_tiles.clear();
+			return;
+		}
+
+		
+
+		vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+
+		vec2i current_tile = {
+			(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
+			(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
+		};
+
+		if (is_left && !is_right)
+		{
+			m_settings = TileMap_Settings::Paint;
+			if (!dragging && (m_paint_settings == TileMap_Paint_Settings::Rectangle || m_paint_settings == TileMap_Paint_Settings::Line || m_paint_settings == TileMap_Paint_Settings::Fill))
+			{
+				start_tile = current_tile;
+			}
+			dragging = true;
+
+		}
+		else if (is_right && !is_left)
+		{
+			m_settings = TileMap_Settings::Eraser;
+			dragging = true;
+		}
+
+
+
+
+
+
+
+		bool should_paint = true;
+
+		if (dragging)
+		{
+			if (current_tile == previous_tile && m_settings == m_previous_settings)
+			{
+				should_paint = false;
+			}
+			else if (current_tile != previous_tile)
+			{
+				temp_tiles.clear();
+			}
+		}
+
+
+		if (m_previous_settings != m_settings)
+		{
+			dragging = false;
+			m_previous_settings = m_settings;
+		}
+
+		if (!should_paint)
+		{
+			return;
+		}
+
+
+		switch (m_paint_settings)
+		{
+		case ag::TileMap_Paint_Settings::None:
+		{
+			paint_eraser_tiles_helper(tile_set, current_tile);
+			break;
+		}
+
+		case ag::TileMap_Paint_Settings::Paint:
+		{
+			paint_eraser_tiles_helper(tile_set, current_tile);
+			break;
+		}
+		case ag::TileMap_Paint_Settings::Line:
+		{
+			paint_eraser_tiles_helper(tile_set, current_tile);
+			break;
+		}
+		case ag::TileMap_Paint_Settings::Rectangle:
+		{
+			if (dragging)
+			{
+				int x_max = std::max(start_tile.x, current_tile.x);
+				int y_max = std::max(start_tile.y, current_tile.y);
+
+				int x_min = std::min(start_tile.x, current_tile.x);
+				int y_min = std::min(start_tile.y, current_tile.y);
+
+				for (int x = x_min; x <= x_max; x++)
 				{
-					if (tile_set.placed_tiles.contains(tile_pos))
+					for (int y = y_min; y <= y_max; y++)
 					{
-						auto it = tile_set.placed_tiles.find(tile_pos);
-						if (it != tile_set.placed_tiles.end())
+						paint_eraser_tiles_helper({ x, y });
+					}
+				}
+			}
+
+			break;
+		}
+		case ag::TileMap_Paint_Settings::Fill:
+		{
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+		previous_tile = current_tile;
+	}
+	void ScenePanel::paint_eraser_tiles_helper(const vec2i& pos)
+	{
+		switch (m_settings)
+		{
+		case ag::TileMap_Settings::Paint:
+		{
+			temp_tiles[pos] = m_tile_id;
+			return;
+		}
+		case ag::TileMap_Settings::Eraser:
+		{
+			//erase_tiles(tile_set, pos);
+			return;
+		}
+		default:
+			return;
+		}
+	}
+	void ScenePanel::paint_eraser_tiles_helper(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		switch (m_settings)
+		{
+		case ag::TileMap_Settings::Paint:
+		{
+			paint_tiles(tile_set, pos);
+			return;
+		}
+		case ag::TileMap_Settings::Eraser:
+		{
+			erase_tiles(tile_set, pos);
+			return;
+		}
+		default:
+			return;
+		}
+	}
+	void ScenePanel::paint_tiles(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		tile_set.placed_tiles[pos] = m_tile_id;
+	}
+	void ScenePanel::erase_tiles(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		if (tile_set.placed_tiles.contains(pos))
+		{
+			auto it = tile_set.placed_tiles.find(pos);
+			if (it != tile_set.placed_tiles.end())
+			{
+				tile_set.placed_tiles.erase(it);
+			}
+		}
+	}
+
+
+
+	void ScenePanel::draw_tilemap_ghosts()
+	{
+		{
+			if (has_selected_entity())
+			{
+				auto type = NodeHelper::get_nodetype(m_selected_entity);
+				if (type == NodeType::TileMap && m_selected_entity.has_component<Texture_Component>() &&
+					m_selected_entity.has_component<TileSet_Component>() && m_selected_entity.has_component<Tile_Component>())
+				{
+					auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
+					auto& props = m_selected_entity.get_component<Tile_Component>();
+
+					Transform_Component trans;
+					Sprite sprite;
+					sprite.size = props.size;
+					sprite.fill_color.a = 150;
+					Renderer2D::set_texture(m_selected_entity.get_component<Texture_Component>().texture);
+					{
+						for (const auto& [position, id] : temp_tiles)
 						{
-							tile_set.placed_tiles.erase(it);
+							auto tex_it = tile_set.tile_definitions.find(id);
+							if (tex_it == tile_set.tile_definitions.end())
+							{
+								continue;
+							}
+							const Tile_Defination& def = tex_it->second;
+							sprite.texture_rect = def.texture_rect;
+
+							trans.position = (position * props.size) + props.size / 2 + props.offset;
+
+							Renderer2D::draw_sprite(sprite, trans);
 						}
+					}
+
+
+					auto def = tile_set.tile_definitions.find(m_tile_id);
+					if (def != tile_set.tile_definitions.end())
+					{
+						auto texture_rect = def->second.texture_rect;
+						sprite.texture_rect = texture_rect;
+						Transform_Component trans;
+						vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+
+						vec2i current_tile = {
+							(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
+							(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
+						};
+
+						trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
+
+						Renderer2D::draw_sprite(sprite, trans);
 					}
 				}
 			}
 		}
 
-
-		return false;
 	}
+
 }
