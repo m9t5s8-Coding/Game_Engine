@@ -51,6 +51,12 @@ namespace ag::Math
     return vec2f((first + second) / 2);
   }
 
+  template <typename T>
+  inline float slope(const vec2<T>& first, const vec2<T>& second)
+  {
+    return static_cast<float>((second.x - first.x) / (second.y - first.y));
+  }
+
 
   inline float angle_betn_points(const vec2f& first, const vec2f& second)
   {

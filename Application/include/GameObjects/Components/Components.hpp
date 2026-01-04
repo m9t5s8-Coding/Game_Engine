@@ -342,7 +342,7 @@ namespace ag
 	struct Tile_Defination
 	{
 		uint_rect texture_rect;
-		bool is_solid = true;
+		bool is_solid = false;
 
 		static json save_json(const Tile_Defination& def);
 

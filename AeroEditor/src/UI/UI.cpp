@@ -563,6 +563,7 @@ namespace ag::UI
 
 		ImGui::End();
 	}
+
 	bool is_right_file(const std::filesystem::path& path)
 	{
 		std::string ext = path.extension().string();
@@ -572,6 +573,7 @@ namespace ag::UI
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
 			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".aeroscene" || ext == ".lua";
 	}
+
 	bool is_image(const std::filesystem::path& path)
 	{
 		std::string ext = path.extension().string();
@@ -581,6 +583,7 @@ namespace ag::UI
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
 			ext == ".tiff" || ext == ".tif" || ext == ".webp";
 	}
+
 	void draw_folder_node(const std::filesystem::path& directory)
 	{
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
@@ -1569,14 +1572,19 @@ namespace ag::UI
 		}
 	}
 
+
+
+
 	void draw_tilemap_register(Entity entity)
 	{
 		static bool show_register = false;
 		static std::vector<vec2u> selected_tiles;
+		static std::vector<vec2u> solid_tiles;
 		static vec2i tile_size = { 32, 32 };
 		static vec2f last_mouse_pos;
 		static vec2f current_mouse_pos;
 		static bool is_dragging = false;
+		static bool is_for_solid = false;
 
 
 		if (ImGui::Button("Register TileSet"))
@@ -1586,6 +1594,8 @@ namespace ag::UI
 			ImGui::OpenPopup("TileSet Register");
 			show_register = true;
 			selected_tiles.clear();
+			solid_tiles.clear();
+			is_for_solid = false;
 
 			if (entity.has_component<TileSet_Component>())
 			{
@@ -1593,6 +1603,10 @@ namespace ag::UI
 				for (const auto& [id, def] : tile_set.tile_definitions)
 				{
 					selected_tiles.push_back(id);
+					if (def.is_solid)
+					{
+						solid_tiles.push_back(id);
+					}
 				}
 			}
 		}
@@ -1703,14 +1717,23 @@ namespace ag::UI
 										selected_tiles.end(),
 										tile_id) != selected_tiles.end();
 
+									bool is_solid = std::find(solid_tiles.begin(), solid_tiles.end(), tile_id) != solid_tiles.end() && is_selected;
+
 									vec2f scale = screen_size / texture_size;
 									vec2f cell_min = screen_pos + vec2f(x * tile_size.x, y * tile_size.y) * scale;
 									vec2f cell_max = screen_pos + vec2f((x + 1) * tile_size.x, (y + 1) * tile_size.y) * scale;
 
-									ImU32 color = is_selected ? IM_COL32(200, 200, 200, 50)
+									ImU32 selected_color = is_selected ? IM_COL32(200, 200, 200, 50)
 										: IM_COL32(0, 0, 0, 150);
 
-									draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), color);
+
+									ImU32 solid_color = is_solid ? IM_COL32(200, 50, 50, 100)
+										: IM_COL32(0, 0, 0, 150);
+
+									draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), selected_color);
+
+									if (is_for_solid)
+										draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), solid_color);
 
 									ImGui::PushID(("tile_" + std::to_string(x) + "_" + std::to_string(y)).c_str());
 									ImGui::SetCursorScreenPos(cell_min.to_imvec2());
@@ -1722,40 +1745,116 @@ namespace ag::UI
 
 										if (control)
 										{
-											auto it = std::find(selected_tiles.begin(),
-												selected_tiles.end(),
-												tile_id);
-											if (it != selected_tiles.end())
-												selected_tiles.erase(it);
-											else
-												selected_tiles.push_back(tile_id);
-										}
-										else if (shift && !selected_tiles.empty())
-										{
-											vec2u last_selected = selected_tiles.back();
-											int start_x = std::min(last_selected.x, tile_id.x);
-											int end_x = std::max(last_selected.x, tile_id.x);
-											int start_y = std::min(last_selected.y, tile_id.y);
-											int end_y = std::max(last_selected.y, tile_id.y);
-
-											for (int y = start_y; y <= end_y; y++)
+											if (!is_for_solid)
 											{
-												for (int x = start_x; x <= end_x; x++)
+												auto it = std::find(selected_tiles.begin(),
+													selected_tiles.end(),
+													tile_id);
+												if (it != selected_tiles.end())
 												{
-													vec2u id = { (AG_uint)x, (AG_uint)y };
-													if (std::find(selected_tiles.begin(),
-														selected_tiles.end(),
-														id) == selected_tiles.end())
+													selected_tiles.erase(it);
+												}
+												else
+												{
+													selected_tiles.push_back(tile_id);
+												}
+											}
+											else
+											{
+												auto selected = std::find(
+													selected_tiles.begin(),
+													selected_tiles.end(),
+													tile_id
+												);
+												if (selected != selected_tiles.end())
+												{
+													auto it = std::find(
+														solid_tiles.begin(),
+														solid_tiles.end(),
+														tile_id
+													);
+
+													if (it != solid_tiles.end())
 													{
-														selected_tiles.push_back(id);
+														solid_tiles.erase(it);
+													}
+													else
+													{
+														solid_tiles.push_back(tile_id);
+													}
+												}
+
+											}
+										}
+										else if ((shift && !selected_tiles.empty() && !is_for_solid) || (shift && !solid_tiles.empty() && is_for_solid))
+										{
+											if (!is_for_solid)
+											{
+												vec2u last_selected = selected_tiles.back();
+												int start_x = std::min(last_selected.x, tile_id.x);
+												int end_x = std::max(last_selected.x, tile_id.x);
+												int start_y = std::min(last_selected.y, tile_id.y);
+												int end_y = std::max(last_selected.y, tile_id.y);
+
+												for (int y = start_y; y <= end_y; y++)
+												{
+													for (int x = start_x; x <= end_x; x++)
+													{
+														vec2u id = { (AG_uint)x, (AG_uint)y };
+														if (std::find(selected_tiles.begin(),
+															selected_tiles.end(),
+															id) == selected_tiles.end())
+														{
+															selected_tiles.push_back(id);
+														}
+													}
+												}
+											}
+											else
+											{
+												vec2u last_selected = solid_tiles.back();
+												int start_x = std::min(last_selected.x, tile_id.x);
+												int end_x = std::max(last_selected.x, tile_id.x);
+												int start_y = std::min(last_selected.y, tile_id.y);
+												int end_y = std::max(last_selected.y, tile_id.y);
+
+												for (int y = start_y; y <= end_y; y++)
+												{
+													for (int x = start_x; x <= end_x; x++)
+													{
+														vec2u id = { (AG_uint)x, (AG_uint)y };
+														if (std::find(selected_tiles.begin(),
+															selected_tiles.end(),
+															id) != selected_tiles.end())
+														{
+															if (std::find(solid_tiles.begin(),
+																solid_tiles.end(),
+																id) == solid_tiles.end())
+															{
+																solid_tiles.push_back(id);
+															}
+														}
 													}
 												}
 											}
 										}
 										else
 										{
-											selected_tiles.clear();
-											selected_tiles.push_back(tile_id);
+											if (!is_for_solid)
+											{
+												selected_tiles.clear();
+												selected_tiles.push_back(tile_id);
+											}
+											else
+											{
+												if (std::find(selected_tiles.begin(),
+													selected_tiles.end(),
+													tile_id) != selected_tiles.end())
+												{
+													solid_tiles.clear();
+													solid_tiles.push_back(tile_id);
+												}
+											}
 										}
 									}
 
@@ -1767,8 +1866,16 @@ namespace ag::UI
 											x * (int)tile_size.x,
 											y * (int)tile_size.y);
 										ImGui::Text("Size: %.0fx%.0f", tile_size.x, tile_size.y);
-										if (is_selected)
-											ImGui::TextColored(ImVec4(0, 1, 0, 1), "Selected");
+										if (!is_for_solid)
+										{
+											if (is_selected)
+												ImGui::TextColored(ImVec4(0, 1, 0, 1), "Selected");
+										}
+										else
+										{
+											if (is_solid)
+												ImGui::TextColored(ImVec4(0, 1, 0, 1), "Solid Tile");
+										}
 										ImGui::EndTooltip();
 									}
 									ImGui::PopID();
@@ -1793,8 +1900,25 @@ namespace ag::UI
 						{
 							selected_tiles.clear();
 						}
-
+						ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
+						std::string switch_label;
+						{
+							if (!is_for_solid)
+							{
+								switch_label = "Solid Tile View";
+							}
+							else
+							{
+								switch_label = "Tile Register View";
+							}
+						}
 						float button_height = 35.0f;
+						if (ImGui::Button(switch_label.c_str(), ImVec2(0, button_height)))
+						{
+							is_for_solid = !is_for_solid;
+						}
+
+
 						float button_width = ImGui::GetContentRegionAvail().x * 0.5f - 5.0f;
 						ImGui::SetCursorPosY(available_height - button_height);
 
@@ -1812,17 +1936,19 @@ namespace ag::UI
 								Tile_Defination def;
 
 								def.texture_rect = { ids * size, size };
-								def.is_solid = false;
+
+								def.is_solid = std::find(solid_tiles.begin(),
+									solid_tiles.end(),
+									ids) != solid_tiles.end();
+								AERO_CORE_INFO("Solid:{0}", def.is_solid);
 								tile_set.tile_definitions[ids] = def;
-							}
-							if (!selected_tiles.empty())
-							{
+
 								tile_set.is_tile_registered = true;
-								tile_set.tile_changed = true;
 							}
 
 							show_register = false;
 							selected_tiles.clear();
+							solid_tiles.clear();
 							ImGui::CloseCurrentPopup();
 						}
 						ImGui::SameLine(0.0f, 10.0f);
@@ -1830,6 +1956,7 @@ namespace ag::UI
 						{
 							show_register = false;
 							selected_tiles.clear();
+							solid_tiles.clear();
 							ImGui::CloseCurrentPopup();
 						}
 					}
@@ -1839,10 +1966,17 @@ namespace ag::UI
 				{
 					show_register = false;
 					selected_tiles.clear();
+					solid_tiles.clear();
 					ImGui::CloseCurrentPopup();
 				});
 		}
 	}
+
+
+
+
+
+
 
 	bool draw_tilemap_selector(Entity entity, vec2u& id)
 	{
@@ -1859,6 +1993,7 @@ namespace ag::UI
 			auto& tile_set = entity.get_component<TileSet_Component>();
 			if (!tile_set.is_tile_registered)
 			{
+				AERO_CORE_INFO("Tile is not registered");
 				return false;
 			}
 			if (tile_set.tile_changed)
@@ -1877,8 +2012,12 @@ namespace ag::UI
 			}
 
 		}
-		if (!entity.has_component<Tile_Component>() || !entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture)
+		if (!entity.has_component<Tile_Component>() || !entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture || !entity.has_component<TileSet_Component>())
+		{
+			AERO_CORE_INFO("Tile Map Selector is not drawing");
 			return false;
+		}
+
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse |
 			ImGuiWindowFlags_NoCollapse;

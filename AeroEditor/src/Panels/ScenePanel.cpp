@@ -1706,7 +1706,7 @@ namespace ag
 		bool is_left = Mouse::is_mouse_pressed(Button::ButtonLeft);
 		bool is_right = Mouse::is_mouse_pressed(Button::ButtonRight);
 
-		auto& props = m_selected_entity.get_component<Tile_Component>();
+		
 		auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
 
 		if ((!is_left && !is_right) || (is_left && is_right))
@@ -1721,10 +1721,11 @@ namespace ag
 			}
 			dragging = false;
 			temp_tiles.clear();
+			previous_tile = { std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
 			return;
 		}
 
-		
+		auto& props = m_selected_entity.get_component<Tile_Component>();
 
 		vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
 
@@ -1746,6 +1747,10 @@ namespace ag
 		else if (is_right && !is_left)
 		{
 			m_settings = TileMap_Settings::Eraser;
+			if (!dragging && (m_paint_settings == TileMap_Paint_Settings::Rectangle || m_paint_settings == TileMap_Paint_Settings::Line || m_paint_settings == TileMap_Paint_Settings::Fill))
+			{
+				start_tile = current_tile;
+			}
 			dragging = true;
 		}
 
@@ -1786,21 +1791,97 @@ namespace ag
 		{
 		case ag::TileMap_Paint_Settings::None:
 		{
-			paint_eraser_tiles_helper(tile_set, current_tile);
+			{
+				paint_eraser_tiles_helper(tile_set, current_tile);
+			}
 			break;
 		}
 
 		case ag::TileMap_Paint_Settings::Paint:
 		{
-			paint_eraser_tiles_helper(tile_set, current_tile);
+			{
+				if (previous_tile.x == std::numeric_limits<int>::max())
+				{
+					previous_tile = current_tile;
+					paint_eraser_tiles_helper(tile_set, current_tile);
+					break;
+				}
+				float dx = current_tile.x - previous_tile.x;
+				float dy = current_tile.y - previous_tile.y;
+
+				int steps = std::max(abs(dx), abs(dy));
+
+				for (int i = 0; i <= steps; i++)
+				{
+					float t = (float)i / steps;
+					int x = previous_tile.x + dx * t;
+					int y = previous_tile.y + dy * t;
+					paint_eraser_tiles_helper(tile_set, {x, y});
+				}
+				if (steps == 0)
+				{
+					paint_eraser_tiles_helper(tile_set, current_tile);
+				}
+			}
 			break;
 		}
 		case ag::TileMap_Paint_Settings::Line:
 		{
-			paint_eraser_tiles_helper(tile_set, current_tile);
+			if(dragging)
+			{
+				float dx = current_tile.x - start_tile.x;
+				float dy = current_tile.y - start_tile.y;
+
+				int steps = std::max(abs(dx), abs(dy));
+
+				for (int i = 0; i <= steps; i++)
+				{
+					float t = (float)i / steps;
+					int x = start_tile.x + dx * t;
+					int y = start_tile.y + dy * t;
+					paint_eraser_tiles_helper({ x, y });
+				}
+				if (steps == 0)
+				{
+					paint_eraser_tiles_helper(current_tile);
+				}
+			}
 			break;
 		}
 		case ag::TileMap_Paint_Settings::Rectangle:
+		{
+			if (dragging)
+			{
+				int x_max = std::max(start_tile.x, current_tile.x);
+				int y_max = std::max(start_tile.y, current_tile.y);
+
+				int x_min = std::min(start_tile.x, current_tile.x);
+				int y_min = std::min(start_tile.y, current_tile.y);
+
+				int width = x_max - x_min;
+				int height = y_max - y_min;
+
+				for (int x = x_min; x <= x_max; x++)
+				{
+					paint_eraser_tiles_helper({ x, y_min });
+				}
+				for (int x = x_min; x <= x_max; x++)
+				{
+					paint_eraser_tiles_helper({ x, y_min + height });
+				}
+				for (int y = y_min; y <= y_max; y++)
+				{
+					paint_eraser_tiles_helper({ x_min, y });
+				}
+				for (int y = y_min; y <= y_max; y++)
+				{
+					paint_eraser_tiles_helper({ x_min + width, y });
+				}
+				
+			}
+			break;
+		}
+		case ag::TileMap_Paint_Settings::Fill:
 		{
 			if (dragging)
 			{
@@ -1818,11 +1899,6 @@ namespace ag
 					}
 				}
 			}
-
-			break;
-		}
-		case ag::TileMap_Paint_Settings::Fill:
-		{
 			break;
 		}
 		default:
@@ -1843,7 +1919,7 @@ namespace ag
 		}
 		case ag::TileMap_Settings::Eraser:
 		{
-			//erase_tiles(tile_set, pos);
+			temp_tiles[pos] = m_tile_id;
 			return;
 		}
 		default:

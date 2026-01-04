@@ -1137,29 +1137,29 @@ namespace ag
 
 		for (const auto& [pos, id] : props.placed_tiles)
 		{
-			/*auto tex_it = props.tile_definitions.find(id);
+			auto tex_it = props.tile_definitions.find(id);
 			if (tex_it == props.tile_definitions.end())
 			{
 				continue;
 			}
 			const Tile_Defination& def = tex_it->second;
 			if (def.is_solid)
-			{*/
-			vec2f position = (pos * tile.size) + tile.size / 2 + tile.offset;
-			Math::pixels_to_meters(position);
-			b2PolygonShape shape;
-			vec2f size = tile.size;
-			Math::pixels_to_meters(size);
-			shape.SetAsBox(size.x / 2, size.y / 2, { position.x, position.y }, 0.0f);
+			{
+				vec2f position = (pos * tile.size) + tile.size / 2 + tile.offset;
+				Math::pixels_to_meters(position);
+				b2PolygonShape shape;
+				vec2f size = tile.size;
+				Math::pixels_to_meters(size);
+				shape.SetAsBox(size.x / 2, size.y / 2, { position.x, position.y }, 0.0f);
 
-			b2FixtureDef fixture_def;
-			fixture_def.shape = &shape;
-			fixture_def.density = 0.0f;
-			fixture_def.friction = 0.5f;
-			fixture_def.restitution = 0.1f;
+				b2FixtureDef fixture_def;
+				fixture_def.shape = &shape;
+				fixture_def.density = 0.0f;
+				fixture_def.friction = 0.5f;
+				fixture_def.restitution = 0.1f;
 
-			props.body->CreateFixture(&fixture_def);
-			//}
+				props.body->CreateFixture(&fixture_def);
+			}
 		}
 	}
 
