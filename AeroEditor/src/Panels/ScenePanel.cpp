@@ -5,6 +5,13 @@
 
 namespace ag
 {
+	static const uint8_t bit_lookup[3][3] =
+	{
+			{ TL,  T,  TR },
+			{ L,   0,  R  },
+			{ BL,  B,  BR }
+	};
+
 	namespace Icons {
 		constexpr const char* PLUS = "[+]";
 		constexpr const char* SEARCH = "[S]";
@@ -117,10 +124,9 @@ namespace ag
 				{
 					auto& props = m_selected_entity.get_component<Tile_Component>();
 					vec2u tile_id = m_tile_id;
-					if (UI::draw_tilemap_selector(m_selected_entity, m_tile_id))
+					if (UI::draw_tilemap_selector(m_selected_entity, m_tile_id, m_active_set, m_use_auto_tile))
 					{
 						m_tile_id = tile_id;
-						AERO_CORE_INFO("True");
 						m_tile_id.print();
 					}
 					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
@@ -1688,12 +1694,6 @@ namespace ag
 
 
 
-
-
-
-
-
-
 	void ScenePanel::tile_map_draw()
 	{
 		if (!m_selected_entity.has_component<Tile_Component>() || !m_selected_entity.has_component<TileSet_Component>())
@@ -1783,6 +1783,7 @@ namespace ag
 
 		if (!should_paint)
 		{
+			previous_tile = current_tile;
 			return;
 		}
 
@@ -1946,7 +1947,34 @@ namespace ag
 	}
 	void ScenePanel::paint_tiles(TileSet_Component& tile_set, const vec2i& pos)
 	{
-		tile_set.placed_tiles[pos] = m_tile_id;
+		if(!m_use_auto_tile)
+		{
+			Tile tiles;
+			tiles.tile_id = m_tile_id;
+			tile_set.placed_tiles[pos] = tiles;
+		}
+		else
+		{
+			auto& comps = m_selected_entity.get_component<AutoTiling_Component>();
+			auto it = comps.auto_tiles.find(m_active_set);
+			if (it != comps.auto_tiles.end())
+			{
+				auto mask = calculate_bitmask(tile_set, pos);
+				AERO_CORE_INFO("Mask:{0} 1", mask);
+				auto id = it->second.tile_bitmask.find(mask);
+				if (id != it->second.tile_bitmask.end())
+				{
+					Tile tiles;
+					tiles.tile_id = id->second;
+					tiles.set_id = it->second.set_id;
+					tiles.use_autotile = true;
+					tile_set.placed_tiles[pos] = tiles;
+					AERO_CORE_INFO("Mask:{0} 2", mask);
+					update_neighbour(tile_set, pos);
+				}
+			}
+			
+		}
 	}
 	void ScenePanel::erase_tiles(TileSet_Component& tile_set, const vec2i& pos)
 	{
@@ -1961,6 +1989,81 @@ namespace ag
 	}
 
 
+	uint16_t ScenePanel::get_set_id(const std::string& set_name)
+	{
+		if (m_selected_entity.has_component<AutoTiling_Component>())
+		{
+			auto& props = m_selected_entity.get_component<AutoTiling_Component>();
+
+			auto it = props.auto_tiles.find(set_name);
+			if (it != props.auto_tiles.end())
+			{
+				return it->second.set_id;
+			}
+		}
+		return std::numeric_limits<uint16_t>::max();
+	}
+
+	uint16_t ScenePanel::normalize_autotile_mask(uint16_t mask)
+	{
+		const bool t = mask & T;
+		const bool l = mask & L;
+		const bool r = mask & R;
+		const bool b = mask & B;
+
+		// TL requires T + L
+		if (!(t && l)) mask &= ~TL;
+
+		// TR requires T + R
+		if (!(t && r)) mask &= ~TR;
+
+		// BL requires B + L
+		if (!(b && l)) mask &= ~BL;
+
+		// BR requires B + R
+		if (!(b && r)) mask &= ~BR;
+
+
+		return mask;
+	}
+
+
+	uint16_t ScenePanel::calculate_bitmask(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		uint16_t mask = 0;
+
+		auto active_set_id = get_set_id(m_active_set);
+
+		auto check = [&](int dx, int dy, uint8_t bit) {
+			vec2i neighbor_pos = { pos.x + dx, pos.y + dy };
+
+			if (neighbor_pos == pos)
+			{
+				mask |= bit;
+				return;
+			}
+
+			auto it = tile_set.placed_tiles.find(neighbor_pos);
+			if (it == tile_set.placed_tiles.end())
+				return;
+
+			const Tile& neighbor = it->second;
+			if (neighbor.set_id == active_set_id && neighbor.use_autotile)
+				mask |= bit;
+			};
+
+		check(-1, -1, TL);
+		check(0, -1, T);
+		check(1, -1, TR);
+		check(-1, 0, L);
+		check(0, 0, M);
+		check(1, 0, R);
+		check(-1, 1, BL);
+		check(0, 1, B);
+		check(1, 1, BR);
+
+		return normalize_autotile_mask(mask);
+	}
 
 	void ScenePanel::draw_tilemap_ghosts()
 	{
@@ -1974,45 +2077,88 @@ namespace ag
 					auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
 					auto& props = m_selected_entity.get_component<Tile_Component>();
 
-					Transform_Component trans;
-					Sprite sprite;
-					sprite.size = props.size;
-					sprite.fill_color.a = 150;
-					Renderer2D::set_texture(m_selected_entity.get_component<Texture_Component>().texture);
+					if (!m_use_auto_tile)
 					{
-						for (const auto& [position, id] : temp_tiles)
+						Transform_Component trans;
+						Sprite sprite;
+						sprite.size = props.size;
+						sprite.fill_color.a = 150;
+						Renderer2D::set_texture(m_selected_entity.get_component<Texture_Component>().texture);
 						{
-							auto tex_it = tile_set.tile_definitions.find(id);
-							if (tex_it == tile_set.tile_definitions.end())
+							for (const auto& [position, id] : temp_tiles)
 							{
-								continue;
-							}
-							const Tile_Defination& def = tex_it->second;
-							sprite.texture_rect = def.texture_rect;
+								auto tex_it = tile_set.tile_definitions.find(id);
+								if (tex_it == tile_set.tile_definitions.end())
+								{
+									continue;
+								}
+								const Tile_Defination& def = tex_it->second;
+								sprite.texture_rect = def.texture_rect;
 
-							trans.position = (position * props.size) + props.size / 2 + props.offset;
+								trans.position = (position * props.size) + props.size / 2 + props.offset;
+
+								Renderer2D::draw_sprite(sprite, trans);
+							}
+						}
+
+
+						auto def = tile_set.tile_definitions.find(m_tile_id);
+						if (def != tile_set.tile_definitions.end())
+						{
+							auto texture_rect = def->second.texture_rect;
+							sprite.texture_rect = texture_rect;
+							Transform_Component trans;
+							vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+
+							vec2i current_tile = {
+								(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
+								(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
+							};
+
+							trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
 
 							Renderer2D::draw_sprite(sprite, trans);
 						}
 					}
-
-
-					auto def = tile_set.tile_definitions.find(m_tile_id);
-					if (def != tile_set.tile_definitions.end())
+					else
 					{
-						auto texture_rect = def->second.texture_rect;
-						sprite.texture_rect = texture_rect;
 						Transform_Component trans;
-						vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+						Rectangle rect;
+						rect.size = props.size;
+						rect.fill_color.a = 200;
+						Renderer2D::set_texture(m_selected_entity.get_component<Texture_Component>().texture);
+						{
+							for (const auto& [position, id] : temp_tiles)
+							{
+								auto tex_it = tile_set.tile_definitions.find(id);
+								if (tex_it == tile_set.tile_definitions.end())
+								{
+									continue;
+								}
+								const Tile_Defination& def = tex_it->second;
 
-						vec2i current_tile = {
-							(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
-							(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
-						};
+								trans.position = (position * props.size) + props.size / 2 + props.offset;
 
-						trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
+								Renderer2D::draw_rectangle(rect, trans);
+							}
+						}
 
-						Renderer2D::draw_sprite(sprite, trans);
+
+						auto def = tile_set.tile_definitions.find(m_tile_id);
+						if (def != tile_set.tile_definitions.end())
+						{
+							Transform_Component trans;
+							vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+
+							vec2i current_tile = {
+								(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
+								(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
+							};
+
+							trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
+
+							Renderer2D::draw_rectangle(rect, trans);
+						}
 					}
 				}
 			}
@@ -2020,4 +2166,51 @@ namespace ag
 
 	}
 
+	void ScenePanel::update_neighbour(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		auto set_id = get_set_id(m_active_set);
+		auto& comps = m_selected_entity.get_component<AutoTiling_Component>();
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			for (int dy = -1; dy <= 1; dy++)
+			{
+				if (dx == 0 && dy == 0)
+				{
+					continue;
+				}
+				vec2i neighbour_pos = { pos.x + dx, pos.y + dy };
+
+				auto tiles = tile_set.placed_tiles.find(neighbour_pos);
+				if (tiles == tile_set.placed_tiles.end())
+				{
+					continue;
+				}
+
+				Tile& tile = tiles->second;
+				if (tile.set_id != set_id || !tile.use_autotile)
+				{
+					continue;
+				}
+
+				auto it = comps.auto_tiles.find(m_active_set);
+				if (it != comps.auto_tiles.end())
+				{
+					auto mask = calculate_bitmask(tile_set, neighbour_pos);
+					auto id = it->second.tile_bitmask.find(mask);
+					if (id != it->second.tile_bitmask.end())
+					{
+						if (tile.tile_id != id->second)
+						{
+							Tile new_tile;
+							new_tile.tile_id = id->second;
+							new_tile.set_id = it->second.set_id;
+							new_tile.use_autotile = true;
+							tile_set.placed_tiles[neighbour_pos] = new_tile;
+							update_neighbour(tile_set, neighbour_pos);
+						}
+					}
+				}
+			}
+		}
+	}
 }

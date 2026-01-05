@@ -162,8 +162,11 @@ namespace ag
 		void paint_tiles(TileSet_Component& tile_set, const vec2i& pos);
 		void erase_tiles(TileSet_Component& tile_set, const vec2i& pos);
 
-		
+		void update_neighbour(TileSet_Component& tile_set, const vec2i& pos);
 
+		uint16_t calculate_bitmask(TileSet_Component& tile_set, const vec2i& pos);
+		uint16_t normalize_autotile_mask(uint16_t mask);
+		uint16_t get_set_id(const std::string& set_name);
 	private:
 		AG_ref<Scene> m_scene;
 		Entity m_selected_entity;
@@ -191,5 +194,7 @@ namespace ag
 		TileMap_Paint_Settings m_paint_settings = TileMap_Paint_Settings::Paint;
 		TileMap_Settings m_settings = TileMap_Settings::Paint , m_previous_settings = TileMap_Settings::Paint;
 		std::unordered_map<vec2i, vec2u, vec2_hash<int>> temp_tiles;
+		std::string m_active_set;
+		bool m_use_auto_tile = false;
 	};
 }

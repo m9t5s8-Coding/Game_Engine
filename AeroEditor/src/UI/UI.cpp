@@ -7,6 +7,12 @@
 
 namespace ag::UI
 {
+	static const uint16_t bit_lookup[3][3] =
+	{
+			{ TL,  T,  TR },
+			{ L,   M,  R  },
+			{ BL,  B,  BR }
+	};
 
 	void draw_menu_bar()
 	{
@@ -311,8 +317,6 @@ namespace ag::UI
 		ImGui::EndMainMenuBar();
 
 	}
-
-
 
 	void draw_texture(Entity entity)
 	{
@@ -648,13 +652,6 @@ namespace ag::UI
 			ImGui::PopID();
 		}
 	}
-
-
-
-
-
-
-
 
 	void draw_animation(Entity entity)
 	{
@@ -1572,9 +1569,6 @@ namespace ag::UI
 		}
 	}
 
-
-
-
 	void draw_tilemap_register(Entity entity)
 	{
 		static bool show_register = false;
@@ -1607,6 +1601,10 @@ namespace ag::UI
 					{
 						solid_tiles.push_back(id);
 					}
+				}
+				if (tile_set.tile_size != 0)
+				{
+					tile_size = tile_set.tile_size;
 				}
 			}
 		}
@@ -1940,13 +1938,13 @@ namespace ag::UI
 								def.is_solid = std::find(solid_tiles.begin(),
 									solid_tiles.end(),
 									ids) != solid_tiles.end();
-								AERO_CORE_INFO("Solid:{0}", def.is_solid);
 								tile_set.tile_definitions[ids] = def;
 
 								tile_set.is_tile_registered = true;
 							}
-
+							tile_set.tile_size = tile_size;
 							show_register = false;
+							tile_set.tile_changed = true;
 							selected_tiles.clear();
 							solid_tiles.clear();
 							ImGui::CloseCurrentPopup();
@@ -1975,10 +1973,391 @@ namespace ag::UI
 
 
 
+	void draw_autotiling_register(Entity entity)
+	{
+		static bool show_register = false;
+		static std::string active_set;
+		
+
+		static char buffer[128] = "";
+		buffer[sizeof(buffer) - 1] = '\0';
+
+		ImGui::InputTextWithHint("##NewSetName", "New Set Name", buffer, sizeof(buffer));
+		ImGui::SameLine();
+		if (ImGui::Button("Add") && buffer[0] != '\0')
+		{
+			auto& comps = entity.get_component<AutoTiling_Component>();
+			std::string name = buffer;
+			if (comps.auto_tiles.find(name) == comps.auto_tiles.end())
+			{
+				Auto_Tiles tiles;
+				comps.next_id++;
+				tiles.set_id = comps.next_id;
+				comps.auto_tiles[name] = tiles;
+				buffer[0] = '\0';
+			}
+			else
+			{
+				ImGui::OpenPopup("Set Name Exists");
+			}
+		}
+		{
+
+			if (ImGui::BeginCombo("Current Set",
+				active_set.empty() ? "None" : active_set.c_str()))
+			{
+				if (ImGui::Selectable("None", active_set.empty()))
+				{
+					active_set = "";
+				}
+				auto& comps = entity.get_component<AutoTiling_Component>();
+				for (const auto& [name, _] : comps.auto_tiles)
+				{
+					bool is_selected = (active_set == name);
+					if (ImGui::Selectable(name.c_str(), is_selected))
+					{
+						active_set = name;
+					}
+					if (is_selected)
+						ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+		}
+
+		static std::vector<vec2u> selected_tiles;
+		static std::unordered_map<vec2u, uint16_t, vec2_hash<AG_uint>> temp_bitmask;
+		static vec2i tile_size = { 32, 32 };
+		static vec2f last_mouse_pos;
+		static vec2f current_mouse_pos;
+		static bool is_dragging = false;
+		static std::string current_set_name = "";
+		static std::string set_name = "";
+		static bool creating_new_set = false;
+		static bool editing_existing_set = false;
+
+		float total_width = ImGui::GetContentRegionAvail().x;
+		float spacing = 10.0f;
+		float width = (total_width - 5.0f) * 0.5f;
+		if (ImGui::Button("Edit Set", ImVec2(width, 30.0f)))
+		{
+			if (!entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture ||
+				!entity.has_component<TileSet_Component>() || !entity.has_component<AutoTiling_Component>())
+				return;
+
+			ImGui::OpenPopup("AutoTiling Register");
+			show_register = true;
+			selected_tiles.clear();
+
+			if (entity.has_component<TileSet_Component>())
+			{
+				auto& tile_set = entity.get_component<TileSet_Component>();
+				for (const auto& [id, def] : tile_set.tile_definitions)
+				{
+					selected_tiles.push_back(id);
+				}
+				if (tile_set.tile_size.x > 0 && tile_set.tile_size.y > 0)
+				{
+					tile_size = tile_set.tile_size;
+				}
+			}
+			temp_bitmask.clear();
+			if (entity.has_component<AutoTiling_Component>())
+			{
+				auto& comps = entity.get_component<AutoTiling_Component>();
+				auto it = comps.auto_tiles.find(active_set);
+				if (it != comps.auto_tiles.end())
+				{
+					Auto_Tiles& set = it->second;
+					for (const auto& [key, value] : set.tile_bitmask)
+					{
+						temp_bitmask[value] = key;
+					}
+				}
+			}
+		}
+		ImGui::SameLine(0, 10.0f);
+		if (ImGui::Button("Delete Set", ImVec2(width, 30.0f)))
+		{
+			auto& comps = entity.get_component<AutoTiling_Component>();
+			auto it = comps.auto_tiles.find(active_set);
+			if (it != comps.auto_tiles.end())
+			{
+				comps.auto_tiles.erase(it);
+				active_set = "";
+			}
+		}
+
+
+		if (show_register)
+		{
+			custom_popup("AutoTiling Register", "AutoTiling Register",
+				[&]() mutable
+				{
+					auto& texture = entity.get_component<Texture_Component>().texture;
+					vec2f texture_size = texture->get_size();
+					ImTextureID texture_id = (ImTextureID)(intptr_t)texture->get_texture_id();
+
+					float available_width = ImGui::GetContentRegionAvail().x;
+					float left_width = available_width * 0.65f - 5.0f;
+					float right_width = available_width * 0.35f - 5.0f;
+
+					ImGui::BeginChild("TextureColumn", ImVec2(left_width, 0), true);
+					{
+						ImGui::Text("Texture Preview");
+						ImGui::Separator();
+
+						ImGui::BeginChild("TextureContainer", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+						{
+							static vec2f view_size = ImGui::GetContentRegionAvail();
+							static vec2f view_center;
+
+							vec2f mouse_screen = ImGui::GetMousePos();
+							vec2f child_pos = ImGui::GetWindowPos();
+							vec2f child_size = ImGui::GetWindowSize();
+
+							current_mouse_pos = mouse_screen - child_pos;
+
+
+							vec2f container = ImGui::GetContentRegionAvail();
+							vec2f container_start_pos = ImGui::GetCursorScreenPos();
+							bool is_hovering_container = ImGui::IsMouseHoveringRect(
+								container_start_pos.to_imvec2(),
+								(container_start_pos + container).to_imvec2());
+
+							if (is_hovering_container && ImGui::IsMouseClicked(2))
+							{
+								is_dragging = true;
+								last_mouse_pos = current_mouse_pos;
+							}
+							if (is_dragging)
+							{
+								if (ImGui::IsMouseDown(2))
+								{
+									vec2f start = Math::screen_to_world(last_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+									vec2f end = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+									vec2f delta = start - end;
+
+									view_center += delta;
+									last_mouse_pos = current_mouse_pos;
+								}
+								else
+								{
+									is_dragging = false;
+								}
+							}
+
+							if (is_hovering_container && ImGui::GetIO().MouseWheel != 0)
+							{
+								float scale_factor = (ImGui::GetIO().MouseWheel > 0) ? 0.9f : 1.1f;
+								vec2f world_before_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+								view_size *= scale_factor;
+								vec2f world_after_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+								vec2f offset = world_before_zoom - world_after_zoom;
+								view_center += offset;
+							}
+							vec2f world_pos = vec2f(0, 0) - texture_size * 0.5f;
+							vec2f screen_pos = Math::world_to_screen(world_pos, Math::get_float_rect(view_size, view_center), container);
+							vec2f screen_size = Math::world_size_to_screen_size(texture_size, view_size, container);
+							ImGui::SetCursorPos(screen_pos.to_imvec2());
+							ImGui::Image(texture_id, screen_size.to_imvec2());
+							ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+
+							vec2f window_pos = ImGui::GetWindowPos();
+							screen_pos += window_pos;
+							vec2i total_dim = texture_size / tile_size;
+							for (int x = 0; x <= total_dim.x; x++)
+							{// Vertical
+								float px = screen_pos.x + x * tile_size.x * (screen_size.x / texture_size.x);
+								draw_list->AddLine(ImVec2(px, screen_pos.y),
+									ImVec2(px, screen_pos.y + screen_size.y),
+									IM_COL32(255, 255, 255, 100), 2.0f);
+							}
+
+							for (int y = 0; y <= total_dim.y; y++)
+							{// Horizontal
+								float py = screen_pos.y + y * tile_size.y * (screen_size.y / texture_size.y);
+								draw_list->AddLine(
+									ImVec2(screen_pos.x, py),
+									ImVec2(screen_pos.x + screen_size.x, py),
+									IM_COL32(255, 255, 255, 100), 2.0f);
+							}
+
+							vec2f button_size = Math::world_size_to_screen_size(tile_size, view_size, container);
+							for (int x = 0; x < total_dim.x; x++)
+							{
+								for (int y = 0; y < total_dim.y; y++)
+								{
+									vec2u tile_id = { (AG_uint)x, (AG_uint)y };
+
+									bool is_selected = std::find(selected_tiles.begin(),
+										selected_tiles.end(),
+										tile_id) != selected_tiles.end();
+
+									uint16_t mask = 0;
+									auto it = temp_bitmask.find(tile_id);
+									if (it != temp_bitmask.end())
+										mask = it->second;
+
+
+									vec2f scale = screen_size / texture_size;
+									vec2f cell_min = screen_pos + vec2f(x * tile_size.x, y * tile_size.y) * scale;
+									vec2f cell_max = screen_pos + vec2f((x + 1) * tile_size.x, (y + 1) * tile_size.y) * scale;
+
+									ImU32 selected_color = is_selected ? IM_COL32(200, 200, 200, 50)
+										: IM_COL32(0, 0, 0, 150);
+
+
+									draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), selected_color);
+
+
+									ImGui::SetCursorScreenPos(cell_min.to_imvec2());
+
+									vec2f sub_size = (cell_max - cell_min) / 3.0f;
+									ImGui::PushID(tile_id.x);
+									ImGui::PushID(tile_id.y);
+									for (int sy = 0; sy < 3; sy++)
+									{
+										for (int sx = 0; sx < 3; sx++)
+										{
+
+
+											uint16_t bit = bit_lookup[sy][sx];
+											if (bit == 0) continue;
+
+
+											vec2f sub_min = cell_min + vec2f(sx, sy) * sub_size;
+											vec2f sub_max = sub_min + sub_size;
+
+											bool selected = (mask & bit) != 0;
+
+											ImU32 color = selected
+												? IM_COL32(255, 0, 0, 180)
+												: IM_COL32(50, 50, 50, 0);
+
+											draw_list->AddRectFilled(sub_min.to_imvec2(), sub_max.to_imvec2(), color);
+
+											ImGui::PushID((sy * 3 + sx));
+											ImGui::SetCursorScreenPos(sub_min.to_imvec2());
+
+											if (ImGui::InvisibleButton("##autobit", sub_size.to_imvec2()))
+											{
+												mask ^= bit;
+											}
+
+											ImGui::PopID();
+										}
+									}
+
+									if (mask != 0)
+										temp_bitmask[tile_id] = mask;
+									else
+										temp_bitmask.erase(tile_id);
+
+									ImGui::PopID();
+									ImGui::PopID();
+								}
+							}
+
+							ImGui::EndChild();
+						}
+						ImGui::EndChild();
+					}
+					ImGui::SameLine(0.0f, 10.0f);
+					ImGui::BeginChild("Control", ImVec2(right_width, 0), true);
+					{
+						float available_height = ImGui::GetContentRegionAvail().y;
+						ImGui::Text("Tile Register Controls");
+						ImGui::Separator();
+						ImGui::Text("Texture Info:");
+						ImGui::Text("Size: %.0fx%.0f", texture_size.x, texture_size.y);
+						ImGui::Separator();
+
+						if (UI::draw_vec2("Size", tile_size))
+						{
+							selected_tiles.clear();
+						}
 
 
 
-	bool draw_tilemap_selector(Entity entity, vec2u& id)
+						ImGui::Text("Set Name: %s", set_name.c_str());
+
+						ImGui::Dummy(ImVec2(0.0f, 2.0f));
+						if (ImGui::BeginPopupModal("Set Name Exists", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+						{
+							ImGui::Text("An Set with that name already exists!");
+							if (ImGui::Button("OK"))
+							{
+								ImGui::CloseCurrentPopup();
+							}
+							ImGui::EndPopup();
+						}
+
+
+
+
+						float button_width = ImGui::GetContentRegionAvail().x * 0.5f - 5.0f;
+						float button_height = 35.0f;
+						ImGui::SetCursorPosY(available_height - button_height);
+
+						if (ImGui::Button("Register Tiles", ImVec2(button_width, button_height)) && !selected_tiles.empty())
+						{
+							if (!active_set.empty())
+							{
+								auto& comps = entity.get_component<AutoTiling_Component>();
+								auto it = comps.auto_tiles.find(active_set);
+								if (it != comps.auto_tiles.end())
+								{
+									Auto_Tiles& set = it->second;
+									set.tile_bitmask.clear();
+									for (const auto& [key, value] : temp_bitmask)
+									{
+										set.tile_bitmask[value] = key;
+									}
+								}
+								show_register = false;
+								selected_tiles.clear();
+								temp_bitmask.clear();
+								ImGui::CloseCurrentPopup();
+							}
+						}
+						ImGui::SameLine(0.0f, 10.0f);
+						if (ImGui::Button("Cancel", ImVec2(button_width, button_height)))
+						{
+							show_register = false;
+
+
+
+
+							selected_tiles.clear();
+							current_set_name = "";
+							creating_new_set = false;
+							editing_existing_set = false;
+							temp_bitmask.clear();
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					ImGui::EndChild();
+				},
+				[]()
+				{
+					show_register = false;
+					selected_tiles.clear();
+					current_set_name = "";
+					creating_new_set = false;
+					editing_existing_set = false;
+					temp_bitmask.clear();
+					ImGui::CloseCurrentPopup();
+				});
+		}
+	}
+
+
+
+
+
+	bool draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile)
 	{
 		static bool window_open = true;
 		static std::vector<vec2u> registered_tiles;
@@ -1993,7 +2372,6 @@ namespace ag::UI
 			auto& tile_set = entity.get_component<TileSet_Component>();
 			if (!tile_set.is_tile_registered)
 			{
-				AERO_CORE_INFO("Tile is not registered");
 				return false;
 			}
 			if (tile_set.tile_changed)
@@ -2008,13 +2386,15 @@ namespace ag::UI
 					tile_size = def.texture_rect.size;
 				}
 				tile_set.tile_changed = false;
-				AERO_CORE_INFO("Tile Changed");
+				if (tile_set.tile_size != 0)
+				{
+					tile_size = tile_set.tile_size;
+				}
 			}
 
 		}
 		if (!entity.has_component<Tile_Component>() || !entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture || !entity.has_component<TileSet_Component>())
 		{
-			AERO_CORE_INFO("Tile Map Selector is not drawing");
 			return false;
 		}
 
@@ -2032,13 +2412,46 @@ namespace ag::UI
 			float available_width = ImGui::GetContentRegionAvail().x;
 			ImGui::BeginChild("TextureColumn", ImVec2(0, 0), true);
 			{
+				if(entity.has_component<AutoTiling_Component>())
+				{
+					ImGui::BeginChild("AutoTileColumn", ImVec2(0, 80), true);
+					{
+						if (ImGui::BeginCombo("Current Set",
+							set_name.empty() ? "None" : set_name.c_str()))
+						{
+							if (ImGui::Selectable("None", set_name.empty()))
+							{
+								set_name = "";
+							}
+							auto& comps = entity.get_component<AutoTiling_Component>();
+							for (const auto& [name, _] : comps.auto_tiles)
+							{
+								bool is_selected = (set_name == name);
+								if (ImGui::Selectable(name.c_str(), is_selected))
+								{
+									set_name = name;
+								}
+								if (is_selected)
+									ImGui::SetItemDefaultFocus();
+							}
+							ImGui::EndCombo();
+						}
+					}
+					ImGui::Dummy(ImVec2(0, 3));
+					UI::draw_bool("Use Auto Tile", use_autotile);
+					ImGui::EndChild();
+				}
+
 				ImGui::BeginChild("TextureContainer", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 				{
 					static vec2f view_size = ImGui::GetContentRegionAvail();
 					static vec2f view_center;
 					static vec2f window_size = ImGui::GetWindowSize();
+
+					vec2f current_size = ImGui::GetWindowSize();
+					if(current_size.x != 0 && current_size.y != 0)
 					{// On Resize
-						vec2f current_size = ImGui::GetWindowSize();
+
 						if (current_size != window_size)
 						{
 							vec2f scale = current_size / window_size;
@@ -2046,138 +2459,140 @@ namespace ag::UI
 							window_size = current_size;
 						}
 
-					}
-
-					vec2f mouse_screen = ImGui::GetMousePos();
-					vec2f child_pos = ImGui::GetWindowPos();
-					vec2f child_size = ImGui::GetWindowSize();
-
-					current_mouse_pos = mouse_screen - child_pos;
 
 
-					vec2f container = ImGui::GetContentRegionAvail();
-					vec2f container_start_pos = ImGui::GetCursorScreenPos();
-					bool is_hovering_container = ImGui::IsMouseHoveringRect(
-						container_start_pos.to_imvec2(),
-						(container_start_pos + container).to_imvec2());
+						vec2f mouse_screen = ImGui::GetMousePos();
+						vec2f child_pos = ImGui::GetWindowPos();
+						vec2f child_size = ImGui::GetWindowSize();
 
-					if (is_hovering_container && ImGui::IsMouseClicked(2))
-					{
-						is_dragging = true;
-						last_mouse_pos = current_mouse_pos;
-					}
-					if (is_dragging)
-					{
-						if (ImGui::IsMouseDown(2))
+						current_mouse_pos = mouse_screen - child_pos;
+
+
+						vec2f container = ImGui::GetContentRegionAvail();
+						vec2f container_start_pos = ImGui::GetCursorScreenPos();
+						bool is_hovering_container = ImGui::IsMouseHoveringRect(
+							container_start_pos.to_imvec2(),
+							(container_start_pos + container).to_imvec2());
+
+						if (is_hovering_container && ImGui::IsMouseClicked(2))
 						{
-							vec2f start = Math::screen_to_world(last_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-							vec2f end = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-							vec2f delta = start - end;
-
-							view_center += delta;
+							is_dragging = true;
 							last_mouse_pos = current_mouse_pos;
 						}
-						else
+						if (is_dragging)
 						{
-							is_dragging = false;
-						}
-					}
-
-					if (is_hovering_container && ImGui::GetIO().MouseWheel != 0)
-					{
-						float scale_factor = (ImGui::GetIO().MouseWheel > 0) ? 0.9f : 1.1f;
-						vec2f world_before_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-						view_size *= scale_factor;
-						vec2f world_after_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
-						vec2f offset = world_before_zoom - world_after_zoom;
-						view_center += offset;
-					}
-					vec2f world_pos = vec2f(0, 0) - texture_size * 0.5f;
-					vec2f screen_pos = Math::world_to_screen(world_pos, Math::get_float_rect(view_size, view_center), container);
-					vec2f screen_size = Math::world_size_to_screen_size(texture_size, view_size, container);
-					ImGui::SetCursorPos(screen_pos.to_imvec2());
-					ImGui::Image(texture_id, screen_size.to_imvec2());
-					ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-
-					vec2f window_pos = ImGui::GetWindowPos();
-					screen_pos += window_pos;
-					vec2i total_dim = texture_size / tile_size;
-					for (int x = 0; x <= total_dim.x; x++)
-					{// Vertical
-						float px = screen_pos.x + x * tile_size.x * (screen_size.x / texture_size.x);
-						draw_list->AddLine(ImVec2(px, screen_pos.y),
-							ImVec2(px, screen_pos.y + screen_size.y),
-							IM_COL32(255, 255, 255, 100), 2.0f);
-					}
-
-					for (int y = 0; y <= total_dim.y; y++)
-					{// Horizontal
-						float py = screen_pos.y + y * tile_size.y * (screen_size.y / texture_size.y);
-						draw_list->AddLine(
-							ImVec2(screen_pos.x, py),
-							ImVec2(screen_pos.x + screen_size.x, py),
-							IM_COL32(255, 255, 255, 100), 2.0f);
-					}
-
-					vec2f button_size = Math::world_size_to_screen_size(tile_size, view_size, container);
-					for (int x = 0; x < total_dim.x; x++)
-					{
-						for (int y = 0; y < total_dim.y; y++)
-						{
-							vec2u tile_id = { (AG_uint)x, (AG_uint)y };
-
-							bool is_registered = std::find(registered_tiles.begin(),
-								registered_tiles.end(),
-								tile_id) != registered_tiles.end();
-
-							bool selected = (tile_id == id) && is_registered;
-
-							vec2f scale = screen_size / texture_size;
-							vec2f cell_min = screen_pos + vec2f(x * tile_size.x, y * tile_size.y) * scale;
-							vec2f cell_max = screen_pos + vec2f((x + 1) * tile_size.x, (y + 1) * tile_size.y) * scale;
-
-							ImU32 color;
-
-							if (!is_registered)
-								color = IM_COL32(0, 0, 0, 150);
-							else if (selected)
-								color = IM_COL32(100, 0, 0, 150);
-							else
-								color = IM_COL32(100, 100, 100, 80);
-
-							draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), color);
-
-							if (is_registered)
+							if (ImGui::IsMouseDown(2))
 							{
-								ImGui::PushID(("tile_" + std::to_string(x) + "_" + std::to_string(y)).c_str());
-								ImGui::SetCursorScreenPos(cell_min.to_imvec2());
+								vec2f start = Math::screen_to_world(last_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+								vec2f end = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+								vec2f delta = start - end;
 
-								if (ImGui::InvisibleButton("##Cell", button_size.to_imvec2()))
-								{
-									id = tile_id;
-									selected = true;
-								}
-
-								if (ImGui::IsItemHovered())
-								{
-									ImGui::BeginTooltip();
-									ImGui::Text("Tile (%d, %d)", x, y);
-									ImGui::Text("Position: (%d, %d)",
-										x * (int)tile_size.x,
-										y * (int)tile_size.y);
-									ImGui::Text("Size: %.0fx%.0f", tile_size.x, tile_size.y);
-									if (is_registered)
-										ImGui::TextColored(ImVec4(0, 1, 0, 1), "Registered");
-									ImGui::EndTooltip();
-								}
-								ImGui::PopID();
+								view_center += delta;
+								last_mouse_pos = current_mouse_pos;
 							}
-
-
+							else
+							{
+								is_dragging = false;
+							}
 						}
-					}
 
+						if (is_hovering_container && ImGui::GetIO().MouseWheel != 0)
+						{
+							float scale_factor = (ImGui::GetIO().MouseWheel > 0) ? 0.9f : 1.1f;
+							vec2f world_before_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+							view_size *= scale_factor;
+							vec2f world_after_zoom = Math::screen_to_world(current_mouse_pos, Math::get_float_rect(view_size, view_center), container);
+							vec2f offset = world_before_zoom - world_after_zoom;
+							view_center += offset;
+						}
+						vec2f world_pos = vec2f(0, 0) - texture_size * 0.5f;
+						vec2f screen_pos = Math::world_to_screen(world_pos, Math::get_float_rect(view_size, view_center), container);
+						vec2f screen_size = Math::world_size_to_screen_size(texture_size, view_size, container);
+						ImGui::SetCursorPos(screen_pos.to_imvec2());
+						ImGui::Image(texture_id, screen_size.to_imvec2());
+						ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+
+						vec2f window_pos = ImGui::GetWindowPos();
+						screen_pos += window_pos;
+						vec2i total_dim = texture_size / tile_size;
+						for (int x = 0; x <= total_dim.x; x++)
+						{// Vertical
+							float px = screen_pos.x + x * tile_size.x * (screen_size.x / texture_size.x);
+							draw_list->AddLine(ImVec2(px, screen_pos.y),
+								ImVec2(px, screen_pos.y + screen_size.y),
+								IM_COL32(255, 255, 255, 100), 2.0f);
+						}
+
+						for (int y = 0; y <= total_dim.y; y++)
+						{// Horizontal
+							float py = screen_pos.y + y * tile_size.y * (screen_size.y / texture_size.y);
+							draw_list->AddLine(
+								ImVec2(screen_pos.x, py),
+								ImVec2(screen_pos.x + screen_size.x, py),
+								IM_COL32(255, 255, 255, 100), 2.0f);
+						}
+
+						vec2f button_size = Math::world_size_to_screen_size(tile_size, view_size, container);
+						for (int x = 0; x < total_dim.x; x++)
+						{
+							for (int y = 0; y < total_dim.y; y++)
+							{
+								vec2u tile_id = { (AG_uint)x, (AG_uint)y };
+
+								bool is_registered = std::find(registered_tiles.begin(),
+									registered_tiles.end(),
+									tile_id) != registered_tiles.end();
+
+								bool selected = (tile_id == id) && is_registered;
+
+								vec2f scale = screen_size / texture_size;
+								vec2f cell_min = screen_pos + vec2f(x * tile_size.x, y * tile_size.y) * scale;
+								vec2f cell_max = screen_pos + vec2f((x + 1) * tile_size.x, (y + 1) * tile_size.y) * scale;
+
+								ImU32 color;
+
+								if (!is_registered)
+									color = IM_COL32(0, 0, 0, 150);
+								else if (selected)
+									color = IM_COL32(100, 0, 0, 150);
+								else
+									color = IM_COL32(100, 100, 100, 80);
+
+								draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), color);
+
+								if (is_registered)
+								{
+									ImGui::PushID(("tile_" + std::to_string(x) + "_" + std::to_string(y)).c_str());
+									ImGui::SetCursorScreenPos(cell_min.to_imvec2());
+
+									if (ImGui::InvisibleButton("##Cell", button_size.to_imvec2()))
+									{
+										id = tile_id;
+										selected = true;
+									}
+
+									if (ImGui::IsItemHovered())
+									{
+										ImGui::BeginTooltip();
+										ImGui::Text("Tile (%d, %d)", x, y);
+										ImGui::Text("Position: (%d, %d)",
+											x * (int)tile_size.x,
+											y * (int)tile_size.y);
+										ImGui::Text("Size: %.0fx%.0f", tile_size.x, tile_size.y);
+										if (is_registered)
+											ImGui::TextColored(ImVec4(0, 1, 0, 1), "Registered");
+										ImGui::EndTooltip();
+									}
+									ImGui::PopID();
+								}
+
+
+							}
+						}
+
+						
+					}
 					ImGui::EndChild();
 				}
 				ImGui::EndChild();
@@ -2477,12 +2892,6 @@ namespace ag::UI
 
 	}
 
-
-
-
-
-
-
 	void draw_script_selector(Entity entity)
 	{
 		if (!entity.has_component<Script_Component>())
@@ -2545,6 +2954,7 @@ namespace ag::UI
 
 		draw_create_script_model(show_create_model, entity);
 	}
+
 	void draw_create_script_model(bool& show_model, Entity entity)
 	{
 		if (!show_model)

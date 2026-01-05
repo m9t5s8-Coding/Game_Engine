@@ -338,6 +338,18 @@ namespace ag
 	};
 
 
+	enum AutoTileBit : uint16_t
+	{
+		TL = 1 << 0,
+		T = 1 << 1,
+		TR = 1 << 2,
+		L = 1 << 3,
+		M = 1 << 4,
+		R = 1 << 5,
+		BL = 1 << 6,
+		B = 1 << 7,
+		BR = 1 << 8,
+	};
 
 	struct Tile_Defination
 	{
@@ -347,6 +359,17 @@ namespace ag
 		static json save_json(const Tile_Defination& def);
 
 		static void load_json(Tile_Defination& def, const json& j);
+	};
+
+	struct Tile
+	{
+		vec2u tile_id;
+		uint16_t set_id = std::numeric_limits<uint16_t>::max();
+		bool use_autotile = false;
+
+		static json save_json(const Tile& tile);
+
+		static Tile load_json(const json& j);
 	};
 
 	struct Tile_Component
@@ -372,9 +395,10 @@ namespace ag
 	struct TileSet_Component
 	{
 		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
-		std::unordered_map<vec2i, vec2u, vec2_hash<int>> placed_tiles;
+		std::unordered_map<vec2i, Tile, vec2_hash<int>> placed_tiles;
 		bool is_tile_registered = false;
 		bool tile_changed = false;
+		vec2i tile_size;
 
 		b2Body* body = nullptr;
 
@@ -401,6 +425,30 @@ namespace ag
 		static void create_body(Entity entity);
 	};
 
+	struct Auto_Tiles
+	{
+		std::unordered_map<uint16_t, vec2u> tile_bitmask;
+		uint16_t set_id;
+
+		static json save_json(const Auto_Tiles& tiles);
+		static Auto_Tiles load_json(const json& j);
+		static void clone_entity(Entity original, Entity clone);
+		static const char* get_name();
+	};
+
+	struct AutoTiling_Component
+	{
+		std::unordered_map<std::string, Auto_Tiles> auto_tiles;
+		uint16_t next_id;
+		static void add_component(Entity entity);
+		static void remove_component(Entity entity);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static void clone_entity(Entity original, Entity clone);
+		static const char* get_name();
+		static bool is_compatible(NodeType type);
+		static void imgui_render(Entity entity);
+	};
 
 
 	enum class ShapeType

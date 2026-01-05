@@ -961,6 +961,25 @@ namespace ag
 	}
 
 
+	json Tile::save_json(const Tile& tile)
+	{
+		json j;
+		Helper::save_json(j, "ID", tile.tile_id);
+		Helper::save_json(j, "SetID", tile.set_id);
+		Helper::save_json(j, "AutoTile", tile.use_autotile);
+		return j;
+	}
+
+	Tile Tile::load_json(const json& j)
+	{
+		Tile tile;
+		Helper::load_json(j, "ID", tile.tile_id);
+		Helper::load_json(j, "SetID", tile.set_id);
+		Helper::load_json(j, "AutoTile", tile.use_autotile);
+
+		return tile;
+	}
+
 
 	void Tile_Component::add_component(Entity entity)
 	{
@@ -1007,7 +1026,7 @@ namespace ag
 	}
 	void TileSet_Component::remove_component(Entity entity)
 	{
-		entity.add_component<TileSet_Component>();
+		entity.remove_component<TileSet_Component>();
 	}
 	json TileSet_Component::save_json(Entity entity)
 	{
@@ -1016,16 +1035,18 @@ namespace ag
 		if (!tileset.tile_definitions.empty())
 			Helper::save_json(j, "Registered", tileset.is_tile_registered);
 
+		Helper::save_json(j, "Size", tileset.tile_size);
+
 		for (const auto& [id, def] : tileset.tile_definitions)
 		{
 			std::string key = std::to_string(id.x) + "," + std::to_string(id.y);
 			j["Definations"][key] = Tile_Defination::save_json(def);
 		}
 
-		for (const auto& [grid, id] : tileset.placed_tiles)
+		for (const auto& [grid, tile] : tileset.placed_tiles)
 		{
 			std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
-			Helper::save_json(j["Grid"], key, id);
+			j["Grid"][key] = Tile::save_json(tile);
 		}
 
 		return j;
@@ -1037,6 +1058,7 @@ namespace ag
 
 		auto& tileset = entity.get_component<TileSet_Component>();
 
+		Helper::load_json(j, "Size", tileset.tile_size);
 
 		if (j.contains("Definations"))
 		{
@@ -1056,11 +1078,10 @@ namespace ag
 		{
 			for (auto& [key, id_json] : j["Grid"].items())
 			{
-				vec2u tile_id;
-				Helper::load_json(id_json, tile_id);
+				Tile tile = Tile::load_json(id_json);
 				vec2u pos;
 				sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
-				tileset.placed_tiles[pos] = tile_id;
+				tileset.placed_tiles[pos] = tile;
 			}
 		}
 
@@ -1094,9 +1115,10 @@ namespace ag
 		Sprite sprite;
 		sprite.size = props.size;
 
-		for (const auto& [position, id] : tile_set.placed_tiles)
+		for (const auto& [position, tile] : tile_set.placed_tiles)
 		{
-			auto tex_it = tile_set.tile_definitions.find(id);
+
+			auto tex_it = tile_set.tile_definitions.find(tile.tile_id);
 			if (tex_it == tile_set.tile_definitions.end())
 			{
 				continue;
@@ -1135,9 +1157,9 @@ namespace ag
 		auto& world = scene->get_world();
 		props.body = world.CreateBody(&body_def);
 
-		for (const auto& [pos, id] : props.placed_tiles)
+		for (const auto& [pos, tile_detail] : props.placed_tiles)
 		{
-			auto tex_it = props.tile_definitions.find(id);
+			auto tex_it = props.tile_definitions.find(tile_detail.tile_id);
 			if (tex_it == props.tile_definitions.end())
 			{
 				continue;
@@ -1161,6 +1183,111 @@ namespace ag
 				props.body->CreateFixture(&fixture_def);
 			}
 		}
+	}
+
+
+
+	json Auto_Tiles::save_json(const Auto_Tiles& tiles)
+	{
+		json j;
+
+		for (const auto& [mask, id] : tiles.tile_bitmask)
+		{
+			std::string key = std::to_string(mask);
+			Helper::save_json(j, key, id);
+		}
+		Helper::save_json(j, "SetID", tiles.set_id);
+		return j;
+	}
+	Auto_Tiles Auto_Tiles::load_json(const json& j)
+	{
+		Auto_Tiles tiles;
+
+		for (auto& [key_str, value] : j.items())
+		{
+			if (key_str == "SetID")
+				continue;
+
+			uint16_t mask = static_cast<uint16_t>(std::stoi(key_str));
+
+			vec2u tile_id;
+			Helper::load_json(j, key_str, tile_id);
+			tiles.tile_bitmask[mask] = tile_id;
+		}
+		Helper::load_json(j, "SetID", tiles.set_id);
+		return tiles;
+	}
+	void Auto_Tiles::clone_entity(Entity original, Entity clone)
+	{
+		if (original.has_component<Auto_Tiles>())
+		{
+			clone.add_component<Auto_Tiles>(original.get_component<Auto_Tiles>());
+		}
+	}
+	const char* Auto_Tiles::get_name()
+	{
+		return "AutoTile";
+	}
+
+
+
+	void AutoTiling_Component::add_component(Entity entity)
+	{
+		entity.add_component<AutoTiling_Component>();
+	}
+	void AutoTiling_Component::remove_component(Entity entity)
+	{
+		auto& props = entity.get_component<AutoTiling_Component>();
+		props.auto_tiles.clear();
+		entity.remove_component<AutoTiling_Component>();
+	}
+	json AutoTiling_Component::save_json(Entity entity)
+	{
+		json j;
+		const auto& props = entity.get_component<AutoTiling_Component>();
+
+		j["AutoTiles"] = json::object();
+		for (const auto& [key, auto_tile] : props.auto_tiles)
+		{
+			j["AutoTiles"][key] = Auto_Tiles::save_json(auto_tile);
+		}
+
+		return j;
+	}
+	void AutoTiling_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<AutoTiling_Component>())
+			entity.add_component<AutoTiling_Component>();
+
+		auto& props = entity.get_component<AutoTiling_Component>();
+
+		if (j.contains("AutoTiles") && j["AutoTiles"].is_object())
+		{
+			props.auto_tiles.clear();
+
+			for (const auto& [name, autotile_json] : j["AutoTiles"].items())
+			{
+				Auto_Tiles auto_tile = Auto_Tiles::load_json(autotile_json);
+				props.auto_tiles[name] = auto_tile;
+				props.next_id = std::max(auto_tile.set_id, props.next_id);
+			}
+		}
+	}
+	void AutoTiling_Component::clone_entity(Entity original, Entity clone)
+	{
+		if (original.has_component<AutoTiling_Component>())
+		{
+			clone.add_component<AutoTiling_Component>(original.get_component<AutoTiling_Component>());
+		}
+	}
+	const char* AutoTiling_Component::get_name()
+	{
+		return "AutoTileSet";
+	}
+	bool AutoTiling_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::TileMap);
 	}
 
 

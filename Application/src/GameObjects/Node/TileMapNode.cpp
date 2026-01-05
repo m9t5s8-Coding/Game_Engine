@@ -21,6 +21,7 @@ namespace ag
 		Tile_Component::clone_entity(original, clone);
 		TileSet_Component::clone_entity(original, clone);
 		Script_Component::clone_entity(original, clone);
+		AutoTiling_Component::clone_entity(original, clone);
 	}
 	json TileMapNode::save_json(Entity entity)
 	{
@@ -30,6 +31,7 @@ namespace ag
 		NodeHelper::save_component<Tile_Component>(entity, j);
 		NodeHelper::save_component<TileSet_Component>(entity, j);
 		NodeHelper::save_component<Script_Component>(entity, j);
+		NodeHelper::save_component<AutoTiling_Component>(entity, j);
 
 		return j;
 	}
@@ -39,6 +41,7 @@ namespace ag
 		NodeHelper::load_component<Tile_Component>(entity, j);
 		NodeHelper::load_component<TileSet_Component>(entity, j);
 		NodeHelper::load_component<Script_Component>(entity, j);
+		NodeHelper::load_component<AutoTiling_Component>(entity, j);
 	}
 	void TileMapNode::update(Entity entity, TimeStamp ts)
 	{

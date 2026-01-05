@@ -194,15 +194,7 @@ namespace ag
 
         bool operator==(const vec2<T> &other) const
         {
-            constexpr T epsilon = static_cast<T>(1.0E-4);
-            if constexpr (std::is_floating_point_v<T>)
-            {
-                return std::fabs(x - other.x) < epsilon && std::fabs(y - other.y) < epsilon;
-            }
-            else
-            {
-                return x == other.x && y == other.y;
-            }
+            return x == other.x && y == other.y;
         }
         bool operator==(T scalar) const
         {
@@ -214,6 +206,10 @@ namespace ag
             return !(*this == other);
         }
 
+        bool operator!=(T scalar)
+        {
+          return x == 0 || y == 0;
+        }
 
         bool operator<(const vec2<T> &other) const
         {

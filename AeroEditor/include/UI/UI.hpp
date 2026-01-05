@@ -11,6 +11,8 @@
 
 namespace ag::UI
 {
+	
+
 	struct Panels
 	{
 		bool properties_panel = true;
@@ -84,6 +86,8 @@ namespace ag::UI
 
 	void draw_animation(Entity entity);
 	void draw_tilemap_register(Entity entity);
+	void draw_autotiling_register(Entity entity);
+
 	bool texture_selector(Entity entity, uint_rect& texture_rect);
 
 	void content_browser();
@@ -94,7 +98,7 @@ namespace ag::UI
 	void draw_script_selector(Entity entity);
 	void draw_create_script_model(bool& show_model, Entity entity);
 
-	bool draw_tilemap_selector(Entity entity, vec2u& id);
+	bool draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile);
 
 	void custom_popup(PopUpModel& model);
 

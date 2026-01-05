@@ -15,11 +15,12 @@ namespace ag
 		comps.clear();
 		REGISTER_COMPONENT(Border_Component);
 		REGISTER_COMPONENT(Corner_Component);
-		
+
 		REGISTER_COMPONENT(TextureRect_Component);
 		REGISTER_COMPONENT(TextureFlip_Component);
 
 		REGISTER_COMPONENT(TileSet_Component);
+		REGISTER_COMPONENT(AutoTiling_Component);
 
 		REGISTER_COMPONENT(Window_Component);
 
@@ -243,7 +244,7 @@ namespace ag
 				UI::draw_vec2("Size", props.size, { 1280, 720 });
 
 				ImGui::Dummy(spacing);
-				UI::draw_vec2("Center", props.center, props.size / 2 );
+				UI::draw_vec2("Center", props.center, props.size / 2);
 				ImGui::Dummy(spacing);
 			}, false);
 	}
@@ -338,9 +339,16 @@ namespace ag
 					ImGui::Checkbox(label, &props.collide_with[i]);
 				}
 				ImGui::Dummy(spacing);
-			}, false);
+			}, true);
 	}
-
+	void AutoTiling_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<AutoTiling_Component>("AutoTiling Component", entity,
+			[entity](AutoTiling_Component& comp) mutable
+			{
+					UI::draw_autotiling_register(entity);
+			}, true);
+	}
 
 
 	void NodeProperties::animated_sprite_2D(Entity entity)

@@ -17,7 +17,7 @@
 
 namespace ag
 {
-	
+
 	enum class Quad_Type
 	{
 		Rectangle = 0,
@@ -46,7 +46,7 @@ namespace ag
 		vec2f flip;
 	};
 
-	
+
 
 	struct Renderer2D_Data
 	{
@@ -84,7 +84,7 @@ namespace ag
 
 		AG_ref<IndexBuffer> indexbuffer = ag::IndexBuffer::create(indices, 6);
 
-		 
+
 		float vertices[] = {
 			0.f, 0.f,
 			0.f, 1.f,
@@ -181,7 +181,7 @@ namespace ag
 		s_data->quad_texture = texture;
 	}
 
-	
+
 
 	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform)
 	{
@@ -202,7 +202,7 @@ namespace ag
 			instance->border_thickness = rect.border_thickness * transform.scale.average();
 			rect.fill_color.normalize_color(instance->fill_color);
 			rect.border_color.normalize_color(instance->border_color);
-			
+
 			instance->corner_radius = rect.corner_radius * (transform.scale.x + transform.scale.y) * 0.5;
 		}
 		s_data->quad_index++;
@@ -229,7 +229,7 @@ namespace ag
 			instance->border_thickness = circle.border_thickness * transform.scale.average();
 			circle.fill_color.normalize_color(instance->fill_color);
 			circle.border_color.normalize_color(instance->border_color);
-			
+
 		}
 		s_data->quad_index++;
 	}
@@ -262,9 +262,9 @@ namespace ag
 					instance->texture_rect.z = instance->texture_size.x;
 					instance->texture_rect.w = instance->texture_size.y;
 				}
-				
+
 			}
-			
+
 
 
 			instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
@@ -343,7 +343,7 @@ namespace ag
 		size_t data_size = (uint8_t*)s_data->quad_instanced_ptr - (uint8_t*)s_data->quad_instanced_base;
 		s_data->quad_instanced_buffer->set_data(s_data->quad_instanced_base, data_size);
 
-		
+
 		s_data->text_texture->bind(0);
 		if (s_data->quad_texture)
 		{
