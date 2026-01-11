@@ -434,7 +434,7 @@ namespace ag
 	}
 	void Corner_Component::remove_component(Entity entity)
 	{
-		entity.add_component<Corner_Component>();
+		entity.remove_component<Corner_Component>();
 	}
 	json Corner_Component::save_json(Entity entity)
 	{
@@ -480,7 +480,7 @@ namespace ag
 	}
 	void UI_Component::remove_component(Entity entity)
 	{
-		entity.add_component<UI_Component>();
+		entity.remove_component<UI_Component>();
 	}
 	json UI_Component::save_json(Entity entity)
 	{
@@ -933,13 +933,15 @@ namespace ag
 
 		if (anim.animations.find(name) == anim.animations.end())
 			return false;
-		else
-		{
-			anim.current_animation = name;
-			anim.current_frame = 0;
-			anim.timer - 0.0f;
-			anim.current_animation_completed = false;
-		}
+
+		if (anim.current_animation == name)
+			return false;
+
+		anim.current_animation = name;
+		anim.current_frame = 0;
+		anim.timer = 0.0f;
+		anim.current_animation_completed = false;
+		return true;
 
 	}
 

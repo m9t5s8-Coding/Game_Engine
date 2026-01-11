@@ -6,7 +6,6 @@
 #include <Scene/Entity.hpp>
 #include <Project/Project.hpp>
 #include <string>
-#include <UI/DrawUI.hpp>
 #include <cstdint>
 #include <Project/FileDialogs.hpp>
 #include <Helper.hpp>

@@ -303,7 +303,10 @@ namespace ag
 				sol::resolve<ag::vec2f(const ag::vec2f&) const>(&ag::vec2f::operator+),
 				sol::resolve<ag::vec2f(const float) const>(&ag::vec2f::operator+)
 			),
-			"__sub", sol::resolve<ag::vec2f(const ag::vec2f&) const>(&ag::vec2f::operator-),
+			"__sub", sol::overload(
+				sol::resolve<ag::vec2f(const ag::vec2f&) const>(&ag::vec2f::operator-),
+				sol::resolve<ag::vec2f(const float) const>(&ag::vec2f::operator-)
+			),
 			"__mul", sol::resolve<ag::vec2f(const ag::vec2f&) const>(&ag::vec2f::operator*),
 			"__div", sol::resolve<ag::vec2f(const ag::vec2f&) const>(&ag::vec2f::operator/),
 			"__eq", sol::resolve<bool(const ag::vec2f&) const>(&ag::vec2f::operator==),
@@ -450,10 +453,12 @@ namespace ag
 				lua.set_function("play_animation", [](ag::Entity& entity, const std::string& animation_name) -> bool {
 					if (entity.has_component<Animation_Component>())
 					{
-						Animation_Component::play_animation(entity, animation_name);
+						return Animation_Component::play_animation(entity, animation_name);
 					}
 					else
+					{
 						return false;
+					}
 					});
 
 				lua.set_function("flip_vertical", [](ag::Entity& entity, const bool vertical)
@@ -501,9 +506,23 @@ namespace ag
 					if (!body)
 						return;
 
-					float v = velocity;
-					Math::pixels_to_meters(v);
+					float v;
+					v = Math::pixels_to_meters(velocity);
 					body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
+				}
+				});
+
+
+			lua.set_function("set_velocity_y", [](ag::Entity& entity, float velocity) {
+				if (entity.has_component<PhysicsBody_Component>())
+				{
+					auto& body = entity.get_component<PhysicsBody_Component>().body;
+					if (!body)
+						return;
+
+					float v;
+					v = Math::pixels_to_meters(velocity);
+					body->SetLinearVelocity(b2Vec2(body->GetLinearVelocity().x, v));
 				}
 				});
 
@@ -535,6 +554,22 @@ namespace ag
 					//auto& text = entity.get_component< TextNode::TextProp>().text;
 					//text.text = value;
 				}
+				});
+
+
+			lua.set_function("is_hovered", [](ag::Entity& entity, const vec2f& mouse_pos) -> bool
+				{
+					if (!entity.has_component<Transform_Component>() || !entity.has_component<Render2D_Component>())
+						return false;
+
+					auto& transform = entity.get_component<Transform_Component>();
+					auto& size = entity.get_component<Render2D_Component>().size;
+
+					float_rect rect;
+					rect.size = size * transform.scale;
+					rect.position = transform.position - rect.size / 2;
+
+					return rect.contains(mouse_pos);
 				});
 
 		}

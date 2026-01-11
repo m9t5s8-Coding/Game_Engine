@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <Math/vec4.hpp>
 
+
 namespace ag
 {
     struct Color
@@ -35,6 +36,12 @@ namespace ag
           color.z = b / 255.0f;
           color.w = a / 255.0f;
         }
+
+        ImVec4 to_imvec4() const
+        {
+          return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+        }
+
 
         bool operator == (const Color& other) const
         {

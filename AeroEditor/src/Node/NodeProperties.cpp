@@ -163,7 +163,6 @@ namespace ag
 			{
 				UI::draw_texture(entity);
 				ImGui::Dummy(spacing);
-
 			}, false);
 	}
 	void TextureRect_Component::imgui_render(Entity entity)
@@ -178,7 +177,10 @@ namespace ag
 				if (entity.has_component<Texture_Component>())
 				{
 					const auto& texture = entity.get_component<Texture_Component>();
-					reset_value = texture.texture->get_size();
+					if(texture.texture)
+					{
+						reset_value = texture.texture->get_size();
+					}
 				}
 				UI::draw_vec2("Size", props.rect.size, reset_value);
 				ImGui::Dummy(spacing);
@@ -210,6 +212,7 @@ namespace ag
 				ImGui::Dummy(spacing);
 				UI::draw_value("Rotation", transform.rotation);
 				ImGui::Dummy(spacing);
+
 			}, false);
 	}
 	void Tag_Component::imgui_render(Entity entity)
@@ -418,6 +421,7 @@ namespace ag
 		Tag_Component::imgui_render(entity);
 		Transform_Component::imgui_render(entity);
 		Texture_Component::imgui_render(entity);
+		Render2D_Component::imgui_render(entity);
 
 
 		add_component(entity);

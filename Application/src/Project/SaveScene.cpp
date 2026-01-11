@@ -69,6 +69,7 @@ namespace ag
 		file << j.dump(4);
 		file.close();
 		AERO_CORE_INFO("Scene saved successfully to {}", path);
+		scene->set_save_required(false);
 		Helper::makefile_read_only(path);
 	}
 

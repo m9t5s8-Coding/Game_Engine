@@ -1,6 +1,7 @@
 ﻿#include <Application/EditorLayer.hpp>
 #include <UI/StyleScope.hpp>
 #include <algorithm>
+#include <UI/UI.hpp>
 
 namespace ag
 {
@@ -228,8 +229,17 @@ namespace ag
 					StyleScope scene_button_style;
 					scene_button_style.push_style_color(ImGuiCol_Button,
 						(m_scene == scene) ? active_scene_color : bg_color);
+					std::string scene_name = name;
+					if (scene->is_save_required())
+					{
+						scene_name =  scene_name + " *";
+					}
+					else
+					{
+						scene_name = scene_name + "  ";
+					}
 
-					if (ImGui::Button(name.c_str(), ImVec2(0, 30)))
+					if (ImGui::Button(scene_name.c_str(), ImVec2(0, 30)))
 					{
 						set_active_scene(scene);
 					}
@@ -264,13 +274,7 @@ namespace ag
 			ImGui::SetWindowFontScale(1.5f);
 			if (ImGui::Button("+", ImVec2(0, 30)))
 			{
-				auto full_path = FileDialogs::save_file(
-					"AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
-
-				if (!full_path.empty())
-				{
-					handle_scene_creation(full_path);
-				}
+				UI::get_uistate_panels().create_new_scene = true;
 			}
 			ImGui::SetWindowFontScale(1.0f);
 		}
@@ -642,50 +646,17 @@ namespace ag
 
 
 
-	void EditorLayer::handle_scene_creation(std::string& full_path)
-	{
-		auto project = Project::get_active_project();
-		if (!project) return;
-
-		Helper::normalize_path(full_path);
-
-		std::string project_dir = project->get_directory();
-		std::string scene_dir = project->get_scene_directory();
-		std::string base_path = project_dir + scene_dir + "/";
-
-		std::string relative_path = full_path;
-		if (relative_path.find(base_path) == 0)
-			relative_path = relative_path.substr(base_path.size());
-
-		Helper::normalize_path(relative_path);
-
-		std::filesystem::path p(full_path);
-		std::string scene_name = p.stem().string();
-		std::string scene_path = "/" + relative_path;
-
-		m_scene = Scene::create(scene_name, scene_path);
-		if (!m_scene)
-		{
-			AERO_CORE_ERROR("Failed to create scene: {}", scene_name);
-			return;
-		}
-
-		SaveScene::save_scene(m_scene, full_path);
-		Scene::set_active_scene(m_scene);
-
-		m_scenes[scene_name] = m_scene;
-		m_panel->set_scene(m_scene);
-	}
-
 	void EditorLayer::handle_scene_deletion(const std::string& scene_name)
 	{
+		if (m_scenes.size() == 1)
+			return;
+
 		auto it = m_scenes.find(scene_name);
 		if (it == m_scenes.end()) return;
 
-		// If deleting active scene, switch to another or nullptr
+		
 		if (it->second == m_scene)
 		{
-			// Try to find another scene
 			for (auto& [name, scene] : m_scenes)
 			{
 				if (name != scene_name)
@@ -693,13 +664,6 @@ namespace ag
 					set_active_scene(scene);
 					break;
 				}
-			}
-
-			// If no other scenes, set to nullptr
-			if (m_scenes.size() == 1)
-			{
-				m_scene = nullptr;
-				m_panel->set_scene(nullptr);
 			}
 		}
 
@@ -831,12 +795,9 @@ namespace ag
 		return false;
 	}
 
-	void EditorLayer::create_new_scene()
+	void EditorLayer::create_new_scene(const std::string& path)
 	{
-		auto full_path = FileDialogs::save_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
-		if (full_path.empty())
-			return;
-
+		std::string full_path = path;
 		auto project = Project::get_active_project();
 		Helper::normalize_path(full_path);
 
@@ -887,6 +848,82 @@ namespace ag
 	{
 
 	}
+
+	void EditorLayer::save_scene_as_default()
+	{
+		auto project = Project::get_active_project();
+		const auto& file_path = project->get_project_file_directory();
+		Helper::makefile_read_only(file_path, false);
+		try
+		{
+			std::ifstream file(file_path);
+			
+			if (!file.is_open())
+			{
+				AERO_CORE_WARN("Failed to Open File! {0}", file_path);
+				throw std::runtime_error("Failed to Open Project File");
+			}
+
+			json j;
+			file >> j;
+			file.close();
+
+
+			auto scene = Scene::get_active_scene();
+			if (!scene)
+			{
+				throw std::runtime_error("No active scene");
+			}
+
+			Helper::save_json(j["Scene"], "Default", scene->get_name());
+			Helper::save_json(j["Scene"], "Default Path", scene->get_directory());
+
+			std::ofstream out_file(file_path);
+			if (!out_file.is_open())
+			{
+				AERO_CORE_WARN("Failed to Open File! {0}", file_path);
+				throw std::runtime_error("Failed to Open Project File");
+			}
+			out_file << j.dump(4);
+			out_file.close();
+			
+		}
+		catch (const std::exception& e)
+		{
+			AERO_CORE_ERROR("Failed to set default scene:{}", e.what());
+		}
+		Helper::makefile_read_only(file_path, true);
+	}
+
+	void EditorLayer::save_all_scene()
+	{
+		auto project = Project::get_active_project();
+		for (auto& [name, scene] : m_scenes)
+		{
+			if (!scene)
+				continue;
+
+			std::string scene_path = project->get_directory() + project->get_scene_directory() + scene->get_directory();
+
+			try
+			{
+				SaveScene::save_scene(scene, scene_path);
+			}
+			catch(const std::exception& e)
+			{
+				AERO_CORE_ERROR("Failed to save scene: {0}, {1}", scene->get_name(), e.what());
+			}
+			
+		}
+	}
+
+
+	void EditorLayer::try_exit()
+	{
+		Application::get().m_running = false;
+	}
+
+
 
 	void EditorLayer::editor_things()
 	{

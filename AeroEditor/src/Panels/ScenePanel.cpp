@@ -2,6 +2,7 @@
 #include <Application/EditorLayer.hpp>
 #include <Node/NodeProperties.hpp>
 #include <UI/UI.hpp>
+#include <queue>
 
 namespace ag
 {
@@ -89,24 +90,9 @@ namespace ag
 	{
 		UI::draw_menu_bar();
 		UI::content_browser();
+		UI::create_new_scene();
 
-		/*ImGui::Begin("Scene");
-		draw_scene_top_panel();
-		ImGui::Spacing();
 
-		auto view = m_scene->m_registry.view<Tag_Component>();
-		for (auto entityID : view)
-		{
-			Entity entity(entityID);
-			auto& tag = entity.get_component<Tag_Component>();
-			if (tag.parent.get_id() == INVALID_ENTITY)
-			{
-				draw_node_hierarchy(entity, 0);
-				ImGui::Spacing();
-
-			}
-		}
-		ImGui::End();*/
 		draw_scene_hierarchy();
 
 
@@ -127,18 +113,7 @@ namespace ag
 					if (UI::draw_tilemap_selector(m_selected_entity, m_tile_id, m_active_set, m_use_auto_tile))
 					{
 						m_tile_id = tile_id;
-						m_tile_id.print();
 					}
-					//TileMapNodeFeatures::texture_selector_gui(props.texture, m_texture_rect);
-					//TileMapNodeFeatures::register_tile(m_selected_entity);
-
-					/*m_is_texture_selected = (texture_selector(props.texture, props.size, m_texture_rect));
-					if (m_is_texture_selected)
-					{
-						auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-						props.ghost_sprite.texture_rect = m_texture_rect;
-						props.display_ghost = true;
-					}*/
 				}
 			}
 			else if (tag.node_type == NodeType::Sprite)
@@ -209,50 +184,7 @@ namespace ag
 
 	void ScenePanel::draw_scene_top_panel()
 	{
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-			ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-			ImGui::BeginChild("Toolbar", ImVec2(0, 40), false, flags);
-			{
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 5));
-
-				ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-				ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-				ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-				ImVec4 active_scene = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
-
-				ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bg_hovered);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
-				ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-
-				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
-
-
-
-				ImGui::SameLine(0, 10);
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
-				ImGui::SetWindowFontScale(1.5f);
-				if (ImGui::Button("+", ImVec2(30, 30)))
-				{
-					m_show_create_panel = true;
-				}
-				ImGui::SameLine(0, 5.0f);
-				if (ImGui::Button("s", ImVec2(30, 30)))
-				{
-					add_scripts();
-				}
-				ImGui::SetWindowFontScale(1.0f);
-				ImGui::PopStyleVar();
-
-				ImGui::PopStyleColor(4);
-				ImGui::PopStyleVar(2);
-			}
-			ImGui::EndChild();
-			ImGui::PopStyleVar();
-		}
+		
 	}
 
 
@@ -361,7 +293,6 @@ namespace ag
 
 		ImGui::Separator();
 
-		// Footer with selected object info and create button
 		ImGui::BeginChild("FooterArea", ImVec2(0, 80), true);
 		{
 			auto it = NodeFactory::nodes.find(state.selected_prefab);
@@ -374,7 +305,6 @@ namespace ag
 				ImGui::SameLine();
 				ImGui::Text("%s", it->second.c_str());
 
-				// Right: Create button
 				ImGui::NextColumn();
 
 				bool can_create = NodeFactory::create_map.find(state.selected_prefab) !=
@@ -386,9 +316,10 @@ namespace ag
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
 
-				if (ImGui::Button("CREATE", ImVec2(100, 0))) {
+				if (ImGui::Button("CREATE", ImVec2(100, 0)))
+				{
 					create_selected_object(state.selected_prefab);
-
+					m_scene->set_save_required(true);
 				}
 
 				ImGui::PopStyleColor(3);
@@ -735,7 +666,7 @@ namespace ag
 			m_selected_entity = entity;
 		}
 
-		// Double click - focus entity in viewport
+
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
 			//focus_entity_in_viewport(entity);
 		}
@@ -751,35 +682,45 @@ namespace ag
 		if (ImGui::MenuItem("Rename", "F2"))
 		{
 			//start_renaming_entity(entity);
+			m_scene->set_save_required(true);
 		}
 
 		if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
 		{
 			duplicate_entity();
+			m_scene->set_save_required(true);
 		}
 
 		if (ImGui::MenuItem("Delete", "Del"))
 		{
 			delete_entity();
+			m_scene->set_save_required(true);
 		}
 
 		if (ImGui::MenuItem("Make Root", "Ctrl+Shift+R"))
 		{
 			make_root_entity();
+			m_scene->set_save_required(true);
 		}
 
 		ImGui::Separator();
 
 		if (ImGui::BeginMenu("Create Child")) {
 
-			if (ImGui::MenuItem("Empty")) {
+			if (ImGui::MenuItem("Empty"))
+			{
 				//create_child_entity(entity, "Empty", NodeType::Empty);
+				m_scene->set_save_required(true);
 			}
-			if (ImGui::MenuItem("Cube")) {
+			if (ImGui::MenuItem("Cube")) 
+			{
 				//create_child_entity(entity, "Cube", NodeType::Cube);
+				m_scene->set_save_required(true);
 			}
-			if (ImGui::MenuItem("Light")) {
+			if (ImGui::MenuItem("Light"))
+			{
 				//create_child_entity(entity, "Light", NodeType::PointLight);
+				m_scene->set_save_required(true);
 			}
 			ImGui::EndMenu();
 		}
@@ -797,23 +738,30 @@ namespace ag
 		ImGui::Separator();
 
 		// Component toggles
-		if (entity.has_component<Tag_Component>()) {
+		if (entity.has_component<Tag_Component>())
+		{
 			auto& vis = entity.get_component<Tag_Component>();
-			if (ImGui::MenuItem(vis.visible ? "Hide" : "Show")) {
+			if (ImGui::MenuItem(vis.visible ? "Hide" : "Show"))
+			{
 				vis.visible = !vis.visible;
+				m_scene->set_save_required(true);
 			}
 		}
 
-		if (entity.has_component<Tag_Component>()) {
+		if (entity.has_component<Tag_Component>())
+		{
 			auto& lock = entity.get_component<Tag_Component>();
-			if (ImGui::MenuItem(lock.locked ? "Unlock" : "Lock")) {
+			if (ImGui::MenuItem(lock.locked ? "Unlock" : "Lock"))
+			{
 				lock.locked = !lock.locked;
+				m_scene->set_save_required(true);
 			}
 		}
 
 		ImGui::Separator();
 
-		if (ImGui::MenuItem("Properties", "Alt+Enter")) {
+		if (ImGui::MenuItem("Properties", "Alt+Enter"))
+		{
 			// Show properties panel
 		}
 	}
@@ -822,23 +770,28 @@ namespace ag
 		if (ImGui::MenuItem("Create Empty")) {
 			/*Entity new_entity = m_scene->create_entity("Empty", NodeType::Empty);
 			m_selected_entity = new_entity;*/
+			m_scene->set_save_required(true);
 		}
 
 		if (ImGui::MenuItem("Create From Prefab...")) {
 			// Open prefab browser
+			m_scene->set_save_required(true);
 		}
 
 		ImGui::Separator();
 
 		//has_clipboard_entity()
-		if (ImGui::MenuItem("Paste", "Ctrl+V", false, false)) {
+		if (ImGui::MenuItem("Paste", "Ctrl+V", false, false))
+		{
 			//paste_entity();
+			m_scene->set_save_required(true);
 		}
 
 		ImGui::Separator();
 
 		if (ImGui::MenuItem("Expand All")) {
 			expand_all_nodes();
+
 		}
 
 		if (ImGui::MenuItem("Collapse All")) {
@@ -899,7 +852,8 @@ namespace ag
 
 		// Locked entity
 		if (entity.has_component<Tag_Component>() &&
-			entity.get_component<Tag_Component>().locked) {
+			entity.get_component<Tag_Component>().locked)
+		{
 			text_color = m_hierarchy_state.disabled_color;
 		}
 
@@ -1235,44 +1189,6 @@ namespace ag
 		ImGui::End();
 	}
 
-	//void ScenePanel::draw_create_object()
-	//{
-	//	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
-	//	ImGui::Begin("Create Objects", &m_show_create_panel, window_flags);
-	//	static NodeType selectedPrefab = NodeType::Rectangle;
-	//	NodeType newSelected = selectedPrefab;
-
-	//	for (auto& [type, name] : NodeFactory::nodes)
-	//	{
-	//		if (ImGui::Selectable(name.c_str(), selectedPrefab == type))
-	//			newSelected = type;
-	//		ImGui::Spacing();
-	//		ImGui::Spacing();
-	//	}
-	//	selectedPrefab = newSelected;
-	//	auto it = NodeFactory::nodes.find(selectedPrefab);
-	//	if (it != NodeFactory::nodes.end() && NodeFactory::create_map.find(selectedPrefab) != NodeFactory::create_map.end())
-	//	{
-	//		if (ImGui::Button("Create Entity"))
-	//		{
-	//			Entity newEntity = m_scene->create_entity(it->second, selectedPrefab);
-
-	//			if (m_selected_entity)
-	//			{
-	//				auto& tag = m_selected_entity.get_component<Tag_Component>();
-	//				auto& new_e_tag = newEntity.get_component<Tag_Component>();
-
-	//				new_e_tag.parent = m_selected_entity;
-	//				tag.children.push_back(newEntity);
-	//			}
-
-	//			m_selected_entity = newEntity;
-	//			m_show_create_panel = false;
-	//		}
-	//	}
-	//	ImGui::End();
-	//}
-
 	void ScenePanel::draw_selected_text()
 	{
 		if (m_selected_entity.get_id() == INVALID_ENTITY)
@@ -1374,6 +1290,7 @@ namespace ag
 			if (is_left_pressed)
 			{
 				scale_transform_setting();
+				m_scene->set_save_required(true);
 			}
 			else if (left_released)
 			{
@@ -1394,6 +1311,7 @@ namespace ag
 			if (is_left_pressed)
 			{
 				rotate_transform_setting();
+				m_scene->set_save_required(true);
 			}
 			else if (left_released)
 			{
@@ -1414,6 +1332,7 @@ namespace ag
 			if (is_left_pressed)
 			{
 				move_transform_setting();
+				m_scene->set_save_required(true);
 			}
 			else if (left_released)
 			{
@@ -1537,44 +1456,6 @@ namespace ag
 		transform.scale.y = std::max(0.01f, transform.scale.y);
 	}
 
-	void ScenePanel::add_scripts()
-	{
-		if (!m_selected_entity)
-			return;
-
-		auto full_path = FileDialogs::open_file("Lua Scripts(*.lua)\0 * .lua\0All Files(*.*)\0 * .*\0");
-		if (!full_path.empty())
-		{
-			auto project = Project::get_active_project();
-			Helper::normalize_path(full_path);
-
-			std::string project_dir = project->get_directory();
-			std::string script_dir = project->get_scripts_directory();
-
-			std::string base_path = project_dir + script_dir + "/";
-
-			std::string relative_path = full_path;
-			if (relative_path.find(base_path) == 0)
-				relative_path = relative_path.substr(base_path.size());
-
-			Helper::normalize_path(relative_path);
-
-			std::filesystem::path p(full_path);
-			std::string script_path = "/" + relative_path;
-
-			if (!m_selected_entity.has_component<Script_Component>())
-			{
-				Script_Component comp;
-				comp.path = script_path;
-				m_selected_entity.add_component<Script_Component>(comp);
-			}
-			else
-			{
-				auto& comp = m_selected_entity.get_component<Script_Component>();
-				comp.path = script_path;
-			}
-		}
-	}
 
 
 	void ScenePanel::duplicate_entity()
@@ -1586,11 +1467,13 @@ namespace ag
 		auto new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
 
 		m_selected_entity = new_entity;
+		m_scene->set_save_required(true);
 	}
 	void ScenePanel::delete_entity()
 	{
 		m_scene->destroy_entity(m_selected_entity);
 		m_selected_entity = Entity();
+		m_scene->set_save_required(true);
 	}
 
 	void ScenePanel::reset_transform_setting()
@@ -1601,6 +1484,7 @@ namespace ag
 		m_scale_flag = false;
 		m_rotate_flag = false;
 		m_delta = { 0, 0 };
+		m_scene->set_save_required(true);
 	}
 
 	void ScenePanel::update_tilemap()
@@ -1647,12 +1531,14 @@ namespace ag
 			if (e.get_key_code() == Key::D)
 			{
 				duplicate_entity();
+				m_scene->set_save_required(true);
 			}
 
 			// Make Root Entity
 			if (e.get_key_code() == Key::R && shift)
 			{
 				make_root_entity();
+				m_scene->set_save_required();
 			}
 			return false;
 		}
@@ -1675,6 +1561,7 @@ namespace ag
 		case Key::Delete:
 		{
 			delete_entity();
+			m_scene->set_save_required();
 			break;
 		}
 
@@ -1706,7 +1593,7 @@ namespace ag
 		bool is_left = Mouse::is_mouse_pressed(Button::ButtonLeft);
 		bool is_right = Mouse::is_mouse_pressed(Button::ButtonRight);
 
-		
+
 		auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
 
 		if ((!is_left && !is_right) || (is_left && is_right))
@@ -1817,7 +1704,7 @@ namespace ag
 					float t = (float)i / steps;
 					int x = previous_tile.x + dx * t;
 					int y = previous_tile.y + dy * t;
-					paint_eraser_tiles_helper(tile_set, {x, y});
+					paint_eraser_tiles_helper(tile_set, { x, y });
 				}
 				if (steps == 0)
 				{
@@ -1828,7 +1715,7 @@ namespace ag
 		}
 		case ag::TileMap_Paint_Settings::Line:
 		{
-			if(dragging)
+			if (dragging)
 			{
 				float dx = current_tile.x - start_tile.x;
 				float dy = current_tile.y - start_tile.y;
@@ -1878,7 +1765,7 @@ namespace ag
 				{
 					paint_eraser_tiles_helper({ x_min + width, y });
 				}
-				
+
 			}
 			break;
 		}
@@ -1934,11 +1821,13 @@ namespace ag
 		case ag::TileMap_Settings::Paint:
 		{
 			paint_tiles(tile_set, pos);
+			m_scene->set_save_required();
 			return;
 		}
 		case ag::TileMap_Settings::Eraser:
 		{
 			erase_tiles(tile_set, pos);
+			m_scene->set_save_required();
 			return;
 		}
 		default:
@@ -1947,47 +1836,76 @@ namespace ag
 	}
 	void ScenePanel::paint_tiles(TileSet_Component& tile_set, const vec2i& pos)
 	{
-		if(!m_use_auto_tile)
+		if (!m_use_auto_tile)
 		{
-			Tile tiles;
-			tiles.tile_id = m_tile_id;
-			tile_set.placed_tiles[pos] = tiles;
+			Tile tile{};
+			tile.tile_id = m_tile_id;
+			tile_set.placed_tiles[pos] = tile;
+			return;
 		}
-		else
+
+		auto& comps = m_selected_entity.get_component<AutoTiling_Component>();
+		auto it = comps.auto_tiles.find(m_active_set);
+		if (it == comps.auto_tiles.end())
+			return;
+
+		Tile& placed = tile_set.placed_tiles[pos];
+		placed.set_id = it->second.set_id;
+		placed.use_autotile = true;
+
+		auto def = it->second.tile_bitmask.find(0);
+		placed.tile_id = (def != it->second.tile_bitmask.end())
+			? def->second
+			: it->second.tile_bitmask.begin()->second;
+
+		uint16_t raw = calculate_bitmask(tile_set, pos);
+		uint16_t final_mask = resolve_mask(it->second.tile_bitmask, raw);
+		auto id = it->second.tile_bitmask.find(final_mask);
+		if (id != it->second.tile_bitmask.end())
 		{
-			auto& comps = m_selected_entity.get_component<AutoTiling_Component>();
-			auto it = comps.auto_tiles.find(m_active_set);
-			if (it != comps.auto_tiles.end())
-			{
-				auto mask = calculate_bitmask(tile_set, pos);
-				AERO_CORE_INFO("Mask:{0} 1", mask);
-				auto id = it->second.tile_bitmask.find(mask);
-				if (id != it->second.tile_bitmask.end())
-				{
-					Tile tiles;
-					tiles.tile_id = id->second;
-					tiles.set_id = it->second.set_id;
-					tiles.use_autotile = true;
-					tile_set.placed_tiles[pos] = tiles;
-					AERO_CORE_INFO("Mask:{0} 2", mask);
-					update_neighbour(tile_set, pos);
-				}
-			}
-			
+			if (placed.tile_id != id->second)
+				placed.tile_id = id->second;
 		}
-	}
-	void ScenePanel::erase_tiles(TileSet_Component& tile_set, const vec2i& pos)
-	{
-		if (tile_set.placed_tiles.contains(pos))
-		{
-			auto it = tile_set.placed_tiles.find(pos);
-			if (it != tile_set.placed_tiles.end())
-			{
-				tile_set.placed_tiles.erase(it);
-			}
-		}
+
+		update_neighbour(tile_set, pos);
 	}
 
+	void ScenePanel::erase_tiles(TileSet_Component& tile_set, const vec2i& pos)
+	{
+		auto it = tile_set.placed_tiles.find(pos);
+		if (it == tile_set.placed_tiles.end())
+			return;
+
+
+		bool was_autotile = it->second.use_autotile;
+		auto set_id = it->second.set_id;
+
+		tile_set.placed_tiles.erase(it);
+
+
+		if (was_autotile)
+		{
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 1; dy++)
+				{
+					if (dx == 0 && dy == 0) continue;
+
+					vec2i neighbour_pos = { pos.x + dx, pos.y + dy };
+
+					auto tile_it = tile_set.placed_tiles.find(neighbour_pos);
+					if (tile_it == tile_set.placed_tiles.end())
+						continue;
+
+					Tile& tile = tile_it->second;
+					if (tile.set_id == set_id && tile.use_autotile)
+					{
+						update_neighbour(tile_set, neighbour_pos);
+					}
+				}
+			}
+		}
+	}
 
 	uint16_t ScenePanel::get_set_id(const std::string& set_name)
 	{
@@ -2023,7 +1941,6 @@ namespace ag
 		// BR requires B + R
 		if (!(b && r)) mask &= ~BR;
 
-
 		return mask;
 	}
 
@@ -2031,13 +1948,15 @@ namespace ag
 	uint16_t ScenePanel::calculate_bitmask(TileSet_Component& tile_set, const vec2i& pos)
 	{
 		uint16_t mask = 0;
-
 		auto active_set_id = get_set_id(m_active_set);
 
-		auto check = [&](int dx, int dy, uint8_t bit) {
+		if (active_set_id == std::numeric_limits<uint16_t>::max())
+			return mask;
+
+		auto check = [&](int dx, int dy, uint16_t bit) {
 			vec2i neighbor_pos = { pos.x + dx, pos.y + dy };
 
-			if (neighbor_pos == pos)
+			if (neighbor_pos.x == pos.x && neighbor_pos.y == pos.y)
 			{
 				mask |= bit;
 				return;
@@ -2049,21 +1968,57 @@ namespace ag
 
 			const Tile& neighbor = it->second;
 			if (neighbor.set_id == active_set_id && neighbor.use_autotile)
+			{
 				mask |= bit;
+				return;
+			}
 			};
 
-		check(-1, -1, TL);
+		// Check direct neighbors (4-way)
 		check(0, -1, T);
-		check(1, -1, TR);
 		check(-1, 0, L);
 		check(0, 0, M);
 		check(1, 0, R);
-		check(-1, 1, BL);
 		check(0, 1, B);
-		check(1, 1, BR);
+
+
+		if (mask & T && mask & L) check(-1, -1, TL);
+		if (mask & T && mask & R) check(1, -1, TR);
+		if (mask & B && mask & L) check(-1, 1, BL);
+		if (mask & B && mask & R) check(1, 1, BR);
+
 
 		return normalize_autotile_mask(mask);
 	}
+
+	uint16_t ScenePanel::remove_lowest_priority_bit(uint16_t mask)
+	{
+		static constexpr uint16_t priority[] = {
+				TL, TR, BL, BR,
+				T, L, R, B
+		};
+		for (uint16_t bit : priority)
+		{
+			if (mask & bit)
+				return mask & ~bit;
+		}
+
+		return mask;
+	}
+
+
+	uint16_t ScenePanel::resolve_mask(const std::unordered_map<uint16_t, vec2u>& table, uint16_t mask)
+	{
+		while (!table.contains(mask))
+		{
+			uint16_t reduced = remove_lowest_priority_bit(mask);
+			if (reduced == mask)
+				break;
+			mask = reduced;
+		}
+		return mask;
+	}
+
 
 	void ScenePanel::draw_tilemap_ghosts()
 	{
@@ -2166,50 +2121,55 @@ namespace ag
 
 	}
 
-	void ScenePanel::update_neighbour(TileSet_Component& tile_set, const vec2i& pos)
+	void ScenePanel::update_neighbour(TileSet_Component& tile_set, const vec2i& start)
 	{
 		auto set_id = get_set_id(m_active_set);
+		if (set_id == std::numeric_limits<uint16_t>::max()) return;
+
 		auto& comps = m_selected_entity.get_component<AutoTiling_Component>();
+		auto auto_it = comps.auto_tiles.find(m_active_set);
+		if (auto_it == comps.auto_tiles.end()) return;
+
+		auto& table = auto_it->second.tile_bitmask;
+
+		std::queue<vec2i> q;
+		std::unordered_set<vec2i, vec2_hash<int>> visited;
+
+		q.push(start);
 		for (int dx = -1; dx <= 1; dx++)
-		{
 			for (int dy = -1; dy <= 1; dy++)
+				if (dx || dy)
+					q.push({ start.x + dx, start.y + dy });
+
+		while (!q.empty())
+		{
+			vec2i pos = q.front();
+			q.pop();
+
+			if (visited.contains(pos))
+				continue;
+			visited.insert(pos);
+
+			auto self_it = tile_set.placed_tiles.find(pos);
+			if (self_it == tile_set.placed_tiles.end())
+				continue;
+
+			Tile& self = self_it->second;
+			if (self.set_id != set_id || !self.use_autotile)
+				continue;
+
+			uint16_t raw = calculate_bitmask(tile_set, pos);
+			uint16_t resolved = resolve_mask(table, raw);
+
+			auto id_it = table.find(resolved);
+			if (id_it != table.end() && self.tile_id != id_it->second)
 			{
-				if (dx == 0 && dy == 0)
-				{
-					continue;
-				}
-				vec2i neighbour_pos = { pos.x + dx, pos.y + dy };
+				self.tile_id = id_it->second;
 
-				auto tiles = tile_set.placed_tiles.find(neighbour_pos);
-				if (tiles == tile_set.placed_tiles.end())
-				{
-					continue;
-				}
-
-				Tile& tile = tiles->second;
-				if (tile.set_id != set_id || !tile.use_autotile)
-				{
-					continue;
-				}
-
-				auto it = comps.auto_tiles.find(m_active_set);
-				if (it != comps.auto_tiles.end())
-				{
-					auto mask = calculate_bitmask(tile_set, neighbour_pos);
-					auto id = it->second.tile_bitmask.find(mask);
-					if (id != it->second.tile_bitmask.end())
-					{
-						if (tile.tile_id != id->second)
-						{
-							Tile new_tile;
-							new_tile.tile_id = id->second;
-							new_tile.set_id = it->second.set_id;
-							new_tile.use_autotile = true;
-							tile_set.placed_tiles[neighbour_pos] = new_tile;
-							update_neighbour(tile_set, neighbour_pos);
-						}
-					}
-				}
+				for (int dx = -1; dx <= 1; dx++)
+					for (int dy = -1; dy <= 1; dy++)
+						if (dx || dy)
+							q.push({ pos.x + dx, pos.y + dy });
 			}
 		}
 	}

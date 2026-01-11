@@ -43,6 +43,9 @@ namespace ag
 		bool has_name() { return !m_name.empty(); }
 		bool has_directory() { return !m_directory.empty(); }
 
+		bool is_save_required() const { return m_save_required; }
+		void set_save_required(bool required = true) { m_save_required = required; }
+
 		AG_uint get_index() const { return m_next_index; }
 		void set_next_index(AG_uint index) { m_next_index = index; }
 
@@ -70,7 +73,7 @@ namespace ag
 		void draw_entity(Entity entity);
 
 
-		
+
 	private:
 		entt::registry m_registry;
 		AG_uint m_next_index = 0;
@@ -78,10 +81,11 @@ namespace ag
 		std::string m_name = "";
 		std::string m_directory = "";
 		std::vector<Entity> m_to_delete_entity;
+		bool m_save_required = false;
 
 		inline static AG_ref<Scene> s_active_scene;
 
-		
+
 
 
 		friend class Entity;

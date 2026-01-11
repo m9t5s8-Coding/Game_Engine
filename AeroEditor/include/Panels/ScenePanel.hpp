@@ -117,7 +117,6 @@ namespace ag
 		void reset_transform_setting();
 
 
-		void add_scripts();
 
 		void update_tilemap();
 
@@ -165,6 +164,8 @@ namespace ag
 		void update_neighbour(TileSet_Component& tile_set, const vec2i& pos);
 
 		uint16_t calculate_bitmask(TileSet_Component& tile_set, const vec2i& pos);
+		uint16_t resolve_mask(const std::unordered_map<uint16_t, vec2u>& table, uint16_t mask);
+		uint16_t remove_lowest_priority_bit(uint16_t mask);
 		uint16_t normalize_autotile_mask(uint16_t mask);
 		uint16_t get_set_id(const std::string& set_name);
 	private:

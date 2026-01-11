@@ -28,6 +28,7 @@ namespace ag
 		bool is_viewport_hovered() const { return m_viewport_hovered; }
 
 		static EditorLayer& get() { return *s_instance; }
+	
 
 		float_rect get_float_rect() { return m_view_controller->get_view().get_float_rect(); }
 		vec2f get_viewport_size() { return m_viewport_size; }
@@ -36,11 +37,13 @@ namespace ag
 
 
 		void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) { m_scenes[scene_name] = scene; m_panel->set_scene(scene); }
-		void create_new_scene();
+		void create_new_scene(const std::string& path);
 		void open_scene();
 		void save_scene();
 		void run_runtime();
-
+		void save_scene_as_default();
+		void save_all_scene();
+		void try_exit();
 
 		void load_texture(Entity entity);
 
@@ -49,7 +52,7 @@ namespace ag
 
 		bool on_text_input(TextInputEvent& e);
 	private:
-		std::array<bool, 3> axis_constraints = { false, false };
+		
 
 		AG_ref<ViewController> m_view_controller;
 		AG_ref<FrameBuffer> m_framebuffer;
@@ -62,7 +65,7 @@ namespace ag
 		vec2f m_last_mouse_pos;
 		bool m_viewport_hovered = false;
 
-
+		std::array<bool, 3> axis_constraints = { false, false };
 		bool m_minimized = false;
 
 		static EditorLayer *s_instance;
@@ -75,7 +78,6 @@ namespace ag
 		void render_settings();
 		void render_viewport_content();
 		void handle_viewport_interaction();
-		void handle_scene_creation(std::string& full_path);
 		void handle_scene_deletion(const std::string& scene_name);
 		void render_scene_buttons();
 		void render_add_scene_button();

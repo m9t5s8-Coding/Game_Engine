@@ -4,8 +4,10 @@
 #include <Panels/ScenePanel.hpp>
 #include <windows.h> 
 #include <shellapi.h>
+#include <UI/PopUp.hpp>
+#include <UI/StyleScope.hpp>
 
-namespace ag::UI
+namespace ag
 {
 	static const uint16_t bit_lookup[3][3] =
 	{
@@ -13,8 +15,14 @@ namespace ag::UI
 			{ L,   M,  R  },
 			{ BL,  B,  BR }
 	};
+	Panels UI::s_show_panels{};
+	PropertyStyle UI::s_property_style{};
+	static const Color folder_color = Color::White;
+	static std::string new_name;
+	static std::string path;
 
-	void draw_menu_bar()
+
+	void UI::draw_menu_bar()
 	{
 		if (!ImGui::BeginMainMenuBar()) return;
 
@@ -24,7 +32,7 @@ namespace ag::UI
 			// New Scene
 			if (ImGui::MenuItem("New Scene", "Ctrl+N"))
 			{
-				EditorLayer::get().create_new_scene();
+				UI::get_uistate_panels().create_new_scene = true;
 			}
 
 			// Open Scene
@@ -50,18 +58,18 @@ namespace ag::UI
 			// Save Scene As
 			if (ImGui::MenuItem("Save Scene As Default", "Ctrl+Shift+S"))
 			{
-				//EditorLayer::get().save_scene_as_default();
+				EditorLayer::get().save_scene_as_default();
 			}
 
 			// Save All
 			if (ImGui::MenuItem("Save All", "Ctrl+Alt+S"))
 			{
-				// EditorLayer::get().save_all_scene();
+				EditorLayer::get().save_all_scene();
 			}
 
 			ImGui::Separator();
 
-			// Project submenu
+
 			if (ImGui::BeginMenu("Project"))
 			{
 				if (ImGui::MenuItem("New Project..."))
@@ -84,7 +92,7 @@ namespace ag::UI
 			// Exit
 			if (ImGui::MenuItem("Exit", "Alt+F4"))
 			{
-				//EditorLayer::get().try_exit();
+				EditorLayer::get().try_exit();
 			}
 
 			ImGui::EndMenu();
@@ -166,17 +174,17 @@ namespace ag::UI
 		if (ImGui::BeginMenu("View"))
 		{
 
-			if (ImGui::MenuItem("Scene", nullptr, &show_panels.scene_panel))
+			if (ImGui::MenuItem("Scene", nullptr, &s_show_panels.scene_panel))
 			{
 				//EditorLayer::get().toggle_window("Scene", show_scene);
 			}
 
-			if (ImGui::MenuItem("Properties", nullptr, &show_panels.properties_panel))
+			if (ImGui::MenuItem("Properties", nullptr, &s_show_panels.properties_panel))
 			{
 				//EditorLayer::get().toggle_window("Inspector", show_inspector);
 			}
 
-			if (ImGui::MenuItem("Console", nullptr, &show_panels.console_panel))
+			if (ImGui::MenuItem("Console", nullptr, &s_show_panels.console_panel))
 			{
 				//EditorLayer::get().toggle_window("Console", show_console);
 			}
@@ -318,7 +326,7 @@ namespace ag::UI
 
 	}
 
-	void draw_texture(Entity entity)
+	void UI::draw_texture(Entity entity)
 	{
 		if (!entity.has_component<Texture_Component>())
 			return;
@@ -556,7 +564,7 @@ namespace ag::UI
 
 	}
 
-	void content_browser()
+	void UI::content_browser()
 	{
 		auto project = Project::get_active_project();
 		std::filesystem::path root = project->get_directory();
@@ -568,7 +576,7 @@ namespace ag::UI
 		ImGui::End();
 	}
 
-	bool is_right_file(const std::filesystem::path& path)
+	bool UI::is_right_file(const std::filesystem::path& path)
 	{
 		std::string ext = path.extension().string();
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -578,7 +586,7 @@ namespace ag::UI
 			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".aeroscene" || ext == ".lua";
 	}
 
-	bool is_image(const std::filesystem::path& path)
+	bool UI::is_image(const std::filesystem::path& path)
 	{
 		std::string ext = path.extension().string();
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -588,74 +596,135 @@ namespace ag::UI
 			ext == ".tiff" || ext == ".tif" || ext == ".webp";
 	}
 
-	void draw_folder_node(const std::filesystem::path& directory)
+	void UI::draw_folder_node(const std::filesystem::path& directory)
 	{
+		std::vector<std::filesystem::directory_entry> entries;
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
+		{
+			entries.push_back(entry);
+		}
+
+		std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b)
+			{
+				if (a.is_directory() != b.is_directory())
+				{
+					return a.is_directory() > b.is_directory();
+				}
+				return a.path().filename().string() < b.path().filename().string();
+			});
+
+		for (const auto& entry : entries)
 		{
 			const auto& path = entry.path();
 			std::string name = path.filename().string();
+			std::string ext = path.extension().string();
 
 			ImGui::PushID(path.string().c_str());
 
+			static std::filesystem::path selected_path;
+			bool is_selected = (selected_path == path);
+
 			if (entry.is_directory())
 			{
-				ImGuiTreeNodeFlags flags =
-					ImGuiTreeNodeFlags_OpenOnArrow |
-					ImGuiTreeNodeFlags_SpanAvailWidth;
+				ImGui::PushStyleColor(ImGuiCol_Text, folder_color.to_imvec4());
 
-				bool open = ImGui::TreeNodeEx(
-					(std::string(ICON_FOLDER) + " " + name).c_str(),
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen |
+					ImGuiTreeNodeFlags_Framed |
+					ImGuiTreeNodeFlags_SpanAvailWidth |
+					ImGuiTreeNodeFlags_AllowItemOverlap |
+					ImGuiTreeNodeFlags_OpenOnArrow |
+					(is_selected ? ImGuiTreeNodeFlags_Selected : 0);
+
+				bool is_open = ImGui::TreeNodeEx(
+					(name).c_str(),
 					flags
 				);
 
-				// Right-click folder
+				if (ImGui::IsItemClicked())
+				{
+					selected_path = path;
+				}
+
+
 				if (ImGui::BeginPopupContextItem())
 				{
-					ImGui::MenuItem("Open");
-					ImGui::MenuItem("Rename");
-					ImGui::MenuItem("Delete");
 					ImGui::EndPopup();
 				}
 
-				if (open)
-				{
-					draw_folder_node(path);   // recursion
-					ImGui::TreePop();
-				}
-			}
-			else if (is_right_file(path))
-			{
-				ImGui::Selectable((std::string(ICON_FOLDER) + " " + name).c_str());
-
-				// Right-click file
-				if (ImGui::BeginPopupContextItem())
-				{
-					ImGui::MenuItem("Open");
-					ImGui::MenuItem("Delete");
-					ImGui::EndPopup();
-				}
-
-				// Drag & drop
 				if (ImGui::BeginDragDropSource())
 				{
 					std::string p = path.string();
-					ImGui::SetDragDropPayload(
-						"CONTENT_BROWSER_ITEM",
-						p.c_str(),
-						p.size() + 1
-					);
-					ImGui::Text("%s", name.c_str());
+					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
+
+					ImGui::BeginTooltip();
+					ImGui::TextDisabled("Drag to move folder");
+					ImGui::EndTooltip();
+
 					ImGui::EndDragDropSource();
 				}
+
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+					{
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				if (is_open)
+				{
+					draw_folder_node(path);
+					ImGui::TreePop();
+				}
+
+				ImGui::PopStyleColor();
+			}
+			else if (is_right_file(path))
+			{
+
+				float avail_width = ImGui::GetContentRegionAvail().x;
+				float text_width = ImGui::CalcTextSize(name.c_str()).x;
+
+				if (ImGui::Selectable(name.c_str(), is_selected,
+					ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_SpanAllColumns))
+				{
+					selected_path = path;
+				}
+
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+				{
+					ImGui::BeginTooltip();
+					//ImGui::TextColored(file_color, "%s", name.c_str());
+					ImGui::Separator();
+					ImGui::EndTooltip();
+				}
+
+
+				if (ImGui::BeginPopupContextItem())
+				{
+					ImGui::EndPopup();
+				}
+
+				if (ImGui::BeginDragDropSource())
+				{
+					std::string p = path.string();
+					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
+
+					ImGui::BeginTooltip();
+					ImGui::TextDisabled("Drag to move file");
+					ImGui::EndTooltip();
+
+					ImGui::EndDragDropSource();
+				}
+
 			}
 
 			ImGui::PopID();
 		}
 	}
 
-	void draw_animation(Entity entity)
+	void UI::draw_animation(Entity entity)
 	{
-		// To show Frame Selector
 		static bool show_frame_selector = false;
 		static std::string current_anim_for_frames = "";
 		static std::vector<int> selected_frames;
@@ -1569,7 +1638,7 @@ namespace ag::UI
 		}
 	}
 
-	void draw_tilemap_register(Entity entity)
+	void UI::draw_tilemap_register(Entity entity)
 	{
 		static bool show_register = false;
 		static std::vector<vec2u> selected_tiles;
@@ -1970,14 +2039,11 @@ namespace ag::UI
 		}
 	}
 
-
-
-
-	void draw_autotiling_register(Entity entity)
+	void UI::draw_autotiling_register(Entity entity)
 	{
 		static bool show_register = false;
 		static std::string active_set;
-		
+
 
 		static char buffer[128] = "";
 		buffer[sizeof(buffer) - 1] = '\0';
@@ -2353,11 +2419,7 @@ namespace ag::UI
 		}
 	}
 
-
-
-
-
-	bool draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile)
+	bool UI::draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile)
 	{
 		static bool window_open = true;
 		static std::vector<vec2u> registered_tiles;
@@ -2412,7 +2474,7 @@ namespace ag::UI
 			float available_width = ImGui::GetContentRegionAvail().x;
 			ImGui::BeginChild("TextureColumn", ImVec2(0, 0), true);
 			{
-				if(entity.has_component<AutoTiling_Component>())
+				if (entity.has_component<AutoTiling_Component>())
 				{
 					ImGui::BeginChild("AutoTileColumn", ImVec2(0, 80), true);
 					{
@@ -2449,7 +2511,7 @@ namespace ag::UI
 					static vec2f window_size = ImGui::GetWindowSize();
 
 					vec2f current_size = ImGui::GetWindowSize();
-					if(current_size.x != 0 && current_size.y != 0)
+					if (current_size.x != 0 && current_size.y != 0)
 					{// On Resize
 
 						if (current_size != window_size)
@@ -2591,7 +2653,7 @@ namespace ag::UI
 							}
 						}
 
-						
+
 					}
 					ImGui::EndChild();
 				}
@@ -2604,11 +2666,7 @@ namespace ag::UI
 
 	}
 
-
-
-
-
-	bool texture_selector(Entity entity, uint_rect& texture_rect)
+	bool UI::texture_selector(Entity entity, uint_rect& texture_rect)
 	{
 		static bool window_open = true;
 		static vec2f current_mouse_pos;
@@ -2892,13 +2950,10 @@ namespace ag::UI
 
 	}
 
-	void draw_script_selector(Entity entity)
+	void UI::draw_script_selector(Entity entity)
 	{
 		if (!entity.has_component<Script_Component>())
 			return;
-
-		static bool show_create_model = false;
-
 		auto& props = entity.get_component<Script_Component>();
 
 		if (!props.path.empty())
@@ -2910,7 +2965,7 @@ namespace ag::UI
 		float button_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f;
 		if (ImGui::Button("Create New", ImVec2(button_width, 0)))
 		{
-			show_create_model = true;
+			s_show_panels.create_new_script = true;
 		}
 
 		ImGui::SameLine();
@@ -2952,141 +3007,379 @@ namespace ag::UI
 
 		ImGui::Dummy(ImVec2(0, 5));
 
-		draw_create_script_model(show_create_model, entity);
+		create_new_script(entity);
 	}
 
-	void draw_create_script_model(bool& show_model, Entity entity)
+	void UI::test_popup(Entity entity)
 	{
-		if (!show_model)
-			return;
-		static std::string new_script_name;
+		static bool show_popup = false;
 
-		ImGui::OpenPopup("Create New Script");
-		custom_popup("Create New Script", "Create New Script",
-			[&]() mutable
-			{
-				draw_string("Script Name", new_script_name);
-
-				float button_width = (ImGui::GetContentRegionAvail().x - 10.0f) * 0.5f;
-
-				if (ImGui::Button("Create Script"))
-				{
-					if (!new_script_name.empty())
-					{
-						auto project = Project::get_active_project();
-						std::string script_path = "/" + new_script_name + ".lua";
-						std::string full_path = project->get_directory() + project->get_scripts_directory() + script_path;
-
-						std::ofstream file(full_path);
-						if (file.is_open())
-						{
-							file << "--- " << new_script_name << ".lua ---\n\n";
-							file << "local entity = get_entity()\n\n";
-							file << "function on_create()\n";
-							file << "  aero_print(\"Entity Created\")\n";
-							file << "end\n\n";
-							file << "function on_update(dt)\n";
-							file << "  aero_print(\"Entity Updated\")\n";
-							file << "end\n\n";
-							file << "function on_delete()\n";
-							file << "  aero_print(\"Entity Deleted\")\n";
-							file << "end\n\n";
-							file << "function on_event(event)\n";
-							file << "  aero_print(\"Entity Events\")\n";
-							file << "end\n\n";
-						}
-						file.close();
-						auto& comps = entity.get_component<Script_Component>();
-						comps.path = script_path;
-						show_model = false;
-					}
-				}
-				ImGui::SameLine(0, 10.0f);
-				if (ImGui::Button("Cancel"))
-				{
-					show_model = false;
-				}
-			},
-
-			[&]() mutable
-			{
-				show_model = false;
-			});
-	}
-
-	void custom_popup(PopUpModel& model)
-	{
-		ImGuiWindowFlags flag = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove;
-
-		ImVec4 original_dim_color = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
-
-		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
-
-
-
-		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-
-
-		ImGui::SetNextWindowPos(ImVec2(center.x - model.window_size.x * 0.5f,
-			center.y - model.window_size.y * 0.5f),
-			ImGuiCond_Appearing);
-		ImGui::SetNextWindowSize(model.window_size.to_imvec2(), ImGuiCond_Appearing);
-
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
-
-		if (ImGui::BeginPopupModal(model.id.c_str(), NULL, flag))
+		if (ImGui::Button("PopUp"))
 		{
-			ImVec2 window_pos = ImGui::GetWindowPos();
-			ImVec2 window_size = ImGui::GetWindowSize();
-			ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-			float title_bar_height = 40.0f;
-			ImU32 title_bar_color = IM_COL32(50, 50, 50, 255);
-
-			draw_list->AddRectFilled(
-				window_pos,
-				ImVec2(window_pos.x + window_size.x, window_pos.y + title_bar_height),
-				title_bar_color
-			);
-			ImGui::SetWindowFontScale(1.2f);
-			ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
-			ImGui::TextColored(ImVec4(1, 1, 1, 1), model.name.c_str());
-
-			float close_button_size = title_bar_height - 10;
-			ImGui::SetCursorPos(ImVec2(
-				window_size.x - close_button_size - 5,
-				(title_bar_height - close_button_size) * 0.5f
-			));
-
-
-			ImGui::SetCursorPos(ImVec2(window_size.x - 60, 0));
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-
-			if (ImGui::Button(" X ", ImVec2(60, 40)))
-			{
-				model.on_close();
-			}
-			ImGui::SetWindowFontScale(1.0f);
-			ImGui::PopStyleColor(3);
-
-			ImGui::SetCursorPosY(title_bar_height + 5);
-			ImGui::Dummy(ImVec2(0.0f, 0.0f));
-
-			model.draw_content();
-
-			ImGui::EndPopup();
+			show_popup = true;
+		}
+		else
+		{
+			//return;
 		}
 
-		ImGui::PopStyleColor(2);
 
-		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
+
+		PopUpModel model;
+		model.name = "Texture Selector";
+		model.id = "1234567890";
+		model.confirm_name = "Accept";
+		model.close_name = "Cancel";
+
+		Extra_Settings x_settings;
+		x_settings.size = { 32, 32 };
+		x_settings.draw_lines = true;
+		x_settings.use_size = true;
+		x_settings.create_buttons = false;
+		if (show_popup)
+			Texture_PopUp::draw_popup(model, x_settings, entity);
 	}
 
-	void custom_popup(const std::string& popup_id, const std::string& popup_name, std::function<void()> draw_content, std::function<void()> close)
+	bool UI::draw_button(const GUI_Button& btn)
+	{
+		StyleScope scope;
+
+		scope.push_style_var(ImGuiStyleVar_FrameRounding, btn.radius);
+
+		if (!btn.enabled)
+		{
+			scope.push_style_var(
+				ImGuiStyleVar_Alpha,
+				ImGui::GetStyle().Alpha * 0.5f
+			);
+		}
+
+		scope.push_style_color(
+			ImGuiCol_Button,
+			(btn.enabled ? btn.background.normal : btn.background.disabled).to_imvec4()
+		);
+
+		scope.push_style_color(
+			ImGuiCol_ButtonHovered,
+			btn.background.hover.to_imvec4()
+		);
+
+		scope.push_style_color(
+			ImGuiCol_ButtonActive,
+			btn.background.active.to_imvec4()
+		);
+
+		scope.push_style_color(
+			ImGuiCol_Text,
+			(btn.enabled ? btn.text.normal : btn.text.disabled).to_imvec4()
+		);
+
+		scope.push_style_color(
+			ImGuiCol_Text,
+			btn.text.hover.to_imvec4()
+		);
+
+		scope.push_style_color(
+			ImGuiCol_TextDisabled,
+			btn.text.disabled.to_imvec4()
+		);
+
+		bool clicked = false;
+
+		if (btn.enabled)
+		{
+			clicked = ImGui::Button(
+				btn.label.c_str(),
+				btn.size.to_imvec2()
+			);
+		}
+		else
+		{
+			ImGui::BeginDisabled();
+			ImGui::Button(btn.label.c_str(), btn.size.to_imvec2());
+			ImGui::EndDisabled();
+		}
+
+		return clicked;
+	}
+
+	void UI::create_new_scene()
+	{
+		if (!s_show_panels.create_new_scene)
+			return;
+
+		PopUpModel model;
+		model.id = "##CreateNewScene";
+		model.name = "New Scene";
+		model.window_size = { 500, 270 };
+
+		model.draw_content = [&]() {
+			ImGui::Text("Scene Name");
+			ImGui::SetNextItemWidth(-1);
+
+			char buffer[256];
+			strncpy(buffer, new_name.c_str(), sizeof(buffer));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 6));
+			if (ImGui::InputText("##SceneName", buffer, sizeof(buffer)))
+			{
+				new_name = buffer;
+			}
+
+			ImGui::Dummy(ImVec2(0, 15));
+
+			ImGui::Text("Save Path");
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+
+			char path_buffer[512];
+			strncpy(path_buffer, path.c_str(), sizeof(path_buffer));
+			if (ImGui::InputText("##ScenePath", path_buffer, sizeof(path_buffer)))
+			{
+				path = path_buffer;
+			}
+			ImGui::PopStyleVar();
+			ImGui::SameLine();
+
+			GUI_Button button;
+			button.background.normal = Color(70, 70, 70);
+			button.background.hover = Color(95, 95, 95);
+			button.background.active = Color(55, 55, 55);
+			button.background.disabled = Color(45, 45, 45);
+
+			button.text.normal = Color(230, 230, 230);
+			button.text.hover = Color(255, 255, 255);
+			button.text.active = Color(210, 210, 210);
+			button.text.disabled = Color(120, 120, 120);
+
+
+			{
+				button.label = "...";
+				button.size = { 40, 32 };
+				button.enabled = true;
+				if (draw_button(button))
+				{
+					path = ag::FileDialogs::select_folder("Select Folder for a new Scene");
+				}
+			}
+
+			bool can_create = !new_name.empty() && !path.empty();
+
+			ImGui::Dummy(ImVec2(0, 25));
+
+			float available_width = ImGui::GetContentRegionAvail().x;
+			float spacing = 10.0f;
+			vec2f button_size;
+			button_size.x = (available_width - (spacing * 3)) * 0.5f;
+			button_size.y = 35.0f;
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+
+			Color create_color = can_create ? Color(94, 94, 94) : Color(58, 58, 58);
+			Color hover_color = can_create ? Color(112, 112, 112) : Color(58, 58, 58);
+			{
+				button.label = "Create";
+				button.size = button_size;
+				button.enabled = can_create;
+				button.radius = 3.0f;
+				if (draw_button(button))
+				{
+					if (can_create)
+					{
+						if (!path.empty())
+						{
+							std::string full_path = path + "/" + new_name + ".aeroscene";
+							EditorLayer::get().create_new_scene(full_path);
+						}
+						new_name.clear();
+						path.clear();
+						s_show_panels.create_new_scene = false;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+			}
+			ImGui::SameLine(0, spacing);
+
+			Color cancel_color = Color(94, 94, 94);
+			Color cancel_hover_color = Color(112, 112, 112);
+			{
+				button.label = "Cancel";
+				button.size = button_size;
+				button.enabled = true;
+				if (draw_button(button))
+				{
+					new_name.clear();
+					path.clear();
+					s_show_panels.create_new_scene = false;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			};
+
+		model.on_close = []() {
+			new_name.clear();
+			path.clear();
+			s_show_panels.create_new_scene = false;
+			ImGui::CloseCurrentPopup();
+			};
+
+		Create_Open_Popup::draw_popup(model);
+	}
+
+	void UI::create_new_script(Entity entity)
+	{
+		if (!s_show_panels.create_new_script)
+			return;
+
+		PopUpModel model;
+		model.id = "##CreateNewScript";
+		model.name = "New Script";
+		model.window_size = { 500, 280 };
+
+		model.draw_content = [&]() {
+			ImGui::Text("Script Name");
+			ImGui::SetNextItemWidth(-1);
+
+			char buffer[256];
+			strncpy(buffer, new_name.c_str(), sizeof(buffer));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 6));
+			if (ImGui::InputText("##ScriptName", buffer, sizeof(buffer)))
+			{
+				new_name = buffer;
+			}
+
+			ImGui::Dummy(ImVec2(0, 15));
+
+			ImGui::Text("Save Path");
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+
+			char path_buffer[512];
+			strncpy(path_buffer, path.c_str(), sizeof(path_buffer));
+			if (ImGui::InputText("##ScriptPath", path_buffer, sizeof(path_buffer)))
+			{
+				path = path_buffer;
+			}
+			ImGui::PopStyleVar();
+			ImGui::SameLine();
+
+			GUI_Button button;
+			button.background.normal = Color(70, 70, 70);
+			button.background.hover = Color(95, 95, 95);
+			button.background.active = Color(55, 55, 55);
+			button.background.disabled = Color(45, 45, 45);
+
+			button.text.normal = Color(230, 230, 230);
+			button.text.hover = Color(255, 255, 255);
+			button.text.active = Color(210, 210, 210);
+			button.text.disabled = Color(120, 120, 120);
+
+
+			{
+				button.label = "...";
+				button.size = { 40, 32 };
+				button.enabled = true;
+				if (draw_button(button))
+				{
+					path = ag::FileDialogs::select_folder("Select Folder for a new Scene");
+				}
+			}
+
+			bool can_create = !new_name.empty() && !path.empty();
+
+			ImGui::Dummy(ImVec2(0, 25));
+
+			float available_width = ImGui::GetContentRegionAvail().x;
+			float spacing = 10.0f;
+			vec2f button_size;
+			button_size.x = (available_width - (spacing * 3)) * 0.5f;
+			button_size.y = 35.0f;
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+
+			Color create_color = can_create ? Color(94, 94, 94) : Color(58, 58, 58);
+			Color hover_color = can_create ? Color(112, 112, 112) : Color(58, 58, 58);
+			{
+				button.label = "Create";
+				button.size = button_size;
+				button.enabled = can_create;
+				button.radius = 3.0f;
+				if (draw_button(button))
+				{
+					if (can_create)
+					{
+						if (!path.empty())
+						{
+							std::string full_path = path + "/" + new_name + ".lua";
+							Helper::normalize_path(full_path);
+							std::ofstream file(full_path);
+							if (file.is_open())
+							{
+								file << "--- " << new_name << ".lua ---\n\n";
+								file << "local entity = get_entity()\n\n";
+								file << "function on_create()\n";
+								file << "  aero_print(\"Entity Created\")\n";
+								file << "end\n\n";
+								file << "function on_update(dt)\n";
+								file << "  aero_print(\"Entity Updated\")\n";
+								file << "end\n\n";
+								file << "function on_delete()\n";
+								file << "  aero_print(\"Entity Deleted\")\n";
+								file << "end\n\n";
+								file << "function on_event(event)\n";
+								file << "  aero_print(\"Entity Events\")\n";
+								file << "end\n\n";
+							}
+							file.close();
+							
+							std::string base_path;
+							std::string relative_path;
+							{
+								auto project = Project::get_active_project();
+								std::string base_path = project->get_directory() + project->get_scripts_directory() + "/";
+
+								relative_path = full_path;
+								if (relative_path.find(base_path) == 0)
+									relative_path = relative_path.substr(base_path.size());
+
+								Helper::normalize_path(relative_path);
+							}
+							auto& comps = entity.get_component<Script_Component>();
+							comps.path = relative_path;
+						}
+						new_name.clear();
+						path.clear();
+						s_show_panels.create_new_script = false;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+			}
+			ImGui::SameLine(0, spacing);
+
+			Color cancel_color = Color(94, 94, 94);
+			Color cancel_hover_color = Color(112, 112, 112);
+			{
+				button.label = "Cancel";
+				button.size = button_size;
+				button.enabled = true;
+				if (draw_button(button))
+				{
+					new_name.clear();
+					path.clear();
+					s_show_panels.create_new_script = false;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			};
+
+		model.on_close = []() {
+			new_name.clear();
+			path.clear();
+			s_show_panels.create_new_script = false;
+			ImGui::CloseCurrentPopup();
+			};
+
+		Create_Open_Popup::draw_popup(model);
+	}
+
+	void UI::custom_popup(const std::string& popup_id, const std::string& popup_name, std::function<void()> draw_content, std::function<void()> close)
 	{
 		ImGuiWindowFlags flag = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove;
@@ -3159,8 +3452,7 @@ namespace ag::UI
 		ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
 	}
 
-	// Helper functions
-	void run_current_scene()
+	void UI::run_current_scene()
 	{
 		auto scene = Scene::get_active_scene();
 		auto project = Project::get_active_project();
@@ -3210,7 +3502,7 @@ namespace ag::UI
 
 	}
 
-	void draw_console()
+	void UI::draw_console()
 	{
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
 
