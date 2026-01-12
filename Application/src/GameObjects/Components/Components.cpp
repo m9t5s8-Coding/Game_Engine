@@ -571,7 +571,7 @@ namespace ag
 	}
 	void TextureRect_Component::remove_component(Entity entity)
 	{
-		entity.add_component<TextureRect_Component>();
+		entity.remove_component<TextureRect_Component>();
 	}
 	json TextureRect_Component::save_json(Entity entity)
 	{
@@ -616,7 +616,7 @@ namespace ag
 	}
 	void TextureFlip_Component::remove_component(Entity entity)
 	{
-		entity.add_component<TextureFlip_Component>();
+		entity.remove_component<TextureFlip_Component>();
 	}
 	json TextureFlip_Component::save_json(Entity entity)
 	{
@@ -710,7 +710,7 @@ namespace ag
 	}
 	void Window_Component::remove_component(Entity entity)
 	{
-		entity.add_component<Window_Component>();
+		entity.remove_component<Window_Component>();
 	}
 	json Window_Component::save_json(Entity entity)
 	{
@@ -989,7 +989,7 @@ namespace ag
 	}
 	void Tile_Component::remove_component(Entity entity)
 	{
-		entity.add_component<Tile_Component>();
+		entity.remove_component<Tile_Component>();
 	}
 	json Tile_Component::save_json(Entity entity)
 	{

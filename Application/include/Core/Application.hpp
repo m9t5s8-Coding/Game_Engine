@@ -54,8 +54,10 @@ namespace ag
 
     bool is_minimized() const { return m_minimized; }
 
+    //bool is_window_close() const { return  }
 
     bool m_running = true;
+    bool m_is_closing = false;
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);

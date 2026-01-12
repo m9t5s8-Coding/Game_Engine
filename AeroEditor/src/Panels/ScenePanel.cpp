@@ -90,7 +90,7 @@ namespace ag
 	{
 		UI::draw_menu_bar();
 		UI::content_browser();
-		UI::create_new_scene();
+		UI::popup_functions();
 
 
 		draw_scene_hierarchy();

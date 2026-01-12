@@ -31,8 +31,6 @@ namespace ag
 		REGISTER_COMPONENT(Script_Component);
 	}
 
-
-
 	void NodeProperties::draw_added_components(Entity entity)
 	{
 		for (auto& info : comps)
@@ -43,12 +41,6 @@ namespace ag
 			info.imgui_render(entity);
 		}
 	}
-
-
-
-
-
-
 
 	void NodeProperties::add_component(Entity entity)
 	{
@@ -103,8 +95,6 @@ namespace ag
 
 		ImGui::Dummy(spacing);
 	}
-
-
 
 	void Border_Component::imgui_render(Entity entity)
 	{
@@ -352,7 +342,6 @@ namespace ag
 					UI::draw_autotiling_register(entity);
 			}, true);
 	}
-
 
 	void NodeProperties::animated_sprite_2D(Entity entity)
 	{

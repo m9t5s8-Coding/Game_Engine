@@ -37,7 +37,7 @@ namespace ag
 		bool animation_selector = false;
 		bool tilemap_register = false;
 		bool auto_tiling_register = false;
-		bool save_unsave_panel = false;
+		bool save_changes_panel = false;
 		bool create_new_scene = false;
 		bool create_new_script = false;
 	};
@@ -83,6 +83,8 @@ namespace ag
 
 		static void create_new_scene();
 		static void create_new_script(Entity entity);
+		static void save_changes();
+		static void popup_functions();
 
 		static bool draw_button(const GUI_Button& btn);
 		static void test_popup(Entity entity);

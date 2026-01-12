@@ -94,7 +94,8 @@ namespace ag
 
   bool Application::on_window_close(WindowCloseEvent &e)
   {
-    m_running = false;
+   /* m_running = false;*/
+    m_is_closing = true;
     return true;
   }
 

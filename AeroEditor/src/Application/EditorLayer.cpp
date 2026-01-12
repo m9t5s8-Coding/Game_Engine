@@ -47,6 +47,26 @@ namespace ag
 	{
 		{
 			Application::set_mouse_position(m_current_mouse_pos);
+			if (Application::get().m_is_closing)
+			{
+				bool save_required = false;
+				for (const auto& [key, scene] : m_scenes)
+				{
+					if (scene->is_save_required())
+					{
+						save_required = true;
+						break;
+					}
+				}
+				if (save_required)
+				{
+					UI::get_uistate_panels().save_changes_panel = true;
+				}
+				else
+				{
+					Application::get().m_running = false;
+				}
+			}
 		}
 
 		m_framebuffer->bind();
@@ -214,7 +234,6 @@ namespace ag
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
 
 			bool is_first = true;
-			std::string scene_to_remove;
 
 			for (auto& [name, scene] : m_scenes)
 			{
@@ -249,16 +268,17 @@ namespace ag
 				ImGui::SameLine(0, 1);
 				if (ImGui::Button("x", ImVec2(0, 30)))
 				{
-					scene_to_remove = name;
+					m_scene_to_remove = name;
+					set_active_scene(scene);
 				}
 
 				ImGui::EndGroup();
 				ImGui::PopID();
 			}
 
-			if (!scene_to_remove.empty())
+			if (!m_scene_to_remove.empty())
 			{
-				handle_scene_deletion(scene_to_remove);
+				UI::get_uistate_panels().save_changes_panel = true;
 			}
 		}
 	}
@@ -644,7 +664,11 @@ namespace ag
 
 
 
-
+	void EditorLayer::handle_scene_deletion()
+	{
+		auto scene = Scene::get_active_scene();
+		handle_scene_deletion(scene->get_name());
+	}
 
 	void EditorLayer::handle_scene_deletion(const std::string& scene_name)
 	{
@@ -652,7 +676,11 @@ namespace ag
 			return;
 
 		auto it = m_scenes.find(scene_name);
-		if (it == m_scenes.end()) return;
+		if (it == m_scenes.end())
+		{
+			m_scene_to_remove = "";
+			return;
+		}
 
 		
 		if (it->second == m_scene)
@@ -668,6 +696,7 @@ namespace ag
 		}
 
 		m_scenes.erase(it);
+		m_scene_to_remove = "";
 	}
 
 	void EditorLayer::set_active_scene(AG_ref<Scene> scene)
@@ -832,7 +861,16 @@ namespace ag
 			return;
 
 		Helper::normalize_path(full_path);
-		m_scene = SaveScene::load_scene(full_path);
+		auto scene = SaveScene::load_scene(full_path);
+
+		/*{
+			auto it = m_scenes.find(scene->get_name());
+			if (it != m_scenes.end())
+			{
+				save_scene();
+			}
+		}*/
+		m_scene = scene;
 		m_scenes[m_scene->get_name()] = m_scene;
 		m_panel->set_scene(m_scene);
 	}
@@ -903,6 +941,9 @@ namespace ag
 			if (!scene)
 				continue;
 
+			if (!scene->is_save_required())
+				continue;
+
 			std::string scene_path = project->get_directory() + project->get_scene_directory() + scene->get_directory();
 
 			try
@@ -923,7 +964,27 @@ namespace ag
 		Application::get().m_running = false;
 	}
 
-
+	void EditorLayer::print_scene_name(bool all_scene)
+	{
+		std::string name;
+		if (all_scene)
+		{
+			for (const auto& [key, scene] : m_scenes)
+			{
+				if (scene && scene->is_save_required())
+				{
+					name = key + ".aeroscene";
+					ImGui::Text("%s", name.c_str());
+				}
+			}
+		}
+		else
+		{
+			auto scene = Scene::get_active_scene();
+			name = scene->get_name() + ".aeroscene";
+			ImGui::Text("%s", name.c_str());
+		}
+	}
 
 	void EditorLayer::editor_things()
 	{
@@ -1126,7 +1187,6 @@ namespace ag
 		if (t_axis == TransformAxis::None || t_axis == TransformAxis::Y)
 			Renderer2D::draw_rectangle(y_axis, y_axis_transform);
 	}
-
 
 	void EditorLayer::load_texture(Entity entity)
 	{

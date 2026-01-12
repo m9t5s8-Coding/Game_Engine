@@ -35,6 +35,10 @@ namespace ag
 
 		View& get_view() { return m_view_controller->get_view(); }
 
+		void set_remove_scene(const std::string& remove_scene) { m_scene_to_remove = remove_scene; }
+		std::string get_remove_scene() const { return m_scene_to_remove; }
+
+		void print_scene_name(bool all_scene = false);
 
 		void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) { m_scenes[scene_name] = scene; m_panel->set_scene(scene); }
 		void create_new_scene(const std::string& path);
@@ -51,6 +55,11 @@ namespace ag
 		bool on_key_pressed(KeyPressedEvent& e);
 
 		bool on_text_input(TextInputEvent& e);
+
+		void handle_scene_deletion(const std::string& scene_name);
+		void handle_scene_deletion();
+
+
 	private:
 		
 
@@ -65,10 +74,14 @@ namespace ag
 		vec2f m_last_mouse_pos;
 		bool m_viewport_hovered = false;
 
+		std::string m_scene_to_remove;
+
 		std::array<bool, 3> axis_constraints = { false, false };
 		bool m_minimized = false;
 
 		static EditorLayer *s_instance;
+
+	
 
 	private:
 
@@ -78,7 +91,6 @@ namespace ag
 		void render_settings();
 		void render_viewport_content();
 		void handle_viewport_interaction();
-		void handle_scene_deletion(const std::string& scene_name);
 		void render_scene_buttons();
 		void render_add_scene_button();
 

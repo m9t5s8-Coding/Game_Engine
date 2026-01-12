@@ -35,6 +35,7 @@ namespace ag
 		m_scene->on_update(ts);
 
 		Renderer2D::end_scene();
+
 	}
 
 	void Sandbox2D::on_event(Event& event)

@@ -3103,6 +3103,12 @@ namespace ag
 		return clicked;
 	}
 
+	void UI::popup_functions()
+	{
+		create_new_scene();
+		save_changes();
+	}
+
 	void UI::create_new_scene()
 	{
 		if (!s_show_panels.create_new_scene)
@@ -3328,7 +3334,7 @@ namespace ag
 								file << "end\n\n";
 							}
 							file.close();
-							
+
 							std::string base_path;
 							std::string relative_path;
 							{
@@ -3374,6 +3380,155 @@ namespace ag
 			path.clear();
 			s_show_panels.create_new_script = false;
 			ImGui::CloseCurrentPopup();
+			};
+
+		Create_Open_Popup::draw_popup(model);
+	}
+
+	void UI::save_changes()
+	{
+		if (!s_show_panels.save_changes_panel)
+			return;
+
+		{
+			auto scene = Scene::get_active_scene();
+			std::string remove_scene_name = EditorLayer::get().get_remove_scene();
+			std::string scene_name = scene->get_name();
+			if (remove_scene_name == scene_name)
+			{
+				if (!scene->is_save_required())
+				{
+					EditorLayer::get().handle_scene_deletion();
+					s_show_panels.save_changes_panel = false;
+					return;
+				}
+			}
+		}
+
+		PopUpModel model;
+		model.id = "##SaveChangesPanel";
+		model.name = "Save Changes";
+		model.window_size = { 600, 300 };
+
+		model.draw_content = [&]() {
+			ImGui::Text("Save Changes to the following items?");
+
+
+			ImGui::Dummy(ImVec2(0, 10));
+
+
+			float available_width = ImGui::GetContentRegionAvail().x;
+			float spacing = 10.0f;
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+			float width = (available_width - (2 * spacing));
+
+			ImGui::BeginChild("SaveChangesScenes", ImVec2(width, 150), true);
+			{
+				if (Application::get().m_is_closing)
+				{
+					EditorLayer::get().print_scene_name(true);
+				}
+				else
+				{
+					EditorLayer::get().print_scene_name();
+				}
+			}
+			ImGui::EndChild();
+
+			GUI_Button button;
+			button.background.normal = Color(70, 70, 70);
+			button.background.hover = Color(95, 95, 95);
+			button.background.active = Color(55, 55, 55);
+			button.background.disabled = Color(45, 45, 45);
+
+			button.text.normal = Color(230, 230, 230);
+			button.text.hover = Color(255, 255, 255);
+			button.text.active = Color(210, 210, 210);
+			button.text.disabled = Color(120, 120, 120);
+
+
+			vec2f button_size;
+			button_size.x = (available_width - (spacing * 4)) * 0.33f;
+			button_size.y = 35.0f;
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - button_size.y - spacing);
+
+			Color color = Color(94, 94, 94);
+			Color hover_color = Color(112, 112, 112);
+			{
+				button.label = "Save";
+				button.size = button_size;
+				button.radius = 3.0f;
+				if (draw_button(button))
+				{
+					if (Application::get().m_is_closing)
+					{
+						EditorLayer::get().save_all_scene();
+						Application::get().m_running = false;
+					}
+					else
+					{
+						EditorLayer::get().save_scene();
+						EditorLayer::get().handle_scene_deletion();
+					}
+					s_show_panels.save_changes_panel = false;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			ImGui::SameLine(0, spacing);
+			{
+				button.label = "Don't Save";
+				button.size = button_size;
+				button.radius = 3.0f;
+				if (draw_button(button))
+				{
+					if (Application::get().m_is_closing)
+					{
+						Application::get().m_running = false;
+					}
+					else
+					{
+						EditorLayer::get().handle_scene_deletion();
+					}
+					s_show_panels.save_changes_panel = false;
+					ImGui::CloseCurrentPopup();
+
+				}
+			}
+			ImGui::SameLine(0, spacing);
+			{
+				button.label = "Cancel";
+				button.size = button_size;
+				if (draw_button(button))
+				{
+					if (Application::get().m_is_closing)
+					{
+						Application::get().m_is_closing = false;
+					}
+					else
+					{
+						EditorLayer::get().set_remove_scene("");
+					}
+					s_show_panels.save_changes_panel = false;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			};
+
+		model.on_close = []()
+			{
+				if (Application::get().m_is_closing)
+				{
+					Application::get().m_is_closing = false;
+				}
+				else
+				{
+					EditorLayer::get().set_remove_scene("");
+				}
+				s_show_panels.save_changes_panel = false;
+				ImGui::CloseCurrentPopup();
 			};
 
 		Create_Open_Popup::draw_popup(model);
