@@ -22,6 +22,7 @@ layout(location = 11) in float a_corner_radius;
 layout(location = 12) in vec2  a_texture_size;
 layout(location = 13) in vec4  a_texture_rect;
 layout(location = 14) in vec2  a_flip;
+layout(location = 15) in int a_entity_id;
 
 uniform mat3 u_view_matrix;
 uniform mat3 u_screen_matrix;
@@ -38,6 +39,7 @@ out float corner_radius;
 
 flat out int v_type;
 flat out int v_slot;
+flat out int v_entity_id;
 
 void main()
 {
@@ -47,6 +49,7 @@ void main()
     border_size  = abs(a_border_thickness);
     v_type = a_type;
     v_slot = a_slot;
+    v_entity_id = a_entity_id;
 
     // Rectangle or circle
     if(a_type == 0 || a_type == 1)
@@ -108,7 +111,8 @@ void main()
 #type fragment
 #version 450 core
 
-out vec4 FragColor;
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) out int entity_id;
 
 in vec4 fill_color;
 in vec4 border_color;
@@ -121,6 +125,7 @@ in vec2 tex_coord;
 
 flat in int v_type;
 flat in int v_slot;
+flat in int v_entity_id;
 
 uniform sampler2D u_textures[2]; // support multiple slots
 
@@ -157,6 +162,7 @@ void main()
                              frag_pos.y < border_size || frag_pos.y > size.y - border_size;
             FragColor = is_border ? border_color : fill_color;
         }
+        entity_id = v_entity_id;
     }
     else if(v_type == 1)
     {
@@ -173,6 +179,7 @@ void main()
         float inner_ry = max(radius_y - border_size, 0.001);
         float inner_ellipse = (delta.x*delta.x)/(inner_rx*inner_rx) + (delta.y*delta.y)/(inner_ry*inner_ry);
         FragColor = inner_ellipse > 1.0 ? border_color : fill_color;
+        entity_id = v_entity_id;
     }
     else if(v_type == 2)
     {
@@ -180,6 +187,7 @@ void main()
         vec4 color = texture(u_textures[v_slot], tex_coord);
         color.a *= fill_color.a;
         FragColor = color;
+        entity_id = v_entity_id;
     }
     else if(v_type == 3)
     {
@@ -188,5 +196,7 @@ void main()
         float sd = median(col.r, col.g, col.b);
         float alpha = smoothstep(0.5 - 0.01, 0.5 + 0.01, sd);
         FragColor = vec4(fill_color.rgb, fill_color.a * alpha);
+        entity_id = v_entity_id;
     }
+    
 }

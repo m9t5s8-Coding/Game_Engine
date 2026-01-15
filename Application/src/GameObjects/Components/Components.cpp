@@ -1113,7 +1113,7 @@ namespace ag
 		auto& tile_set = entity.get_component<TileSet_Component>();
 		auto& props = entity.get_component<Tile_Component>();
 		Transform_Component trans;
-
+		int entity_id = (int)(entity.get_id());
 		Sprite sprite;
 		sprite.size = props.size;
 

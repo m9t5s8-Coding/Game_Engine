@@ -1196,6 +1196,7 @@ namespace ag
 
 		if (m_selected_entity.has_component<Transform_Component>())
 		{
+			int entity_id = (int)(m_selected_entity.get_id());
 			auto& name = m_selected_entity.get_component<Tag_Component>().name;
 			auto trans = Transform_Component::get_world_transform(m_selected_entity);
 			Transform_Component transform;
@@ -1205,7 +1206,7 @@ namespace ag
 			text.text_color = Color(220, 220, 220);
 			text.font_size = 18;
 			text.mode = RenderMode::Screen;
-			Renderer2D::draw_text(text, transform);
+			Renderer2D::draw_text(text, transform, entity_id);
 		}
 	}
 
@@ -1219,6 +1220,7 @@ namespace ag
 		for (auto id : view)
 		{
 			Entity e(id);
+			int entity_id = (int)(e.get_id());
 			auto& shapes = e.get_component<CollisionShape_Component>();
 			auto transform = Transform_Component::get_world_transform(e);
 			transform.position = Math::world_to_screen(transform.position, camera.get_float_rect(), viewport_size);
@@ -1232,7 +1234,7 @@ namespace ag
 				rect.fill_color = Color(80, 180, 255, 40);
 				rect.border_color = Color(30, 140, 230, 220);
 				rect.border_thickness = -3.0f;
-				Renderer2D::draw_rectangle(rect, transform);
+				Renderer2D::draw_rectangle(rect, transform, entity_id);
 				break;
 			}
 			case ShapeType::Circle:
@@ -1243,7 +1245,7 @@ namespace ag
 				circle.fill_color = Color(80, 180, 255, 40);
 				circle.border_color = Color(30, 140, 230, 220);
 				circle.border_thickness = -3.0f;
-				Renderer2D::draw_circle(circle, transform);
+				Renderer2D::draw_circle(circle, transform, entity_id);
 				break;
 			}
 			default:
@@ -1254,7 +1256,7 @@ namespace ag
 				rect.fill_color = Color(80, 180, 255, 40);
 				rect.border_color = Color(30, 140, 230, 220);
 				rect.border_thickness = -3.0f;
-				Renderer2D::draw_rectangle(rect, transform);
+				Renderer2D::draw_rectangle(rect, transform, entity_id);
 				break;
 			}
 			}
@@ -1456,6 +1458,28 @@ namespace ag
 		transform.scale.y = std::max(0.01f, transform.scale.y);
 	}
 
+	void ScenePanel::draw_selection_box()
+	{
+		if (!m_selected_entity)
+			return;
+
+		if (m_selected_entity.get_id() == INVALID_ENTITY)
+			return;
+
+		if (m_selected_entity.has_component<Render2D_Component>() && m_selected_entity.has_component<Transform_Component>())
+		{
+			const auto& render2d = m_selected_entity.get_component<Render2D_Component>();
+			Transform_Component transform = Transform_Component::get_world_transform(m_selected_entity);
+
+			int entity_id = (int)(m_selected_entity.get_id());
+
+			Rectangle rect;
+			rect.size = render2d.size;
+			rect.fill_color = Color(150, 150, 150, 150);
+
+			Renderer2D::draw_rectangle(rect, transform, entity_id);
+		}
+	}
 
 
 	void ScenePanel::duplicate_entity()
@@ -1571,15 +1595,65 @@ namespace ag
 
 	bool ScenePanel::on_mouse_pressed(MouseButtonPressedEvent& e)
 	{
-		if (!m_selected_entity)
-			return false;
 		return false;
 	}
 
 
+	bool ScenePanel::on_entity_clicked()
+	{
+		m_scene->m_registry.sort<Tag_Component>([](const Tag_Component& a, const Tag_Component& b)
+			{ return a.index > b.index; });
 
+		auto view = m_scene->m_registry.view<Tag_Component>();
+		for (auto entityID : view)
+		{
+			Entity entity(entityID);
+			auto& tag = entity.get_component<Tag_Component>();
+			if (tag.parent.get_id() != INVALID_ENTITY)
+				continue;
 
+			for (auto e = tag.children.rbegin() ; e != tag.children.rend(); ++e)
+			{
+				if (check_if_clicked(*e))
+					return true;
+			}
 
+			if (check_if_clicked(entity))
+				return true;
+		}
+
+		return false;
+	}
+
+	bool ScenePanel::check_if_clicked(Entity entity)
+	{
+		if (!entity.has_component<Transform_Component>())
+			return false;
+
+		if (!entity.has_component<Render2D_Component>())
+			return false;
+
+		auto& transform = entity.get_component<Transform_Component>();
+		auto& render2d = entity.get_component<Render2D_Component>();
+
+		vec2f position = transform.position - (render2d.size * transform.scale) * 0.5f;
+		vec2f size = render2d.size * transform.scale;
+		float_rect rect = { position, size };
+
+		vec2f mouse_pos = EditorLayer::get().get_viewport_mouse_position();
+
+		if (rect.contains(mouse_pos))
+		{
+			m_selected_entity = entity;
+			AERO_CORE_INFO("Contains Entity");
+			return true;
+		}
+		else
+		{
+			AERO_CORE_INFO("Doesnot Contains Entity");
+			return false;
+		}
+	}
 
 	void ScenePanel::tile_map_draw()
 	{

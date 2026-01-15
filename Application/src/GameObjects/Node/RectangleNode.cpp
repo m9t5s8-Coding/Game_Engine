@@ -72,6 +72,8 @@ namespace ag
 		if (!entity.get_component<Tag_Component>().visible)
 			return;
 
+
+		int entity_id = (int)(entity.get_id());
 		const auto& transform = Transform_Component::get_world_transform(entity);
 		Rectangle rectangle;
 
@@ -88,7 +90,7 @@ namespace ag
 			NodeHelper::set_value(entity, &UI_Component::mode, rectangle.mode);
 
 
-		Renderer2D::draw_rectangle(rectangle, transform);
+		Renderer2D::draw_rectangle(rectangle, transform, entity_id);
 	}
 
 

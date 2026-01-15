@@ -71,15 +71,18 @@ namespace ag
 
 		vec2i m_viewport_size;
 		vec2f m_current_mouse_pos;
+		vec2i m_mouse_position;
 		vec2f m_last_mouse_pos;
 		bool m_viewport_hovered = false;
+		vec2f m_image_pos;
 
 		std::string m_scene_to_remove;
 
+		bool m_entity_selected = false;
 		std::array<bool, 3> axis_constraints = { false, false };
 		bool m_minimized = false;
 
-		static EditorLayer *s_instance;
+		static EditorLayer* s_instance;
 
 	
 
@@ -123,11 +126,14 @@ namespace ag
 		void update_mouse_position();
 
 
-
+		bool on_mouse_clicked(MouseButtonPressedEvent& e);
+		bool on_entity_clicked();
 
 
 		void editor_things();
 		void draw_transform_settings(Entity e);
+
+		void entity_selection();
 	};
 
 }

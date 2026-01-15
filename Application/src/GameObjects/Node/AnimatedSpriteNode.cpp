@@ -75,6 +75,9 @@ namespace ag
       
 
     const auto& transform = Transform_Component::get_world_transform(entity);
+
+    int entity_id = (int)(entity.get_id());
+
     Sprite sprite;
 
     NodeHelper::set_value(entity, &Animation_Component::rect, sprite.texture_rect);
@@ -89,6 +92,6 @@ namespace ag
       NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
 
 
-    Renderer2D::draw_sprite(sprite, transform);
+    Renderer2D::draw_sprite(sprite, transform, entity_id);
   }
 }

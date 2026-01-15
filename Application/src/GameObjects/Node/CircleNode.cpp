@@ -65,6 +65,8 @@ namespace ag
 		if (!entity.get_component<Tag_Component>().visible)
 			return;
 
+
+		int entity_id = (int)(entity.get_id());
 		auto transform = Transform_Component::get_world_transform(entity);
 		Circle circle;
 
@@ -77,7 +79,7 @@ namespace ag
 		if(Engine::is_runtime())
 			NodeHelper::set_value(entity, &UI_Component::mode, circle.mode);
 
-		Renderer2D::draw_circle(circle, transform);
+		Renderer2D::draw_circle(circle, transform, entity_id);
 	}
 
 }

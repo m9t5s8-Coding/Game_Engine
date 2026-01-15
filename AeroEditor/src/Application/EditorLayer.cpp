@@ -20,6 +20,8 @@ namespace ag
 		m_view_controller = ag::AG_cref<ViewController>(window_size, view_center);
 
 		FrameBufferSpecification spec;
+		spec.attachments = { FrameBuffer_Texture_Format::RGBA8, FrameBuffer_Texture_Format::RED_INTEGER, FrameBuffer_Texture_Format::Depth};
+
 		spec.size = window_size;
 
 
@@ -46,6 +48,7 @@ namespace ag
 	void EditorLayer::on_update(TimeStamp ts)
 	{
 		{
+			update_mouse_position();
 			Application::set_mouse_position(m_current_mouse_pos);
 			if (Application::get().m_is_closing)
 			{
@@ -73,6 +76,8 @@ namespace ag
 		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
 		RenderCommand::clear();
 
+		m_framebuffer->clear_attachment(1, -1);
+
 		m_view_controller->on_update(ts);
 		m_panel->on_update();
 
@@ -81,11 +86,18 @@ namespace ag
 
 		editor_things();
 		m_scene->on_update(ts);
+		Renderer2D::start_batch();
+		entity_selection();
+
+
+		
 		m_panel->draw_selected_text();
 		m_panel->draw_collision_shapes();
 		m_panel->draw_tilemap_ghosts();
+		m_panel->draw_selection_box();
 		Renderer2D::end_scene();
 
+		
 		m_framebuffer->unbind();
 
 		m_last_mouse_pos = m_current_mouse_pos;
@@ -720,15 +732,14 @@ namespace ag
 			ImVec2 viewport_size = ImGui::GetContentRegionAvail();
 
 			ImGui::Image((void*)(intptr_t)texture_ID, viewport_size, ImVec2(0, 1), ImVec2(1, 0));
-			if (ImGui::IsItemHovered())
-			{
-				m_viewport_hovered = true;
-			}
+			m_viewport_hovered = ImGui::IsItemHovered();
+			m_image_pos = ImGui::GetItemRectMin();
+
+			if (m_viewport_hovered)
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 			else
-			{
-				m_viewport_hovered = false;
-			}
-			update_mouse_position();
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
 		}
 	}
 
@@ -760,12 +771,10 @@ namespace ag
 
 	void EditorLayer::update_mouse_position()
 	{
-		ImVec2 img_pos = ImGui::GetItemRectMin();
-		ImVec2 mouse = ImGui::GetMousePos();
-		m_viewport_hovered = ImGui::IsItemHovered();
 
-		m_current_mouse_pos = { mouse.x - img_pos.x, mouse.y - img_pos.y };
-
+		vec2f mouse_pos = Mouse::get_mouse_screen_position();
+		m_current_mouse_pos = mouse_pos - m_image_pos;
+		m_mouse_position = m_current_mouse_pos;
 		if (m_view_controller)
 		{
 			m_view_controller->set_viewport_mouse(m_current_mouse_pos);
@@ -785,7 +794,26 @@ namespace ag
 	}
 
 
-
+	void EditorLayer::entity_selection()
+	{
+		if (m_entity_selected)
+		{
+			if (m_mouse_position.x >= 0 && m_mouse_position.y >= 0)
+			{
+				int pixel_data = m_framebuffer->read_pixel(1, m_mouse_position);
+				if (pixel_data >= 0)
+				{
+					Entity e((entt::entity)(pixel_data));
+					m_panel->set_selected_entity(e);
+				}
+				else
+				{
+					m_panel->set_selected_entity(Entity());
+				}
+			}
+			m_entity_selected = false;
+		}
+	}
 
 
 
@@ -797,6 +825,8 @@ namespace ag
 		dispatcher.Dispatch<TextInputEvent>(AERO_BIND_EVENT_FN(EditorLayer::on_text_input));
 		m_view_controller->on_event(e);
 		m_panel->on_event(e);
+		dispatcher.Dispatch<MouseButtonPressedEvent>(AERO_BIND_EVENT_FN(EditorLayer::on_mouse_clicked));
+
 	}
 
 	bool EditorLayer::on_key_pressed(KeyPressedEvent& e)
@@ -818,6 +848,28 @@ namespace ag
 		}
 		return false;
 	}
+
+	bool EditorLayer::on_mouse_clicked(MouseButtonPressedEvent& e)
+	{
+		if (e.get_mouse_button() == Button::ButtonLeft)
+		{
+			if (m_panel->has_selected_entity())
+			{
+				if (NodeHelper::get_nodetype(m_panel->get_selected_entity()) != NodeType::TileMap)
+				{
+					m_entity_selected = true;
+				}
+			}
+			else
+			{
+				m_entity_selected = true;
+			}
+			return false;
+		}
+		return false;
+	}
+
+
 
 	bool EditorLayer::on_text_input(TextInputEvent& e)
 	{
@@ -961,7 +1013,7 @@ namespace ag
 
 	void EditorLayer::try_exit()
 	{
-		Application::get().m_running = false;
+		Application::get().m_is_closing = true;
 	}
 
 	void EditorLayer::print_scene_name(bool all_scene)
@@ -1112,44 +1164,6 @@ namespace ag
 				}
 			}
 		}
-
-
-		// Tile Map Node
-		{
-			if (m_panel->has_selected_entity())
-			{
-				auto selected_entity = m_panel->get_selected_entity();
-				auto type = NodeHelper::get_nodetype(selected_entity);
-				if (type == NodeType::TileMap && selected_entity.has_component<Texture_Component>() &&
-					selected_entity.has_component<TileSet_Component>() && selected_entity.has_component<Tile_Component>())
-				{
-					auto tile_id = m_panel->get_tile_id();
-					auto& tile_set = selected_entity.get_component<TileSet_Component>();
-
-					auto def = tile_set.tile_definitions.find(tile_id);
-					if (def != tile_set.tile_definitions.end())
-					{
-						auto texture_rect = def->second.texture_rect;
-						auto& props = selected_entity.get_component<Tile_Component>();
-						Sprite sprite;
-						sprite.size = texture_rect.size;
-						sprite.texture_rect = texture_rect;
-						sprite.fill_color.a = 100;
-
-						Transform_Component trans;
-						vec2i current_tile = {
-								(int)std::floor((m_current_mouse_pos.x - props.offset.x) / props.size.x),
-								(int)std::floor((m_current_mouse_pos.y - props.offset.y) / props.size.y)
-						};
-
-						trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
-
-						Renderer2D::set_texture(selected_entity.get_component<Texture_Component>().texture);
-						Renderer2D::draw_sprite(sprite, trans);
-					}
-				}
-			}
-		}
 	}
 
 	void EditorLayer::draw_transform_settings(Entity e)
@@ -1214,6 +1228,8 @@ namespace ag
 			}
 		}
 	}
+
+	
 
 	
 }

@@ -44,6 +44,8 @@ namespace ag
 		vec2f texture_size;
 		vec4f texture_rect;
 		vec2f flip;
+
+		int entity_id;
 	};
 
 
@@ -120,6 +122,7 @@ namespace ag
 					{ShaderDataType::Float2, "a_Texture_Size" },
 					{ShaderDataType::Float4, "a_TextureRect"},
 					{ShaderDataType::Float2, "a_flip"},
+					{ShaderDataType::Int, "a_entity_id"},
 			};
 			s_data->quad_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Quad_Instance) * s_data->max_shape);
 			s_data->quad_instanced_buffer->set_layout(instance_layout);
@@ -168,8 +171,12 @@ namespace ag
 
 	void Renderer2D::start_batch()
 	{
+		flush();
+
 		s_data->quad_index = 0;
 		s_data->quad_instanced_ptr = s_data->quad_instanced_base;
+
+		
 	}
 
 	void Renderer2D::set_texture(const AG_ref<Texture>& texture)
@@ -183,7 +190,7 @@ namespace ag
 
 
 
-	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform)
+	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform, int entity_id)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -204,13 +211,15 @@ namespace ag
 			rect.border_color.normalize_color(instance->border_color);
 
 			instance->corner_radius = rect.corner_radius * (transform.scale.x + transform.scale.y) * 0.5;
+
+			instance->entity_id = entity_id;
 		}
 		s_data->quad_index++;
 
 
 	}
 
-	void Renderer2D::draw_circle(const Circle& circle, const Transform_Component& transform)
+	void Renderer2D::draw_circle(const Circle& circle, const Transform_Component& transform, int entity_id)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -229,12 +238,12 @@ namespace ag
 			instance->border_thickness = circle.border_thickness * transform.scale.average();
 			circle.fill_color.normalize_color(instance->fill_color);
 			circle.border_color.normalize_color(instance->border_color);
-
+			instance->entity_id = entity_id;
 		}
 		s_data->quad_index++;
 	}
 
-	void Renderer2D::draw_sprite(const Sprite& sprite, const Transform_Component& transform)
+	void Renderer2D::draw_sprite(const Sprite& sprite, const Transform_Component& transform, int entity_id)
 	{
 		if (s_data->quad_index >= s_data->max_shape)
 		{
@@ -269,11 +278,12 @@ namespace ag
 
 			instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
 			instance->flip.y = (sprite.flip_vertical) ? -1.0f : 1.0f;
+			instance->entity_id = entity_id;
 		}
 		s_data->quad_index++;
 	}
 
-	void Renderer2D::draw_text(const Text& text_string, const Transform_Component& transform)
+	void Renderer2D::draw_text(const Text& text_string, const Transform_Component& transform, int entity_id)
 	{
 		vec2f starting_pos = Text::center_text(text_string, transform);
 		const float scale_x = transform.scale.x * text_string.font_size / TextLoader::font.em_size;
@@ -326,7 +336,7 @@ namespace ag
 
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
 			instance->position.y = base_line - (g.plane_top * scale_y);
-
+			instance->entity_id = entity_id;
 
 			starting_pos.x += g.advance * scale_x;
 

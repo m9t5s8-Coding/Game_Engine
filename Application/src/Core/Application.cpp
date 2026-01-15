@@ -96,7 +96,7 @@ namespace ag
   {
    /* m_running = false;*/
     m_is_closing = true;
-    return true;
+    return false;
   }
 
   bool Application::on_window_resize(WindowResizeEvent &e)

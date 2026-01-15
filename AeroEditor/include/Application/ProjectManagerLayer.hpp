@@ -24,6 +24,8 @@ namespace ag
     void create_new_project();
     void open_existing_project();
 
+    bool on_window_close(WindowCloseEvent& e);
+
 
   };
 }

@@ -133,6 +133,9 @@ namespace ag
 		vec2u get_tile_id() const { return m_tile_id; }
 		void draw_tilemap_ghosts();
 
+		bool on_entity_clicked();
+		void draw_selection_box();
+
 	private:
 		void draw_entity_node(Entity entity, int level);
 		void draw_hierarchy_toolbar();
@@ -168,6 +171,10 @@ namespace ag
 		uint16_t remove_lowest_priority_bit(uint16_t mask);
 		uint16_t normalize_autotile_mask(uint16_t mask);
 		uint16_t get_set_id(const std::string& set_name);
+
+		
+		bool check_if_clicked(Entity entity);
+		
 	private:
 		AG_ref<Scene> m_scene;
 		Entity m_selected_entity;

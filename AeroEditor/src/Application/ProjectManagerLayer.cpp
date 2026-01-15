@@ -1,4 +1,4 @@
-#include <Application/ProjectManagerLayer.hpp>
+﻿#include <Application/ProjectManagerLayer.hpp>
 #include <Application/AppSettings.hpp>
 #include <imgui.h>
 
@@ -27,11 +27,9 @@ namespace ag
 
 	void ProjectManagerLayer::on_imgui_render()
 	{
-		// --- Get window size & position ---
 		ag::vec2u window_size = ag::Application::get().get_window().get_size();
 		ag::vec2f window_pos = ag::Application::get().get_window().get_position();
 
-		// --- Window flags ---
 		ImGuiWindowFlags window_flags =
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
@@ -45,13 +43,11 @@ namespace ag
 		ImGui::SetNextWindowPos({ window_pos.x, window_pos.y });
 		ImGui::SetNextWindowSize({ (float)window_size.x, (float)window_size.y });
 
-		// --- Window style ---
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.12f, 1.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
 
 		ImGui::Begin("MainWindow", nullptr, window_flags);
 		ImGui::Spacing();
-		// --- Title ---
 		{
 			ImGuiIO& io = ImGui::GetIO();
 			ImGui::PushFont(io.Fonts->Fonts[1]);
@@ -67,12 +63,10 @@ namespace ag
 		ImGui::Separator();
 		ImGui::Spacing();
 
-		// --- Center buttons + search bar ---
 		float total_width = 80 + 5 + 80 + 5 + 420;
 		float window_center = window_size.x / 2.0f;
 		ImGui::SetCursorPosX(window_center - total_width / 2.0f);
 
-		// --- Buttons style ---
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5));
 
@@ -85,7 +79,6 @@ namespace ag
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
 		ImGui::PushStyleColor(ImGuiCol_Text, text_color);
 
-		// --- Buttons ---
 		if (ImGui::Button("Create", ImVec2(80, 35)))
 		{
 			create_new_project();
@@ -96,7 +89,6 @@ namespace ag
 			open_existing_project();
 		}
 
-		// --- Search bar ---
 		ImGui::SameLine(0, 5);
 		static char search_buffer[128] = "";
 
@@ -111,7 +103,6 @@ namespace ag
 		ImGui::PopStyleColor(3);
 		ImGui::PopStyleVar();
 
-		// --- Pop buttons style ---
 		ImGui::PopStyleColor(4);
 		ImGui::PopStyleVar(2);
 
@@ -121,20 +112,148 @@ namespace ag
 
 		{
 			ImGui::SetCursorPosX(window_center - total_width / 2.0f);
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 			ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), "Recent Projects");
+			ImGui::PopFont();
+
+			ImGui::SetCursorPosX(window_center - total_width / 2.0f);
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.7f, 1.0f), "Select a project to open");
 		}
-
-		// --- Example recent projects list ---
-		ImVec2 box_size = ImVec2(ImGui::GetContentRegionAvail().x, 120);
-		ImGui::BeginChild("RecentProjectsBox", box_size, false);
-
-		// Title
-
+		ImGui::Spacing();
 		ImGui::Spacing();
 
-		ImGui::BulletText("C:\\Projects\\AeroGameEngine");
-		ImGui::BulletText("D:\\Engines\\SandboxEditor");
-		ImGui::BulletText("E:\\Workspace\\Prototype01");
+		ImVec2 box_size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
+		ImGui::BeginChild("RecentProjectsBox", box_size, false, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoScrollbar);
+
+		struct ProjectEntry
+		{
+			const char* name;
+			const char* path;
+			const char* lastModified;
+		};
+
+		static ProjectEntry projects[] = {
+		{ "AeroGameEngine", "C:\\Projects\\AeroGameEngine", "2 hours ago"},
+		{ "Sandbox Editor", "D:\\Engines\\SandboxEditor", "Yesterday"},
+		{ "Prototype 01", "D:\\Workspace\\Prototype01", "3 days ago"},
+		{ "Game Demo", "D:\\Projects\\GameDemo", "Last week"},
+		{ "Demo Test", "D:\\Tests\\PhysicsTest", "2 weeks ago"}
+		};
+		float item_width = ImGui::GetContentRegionAvail().x - 5.0f;
+		float item_height = 70.0f;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f, 15.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 10.0f));
+
+
+		ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.35f, 0.35f, 0.40f, 1.0f));
+		for (int i = 0; i < IM_ARRAYSIZE(projects); i++)
+		{
+			ImGui::PushID(i);
+
+			ImVec2 item_size(item_width, item_height);
+
+		
+			bool selected = false;
+			if (ImGui::Selectable("##ProjectItem", &selected,
+				ImGuiSelectableFlags_AllowDoubleClick,
+				item_size))
+			{
+				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				{
+					// open_project(projects[i].path);
+				}
+			}
+
+			ImVec2 min = ImGui::GetItemRectMin();
+			ImVec2 max = ImGui::GetItemRectMax();
+
+
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+			ImU32 border_color = ImGui::GetColorU32(ImVec4(0.35f, 0.35f, 0.40f, 1.0f));
+			float border_thickness = 1.0f;
+
+			draw_list->AddRect(min, max, border_color, 0.0f, 0, border_thickness);
+
+
+
+			if (ImGui::BeginPopupContextItem())
+			{
+				if (ImGui::MenuItem("Open"))
+				{
+					// open_project(projects[i].path);
+				}
+				if (ImGui::MenuItem("Remove from list"))
+				{
+
+				}
+				if (ImGui::MenuItem("Show in Explorer"))
+				{
+
+				}
+				ImGui::EndPopup();
+			}
+
+		
+			ImGui::SameLine();
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - item_width + 5.0f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
+
+			ImGui::BeginGroup();
+
+			ImGui::SetWindowFontScale(1.2f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+			ImGui::Text("%s", projects[i].name);
+			ImGui::SetWindowFontScale(1.0f);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+			ImGui::Text("%s", projects[i].path);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.7f, 1.0f));
+			std::string text = "Last opened: ";
+			text += projects[i].lastModified;
+			ImGui::SameLine();
+			ImGui::SetWindowFontScale(0.9f);
+			ImVec2 size = ImGui::CalcTextSize(text.c_str());
+			float width = size.x;
+
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() +	ImGui::GetContentRegionAvail().x - width - 10.0f);
+			ImGui::Text("Last opened: %s", projects[i].lastModified);
+			ImGui::PopStyleColor();
+			ImGui::SetWindowFontScale(1.f);
+			ImGui::EndGroup();
+
+			ImGui::Spacing();
+			ImGui::PopID();
+		}
+		ImGui::PopStyleColor(3);
+
+		ImGui::PopStyleVar(3);
+
+		if (IM_ARRAYSIZE(projects) == 0)
+		{
+			float empty_text_width = ImGui::CalcTextSize("No recent projects").x;
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - empty_text_width) * 0.5f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50.0f);
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.6f, 1.0f));
+			ImGui::Text("No recent projects");
+			ImGui::PopStyleColor();
+
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0f) * 0.5f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
+
+			if (ImGui::Button("Create Your First Project", ImVec2(200.0f, 40.0f)))
+			{
+				create_new_project();
+			}
+		}
 
 		ImGui::EndChild();
 
@@ -146,10 +265,17 @@ namespace ag
 
 	void ProjectManagerLayer::on_event(ag::Event& e)
 	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<WindowCloseEvent>(AERO_BIND_EVENT_FN(ProjectManagerLayer::on_window_close));
 
 	}
 
+	bool ProjectManagerLayer::on_window_close(WindowCloseEvent& e)
+	{
+		Application::get().m_running = false;
 
+		return true;
+	}
 
 
 	void ProjectManagerLayer::create_new_project()

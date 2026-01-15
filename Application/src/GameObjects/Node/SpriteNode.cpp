@@ -80,6 +80,7 @@ namespace ag
     if (!entity.get_component<Tag_Component>().visible)
       return;
 
+    int entity_id = (int)(entity.get_id());
     const auto& transform = Transform_Component::get_world_transform(entity);
     Sprite sprite;
 
@@ -97,7 +98,7 @@ namespace ag
       NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
 
 
-    Renderer2D::draw_sprite(sprite, transform);
+    Renderer2D::draw_sprite(sprite, transform, entity_id);
   }
 
 }
