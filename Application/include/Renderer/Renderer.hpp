@@ -16,10 +16,15 @@ namespace ag
 
     static void on_window_resize(const vec2u& p_size);
 
-    static void submit(const std::shared_ptr<Shader>& p_shader, const std::shared_ptr<VertexArray>& p_vertexarray);
+    static void submit(const std::shared_ptr<VertexArray>& p_vertexarray);
     static void submit_instanced(const AG_ref<Shader>& p_shader, const AG_ref<VertexArray>& p_vertexarray, const AG_uint instanced_count);
 
     static void init();
+
+    static void enable_blend();
+    static void disable_blend();
+
+    static void bind(AG_uint id, AG_uint p_slot = 1);
 
     inline static RendererAPI::API get_API() { return RendererAPI::get_API(); }
 

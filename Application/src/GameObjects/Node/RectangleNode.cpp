@@ -18,7 +18,7 @@ namespace ag
 
 	void RectangleNode::delete_node(Entity entity)
 	{
-		PhysicsBody_Component::delete_entity(entity);
+		PhysicsBody_Component::remove_component(entity);
 		Script_Component::destroy(entity);
 		entity.delete_entity();
 	}
@@ -69,7 +69,7 @@ namespace ag
 
 	void RectangleNode::draw(Entity entity)
 	{
-		if (!entity.get_component<Tag_Component>().visible)
+		if (!Tag_Component::get_visibility(entity))
 			return;
 
 

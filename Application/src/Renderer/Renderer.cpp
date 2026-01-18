@@ -36,26 +36,40 @@ namespace ag
     RenderCommand::init();
   }
 
+  void Renderer::bind(AG_uint id, AG_uint p_slot)
+  {
+    RenderCommand::bind(id, p_slot);
+  }
+
   void Renderer::on_window_resize(const vec2u& p_size)
   {
     RenderCommand::set_viewport(0, 0, p_size.x, p_size.y);
   }
 
-  void Renderer::submit(const std::shared_ptr<Shader>& p_shader, const std::shared_ptr<VertexArray>& p_vertexarray)
+  void Renderer::enable_blend()
   {
-    p_shader->bind();
-    p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
-    p_shader->set_mat3("u_screen_matrix", s_scenedata->screen_matrix);
+    RenderCommand::enable_blend();
+  }
+  void Renderer::disable_blend()
+  {
+    RenderCommand::disable_blend();
+  }
 
+  void Renderer::submit(const std::shared_ptr<VertexArray>& p_vertexarray)
+  {
     p_vertexarray->bind();
     RenderCommand::draw_indexed(p_vertexarray);
   }
   void Renderer::submit_instanced(const AG_ref<Shader>& p_shader, const AG_ref<VertexArray>& p_vertexarray, const AG_uint instanced_count)
   {
+    int samplers[3];
+    for (int i = 0; i < 3; i++)
+      samplers[i] = i;
+
     p_shader->bind();
+    p_shader->set_int_array("u_textures", samplers, 3);
     p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);
     p_shader->set_mat3("u_screen_matrix", s_scenedata->screen_matrix);
-    p_shader->set_vec2f("u_scale", s_scenedata->scale);
     p_vertexarray->bind();
     RenderCommand::draw_instanced(p_vertexarray, instanced_count);
   }

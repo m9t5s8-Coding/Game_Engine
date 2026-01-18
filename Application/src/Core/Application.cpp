@@ -104,7 +104,7 @@ namespace ag
     if (e.get_width() == 0 || e.get_height() == 0)
     {
       m_minimized = true;
-      return false;
+      return true;
     }
     m_minimized = false;
     Renderer::on_window_resize(e.get_size());

@@ -12,8 +12,18 @@ namespace ag
 	void Sandbox2D::on_attach()
 	{
 		auto size = Application::get().get_window().get_size();
-		m_view_controller = ViewController::create(size, size/2);
+		m_view_controller = ViewController::create(size, size / 2);
 		ViewController::set_main_controller(m_view_controller);
+
+		FrameBufferSpecification spec;
+		spec.attachments = { FrameBuffer_Texture_Format::RGBA8,  FrameBuffer_Texture_Format::RED_INTEGER };
+
+		spec.size = size;
+
+
+		m_framebuffer = FrameBuffer::create(spec);
+
+
 		load_project_data();
 	}
 
@@ -25,15 +35,25 @@ namespace ag
 	void Sandbox2D::on_update(ag::TimeStamp ts)
 	{
 		ViewController::set_mouse_position();
-		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
-		RenderCommand::clear();
-
 		m_view_controller->on_update(ts);
 
+		m_framebuffer->bind();
+
+		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
+		RenderCommand::clear();
+		m_framebuffer->clear_attachment(1, -1);
+
 		Renderer2D::begin_scene(m_view_controller->get_view(), Application::get().get_window().get_size());
-
 		m_scene->on_update(ts);
+		Renderer2D::end_scene();
 
+		entity_selection();
+
+		m_framebuffer->unbind();
+
+
+		Renderer2D::begin_scene(m_view_controller->get_view(), Application::get().get_window().get_size());
+		Renderer2D::draw_fullscreen_quad(m_framebuffer->get_colorattachment_id());
 		Renderer2D::end_scene();
 
 	}
@@ -41,7 +61,10 @@ namespace ag
 	void Sandbox2D::on_event(Event& event)
 	{
 		m_scene->on_event(event);
-		//m_view_controller->on_event(event);
+		EventDispatcher dispatcher(event);
+		dispatcher.Dispatch<MouseButtonPressedEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_mouse_pressed));
+		dispatcher.Dispatch<WindowResizeEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_window_resize));
+		dispatcher.Dispatch<WindowCloseEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_window_close));
 	}
 
 	std::string Sandbox2D::get_appdata_path()
@@ -52,6 +75,47 @@ namespace ag
 			return std::string(appdata);
 		else
 			return ".";
+	}
+
+
+	void Sandbox2D::entity_selection()
+	{
+		vec2i mouse_position = Mouse::get_mouse_position();
+		if (mouse_position.x >= 0 && mouse_position.y >= 0)
+		{
+			int pixel_data = m_framebuffer->read_pixel(1, mouse_position);
+			if (pixel_data >= 0)
+			{
+				Entity e((entt::entity)(pixel_data));
+				m_hover_entity = e;
+			}
+			else
+			{
+				m_hover_entity = Entity();
+			}
+		}
+	}
+
+	bool Sandbox2D::on_mouse_pressed(MouseButtonPressedEvent& e)
+	{
+		if (e.get_mouse_button() == Button::ButtonLeft)
+		{
+			if (!m_hover_entity)
+				return false;
+		}
+		return false;
+	}
+
+	bool Sandbox2D::on_window_resize(WindowResizeEvent& e)
+	{
+		m_framebuffer->resize(e.get_size());
+		return false;
+	}
+
+	bool Sandbox2D::on_window_close(WindowCloseEvent& e)
+	{
+		Application::get().m_running = false;
+		return true;
 	}
 
 	void Sandbox2D::load_project_data()

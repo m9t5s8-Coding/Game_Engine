@@ -43,6 +43,7 @@ namespace ag
 
 	void EditorLayer::on_detach()
 	{
+
 	}
 
 	void EditorLayer::on_update(TimeStamp ts)
@@ -804,11 +805,20 @@ namespace ag
 				if (pixel_data >= 0)
 				{
 					Entity e((entt::entity)(pixel_data));
-					m_panel->set_selected_entity(e);
+					if (m_panel->has_selected_entity())
+					{
+						if (m_panel->get_selected_entity().get_id() != e.get_id())
+							m_panel->set_selected_entity(e);
+					}
+					else
+						m_panel->set_selected_entity(e);
 				}
 				else
 				{
-					m_panel->set_selected_entity(Entity());
+					if(m_panel->get_transform_setting() == TransformSetting::None)
+					{
+						m_panel->set_selected_entity(Entity());
+					}
 				}
 			}
 			m_entity_selected = false;

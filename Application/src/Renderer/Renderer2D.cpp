@@ -17,7 +17,6 @@
 
 namespace ag
 {
-
 	enum class Quad_Type
 	{
 		Rectangle = 0,
@@ -36,7 +35,7 @@ namespace ag
 		int texture_slot;
 
 		float border_thickness;
-		vec4f fill_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+		vec4f fill_color;
 		vec4f border_color;
 
 		float corner_radius;
@@ -44,10 +43,12 @@ namespace ag
 		vec2f texture_size;
 		vec4f texture_rect;
 		vec2f flip;
-
 		int entity_id;
 	};
 
+	constexpr int TEXTURE_TEXT = 0;
+	constexpr int TEXTURE_SCENE = 2;
+	constexpr int TEXTURE_SPRITE = 1;
 
 
 	struct Renderer2D_Data
@@ -65,6 +66,13 @@ namespace ag
 		Quad_Instance* quad_instanced_base = nullptr;
 		Quad_Instance* quad_instanced_ptr = nullptr;
 
+
+		AG_ref<VertexArray> fullscreen_vertex_array;
+		AG_ref<VertexBuffer> fullscreen_instanced_buffer;
+		AG_ref<Shader> fullscreen_shader;
+
+
+
 		View view;
 		AG_uint slots;
 	};
@@ -79,7 +87,7 @@ namespace ag
 		s_data->max_shape = 10000;
 		s_data->max_vertices = s_data->max_shape * 4;
 		s_data->max_indices = s_data->max_shape * 6;
-		s_data->slots = 2;
+		s_data->slots = 3;
 
 
 		AG_uint indices[] = { 0, 1, 2, 0, 2, 3 };
@@ -94,9 +102,34 @@ namespace ag
 			1.f, 0.f
 		};
 
+
+
+
+		{
+			float full_vertices[] = {
+			-1.f, -1.f,0.f, 0.f,
+			-1.f, 1.f,0.f, 1.f,
+			1.f, 1.f,1.f, 1.f,
+			1.f, -1.f,1.f , 0.f
+			};
+
+			BufferLayout layout = {
+					{ShaderDataType::Float2, "a_Position"},
+					{ShaderDataType::Float2, "a_texcoord"} };
+
+			s_data->fullscreen_vertex_array = VertexArray::create();
+
+			auto fullscreen_vertex_buffer = VertexBuffer::create(full_vertices, sizeof(full_vertices));
+			fullscreen_vertex_buffer->set_layout(layout);
+			s_data->fullscreen_vertex_array->add_vertex_buffer(fullscreen_vertex_buffer);
+			s_data->fullscreen_vertex_array->set_index_buffer(indexbuffer);
+			s_data->fullscreen_shader = Shader::create("assets/shaders/Sprite2D.glsl");
+
+		}
 		{
 			s_data->quad_instanced_base = new Quad_Instance[s_data->max_shape];
 			s_data->quad_vertex_array = ag::VertexArray::create();
+
 			BufferLayout layout = {
 					{ShaderDataType::Float2, "a_Position"} };
 
@@ -130,14 +163,7 @@ namespace ag
 			s_data->quad_vertex_array->set_index_buffer(indexbuffer);
 			s_data->quad_shader = ag::Shader::create("assets/shaders/Quad.glsl");
 
-
-			int samplers[2];
-			for (int i = 0; i < 2; i++)
-				samplers[i] = i;
-
-			s_data->quad_shader->bind();
-			s_data->quad_shader->set_int_array("u_textures", samplers, 2);
-			s_data->quad_shader->unbind();
+			s_data->quad_texture = ag::Texture2D::create("assets/textures/default.png", false);
 			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png", false);
 			TextLoader::loadGlyph("assets/textures/atlas.json");
 		}
@@ -160,6 +186,12 @@ namespace ag
 		Renderer::begin_scene(view, viewport_size);
 		s_data->view = view;
 
+		Renderer::enable_blend();
+		start_batch();
+	}
+
+	void Renderer2D::begin_scene()
+	{
 		start_batch();
 	}
 
@@ -175,8 +207,6 @@ namespace ag
 
 		s_data->quad_index = 0;
 		s_data->quad_instanced_ptr = s_data->quad_instanced_base;
-
-		
 	}
 
 	void Renderer2D::set_texture(const AG_ref<Texture>& texture)
@@ -188,6 +218,15 @@ namespace ag
 		s_data->quad_texture = texture;
 	}
 
+
+	void Renderer2D::draw_fullscreen_quad(AG_uint id)
+	{
+		Renderer::disable_blend();
+		Renderer::bind(id, TEXTURE_SCENE);
+		s_data->fullscreen_shader->bind();
+		s_data->fullscreen_shader->set_int("u_texture", TEXTURE_SCENE);
+		Renderer::submit(s_data->fullscreen_vertex_array);
+	}
 
 
 	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform, int entity_id)
@@ -259,7 +298,7 @@ namespace ag
 			instance->rotation = Math::to_radians(transform.rotation);
 			instance->mode = static_cast<int>(sprite.mode);
 			instance->quad_mode = static_cast<int>(Quad_Type::Sprite);
-			instance->texture_slot = 1;
+			instance->texture_slot = TEXTURE_SPRITE;
 			sprite.fill_color.normalize_color(instance->fill_color);
 
 			if (s_data->quad_texture)
@@ -331,7 +370,7 @@ namespace ag
 			text_string.text_color.normalize_color(instance->fill_color);
 			instance->mode = static_cast<int>(text_string.mode);
 			instance->quad_mode = static_cast<int>(Quad_Type::Text);
-			instance->texture_slot = 0;
+			instance->texture_slot = TEXTURE_TEXT;
 
 
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
@@ -354,10 +393,10 @@ namespace ag
 		s_data->quad_instanced_buffer->set_data(s_data->quad_instanced_base, data_size);
 
 
-		s_data->text_texture->bind(0);
-		if (s_data->quad_texture)
+		s_data->text_texture->bind(TEXTURE_TEXT);
+		if(s_data->quad_texture)
 		{
-			s_data->quad_texture->bind(1);
+			s_data->quad_texture->bind(TEXTURE_SPRITE);
 		}
 		Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, s_data->quad_index);
 

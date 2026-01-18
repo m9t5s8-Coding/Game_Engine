@@ -87,7 +87,7 @@ namespace ag::NodeHelper
 			return Node_Capability::TileMap;
 
 		case ag::NodeType::Scene2D:
-		case ag::NodeType::TextNode:
+		case ag::NodeType::Text:
 		case ag::NodeType::Button:
 		case ag::NodeType::TextureButton:
 			return Node_Capability::None;

@@ -874,7 +874,7 @@ namespace ag
 			//case NodeType::Light: return ICON_FA_LIGHTBULB;
 			//case NodeType::Mesh: return ICON_FA_CUBES;
 		case NodeType::Sprite: return "ICON_FA_IMAGE";
-		case NodeType::TextNode: return "ICON_FA_FONT";
+		case NodeType::Text: return "ICON_FA_FONT";
 		case NodeType::Button: return "ICON_FA_MOUSE_POINTER";
 			//case NodeType::AudioSource: return ICON_FA_VOLUME_UP;
 			//case NodeType::ParticleSystem: return ICON_FA_FIRE;
@@ -998,7 +998,7 @@ namespace ag
 		case NodeType::Circle:
 		case NodeType::Sprite:
 		case NodeType::AnimatedSprite2D:
-		case NodeType::TextNode:
+		case NodeType::Text:
 			return "Primitives";
 
 		case NodeType::Button:
@@ -1475,7 +1475,7 @@ namespace ag
 
 			Rectangle rect;
 			rect.size = render2d.size;
-			rect.fill_color = Color(150, 150, 150, 150);
+			rect.fill_color = Color(100, 100, 250, 80);
 
 			Renderer2D::draw_rectangle(rect, transform, entity_id);
 		}

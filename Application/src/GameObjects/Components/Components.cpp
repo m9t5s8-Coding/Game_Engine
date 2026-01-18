@@ -111,6 +111,36 @@ namespace ag
 	{
 		return "Tag";
 	}
+	bool Tag_Component::get_visibility(Entity entity)
+	{
+		if (!entity.has_component<Tag_Component>())
+			return true;
+
+		const auto& tag = entity.get_component<Tag_Component>();
+
+		if (!tag.visible)
+			return false;
+
+		if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
+			return get_visibility(tag.parent);
+
+		return true;
+	}
+	bool Tag_Component::get_lock(Entity entity)
+	{
+		if (!entity.has_component<Tag_Component>())
+			return true;
+
+		const auto& tag = entity.get_component<Tag_Component>();
+
+		if (!tag.locked)
+			return false;
+
+		if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
+			return get_lock(tag.parent);
+
+		return true;
+	}
 
 
 	void Transform_Component::add_component(Entity entity)
@@ -338,14 +368,7 @@ namespace ag
 
 
 
-	void Render2D_Component::add_component(Entity entity)
-	{
-		entity.add_component<Render2D_Component>();
-	}
-	void Render2D_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Render2D_Component>();
-	}
+
 	json Render2D_Component::save_json(Entity entity)
 	{
 		json j;
@@ -364,32 +387,15 @@ namespace ag
 		Helper::load_json(j, "Size", props.size);
 		Helper::load_json(j, "Color", props.color);
 	}
-	void Render2D_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Render2D_Component>())
-		{
-			clone.add_component<Render2D_Component>(original.get_component<Render2D_Component>());
-		}
-	}
 	bool Render2D_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Render2D);
 	}
-	const char* Render2D_Component::get_name()
-	{
-		return "Render2D";
-	}
 
 
-	void Border_Component::add_component(Entity entity)
-	{
-		entity.add_component<Border_Component>();
-	}
-	void Border_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Border_Component>();
-	}
+
+
 	json Border_Component::save_json(Entity entity)
 	{
 		json j;
@@ -409,33 +415,15 @@ namespace ag
 		Helper::load_json(j, "Thickness", props.thickness);
 		Helper::load_json(j, "Color", props.color);
 	}
-	void Border_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Border_Component>())
-		{
-			clone.add_component<Border_Component>(original.get_component<Border_Component>());
-		}
-	}
 	bool Border_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::RectShape) ||
 			NodeHelper::has_capability(caps, Node_Capability::CircleShape);
 	}
-	const char* Border_Component::get_name()
-	{
-		return "Border";
-	}
 
 
-	void Corner_Component::add_component(Entity entity)
-	{
-		entity.add_component<Corner_Component>();
-	}
-	void Corner_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Corner_Component>();
-	}
+
 	json Corner_Component::save_json(Entity entity)
 	{
 		json j;
@@ -455,33 +443,16 @@ namespace ag
 		Helper::load_json(j, "Corner", props.corner);
 		Helper::load_json(j, "Uniform", props.uniform);
 	}
-	void Corner_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Corner_Component>())
-		{
-			clone.add_component<Corner_Component>(original.get_component<Corner_Component>());
-		}
-	}
 	bool Corner_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
-		// AERO_CORE_INFO("Node Type:{0}", static_cast<int>(type));
 		return NodeHelper::has_capability(caps, Node_Capability::RectShape);
 	}
-	const char* Corner_Component::get_name()
-	{
-		return "Corner";
-	}
 
 
-	void UI_Component::add_component(Entity entity)
-	{
-		entity.add_component<UI_Component>();
-	}
-	void UI_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<UI_Component>();
-	}
+
+
+
 	json UI_Component::save_json(Entity entity)
 	{
 		json j;
@@ -499,33 +470,17 @@ namespace ag
 		auto& props = entity.get_component<UI_Component>();
 		Helper::load_json(j, "Mode", props.mode);
 	}
-	void UI_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<UI_Component>())
-		{
-			clone.add_component<UI_Component>(original.get_component<UI_Component>());
-		}
-	}
 	bool UI_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::UI);
 	}
-	const char* UI_Component::get_name()
-	{
-		return "UI";
-	}
 
 
 
-	void Texture_Component::add_component(Entity entity)
-	{
-		entity.add_component<Texture_Component>();
-	}
-	void Texture_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Texture_Component>();
-	}
+
+
+
 	json Texture_Component::save_json(Entity entity)
 	{
 		json j;
@@ -545,34 +500,17 @@ namespace ag
 
 		props.texture = NodeHelper::load_texture(props.path);
 	}
-	void Texture_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Texture_Component>())
-		{
-			clone.add_component<Texture_Component>(original.get_component<Texture_Component>());
-		}
-	}
 	bool Texture_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 	}
-	const char* Texture_Component::get_name()
-	{
-		return "Texture";
-	}
 
 
 
 
-	void TextureRect_Component::add_component(Entity entity)
-	{
-		entity.add_component<TextureRect_Component>();
-	}
-	void TextureRect_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<TextureRect_Component>();
-	}
+
+
 	json TextureRect_Component::save_json(Entity entity)
 	{
 		json j;
@@ -590,34 +528,18 @@ namespace ag
 		auto& props = entity.get_component<TextureRect_Component>();
 		Helper::load_json(j, "Rect", props.rect);
 	}
-	void TextureRect_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<TextureRect_Component>())
-		{
-			clone.add_component<TextureRect_Component>(original.get_component<TextureRect_Component>());
-		}
-	}
 	bool TextureRect_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 	}
-	const char* TextureRect_Component::get_name()
-	{
-		return "TextureRect";
-	}
 
 
 
 
-	void TextureFlip_Component::add_component(Entity entity)
-	{
-		entity.add_component<TextureFlip_Component>();
-	}
-	void TextureFlip_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<TextureFlip_Component>();
-	}
+
+
+
 	json TextureFlip_Component::save_json(Entity entity)
 	{
 		json j;
@@ -637,34 +559,16 @@ namespace ag
 		Helper::load_json(j, "Horizontal", props.horizontal);
 		Helper::load_json(j, "Vertical", props.vertical);
 	}
-	void TextureFlip_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<TextureFlip_Component>())
-		{
-			clone.add_component<TextureFlip_Component>(original.get_component<TextureFlip_Component>());
-		}
-	}
 	bool TextureFlip_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 	}
-	const char* TextureFlip_Component::get_name()
-	{
-		return "TextureFlip";
-	}
 
 
 
 
-	void Camera_Component::add_component(Entity entity)
-	{
-		entity.add_component<Camera_Component>();
-	}
-	void Camera_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Camera_Component>();
-	}
+
 	json Camera_Component::save_json(Entity entity)
 	{
 		json j;
@@ -684,34 +588,17 @@ namespace ag
 		Helper::load_json(j, "Size", props.size);
 		Helper::load_json(j, "Center", props.center);
 	}
-	void Camera_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Camera_Component>())
-		{
-			clone.add_component<Camera_Component>(original.get_component<Camera_Component>());
-		}
-	}
 	bool Camera_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Camera);
 	}
-	const char* Camera_Component::get_name()
-	{
-		return "Camera";
-	}
 
 
 
 
-	void Window_Component::add_component(Entity entity)
-	{
-		entity.add_component<Window_Component>();
-	}
-	void Window_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Window_Component>();
-	}
+
+
 	json Window_Component::save_json(Entity entity)
 	{
 		json j;
@@ -729,22 +616,12 @@ namespace ag
 		auto& props = entity.get_component<Window_Component>();
 		Helper::load_json(j, "Size", props.size);
 	}
-	void Window_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Window_Component>())
-		{
-			clone.add_component<Window_Component>(original.get_component<Window_Component>());
-		}
-	}
 	bool Window_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Camera);
 	}
-	const char* Window_Component::get_name()
-	{
-		return "Window";
-	}
+
 
 
 
@@ -787,14 +664,8 @@ namespace ag
 
 
 
-	void Animation_Component::add_component(Entity entity)
-	{
-		entity.add_component<Animation_Component>();
-	}
-	void Animation_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Animation_Component>();
-	}
+
+
 	json Animation_Component::save_json(Entity entity)
 	{
 		json j;
@@ -827,13 +698,6 @@ namespace ag
 				Animation animation = Animation::load_json(animation_json);
 				props.animations[name] = animation;
 			}
-		}
-	}
-	void Animation_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Animation_Component>())
-		{
-			clone.add_component<Animation_Component>(original.get_component<Animation_Component>());
 		}
 	}
 	void Animation_Component::update(Entity entity, TimeStamp ts)
@@ -920,10 +784,6 @@ namespace ag
 
 		props.rect = anim.frames[props.current_frame].frame_rect;
 	}
-	const char* Animation_Component::get_name()
-	{
-		return "Animations";
-	}
 	bool Animation_Component::play_animation(Entity entity, const std::string& name)
 	{
 		if (!entity.has_component<Animation_Component>())
@@ -983,14 +843,7 @@ namespace ag
 	}
 
 
-	void Tile_Component::add_component(Entity entity)
-	{
-		entity.add_component<Tile_Component>();
-	}
-	void Tile_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<Tile_Component>();
-	}
+
 	json Tile_Component::save_json(Entity entity)
 	{
 		json j;
@@ -1009,27 +862,10 @@ namespace ag
 		Helper::load_json(j, "Size", tileset.size);
 		Helper::load_json(j, "Offset", tileset.offset);
 	}
-	void Tile_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Tile_Component>())
-		{
-			clone.add_component<Tile_Component>(original.get_component<Tile_Component>());
-		}
-	}
-	const char* Tile_Component::get_name()
-	{
-		return "Tile";
-	}
 
 
-	void TileSet_Component::add_component(Entity entity)
-	{
-		entity.add_component<TileSet_Component>();
-	}
-	void TileSet_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<TileSet_Component>();
-	}
+
+
 	json TileSet_Component::save_json(Entity entity)
 	{
 		json j;
@@ -1093,10 +929,24 @@ namespace ag
 	}
 	void TileSet_Component::clone_entity(Entity original, Entity clone)
 	{
-		if (original.has_component<TileSet_Component>())
-		{
-			clone.add_component<TileSet_Component>(original.get_component<TileSet_Component>());
-		}
+		if (!original.has_component<TileSet_Component>())
+			return;
+
+		std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
+		std::unordered_map<vec2i, Tile, vec2_hash<int>> placed_tiles;
+		bool is_tile_registered = false;
+		bool tile_changed = false;
+		vec2i tile_size;
+
+		const auto& original_tileset = original.get_component<TileSet_Component>();
+		TileSet_Component clone_tileset;
+		clone_tileset.tile_definitions = original_tileset.tile_definitions;
+		clone_tileset.placed_tiles = original_tileset.placed_tiles;
+		clone_tileset.is_tile_registered = original_tileset.is_tile_registered;
+		clone_tileset.tile_changed = original_tileset.tile_changed;
+		clone_tileset.tile_size = original_tileset.tile_size;
+
+		clone.add_component<TileSet_Component>(clone_tileset);
 	}
 	void TileSet_Component::update(Entity entity)
 	{
@@ -1132,10 +982,6 @@ namespace ag
 
 			Renderer2D::draw_sprite(sprite, trans);
 		}
-	}
-	const char* TileSet_Component::get_name()
-	{
-		return "TileSet";
 	}
 	bool TileSet_Component::is_compatible(NodeType type)
 	{
@@ -1219,24 +1065,10 @@ namespace ag
 		Helper::load_json(j, "SetID", tiles.set_id);
 		return tiles;
 	}
-	void Auto_Tiles::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<Auto_Tiles>())
-		{
-			clone.add_component<Auto_Tiles>(original.get_component<Auto_Tiles>());
-		}
-	}
-	const char* Auto_Tiles::get_name()
-	{
-		return "AutoTile";
-	}
 
 
 
-	void AutoTiling_Component::add_component(Entity entity)
-	{
-		entity.add_component<AutoTiling_Component>();
-	}
+
 	void AutoTiling_Component::remove_component(Entity entity)
 	{
 		auto& props = entity.get_component<AutoTiling_Component>();
@@ -1275,17 +1107,6 @@ namespace ag
 			}
 		}
 	}
-	void AutoTiling_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<AutoTiling_Component>())
-		{
-			clone.add_component<AutoTiling_Component>(original.get_component<AutoTiling_Component>());
-		}
-	}
-	const char* AutoTiling_Component::get_name()
-	{
-		return "AutoTileSet";
-	}
 	bool AutoTiling_Component::is_compatible(NodeType type)
 	{
 		auto caps = NodeHelper::get_node_capabilities(type);
@@ -1308,10 +1129,6 @@ namespace ag
 			shape.size = props.size;
 		}
 		entity.add_component<CollisionShape_Component>(shape);
-	}
-	void CollisionShape_Component::remove_component(Entity entity)
-	{
-		entity.remove_component<CollisionShape_Component>();
 	}
 	json CollisionShape_Component::save_json(Entity entity)
 	{
@@ -1347,19 +1164,10 @@ namespace ag
 		}
 
 	}
-	void CollisionShape_Component::clone_entity(Entity original, Entity clone)
-	{
-		if (original.has_component<CollisionShape_Component>())
-			clone.add_component<CollisionShape_Component>(original.get_component<CollisionShape_Component>());
-	}
-	const char* CollisionShape_Component::get_name()
-	{
-		return "CollisionShape";
-	}
-	bool CollisionShape_Component::is_compatible(NodeType type)
-	{
-		return true;
-	}
+
+
+
+
 
 	void PhysicsBody_Component::add_component(Entity entity)
 	{
@@ -1419,20 +1227,6 @@ namespace ag
 
 		CollisionShape_Component::clone_entity(original, clone);
 	}
-	void PhysicsBody_Component::delete_entity(Entity entity)
-	{
-		if (!entity.has_component<PhysicsBody_Component>())
-			return;
-
-		auto& props = entity.get_component<PhysicsBody_Component>();
-		if (props.body)
-		{
-			auto scene = Scene::get_active_scene();
-			auto& world = scene->get_world();
-			world.DestroyBody(props.body);
-			props.body = nullptr;
-		}
-	}
 	void PhysicsBody_Component::update_entity(Entity entity)
 	{
 		if (!entity.has_component<PhysicsBody_Component>() || !entity.has_component<Transform_Component>() || !Engine::is_runtime())
@@ -1449,10 +1243,6 @@ namespace ag
 		transform.position = position;
 		transform.rotation = Math::to_degree(angle);
 		Transform_Component::get_local_transform(entity, transform);
-	}
-	const char* PhysicsBody_Component::get_name()
-	{
-		return "PhysicsBody";
 	}
 	bool PhysicsBody_Component::is_compatible(NodeType type)
 	{
@@ -1528,6 +1318,53 @@ namespace ag
 		props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 
 	}
+
+
+	json Text_Component::save_json(Entity entity)
+	{
+		json j;
+
+		const auto& props = entity.get_component<Text_Component>();
+
+		Helper::save_json(j, "Text", props.text);
+		Helper::save_json(j, "FontSize", props.font_size);
+
+		return j;
+	}
+	void Text_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<Text_Component>())
+			entity.add_component<Text_Component>();
+
+		auto& props = entity.get_component<Text_Component>();
+		Helper::load_json(j, "Text", props.text);
+		Helper::load_json(j, "FontSize", props.font_size);
+	}
+	bool Text_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Text);
+	}
+
+
+	json FontStyle_Component::save_json(Entity entity)
+	{
+		json j;
+
+
+
+		return j;
+	}
+	void FontStyle_Component::load_json(Entity entity, const json& j)
+	{
+
+	}
+	bool FontStyle_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Text);
+	}
+
 
 	vec2f Text::calc_text_size(const Text& text, const vec2f& s)
 	{

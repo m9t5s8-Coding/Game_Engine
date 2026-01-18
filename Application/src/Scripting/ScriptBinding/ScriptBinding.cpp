@@ -547,13 +547,9 @@ namespace ag
 
 				});
 
-			lua.set_function("set_text", [](ag::Entity& entity, const std::string& value) {
-				auto type = NodeHelper::get_nodetype(entity);
-				if (type == NodeType::TextNode)
+			lua.set_function("set_text", [](ag::Entity& entity, const std::string& value)
 				{
-					//auto& text = entity.get_component< TextNode::TextProp>().text;
-					//text.text = value;
-				}
+				NodeHelper::set_comp_value(entity, &Text_Component::text, value);
 				});
 
 

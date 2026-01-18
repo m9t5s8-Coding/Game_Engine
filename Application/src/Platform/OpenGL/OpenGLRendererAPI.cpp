@@ -6,7 +6,7 @@
 
 namespace ag
 {
-  void OpenGLRendererAPI::set_clear_color(const Color &p_clear_color)
+  void OpenGLRendererAPI::set_clear_color(const Color& p_clear_color)
   {
     vec4f color;
     p_clear_color.normalize_color(color);
@@ -30,13 +30,28 @@ namespace ag
     glViewport(x, y, width, height);
   }
 
-  void OpenGLRendererAPI::draw_indexed(const std::shared_ptr<VertexArray> &p_vertexarray)
+  void OpenGLRendererAPI::bind(AG_uint id, AG_uint p_slot)
+  {
+    glActiveTexture(GL_TEXTURE0 + p_slot);
+    glBindTexture(GL_TEXTURE_2D, id);
+  }
+
+  void OpenGLRendererAPI::draw_indexed(const std::shared_ptr<VertexArray>& p_vertexarray)
   {
     glDrawElements(GL_TRIANGLES, p_vertexarray->get_index_buffer()->get_count(), GL_UNSIGNED_INT, nullptr);
   }
 
-  void OpenGLRendererAPI::draw_instanced(const AG_ref<VertexArray> &p_vertexarray, const AG_uint instance_count)
+  void OpenGLRendererAPI::draw_instanced(const AG_ref<VertexArray>& p_vertexarray, const AG_uint instance_count)
   {
     glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, instance_count);
+  }
+
+  void OpenGLRendererAPI::enable_blend()
+  {
+    glEnable(GL_BLEND);
+  }
+  void OpenGLRendererAPI::disable_blend()
+  {
+    glDisable(GL_BLEND);
   }
 }

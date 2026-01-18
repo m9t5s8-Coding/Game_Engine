@@ -16,7 +16,7 @@ namespace ag
   void SpriteNode::delete_node(Entity entity)
   {
     Script_Component::destroy(entity);
-    PhysicsBody_Component::delete_entity(entity);
+    PhysicsBody_Component::remove_component(entity);
     entity.delete_entity();
   }
   
@@ -32,7 +32,6 @@ namespace ag
     UI_Component::clone_entity(original, clone);
     PhysicsBody_Component::clone_entity(original, clone);
     Script_Component::clone_entity(original, clone);
-
   }
   
   json SpriteNode::save_json(Entity entity)

@@ -15,7 +15,7 @@ namespace ag
   void AnimatedSpriteNode::delete_node(Entity entity)
   {
     Script_Component::destroy(entity);
-    PhysicsBody_Component::delete_entity(entity);
+    PhysicsBody_Component::remove_component(entity);
     entity.delete_entity();
   }
   void AnimatedSpriteNode::clone_node(Entity original, Entity clone)

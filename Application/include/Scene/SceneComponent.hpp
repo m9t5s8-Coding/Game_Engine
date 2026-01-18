@@ -40,7 +40,7 @@ namespace ag
 		Camera = 4,
 		TileMap = 5,
 		Scene2D = 6,
-		TextNode = 7,
+		Text = 7,
 		Button = 8,
 		TextureButton = 9,
 		CollisionShape = 10
@@ -58,7 +58,8 @@ namespace ag
 		Texture2D = 1 << 6,
 		Transform = 1 << 7,
 		Camera = 1 << 8,
-		TileMap = 1 << 9
+		TileMap = 1 << 9,
+		Text = 1 << 10,
 	};
 
 	enum class RenderLayer
