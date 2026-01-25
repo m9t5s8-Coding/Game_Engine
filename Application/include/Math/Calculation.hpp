@@ -106,6 +106,14 @@ namespace ag::Math
     };
   }
 
+  inline vec2f screen_size_to_world_size( const vec2f& screen_size, const vec2f& view_size, const vec2f& window_size)
+  {
+    return {
+        (screen_size.x / window_size.x) * view_size.x,
+        (screen_size.y / window_size.y) * view_size.y
+    };
+  }
+
   inline Direction get_direction(const vec2f& a, const vec2f& b)
   {
     vec2f d = b - a;

@@ -88,6 +88,11 @@ namespace ag
 			{
 				Entity e((entt::entity)(pixel_data));
 				m_hover_entity = e;
+				if (m_hover_entity.has_component<ButtonState_Component>())
+				{
+					auto& props = m_hover_entity.get_component<ButtonState_Component>();
+					props.button_state |= Button_State::Hovered;
+				}
 			}
 			else
 			{
@@ -102,6 +107,12 @@ namespace ag
 		{
 			if (!m_hover_entity)
 				return false;
+
+			if (m_hover_entity.has_component<ButtonState_Component>())
+			{
+				auto& props = m_hover_entity.get_component<ButtonState_Component>();
+				props.button_state |= Button_State::Pressed;
+			}
 		}
 		return false;
 	}

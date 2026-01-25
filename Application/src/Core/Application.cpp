@@ -37,6 +37,7 @@ namespace ag
     {
       float time = static_cast<float>(glfwGetTime());
       TimeStamp timestamp = time - m_last_frametime;
+      delta_time = timestamp.get_seconds();
       m_last_frametime = time;
 
       if (!m_minimized)

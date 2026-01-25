@@ -44,9 +44,9 @@ namespace ag
 		NodeFactory::properties_map[NodeType::Camera] = NodeProperties::camera_2D;
 		NodeFactory::properties_map[NodeType::TileMap] = NodeProperties::tilemap_2D;
 		NodeFactory::properties_map[NodeType::Scene2D] = NodeProperties::scene_2D;
-		//NodeFactory::properties_map[NodeType::TextNode] = TextNode::show_properties;
-		//NodeFactory::properties_map[NodeType::Button] = ButtonNode::show_properties;
-		//NodeFactory::properties_map[NodeType::TextureButton] = TextureButton::show_properties;
+		NodeFactory::properties_map[NodeType::Text] = NodeProperties::text_2D;
+		NodeFactory::properties_map[NodeType::Button] = NodeProperties::button_2D;
+		NodeFactory::properties_map[NodeType::TextureButton] = NodeProperties::texture_button_2D;
 
 	}
 
@@ -70,6 +70,11 @@ namespace ag
 				if (tag.node_type == NodeType::TileMap)
 					tile_map_draw();
 			}
+			if (m_selected_entity.has_component<Text_Component>())
+			{
+				if (!m_selected_entity.has_component<Text_Editor_State>())
+					Text_Editor_State::add_component(m_selected_entity);
+			}
 		}
 		m_last_mouse_position = m_current_mouse_position;
 	}
@@ -77,12 +82,28 @@ namespace ag
 	void ScenePanel::on_event(Event& e)
 	{
 		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<TextInputEvent>(AERO_BIND_EVENT_FN(ScenePanel::on_text_input));
 		dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(ScenePanel::on_key_pressed));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(AERO_BIND_EVENT_FN(ScenePanel::on_mouse_pressed));
 	}
 
 	void ScenePanel::set_selected_entity(Entity entity)
 	{
+		if (has_selected_entity() && m_selected_entity.has_component<Text_Editor_State>())
+		{
+			auto& state = m_selected_entity.get_component<Text_Editor_State>();
+			state.active = false;
+		}
+		if (m_selected_entity.get_id() == entity.get_id() && has_selected_entity())
+		{
+			if (entity && entity.has_component<Text_Editor_State>())
+			{
+				auto& state = entity.get_component<Text_Editor_State>();
+				state.active = true;
+			}
+		}
+
+
 		m_selected_entity = entity;
 	}
 
@@ -116,20 +137,26 @@ namespace ag
 					}
 				}
 			}
-			else if (tag.node_type == NodeType::Sprite)
+			if (m_selected_entity.has_component<TextureRect_Component>())
 			{
-				if (m_selected_entity.has_component<TextureRect_Component>())
-				{
-					auto& rects = m_selected_entity.get_component<TextureRect_Component>();
-					auto& sizes = m_selected_entity.get_component<Render2D_Component>();
-					auto& texture = m_selected_entity.get_component<Texture_Component>().texture;
+				auto& rects = m_selected_entity.get_component<TextureRect_Component>();
+				auto& texture = m_selected_entity.get_component<Texture_Component>().texture;
 
-					uint_rect texture_rect;
-					if (texture)
+				uint_rect texture_rect;
+				if (texture)
+				{
+					if (UI::texture_selector(m_selected_entity, texture_rect))
 					{
-						if (UI::texture_selector(m_selected_entity, texture_rect))
+						rects.rect = texture_rect;
+						if (m_selected_entity.has_component<Textured_Button_Component>())
 						{
-							rects.rect = texture_rect;
+							auto& comps = m_selected_entity.get_component<Textured_Button_Component>();
+							comps.base_rect = texture_rect;
+							comps.overrides[comps.current_state] = texture_rect;
+						}
+						if (m_selected_entity.has_component<Render2D_Component>())
+						{
+							auto& sizes = m_selected_entity.get_component<Render2D_Component>();
 							sizes.size = texture_rect.size;
 						}
 					}
@@ -184,7 +211,7 @@ namespace ag
 
 	void ScenePanel::draw_scene_top_panel()
 	{
-		
+
 	}
 
 
@@ -663,7 +690,7 @@ namespace ag
 		// Right click (context menu)
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
 			ImGui::OpenPopup("EntityContextMenu");
-			m_selected_entity = entity;
+			set_selected_entity(entity);
 		}
 
 
@@ -712,7 +739,7 @@ namespace ag
 				//create_child_entity(entity, "Empty", NodeType::Empty);
 				m_scene->set_save_required(true);
 			}
-			if (ImGui::MenuItem("Cube")) 
+			if (ImGui::MenuItem("Cube"))
 			{
 				//create_child_entity(entity, "Cube", NodeType::Cube);
 				m_scene->set_save_required(true);
@@ -1547,15 +1574,103 @@ namespace ag
 
 	bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
 	{
+		if (!has_selected_entity())
+			return false;
+
 		bool control = Keyboard::is_key_pressed(Key::LeftControl) || Keyboard::is_key_pressed(Key::RightControl);
 		bool shift = Keyboard::is_key_pressed(Key::LeftShift) || Keyboard::is_key_pressed(Key::RightShift);
+
+		// Typing text
+		if (m_selected_entity.has_component<Text_Editor_State>() && m_selected_entity.get_component<Text_Editor_State>().active &&
+			m_selected_entity.has_component<Text_Component>())
+		{
+			auto& state = m_selected_entity.get_component<Text_Editor_State>();
+			auto& props = m_selected_entity.get_component<Text_Component>();
+
+			if (e.get_key_code() == Key::Left && state.caret_index > 0)
+			{
+				state.caret_index--;
+				state.blink_timer = 0.0f;
+				return true;
+			}
+			else if (e.get_key_code() == Key::Right && state.caret_index < (props.text.size()))
+			{
+				state.caret_index++;
+				state.blink_timer = 0.0f;
+				return true;
+			}
+			else if (e.get_key_code() == Key::Backspace)
+			{
+				if (control)
+				{
+					if (state.caret_index == 0)
+						return true;
+
+					size_t delete_start = state.caret_index;
+					while (delete_start > 0 && props.text[delete_start - 1] == ' ')
+						delete_start--;
+
+					while (delete_start > 0 && props.text[delete_start - 1] != ' ')
+						delete_start--;
+
+					props.text.erase(props.text.begin() + delete_start, props.text.begin() + state.caret_index);
+
+					state.caret_index = delete_start;
+				}
+				if (state.caret_index > 0)
+				{
+					props.text.erase(props.text.begin() + state.caret_index - 1);
+					state.blink_timer = 0.0f;
+					state.caret_index--;
+				}
+				return true;
+			}
+			else if (e.get_key_code() == Key::Enter)
+			{
+				props.text.insert(props.text.begin() + state.caret_index, '\n');
+				state.blink_timer = 0.0f;
+				state.caret_index++;
+				return true;
+			}
+			else if (e.get_key_code() == Key::Tab)
+			{
+				props.text.insert(props.text.begin() + state.caret_index, '\t');
+				state.blink_timer = 0.0f;
+				state.caret_index++;
+				return true;
+			}
+			else if (e.get_key_code() == Key::Escape)
+			{
+				state.blink_timer = 0.0f;
+				state.active = false;
+				return true;
+			}
+			else if (e.get_key_code() == Key::V)
+			{
+				if (control)
+				{
+					std::string clipboard_text = Application::get().get_window().get_clipboard_string();
+					props.text.insert(props.text.begin() + state.caret_index, clipboard_text.begin(), clipboard_text.end());
+					state.blink_timer = 0.0f;
+					state.caret_index += clipboard_text.size();
+				}
+			}
+			return false;
+		}
+
+
+
+
+
+
 		if (control)
 		{
-			// Duplicate Entity
+
 			if (e.get_key_code() == Key::D)
 			{
 				duplicate_entity();
 				m_scene->set_save_required(true);
+				return true;
 			}
 
 			// Make Root Entity
@@ -1563,33 +1678,37 @@ namespace ag
 			{
 				make_root_entity();
 				m_scene->set_save_required();
+				return true;
 			}
 			return false;
 		}
 
-		//Transformation Setting
-		if (!m_selected_entity)
-			return false;
 		switch (e.get_key_code())
 		{
-		case Key::G: reset_transform_setting(); m_current_transform_setting = TransformSetting::Move; break;
-		case Key::S: reset_transform_setting(); m_current_transform_setting = TransformSetting::Scale; break;
-		case Key::R: reset_transform_setting(); m_current_transform_setting = TransformSetting::Rotate; break;
-		case Key::X: m_current_transform_axis = TransformAxis::X; break;
-		case Key::Y: m_current_transform_axis = TransformAxis::Y; break;
+		case Key::G: reset_transform_setting(); m_current_transform_setting = TransformSetting::Move; return true;
+		case Key::S: reset_transform_setting(); m_current_transform_setting = TransformSetting::Scale; return true;
+		case Key::R: reset_transform_setting(); m_current_transform_setting = TransformSetting::Rotate; return true;
+		case Key::X: m_current_transform_axis = TransformAxis::X; return true;
+		case Key::Y: m_current_transform_axis = TransformAxis::Y; return true;
 		case Key::Escape:
+		{
 			if (m_current_transform_setting != TransformSetting::None)
 				reset_transform_setting();
-			break;
+			return true;
+		}
 
 		case Key::Delete:
 		{
-			delete_entity();
-			m_scene->set_save_required();
-			break;
+			if (!m_selected_entity.has_component<Text_Editor_State>())
+			{
+				delete_entity();
+				m_scene->set_save_required();
+				return true;
+			}
 		}
 
 		}
+
 		return false;
 	}
 
@@ -1597,6 +1716,30 @@ namespace ag
 	{
 		return false;
 	}
+
+	bool ScenePanel::on_text_input(TextInputEvent& e)
+	{
+		if (!has_selected_entity())
+			return false;
+
+		bool control = Keyboard::is_key_pressed(Key::LeftControl) || Keyboard::is_key_pressed(Key::RightControl);
+		if (control)
+			return false;
+		if (m_selected_entity.has_component<Text_Component>() && m_selected_entity.get_component<Text_Editor_State>().active && m_selected_entity.has_component<Text_Editor_State>())
+		{
+			auto& state = m_selected_entity.get_component<Text_Editor_State>();
+			auto& text = m_selected_entity.get_component<Text_Component>();
+
+			text.text.insert(text.text.begin() + state.caret_index, e.get_character());
+
+			state.caret_index++;
+			state.blink_timer = 0.0f;
+			return true;
+		}
+	}
+
+
+
 
 
 	bool ScenePanel::on_entity_clicked()
@@ -1612,7 +1755,7 @@ namespace ag
 			if (tag.parent.get_id() != INVALID_ENTITY)
 				continue;
 
-			for (auto e = tag.children.rbegin() ; e != tag.children.rend(); ++e)
+			for (auto e = tag.children.rbegin(); e != tag.children.rend(); ++e)
 			{
 				if (check_if_clicked(*e))
 					return true;

@@ -63,20 +63,16 @@ namespace ag
 				float button_width = 26.0f;
 				float button_x = start_x + available_width - button_width - ImGui::GetStyle().FramePadding.x * 2;
 
-				// Save cursor position
 				float saved_cursor_y = ImGui::GetCursorPosY();
 				float saved_cursor_x = ImGui::GetCursorPosX();
 
-				// Draw a dummy at the button position first to extend boundaries
 				ImGui::SetCursorPosX(button_x);
 				ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
 				ImGui::Dummy(ImVec2(button_width * 2.0f, 28));
 
-				// Now set cursor back for the actual button
 				ImGui::SetCursorPosX(button_x);
 				ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
 
-				// Style the remove button
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -91,11 +87,9 @@ namespace ag
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);
 
-				// Restore cursor position for tree content
 				ImGui::SetCursorPosY(saved_cursor_y);
 				ImGui::SetCursorPosX(saved_cursor_x);
 
-				// Confirmation popup
 				if (ImGui::BeginPopup("ConfirmRemove##Component"))
 				{
 					ImGui::Text("Remove component!");

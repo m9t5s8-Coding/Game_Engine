@@ -87,10 +87,15 @@ namespace ag::NodeHelper
 			return Node_Capability::TileMap;
 
 		case ag::NodeType::Scene2D:
-		case ag::NodeType::Text:
+		
 		case ag::NodeType::Button:
 		case ag::NodeType::TextureButton:
 			return Node_Capability::None;
+
+		case ag::NodeType::Text:
+			return Node_Capability::Text |
+				Node_Capability::Transform |
+				Node_Capability::UI;
 
 		case ag::NodeType::CollisionShape:
 			return Node_Capability::Physics2D;

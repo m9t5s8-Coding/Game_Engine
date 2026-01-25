@@ -127,6 +127,7 @@ namespace ag
 
 		bool on_key_pressed(KeyPressedEvent& e);
 		bool on_mouse_pressed(MouseButtonPressedEvent& e);
+		bool on_text_input(TextInputEvent& e);
 		void tile_map_draw();
 
 

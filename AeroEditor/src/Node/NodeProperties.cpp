@@ -24,11 +24,12 @@ namespace ag
 
 		REGISTER_COMPONENT(Window_Component);
 
-
+		REGISTER_COMPONENT(FontStyle_Component);
 		REGISTER_COMPONENT(UI_Component);
 
 		REGISTER_COMPONENT(PhysicsBody_Component);
 		REGISTER_COMPONENT(Script_Component);
+
 	}
 
 	void NodeProperties::draw_added_components(Entity entity)
@@ -137,8 +138,22 @@ namespace ag
 	void Render2D_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Render2D_Component >("Render2D Component", entity,
-			[](Render2D_Component& props) {
-				UI::draw_vec2("Size", props.size);
+			[entity](Render2D_Component& props) mutable
+			{
+
+				vec2f reset_value;
+				{
+					if (entity.has_component<Texture_Component>() && entity.get_component<Texture_Component>().texture)
+					{
+						reset_value = entity.get_component<Texture_Component>().texture->get_size();
+					}
+
+					if (entity.has_component<TextureRect_Component>())
+					{
+						reset_value = entity.get_component<TextureRect_Component>().rect.size;
+					}
+				}
+				UI::draw_vec2("Size", props.size, reset_value);
 
 				ImGui::Dummy(spacing);
 
@@ -155,26 +170,32 @@ namespace ag
 				ImGui::Dummy(spacing);
 			}, false);
 	}
-	void TextureRect_Component::imgui_render(Entity entity)
+	void TextureRect_Component::imgui_render(Entity entity, bool can_remove)
 	{
 		NodeProperties::draw_component_node<TextureRect_Component>("TextureRect Component", entity,
 			[entity](TextureRect_Component& props) mutable
 			{
-				UI::draw_vec2("Position", props.rect.position);
+				ImGui::Dummy(spacing);
+				bool changed = false;
+				changed = UI::draw_vec2("Position", props.rect.position);
 				ImGui::Dummy(spacing);
 
 				vec2u reset_value;
 				if (entity.has_component<Texture_Component>())
 				{
 					const auto& texture = entity.get_component<Texture_Component>();
-					if(texture.texture)
+					if (texture.texture)
 					{
 						reset_value = texture.texture->get_size();
 					}
+					if ((props.rect.size.x == 0 || props.rect.size.y == 0) && texture.texture)
+					{
+						props.rect.size = texture.texture->get_size();
+					}
 				}
-				UI::draw_vec2("Size", props.rect.size, reset_value);
+				changed = UI::draw_vec2("Size", props.rect.size, reset_value);
 				ImGui::Dummy(spacing);
-			}, true);
+			}, can_remove);
 	}
 	void TextureFlip_Component::imgui_render(Entity entity)
 	{
@@ -339,10 +360,244 @@ namespace ag
 		NodeProperties::draw_component_node<AutoTiling_Component>("AutoTiling Component", entity,
 			[entity](AutoTiling_Component& comp) mutable
 			{
-					UI::draw_autotiling_register(entity);
+				UI::draw_autotiling_register(entity);
 			}, true);
 	}
+	void Text_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Text_Component>("Text Component", entity,
+			[entity](Text_Component& comp) mutable
+			{
+				ImGui::Dummy(spacing);
+				//UI::draw_string_multiline("Description", comp.text, 2048, ImVec2(0, 150));
+				UI::draw_value("Size", comp.font_size, 10.0f);
+				ImGui::Dummy(spacing);
 
+
+
+			}, false);
+	}
+	void FontStyle_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<FontStyle_Component>("FontStyle Component", entity,
+			[entity](FontStyle_Component& props) mutable
+			{
+				ImGui::Dummy(spacing);
+				UI::draw_color("Text Color", props.color);
+				ImGui::Dummy(spacing);
+				std::vector<std::string> allignment;
+				allignment.push_back("Left");
+				allignment.push_back("Center");
+				allignment.push_back("Right");
+				UI::draw_enum("Horizontal", props.h_allignment, allignment);
+				ImGui::Dummy(ImVec2(0, 2));
+				allignment.clear();
+				allignment.push_back("Top");
+				allignment.push_back("Center");
+				allignment.push_back("Bottom");
+				UI::draw_enum("Vertical", props.v_allignment, allignment);
+				ImGui::Dummy(spacing);
+
+				UI::draw_value("Line Height", props.line_height, 1.0f, 5.0f);
+				ImGui::Dummy(spacing);
+
+				UI::draw_vec2("Bounds", props.bounds);
+				ImGui::Dummy(spacing);
+
+
+
+			}, true);
+	}
+	void Button_Visual::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Button_Component>("Button_Visual", entity,
+			[entity](Button_Component& comps) mutable
+			{
+				bool changed = false;
+				ImGui::Dummy(spacing);
+				changed = UI::draw_color("Background", comps.base.background);
+
+				ImGui::Dummy(spacing);
+				changed = UI::draw_color("Border", comps.base.border);
+
+				ImGui::Dummy(spacing);
+				changed = UI::draw_color("Text", comps.base.text);
+
+				ImGui::Dummy(spacing);
+				changed = UI::draw_value("Thickness", comps.base.border_thickness);
+
+				ImGui::Dummy(spacing);
+				float size = comps.layout.size.y;
+				changed = UI::draw_value("Corner", comps.base.corner, 0.0f, size * 0.5f);
+
+
+				if (changed)
+				{
+					comps.overrides[comps.current_state] = comps.base;
+				}
+
+				ImGui::Dummy(spacing);
+			}, false);
+	}
+	void Button_Layout::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Button_Component>("Button_Layout", entity,
+			[entity](Button_Component& comps) mutable
+			{
+				ImGui::Dummy(spacing);
+				UI::draw_vec2("Size", comps.layout.size);
+				ImGui::Dummy(spacing);
+
+				std::vector<std::string> allignment;
+				allignment.push_back("Left");
+				allignment.push_back("Center");
+				allignment.push_back("Right");
+				UI::draw_enum("Horizontal", comps.layout.h_allignment, allignment);
+				ImGui::Dummy(ImVec2(0, 2));
+				allignment.clear();
+				allignment.push_back("Top");
+				allignment.push_back("Center");
+				allignment.push_back("Bottom");
+				UI::draw_enum("Vertical", comps.layout.v_allignment, allignment);
+				ImGui::Dummy(spacing);
+
+				UI::draw_bool("Uniform", comps.layout.uniform);
+				ImGui::Dummy(spacing);
+			}, false);
+	}
+	void Button_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Button_Component>("Button Component", entity,
+			[entity](Button_Component& comps) mutable
+			{
+				ImGui::Dummy(spacing);
+				std::vector<std::string> visual_states = Button_Visual::all_states();
+				bool exists = false;
+				if (UI::draw_enum("State", comps.current_state, visual_states))
+				{
+					auto it = comps.overrides.find(comps.current_state);
+					if (it != comps.overrides.end())
+						comps.base = it->second;
+				}
+
+				auto it = comps.overrides.find(comps.current_state);
+				if (it != comps.overrides.end())
+					exists = true;
+				else
+					exists = false;
+
+
+				float total_width = ImGui::GetContentRegionAvail().x;
+				float button_spacing = 10.0f;
+				ImGui::Dummy(spacing);
+
+				GUI_Button button;
+				button.background.normal = Color(70, 70, 70);
+				button.background.hover = Color(95, 95, 95);
+				button.background.active = Color(55, 55, 55);
+				button.background.disabled = Color(45, 45, 45);
+
+				button.text.normal = Color(230, 230, 230);
+				button.text.hover = Color(255, 255, 255);
+				button.text.active = Color(210, 210, 210);
+				button.text.disabled = Color(120, 120, 120);
+
+				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
+
+
+				button.label = "Create New";
+				button.enabled = !exists;
+				if (UI::draw_button(button))
+				{
+					comps.overrides[comps.current_state] = comps.base;
+				}
+
+				ImGui::SameLine(0, button_spacing);
+
+				button.label = "Delete";
+				button.enabled = exists;
+				if (UI::draw_button(button))
+				{
+					if (comps.current_state != Button_Visual_State::Normal)
+					{
+						comps.overrides.erase(comps.current_state);
+						comps.current_state = Button_Visual_State::Normal;
+					}
+				}
+				ImGui::Dummy(spacing);
+			}, false);
+	}
+	void Textured_Button_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Textured_Button_Component>("Texture Button Component", entity,
+			[entity](Textured_Button_Component& comps) mutable
+			{
+				ImGui::Dummy(spacing);
+				std::vector<std::string> visual_states = Button_Visual::all_states();
+				bool exists = false;
+				if (UI::draw_enum("State", comps.current_state, visual_states))
+				{
+					auto it = comps.overrides.find(comps.current_state);
+					if (it != comps.overrides.end())
+					{
+						comps.base_rect = it->second;
+						if (entity.has_component<TextureRect_Component>())
+						{
+							auto& props = entity.get_component<TextureRect_Component>();
+							props.rect = comps.base_rect;
+						}
+					}
+				}
+
+				auto it = comps.overrides.find(comps.current_state);
+				if (it != comps.overrides.end())
+					exists = true;
+				else
+					exists = false;
+
+
+				float total_width = ImGui::GetContentRegionAvail().x;
+				float button_spacing = 10.0f;
+				ImGui::Dummy(spacing);
+
+				GUI_Button button;
+				button.background.normal = Color(70, 70, 70);
+				button.background.hover = Color(95, 95, 95);
+				button.background.active = Color(55, 55, 55);
+				button.background.disabled = Color(45, 45, 45);
+
+				button.text.normal = Color(230, 230, 230);
+				button.text.hover = Color(255, 255, 255);
+				button.text.active = Color(210, 210, 210);
+				button.text.disabled = Color(120, 120, 120);
+
+				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
+
+
+				button.label = "Create New";
+				button.enabled = !exists;
+				if (UI::draw_button(button))
+				{
+					comps.overrides[comps.current_state] = comps.base_rect;
+				}
+
+				ImGui::SameLine(0, button_spacing);
+
+				button.label = "Delete";
+				button.enabled = exists;
+				if (UI::draw_button(button))
+				{
+					if (comps.current_state != Button_Visual_State::Normal)
+					{
+						comps.overrides.erase(comps.current_state);
+						comps.current_state = Button_Visual_State::Normal;
+					}
+				}
+				ImGui::Dummy(spacing);
+			}, false);
+	}
+	
+	
 	void NodeProperties::animated_sprite_2D(Entity entity)
 	{
 		Tag_Component::imgui_render(entity);
@@ -357,7 +612,15 @@ namespace ag
 
 	void NodeProperties::button_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		Button_Layout::imgui_render(entity);
+		Text_Component::imgui_render(entity);
+		Button_Component::imgui_render(entity);
+		Button_Visual::imgui_render(entity);
 
+		add_component(entity);
+		draw_added_components(entity);
 	}
 
 	void NodeProperties::camera_2D(Entity entity)
@@ -419,12 +682,25 @@ namespace ag
 
 	void NodeProperties::text_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		//Render2D_Component::imgui_render(entity);
+		Text_Component::imgui_render(entity);
 
+		add_component(entity);
+		draw_added_components(entity);
 	}
 
 	void NodeProperties::texture_button_2D(Entity entity)
 	{
+		Tag_Component::imgui_render(entity);
+		Transform_Component::imgui_render(entity);
+		Texture_Component::imgui_render(entity);
+		Textured_Button_Component::imgui_render(entity);
+		TextureRect_Component::imgui_render(entity, false);
 
+		add_component(entity);
+		draw_added_components(entity);
 	}
 
 	void NodeProperties::tilemap_2D(Entity entity)

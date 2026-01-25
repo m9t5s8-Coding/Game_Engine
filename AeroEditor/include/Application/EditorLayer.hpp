@@ -43,6 +43,7 @@ namespace ag
 		void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) { m_scenes[scene_name] = scene; m_panel->set_scene(scene); }
 		void create_new_scene(const std::string& path);
 		void open_scene();
+		void open_scene(std::string& path);
 		void save_scene();
 		void run_runtime();
 		void save_scene_as_default();

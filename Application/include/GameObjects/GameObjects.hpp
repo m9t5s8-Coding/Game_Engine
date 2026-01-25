@@ -38,8 +38,8 @@ namespace ag::NodeHelper
 	{
 		if (entity.has_component<C>())
 		{
-			const auto& component = entity.get_component<C>();
-			value = static_cast<S>(component.*member_ptr);
+			auto& component = entity.get_component<C>();
+			value = component.*member_ptr;
 		}
 	}
 

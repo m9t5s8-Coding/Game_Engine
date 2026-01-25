@@ -1,4 +1,4 @@
-#include<GameObjects/Components/Components.hpp>
+﻿#include<GameObjects/Components/Components.hpp>
 
 #include <GameObjects/GameObjects.hpp>
 #include <Renderer/Renderer2D.hpp>
@@ -1351,13 +1351,30 @@ namespace ag
 	{
 		json j;
 
+		const auto& props = entity.get_component<FontStyle_Component>();
 
+		Helper::save_json(j, "H_Allignment", (int)props.h_allignment);
+		Helper::save_json(j, "V_Allignment", (int)props.v_allignment);
+		Helper::save_json(j, "Style", props.style);
+		Helper::save_json(j, "Line_Height", props.line_height);
+		Helper::save_json(j, "Bounds", props.bounds);
+		Helper::save_json(j, "Color", props.color);
 
 		return j;
 	}
 	void FontStyle_Component::load_json(Entity entity, const json& j)
 	{
+		if (!entity.has_component<FontStyle_Component>())
+			entity.add_component<FontStyle_Component>();
 
+		auto& props = entity.get_component<FontStyle_Component>();
+
+		Helper::load_json(j, "H_Allignment", props.h_allignment);
+		Helper::load_json(j, "V_Allignment", props.v_allignment);
+		Helper::load_json(j, "Style", props.style);
+		Helper::load_json(j, "Line_Height", props.line_height);
+		Helper::load_json(j, "Bounds", props.bounds);
+		Helper::load_json(j, "Color", props.color);
 	}
 	bool FontStyle_Component::is_compatible(NodeType type)
 	{
@@ -1366,14 +1383,24 @@ namespace ag
 	}
 
 
-	vec2f Text::calc_text_size(const Text& text, const vec2f& s)
+	constexpr float TEXT_EPSILON = 0.10f;
+	// calculate the longest text_size
+	vec2f Text::calc_longest_size(const Text& text, const vec2f& s)
 	{
-		vec2f scale;
-		scale = s * (text.font_size / TextLoader::font.em_size);
+		const vec2f scale = s * text.font_size / TextLoader::font.em_size;
 		vec2f size = { 0, 0 };
-		float line_height = (TextLoader::font.ascender - TextLoader::font.descender) * TextLoader::font.em_size * scale.y;
+		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
+
+		if (text.bounds.x != 0 && text.bounds.y != 0)
+		{
+			float max_height = std::max((float)text.bounds.y, line_height);
+			return vec2f(text.bounds.x, max_height);
+		}
+
 		size.y = line_height;
 		float width = 0.0f;
+
+
 
 		for (char c : text.text)
 		{
@@ -1384,20 +1411,360 @@ namespace ag
 				size.y += line_height;
 				continue;
 			}
+			if (c == '\t')
+			{
+				auto it = TextLoader::font.glyphs.find(' ');
+				if (it != TextLoader::font.glyphs.end())
+				{
+					float length = (it->second.advance * scale.x) * 4.0f;
+					width += length;
+				}
+				continue;
+			}
 			auto it = TextLoader::font.glyphs.find(c);
 			if (it != TextLoader::font.glyphs.end())
 			{
 				width += it->second.advance * scale.x;
+				if (width >= text.bounds.x && text.bounds.x != 0)
+				{
+					width -= it->second.advance * scale.x;
+					size.x = std::max(size.x, width);
+					width = 0.0f;
+					size.y += line_height;
+				}
 			}
 		}
 		size.x = std::max(size.x, width);
+		size.y = std::max(size.y, line_height);
 		return size;
 	}
-	vec2f Text::center_text(const Text& text, const Transform_Component& transform)
+
+	vec2f Text::calc_line_text_size(const Text& text, const vec2f& s,const vec2f& longest_size, size_t start_index, size_t* break_index)
 	{
-		vec2f size = calc_text_size(text, transform.scale);
-		return transform.position - (size * 0.5f);
+		vec2f scale = s * (text.font_size / TextLoader::font.em_size);
+
+		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
+
+
+		float width = 0.0f;
+		float space_width = 0.0f;
+
+		if (auto it = TextLoader::font.glyphs.find(' ');
+			it != TextLoader::font.glyphs.end())
+		{
+			space_width = it->second.advance * scale.x;
+		}
+
+		size_t i = start_index;
+
+		while (i < text.text.size())
+		{
+			// Handle newline
+			if (text.text[i] == '\n')
+			{
+				*break_index = i;
+				return { width, line_height };
+			}
+
+			// Skip leading spaces
+			if (text.text[i] == ' ')
+			{
+				i++;
+				continue;
+			}
+
+			
+			float word_width = 0.0f;
+			size_t word_start = i;
+
+			while (i < text.text.size())
+			{
+				char c = text.text[i];
+
+				if (c == ' ' || c == '\n')
+				{
+					//AERO_CORE_INFO("I break it");
+					break;
+				}
+
+				if (c == '\t')
+				{
+					word_width += space_width * 4.0f;
+					i++;
+					continue;
+				}
+
+				auto it = TextLoader::font.glyphs.find(c);
+				if (it != TextLoader::font.glyphs.end())
+				{
+					float char_width = it->second.advance * scale.x;
+
+
+					if (word_width + char_width > longest_size.x)
+					{
+						if (word_start != start_index)
+						{
+							*break_index = word_start;
+							//width += word_width;
+						}
+						else
+						{
+							*break_index = i;
+							width += word_width;
+						}
+
+						return { width, line_height };
+					}
+
+					word_width += char_width;
+				}
+
+				i++;
+			}
+
+			float total = width + space_width + word_width;
+			if (longest_size.x > 0 &&
+				width > 0 &&
+				total - longest_size.x > TEXT_EPSILON)
+			{
+				*break_index = word_start;
+				return { width, line_height };
+			}
+
+			// Add word
+			if (width > 0)
+				width += space_width;
+
+			width += word_width;
+
+			// Skip trailing space
+			if (i < text.text.size() && text.text[i] == ' ')
+				i++;
+		}
+
+		*break_index = i;
+		return { width, line_height };
+	}
+	// center the text
+	vec2f Text::center_text(const Text& text, const Transform_Component& transform, const vec2f& longest_size)
+	{
+		return transform.position - (longest_size * 0.5f);
+	}
+
+	vec2f Text::center_single_line_text(const Text& text, const Transform_Component& transform, const vec2f& longest_size, size_t start_index, size_t* break_index)
+	{
+		vec2f position;
+		switch (text.h_allignment)
+		{
+		case Text_Allignment_Horizontal::Left:
+		{
+			calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.x = transform.position.x;
+			break;
+		}
+
+		case Text_Allignment_Horizontal::Center:
+		{
+			vec2f size = calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.x = transform.position.x + (longest_size * 0.5).x - (size * 0.5f).x;
+			break;
+		}
+
+		case Text_Allignment_Horizontal::Right:
+		{
+			vec2f size = calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.x =  transform.position.x + longest_size.x - size.x;
+			break;
+		}
+		}
+
+		switch (text.v_allignment)
+		{
+		case Text_Allignment_Vertical::Top:
+		{
+			calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.y = transform.position.y;
+			break;
+		}
+
+		case Text_Allignment_Vertical::Center:
+		{
+			vec2f size = calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.y = transform.position.y + (longest_size * 0.5).y - (size * 0.5f).y;
+			break;
+		}
+
+		case Text_Allignment_Vertical::Bottom:
+		{
+			vec2f size = calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+			position.y = transform.position.y + longest_size.y - size.y;
+			break;
+		}
+		}
+		return position;
 	}
 
 
+
+
+	json ButtonState_Component::save_json(Entity entity)
+	{
+		json j;
+
+		return j;
+	}
+	void ButtonState_Component::load_json(Entity entity, const json& j)
+	{
+
+	}
+	bool ButtonState_Component::is_compatible(NodeType type)
+	{
+		return true;
+	}
+
+
+	json Button_Visual::save_json(const Button_Visual& visual)
+	{
+		json j;
+		Helper::save_json(j, "Background", visual.background);
+		Helper::save_json(j, "Border", visual.border);
+		Helper::save_json(j, "Text", visual.text);
+		Helper::save_json(j, "Thickness", visual.border_thickness);
+		Helper::save_json(j, "Corner", visual.corner);
+		return j;
+	}
+	Button_Visual Button_Visual::load_json(const json& j)
+	{
+		Button_Visual visual;
+		Helper::load_json(j, "Background", visual.background);
+		Helper::load_json(j, "Border", visual.border);
+		Helper::load_json(j, "Text", visual.text);
+		Helper::load_json(j, "Thickness", visual.border_thickness);
+		Helper::load_json(j, "Corner", visual.corner);
+		return visual;
+	}
+
+
+	json Button_Layout::save_json(const Button_Layout& layout)
+	{
+		json j;
+		Helper::save_json(j, "Size", layout.size);
+		Helper::save_json(j, "HAllignment", (int)layout.h_allignment);
+		Helper::save_json(j, "VAllignment", (int)layout.v_allignment);
+		Helper::save_json(j, "Uniform", layout.uniform);
+		return j;
+	}
+	Button_Layout Button_Layout::load_json(const json& j)
+	{
+		Button_Layout layout;
+		Helper::load_json(j, "Size", layout.size);
+		Helper::load_json(j, "HAllignment", layout.h_allignment);
+		Helper::load_json(j, "VAllignment", layout.v_allignment);
+		Helper::load_json(j, "Uniform", layout.uniform);
+		return layout;
+	}
+
+
+
+	void Button_Component::add_component(Entity entity)
+	{
+		Button_Component comps;
+		comps.overrides[Button_Visual_State::Normal] = comps.base;
+
+		entity.add_component<Button_Component>(comps);
+	}
+	json Button_Component::save_json(Entity entity)
+	{
+		json j;
+		auto& comps = entity.get_component<Button_Component>();
+
+		j["Layout"] = Button_Layout::save_json(comps.layout);
+
+		j["Visual"] = json::object();
+
+		comps.overrides[comps.current_state] = comps.base;
+
+		for (const auto& [state, visual] : comps.overrides)
+		{
+			j["Visual"][Button_Visual::to_string(state)] = Button_Visual::save_json(visual);
+		}
+
+		return j;
+	}
+	void Button_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<Button_Component>())
+			entity.add_component<Button_Component>();
+
+		auto& comps = entity.get_component<Button_Component>();
+
+		comps.layout = Button_Layout::load_json(j["Layout"]);
+
+		if (j.contains("Visual") && j["Visual"].is_object())
+		{
+			comps.overrides.clear();
+
+			for (const auto& [state, visual_json] : j["Visual"].items())
+			{
+				Button_Visual visual = Button_Visual::load_json(visual_json);
+				comps.overrides[Button_Visual::form_string(state)] = visual;
+			}
+		}
+
+		comps.base = comps.overrides[Button_Visual_State::Normal];
+
+	}
+
+
+	void Textured_Button_Component::add_component(Entity entity)
+	{
+		Textured_Button_Component comps;
+		comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
+
+		entity.add_component<Textured_Button_Component>(comps);
+	}
+	json Textured_Button_Component::save_json(Entity entity)
+	{
+		json j;
+
+		auto& comps = entity.get_component<Textured_Button_Component>();
+		j["Visual"] = json::object();
+
+		comps.overrides[comps.current_state] = comps.base_rect;
+		for (const auto& [state, rect] : comps.overrides)
+		{
+			Helper::save_json(j["Visual"], Button_Visual::to_string(state), rect);
+		}
+		return j;
+	}
+
+	void Textured_Button_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<Textured_Button_Component>())
+			entity.add_component<Textured_Button_Component>();
+
+		auto& comps = entity.get_component<Textured_Button_Component>();
+
+		if (j.contains("Visual") && j["Visual"].is_object())
+		{
+			comps.overrides.clear();
+
+			for (const auto& [state_str, rect_json] : j["Visual"].items())
+			{
+				Button_Visual_State state =
+					Button_Visual::form_string(state_str);
+				uint_rect rect;
+				Helper::load_json(rect_json, rect);
+
+				comps.overrides[state] = rect;
+			}
+		}
+
+		comps.base_rect = comps.overrides[Button_Visual_State::Normal];
+		if (entity.has_component<TextureRect_Component>())
+		{
+			auto& props = entity.get_component<TextureRect_Component>();
+			props.rect = comps.base_rect;
+		}
+	}
 }

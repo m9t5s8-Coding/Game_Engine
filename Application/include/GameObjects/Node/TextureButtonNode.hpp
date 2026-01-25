@@ -4,7 +4,7 @@
 
 namespace ag
 {
-  struct ButtonNode
+  struct TextureButtonNode
   {
     static void create_node(Entity entity);
     static void delete_node(Entity entity);

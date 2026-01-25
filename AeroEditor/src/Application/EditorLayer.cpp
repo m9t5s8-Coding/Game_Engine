@@ -92,10 +92,10 @@ namespace ag
 
 
 		
-		m_panel->draw_selected_text();
+		//m_panel->draw_selected_text();
 		m_panel->draw_collision_shapes();
 		m_panel->draw_tilemap_ghosts();
-		m_panel->draw_selection_box();
+		//m_panel->draw_selection_box();
 		Renderer2D::end_scene();
 
 		
@@ -741,6 +741,22 @@ namespace ag
 			else
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+				{
+					const char* dropped_path = (const char*)payload->Data;
+
+					std::filesystem::path path(dropped_path);
+					if(path.extension() == ".aeroscene")
+					{
+						std::string path_string = path.string();
+						open_scene(path_string);
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
 		}
 	}
 
@@ -807,11 +823,15 @@ namespace ag
 					Entity e((entt::entity)(pixel_data));
 					if (m_panel->has_selected_entity())
 					{
-						if (m_panel->get_selected_entity().get_id() != e.get_id())
+						if ((m_panel->get_selected_entity().get_id() != e.get_id() || m_panel->get_selected_entity().has_component<Text_Editor_State>() ) && m_panel->get_transform_setting() == TransformSetting::None)
+						{
 							m_panel->set_selected_entity(e);
+						}
 					}
 					else
+					{
 						m_panel->set_selected_entity(e);
+					}
 				}
 				else
 				{
@@ -922,16 +942,21 @@ namespace ag
 		if (full_path.empty())
 			return;
 
-		Helper::normalize_path(full_path);
-		auto scene = SaveScene::load_scene(full_path);
+		open_scene(full_path);
+	}
 
-		/*{
+	void EditorLayer::open_scene(std::string& path)
+	{
+		Helper::normalize_path(path);
+		auto scene = SaveScene::load_scene(path);
+
+		{
 			auto it = m_scenes.find(scene->get_name());
 			if (it != m_scenes.end())
 			{
 				save_scene();
 			}
-		}*/
+		}
 		m_scene = scene;
 		m_scenes[m_scene->get_name()] = m_scene;
 		m_panel->set_scene(m_scene);

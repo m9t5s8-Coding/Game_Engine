@@ -58,6 +58,7 @@ namespace ag
 
     bool m_running = true;
     bool m_is_closing = false;
+    float delta_time = 0.0f;
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);

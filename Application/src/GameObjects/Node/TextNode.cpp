@@ -58,19 +58,33 @@ namespace ag
 		const auto& transform = Transform_Component::get_world_transform(entity);
 		Text text;
 
+		if (entity.has_component<Text_Component>())
+		{
+			auto& comps = entity.get_component<Text_Component>();
 
-		NodeHelper::set_value(entity, &Text_Component::text, text.text);
-		NodeHelper::set_value(entity, &Text_Component::font_size, text.font_size);
+			text.text = comps.text;
+			text.font_size = comps.font_size;
+			
+		}
+	
 
+		if (entity.has_component<FontStyle_Component>())
+		{
+			const auto& style = entity.get_component<FontStyle_Component>();
 
+			text.h_allignment = style.h_allignment;
+			text.v_allignment = style.v_allignment;
+			text.line_height = style.line_height;
+			text.bounds = style.bounds;
+			text.text_color = style.color;
+			if (Engine::is_runtime())
+				text.draw_rect = false;
+		}
 
-		NodeHelper::set_value(entity, &FontStyle_Component::color, text.text_color);
 
 		if (Engine::is_runtime())
 			NodeHelper::set_value(entity, &UI_Component::mode, text.mode);
 
-		AERO_CORE_INFO("Rendering Text: {0}", text.text);
-		text.text = "AEROENGINE";
 		Renderer2D::draw_text(text, transform, entity_id);
 	}
 }

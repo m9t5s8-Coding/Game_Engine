@@ -464,10 +464,8 @@ namespace ag
 			}
 			else
 			{
-				// Draw a placeholder when no texture is loaded
 				ImGui::SetCursorScreenPos(image_min);
 
-				// Draw a checkerboard pattern as placeholder
 				const float checker_size = 16.0f;
 				const ImU32 col1 = ImGui::GetColorU32(ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
 				const ImU32 col2 = ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
@@ -485,7 +483,6 @@ namespace ag
 					}
 				}
 
-				// Draw a centered "+" icon or text
 				const char* drop_text = "Drop Texture Here";
 				ImVec2 text_size = ImGui::CalcTextSize(drop_text);
 				ImVec2 text_pos = ImVec2(
@@ -493,7 +490,6 @@ namespace ag
 					image_min.y + (preview_size.y - text_size.y) * 0.5f
 				);
 
-				// Draw text with shadow for better visibility
 				draw_list->AddText(ImVec2(text_pos.x + 1, text_pos.y + 1),
 					ImGui::GetColorU32(ImVec4(0, 0, 0, 0.5f)), drop_text);
 				draw_list->AddText(text_pos, ImGui::GetColorU32(ImVec4(1, 1, 1, 0.8f)), drop_text);
@@ -569,7 +565,7 @@ namespace ag
 		auto project = Project::get_active_project();
 		std::filesystem::path root = project->get_directory();
 
-		ImGui::Begin("Content Browser");
+		ImGui::Begin("Content Browser", nullptr, ImGuiWindowFlags_NoScrollbar);
 
 		draw_folder_node(root);
 
@@ -583,7 +579,7 @@ namespace ag
 
 		return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
-			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".aeroscene" || ext == ".lua";
+			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".json" || ext == ".aeroscene" || ext == ".lua";
 	}
 
 	bool UI::is_image(const std::filesystem::path& path)
@@ -596,8 +592,9 @@ namespace ag
 			ext == ".tiff" || ext == ".tif" || ext == ".webp";
 	}
 
-	void UI::draw_folder_node(const std::filesystem::path& directory)
+	void UI::draw_folder_node(const std::filesystem::path& directory, int depth)
 	{
+
 		std::vector<std::filesystem::directory_entry> entries;
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
 		{
@@ -624,21 +621,21 @@ namespace ag
 			static std::filesystem::path selected_path;
 			bool is_selected = (selected_path == path);
 
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
+			//ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f);
+
 			if (entry.is_directory())
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, folder_color.to_imvec4());
 
-				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen |
+				ImGuiTreeNodeFlags flags =
 					ImGuiTreeNodeFlags_Framed |
 					ImGuiTreeNodeFlags_SpanAvailWidth |
 					ImGuiTreeNodeFlags_AllowItemOverlap |
 					ImGuiTreeNodeFlags_OpenOnArrow |
 					(is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 
-				bool is_open = ImGui::TreeNodeEx(
-					(name).c_str(),
-					flags
-				);
+				bool is_open = ImGui::TreeNodeEx((name).c_str(), flags);
 
 				if (ImGui::IsItemClicked())
 				{
@@ -657,6 +654,8 @@ namespace ag
 					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
 
 					ImGui::BeginTooltip();
+					ImGui::Text(name.c_str());
+					ImGui::Separator();
 					ImGui::TextDisabled("Drag to move folder");
 					ImGui::EndTooltip();
 
@@ -667,35 +666,37 @@ namespace ag
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
 					{
+
 					}
 					ImGui::EndDragDropTarget();
 				}
 
 				if (is_open)
 				{
-					draw_folder_node(path);
+					draw_folder_node(path, depth + 1);
 					ImGui::TreePop();
 				}
-
-				ImGui::PopStyleColor();
 			}
+			
 			else if (is_right_file(path))
 			{
+				ImGuiTreeNodeFlags flags =
+					ImGuiTreeNodeFlags_Framed |
+					ImGuiTreeNodeFlags_Leaf |
+					ImGuiTreeNodeFlags_SpanAvailWidth |
+					ImGuiTreeNodeFlags_AllowItemOverlap |
+					ImGuiTreeNodeFlags_NoTreePushOnOpen |
+					(is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 
-				float avail_width = ImGui::GetContentRegionAvail().x;
-				float text_width = ImGui::CalcTextSize(name.c_str()).x;
+				ImGui::TreeNodeEx(name.c_str(), flags);
 
-				if (ImGui::Selectable(name.c_str(), is_selected,
-					ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_SpanAllColumns))
-				{
+				if (ImGui::IsItemClicked())
 					selected_path = path;
-				}
-
+				
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 				{
 					ImGui::BeginTooltip();
-					//ImGui::TextColored(file_color, "%s", name.c_str());
-					ImGui::Separator();
+					ImGui::Text(name.c_str());
 					ImGui::EndTooltip();
 				}
 
@@ -711,6 +712,8 @@ namespace ag
 					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
 
 					ImGui::BeginTooltip();
+					ImGui::Text(name.c_str());
+					ImGui::Separator();
 					ImGui::TextDisabled("Drag to move file");
 					ImGui::EndTooltip();
 
@@ -718,10 +721,14 @@ namespace ag
 				}
 
 			}
-
+			ImGui::PopStyleVar(2);
 			ImGui::PopID();
 		}
 	}
+
+
+
+
 
 	void UI::draw_animation(Entity entity)
 	{
@@ -744,7 +751,6 @@ namespace ag
 		UI::draw_bool("Playing", anim.playing);
 		ImGui::SameLine();
 
-		// Restart Button
 		if (ImGui::Button("Restart"))
 		{
 			anim.timer = 0.0f;
@@ -767,7 +773,6 @@ namespace ag
 		ImGui::SeparatorText("Animation Selection");
 
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
-		// To Show Current Animation
 		if (ImGui::BeginCombo("Current Animation",
 			anim.current_animation.empty() ? "None" : anim.current_animation.c_str()))
 		{
@@ -798,7 +803,6 @@ namespace ag
 		ImGui::SeparatorText("Animation Management");
 
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
-		// Animation Add Button
 		static char new_anim_name[128] = "";
 		ImGui::InputTextWithHint("##NewAnimName", "New Animation Name", new_anim_name, IM_ARRAYSIZE(new_anim_name));
 		ImGui::SameLine();
@@ -831,7 +835,6 @@ namespace ag
 
 
 
-		//To see How many Animation are there
 		ImGui::Text("Animations (%d):", (int)anim.animations.size());
 
 
@@ -859,7 +862,6 @@ namespace ag
 			float button_width = 26.0f;
 			float button_x = start_x + available_width - button_width - ImGui::GetStyle().FramePadding.x * 2;
 
-			// Save cursor position
 			float saved_cursor_y = ImGui::GetCursorPosY();
 			float saved_cursor_x = ImGui::GetCursorPosX();
 
@@ -887,7 +889,6 @@ namespace ag
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);
 
-			// Restore cursor position for tree content
 			ImGui::SetCursorPosY(saved_cursor_y);
 			ImGui::SetCursorPosX(saved_cursor_x);
 
@@ -1131,6 +1132,9 @@ namespace ag
 
 			return;
 		}
+
+
+
 
 
 
@@ -1637,6 +1641,12 @@ namespace ag
 				}, []() { show_frame_selector = false; selected_frames.clear(); });
 		}
 	}
+
+
+
+
+
+
 
 	void UI::draw_tilemap_register(Entity entity)
 	{

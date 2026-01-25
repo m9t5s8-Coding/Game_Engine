@@ -3,6 +3,7 @@
 #include <Math/Math.hpp>
 #include <Scene/Entity.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <string>
 
 namespace ag
 {
@@ -208,7 +209,7 @@ namespace ag
 		static void load_json(Entity entity, const json& j);
 
 		static bool is_compatible(NodeType type);
-		static void imgui_render(Entity entity);
+		static void imgui_render(Entity entity, bool can_remove = true);
 
 		static const char* get_name()
 		{
@@ -496,7 +497,7 @@ namespace ag
 		Center,
 		Right
 	};
-	enum class Text_Allignmet_Vertical
+	enum class Text_Allignment_Vertical
 	{
 		Top,
 		Center,
@@ -506,7 +507,8 @@ namespace ag
 	struct Text_Component : Base_Component<Text_Component>
 	{
 		std::string text = "AeroEngine";
-		float font_size = 48.0f;
+		float font_size = 12.0f;
+		
 
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
@@ -521,6 +523,35 @@ namespace ag
 		}
 	};
 
+	struct Text_Editor_State
+	{
+		size_t caret_index = 0;
+		bool active = false;
+		float blink_timer = 0.0f;
+
+		static void add_component(Entity entity)
+		{
+			if (!entity.has_component<Text_Editor_State>())
+			{
+				Text_Editor_State state;
+				state.active = false;
+				if (entity.has_component<Text_Component>())
+				{
+					auto& props = entity.get_component<Text_Component>();
+					state.caret_index = props.text.size();
+				}
+				entity.add_component<Text_Editor_State>(state);
+			}
+		}
+
+		static void remove_component(Entity entity)
+		{
+			if (entity.has_component<Text_Editor_State>())
+				entity.remove_component<Text_Editor_State>();
+		}
+	
+	};
+
 	enum FontStyle : uint8_t
 	{
 		dirty = 1 << 0,
@@ -531,17 +562,20 @@ namespace ag
 
 	struct FontStyle_Component : Base_Component<FontStyle_Component>
 	{
-		Color color = Color::White;
+		
 		Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Left;
-		Text_Allignmet_Vertical v_allignment = Text_Allignmet_Vertical::Top;
+		Text_Allignment_Vertical v_allignment = Text_Allignment_Vertical::Top;
 		uint8_t style = 0;
 		float line_height = 1.0f;
+		vec2u bounds = { 100, 50 };
+		Color color = Color::White;
 		
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
 
 		static bool is_compatible(NodeType type);
 		static void imgui_render(Entity entity);
+
 
 		static const char* get_name()
 		{
@@ -555,11 +589,18 @@ namespace ag
 		float font_size = 48;
 		RenderMode mode = RenderMode::World;
 		Color text_color = Color::White;
+		Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Left;
+		Text_Allignment_Vertical v_allignment = Text_Allignment_Vertical::Center;
 		vec2f starting_pos;
+		vec2f bounds;
+		float line_height = 1.0f;
+		vec2f padding = { 10, 10 };
+		bool draw_rect = true;
 
-		static vec2f calc_text_size(const Text& text, const vec2f& s);
-
-		static vec2f center_text(const Text& text, const Transform_Component& transform);
+		static vec2f calc_longest_size(const Text& text, const vec2f& s);
+		static vec2f calc_line_text_size(const Text& text, const vec2f& s, const vec2f& longest_size, size_t start_index, size_t* break_index);
+		static vec2f center_text(const Text& text, const Transform_Component& transform, const vec2f& longest_size);
+		static vec2f center_single_line_text(const Text& text, const Transform_Component& transform, const vec2f& longest_size, size_t start_index, size_t* break_index);
 	};
 
 
@@ -568,19 +609,173 @@ namespace ag
 
 	enum Button_State : uint8_t
 	{
-		Hovered = 1 << 0,
-		Pressed = 1 << 1,
-		Active = 1 << 2,
-		Focused = 1 << 3,
-		Disabled = 1 << 4
+		Normal = 1 << 0,
+		Hovered = 1 << 1,
+		Pressed = 1 << 2,
+		Active = 1 << 3,
+		Focused = 1 << 4,
+		Disabled = 1 << 5
 	};
+
+	enum class Button_Visual_State : uint8_t
+	{
+		Normal,
+		Hovered,
+		Pressed,
+		Focused,
+		Disabled
+	};
+
+	
+
 	struct ButtonState_Component : Base_Component<ButtonState_Component>
 	{
-		uint8_t button_state;
+		uint8_t button_state = static_cast<uint8_t>(Button_State::Normal);
 
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
 		static bool is_compatible(NodeType type);
+		static const char* get_name()
+		{
+			return "ButtonState";
+		}
+	};
+
+	struct Button_Visual
+	{
+		Color background = Color::White;
+		Color border = Color::Black;
+		Color text = Color::Black;
+		float border_thickness = 1.0f;
+		float corner = 5.0f;
+
+
+		static json save_json(const Button_Visual& visual);
+		static Button_Visual load_json(const json& j);
+
+		static const char* get_name()
+		{
+			return  "ButtonVisual";
+		}
+
+		static void imgui_render(Entity entity);
+
+		static const char* to_string(Button_Visual_State state)
+		{
+			switch (state)
+			{
+			case ag::Button_Visual_State::Normal:
+				return "Normal";
+			case ag::Button_Visual_State::Hovered:
+				return "Hovered";
+			case ag::Button_Visual_State::Pressed:
+				return "Pressed";
+			case ag::Button_Visual_State::Focused:
+				return "Focused";
+			case ag::Button_Visual_State::Disabled:
+				return "Disabled";
+			default:
+				break;
+			}
+		}
+
+		static std::vector<std::string> all_states()
+		{
+			std::vector<std::string> states;
+			states.push_back("Normal");
+			states.push_back("Hovered");
+			states.push_back("Pressed");
+			states.push_back("Focused");
+			states.push_back("Disabled");
+
+			return states;
+		}
+
+		static Button_Visual_State form_string(const std::string& s)
+		{
+			if (s == "Normal") return Button_Visual_State::Normal;
+			if (s == "Hovered")    return Button_Visual_State::Hovered;
+			if (s == "Pressed")  return Button_Visual_State::Pressed;
+			if (s == "Focused")  return Button_Visual_State::Focused;
+			if (s == "Disabled") return Button_Visual_State::Disabled;
+
+			return Button_Visual_State::Normal;
+		}
+	
+		static Button_Visual_State get_active_state(uint8_t mask)
+		{
+			if (mask & static_cast<uint8_t>(Button_State::Disabled))
+				return Button_Visual_State::Disabled;
+
+			if (mask & static_cast<uint8_t>(Button_State::Pressed) || mask & static_cast<uint8_t>(Button_State::Active))
+				return Button_Visual_State::Pressed;
+
+			if (mask & static_cast<uint8_t>(Button_State::Hovered))
+				return Button_Visual_State::Hovered;
+
+			if (mask & static_cast<uint8_t>(Button_State::Focused))
+				return Button_Visual_State::Focused;
+
+			return Button_Visual_State::Normal;
+		}
+	};
+
+	struct Button_Layout
+	{
+		vec2u size = { 100, 20 };
+		Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Center;
+		Text_Allignment_Vertical v_allignment = Text_Allignment_Vertical::Center;
+		bool uniform = true;
+		
+
+		static json save_json(const Button_Layout& layout);
+		static Button_Layout load_json(const json& j);
+
+		static const char* get_name()
+		{
+			return "ButtonLayout";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+	struct Button_Component : Base_Component<Button_Component>
+	{
+		Button_Visual base;
+		Button_Layout layout;
+		std::unordered_map<Button_Visual_State, Button_Visual> overrides;
+		Button_Visual_State current_state = Button_Visual_State::Normal;
+
+
+		static void add_component(Entity entity);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+
+		static const char* get_name()
+		{
+			return "Button";
+		}
+
+		static void imgui_render(Entity entity);
+	};
+
+	struct Textured_Button_Component : Base_Component<Button_Component>
+	{
+		uint_rect base_rect;
+		std::unordered_map<Button_Visual_State, uint_rect> overrides;
+		Button_Visual_State current_state = Button_Visual_State::Normal;
+
+		static void add_component(Entity entity);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+
+		static const char* get_name()
+		{
+			return "TexturedButton";
+		}
+
+		static void imgui_render(Entity entity);
+
 	};
 
 }

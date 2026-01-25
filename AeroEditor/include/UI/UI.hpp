@@ -77,7 +77,7 @@ namespace ag
 		static void content_browser();
 		static bool is_right_file(const std::filesystem::path& path);
 		static bool is_image(const std::filesystem::path& path);
-		static void draw_folder_node(const std::filesystem::path& directory);
+		static void draw_folder_node(const std::filesystem::path& directory, int depth = 0);
 		static void draw_script_selector(Entity entity);
 		static bool draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile);
 
@@ -648,20 +648,21 @@ namespace ag
 
 		static bool draw_color(const char* label, Color& color,
 			ImGuiColorEditFlags flags = ImGuiColorEditFlags_None,
-			const char* tooltip = nullptr) {
+			const char* tooltip = nullptr)
+		{
 			bool changed = false;
 			BeginProperty(label, tooltip);
 
-			// Convert to normalized float values
-			vec4f normalized = {
+			vec4f normalized =
+			{
 					color.r / 255.0f,
 					color.g / 255.0f,
 					color.b / 255.0f,
 					color.a / 255.0f
 			};
 
-			// Draw color picker
-			if (ImGui::ColorEdit4("##color", &normalized.x, flags)) {
+			if (ImGui::ColorEdit4("##color", &normalized.x, flags))
+			{
 				color.r = static_cast<uint8_t>(normalized.x * 255.0f);
 				color.g = static_cast<uint8_t>(normalized.y * 255.0f);
 				color.b = static_cast<uint8_t>(normalized.z * 255.0f);
@@ -669,20 +670,21 @@ namespace ag
 				changed = true;
 			}
 
-			// Color picker button
 			ImGui::SameLine(0, 4);
-			if (ImGui::Button("Picker", ImVec2(60, 0))) {
+			if (ImGui::Button("Picker", ImVec2(60, 0)))
+			{
 				ImGui::OpenPopup("color_picker_popup");
 			}
 
-			// Color picker popup
-			if (ImGui::BeginPopup("color_picker_popup")) {
+			if (ImGui::BeginPopup("color_picker_popup"))
+			{
 				ImGui::ColorPicker4("##picker", &normalized.x,
 					flags | ImGuiColorEditFlags_DisplayRGB |
 					ImGuiColorEditFlags_DisplayHSV |
 					ImGuiColorEditFlags_DisplayHex);
 
-				if (ImGui::Button("Apply")) {
+				if (ImGui::Button("Apply"))
+				{
 					color.r = static_cast<uint8_t>(normalized.x * 255.0f);
 					color.g = static_cast<uint8_t>(normalized.y * 255.0f);
 					color.b = static_cast<uint8_t>(normalized.z * 255.0f);
@@ -692,57 +694,67 @@ namespace ag
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Cancel")) {
+				if (ImGui::Button("Cancel"))
+				{
 					ImGui::CloseCurrentPopup();
 				}
 
 				ImGui::EndPopup();
 			}
 
-			// Context menu
-			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1)) {
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
 				ImGui::OpenPopup("color_context_menu");
 			}
 
-			if (ImGui::BeginPopup("color_context_menu")) {
-				if (ImGui::MenuItem("Copy as Hex")) {
+			if (ImGui::BeginPopup("color_context_menu"))
+			{
+				if (ImGui::MenuItem("Copy as Hex"))
+				{
 					ImGui::SetClipboardText(fmt::format("#{:02X}{:02X}{:02X}{:02X}",
 						color.r, color.g, color.b, color.a).c_str());
 				}
 
-				if (ImGui::MenuItem("Copy as RGB")) {
+				if (ImGui::MenuItem("Copy as RGB"))
+				{
 					ImGui::SetClipboardText(fmt::format("rgb({}, {}, {})",
 						color.r, color.g, color.b).c_str());
 				}
 
-				if (ImGui::MenuItem("Copy as RGBA")) {
+				if (ImGui::MenuItem("Copy as RGBA"))
+				{
 					ImGui::SetClipboardText(fmt::format("rgba({}, {}, {}, {})",
 						color.r, color.g, color.b, color.a / 255.0f).c_str());
 				}
 
 				ImGui::Separator();
 
-				if (ImGui::MenuItem("Set to Black")) {
+				if (ImGui::MenuItem("Set to Black"))
+				{
 					color = Color::Black;
 					changed = true;
 				}
 
-				if (ImGui::MenuItem("Set to White")) {
+				if (ImGui::MenuItem("Set to White"))
+				{
 					color = Color::White;
 					changed = true;
 				}
 
-				if (ImGui::MenuItem("Set to Red")) {
+				if (ImGui::MenuItem("Set to Red"))
+				{
 					color = Color::Red;
 					changed = true;
 				}
 
-				if (ImGui::MenuItem("Set to Green")) {
+				if (ImGui::MenuItem("Set to Green"))
+				{
 					color = Color::Green;
 					changed = true;
 				}
 
-				if (ImGui::MenuItem("Set to Blue")) {
+				if (ImGui::MenuItem("Set to Blue"))
+				{
 					color = Color::Blue;
 					changed = true;
 				}
@@ -752,7 +764,6 @@ namespace ag
 
 			EndProperty();
 
-			ImGui::Spacing();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -808,6 +819,49 @@ namespace ag
 
 			return changed;
 		}
+
+		static bool draw_string_multiline(
+			const char* label,
+			std::string& value,
+			size_t buffer_size = 1024,
+			ImVec2 box_size = ImVec2(0, 100),
+			const char* tooltip = nullptr)
+		{
+			bool changed = false;
+			BeginProperty(label, tooltip);
+
+			static std::unordered_map<std::string, std::vector<char>> buffers;
+
+			// Stable key per property
+			std::string key = std::string(label) + "##multiline";
+			auto& buffer = buffers[key];
+
+			if (buffer.empty() || std::string(buffer.data()) != value)
+			{
+				buffer.resize(buffer_size);
+				std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+				buffer[buffer_size - 1] = '\0';
+			}
+
+			if (ImGui::InputTextMultiline(
+				"##value",
+				buffer.data(),
+				buffer_size,
+				box_size,
+				ImGuiInputTextFlags_AllowTabInput))
+			{
+				value = std::string(buffer.data());
+				changed = true;
+			}
+
+			EndProperty();
+
+			if (changed)
+				Scene::get_active_scene()->set_save_required();
+
+			return changed;
+		}
+
 
 		template<typename Enum>
 		static bool draw_enum(const char* label, Enum& value, const std::vector<std::string>& options,

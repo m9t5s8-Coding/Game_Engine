@@ -14,6 +14,8 @@
 #include <Renderer/Color.hpp>
 
 #include <GameObjects/Components/Components.hpp>
+#include <Core/Application.hpp>
+#include <cmath>
 
 namespace ag
 {
@@ -74,6 +76,7 @@ namespace ag
 
 
 		View view;
+		vec2f viewport_size;
 		AG_uint slots;
 	};
 	static Renderer2D_Data* s_data;
@@ -185,7 +188,7 @@ namespace ag
 	{
 		Renderer::begin_scene(view, viewport_size);
 		s_data->view = view;
-
+		s_data->viewport_size = viewport_size;
 		Renderer::enable_blend();
 		start_batch();
 	}
@@ -322,33 +325,117 @@ namespace ag
 		s_data->quad_index++;
 	}
 
+	static void draw_curosr(const vec2f& size, const vec2f& position, RenderMode mode, const Color& color, int entity_id)
+	{
+		Rectangle rect;
+		rect.mode = mode;
+
+		rect.fill_color = color;
+		vec2f new_size = Math::screen_size_to_world_size(size, s_data->view.get_size(), s_data->viewport_size);
+		rect.size = { new_size.x, size.y };
+
+		rect.mode = mode;
+
+		Transform_Component trans;
+		trans.position = { position.x + rect.size.x * 0.5f, position.y };
+
+		Renderer2D::draw_rectangle(rect, trans, entity_id);
+	}
+
 	void Renderer2D::draw_text(const Text& text_string, const Transform_Component& transform, int entity_id)
 	{
-		vec2f starting_pos = Text::center_text(text_string, transform);
-		const float scale_x = transform.scale.x * text_string.font_size / TextLoader::font.em_size;
-		const float scale_y = transform.scale.y * text_string.font_size / TextLoader::font.em_size;
+		vec2f longest_size = Text::calc_longest_size(text_string, transform.scale);
+		size_t index = 0;
+		size_t break_index = 0;
+		Transform_Component trans;
+		trans.position = transform.position - (text_string.bounds * 0.5);
+		trans.scale = transform.scale;
+		trans.rotation = transform.rotation;
+
+		Entity entity;
+		bool edit_state = false;
+		if (entity_id >= 0)
+		{
+			entity = Entity((entt::entity)(entity_id));
+		}
+		Text_Editor_State* state = nullptr;
+
+		if (entity && entity.has_component<Text_Editor_State>())
+		{
+			edit_state = true;
+			state = &entity.get_component<Text_Editor_State>();
+		}
+		float delta_time = Application::get().delta_time;
+
+
+
+
+		//starting_pos = 
+		const float scale_x = trans.scale.x * text_string.font_size / TextLoader::font.em_size;
+		const float scale_y = trans.scale.y * text_string.font_size / TextLoader::font.em_size;
+
+		vec2f starting_pos = Text::center_single_line_text(text_string, trans, longest_size, index, &break_index);
+		vec2f padding = text_string.padding * vec2f(scale_x, scale_y);
+		starting_pos.x += padding.x;
+		starting_pos.y += padding.y;
+
 
 		const float ascender = TextLoader::font.ascender * TextLoader::font.em_size * scale_y;
-		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y;
+		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y * text_string.line_height;
 
-		float base_line = starting_pos.y + ascender;
+		starting_pos.y += ascender;
+		float base_line = starting_pos.y;
 
+		auto space_it = TextLoader::font.glyphs.find(' ');
+		if (space_it == TextLoader::font.glyphs.end())
+			return;
+
+		if (text_string.draw_rect)
+		{
+			Rectangle rect;
+			rect.size = longest_size + (padding * 2);
+			rect.fill_color = Color::Transparent;
+			rect.mode = text_string.mode;
+			rect.border_color = text_string.text_color;
+			vec2f thickness = { 1.0f, 1.0f };
+
+			rect.border_thickness = Math::screen_size_to_world_size(thickness, s_data->view.get_size(), s_data->viewport_size).x;
+
+
+			Transform_Component rect_trans;
+			rect_trans.position = trans.position + rect.size * 0.5f;
+			//rect_trans.scale = trans.scale;
+			draw_rectangle(rect, rect_trans, entity_id);
+		}
+
+
+		const TextLoader::Glyph& space_detail = space_it->second;
 
 		if (s_data->quad_index >= s_data->max_shape)
 		{
 			flush();
 		}
-		for (char c : text_string.text)
+		for (; index < text_string.text.size(); ++index)
 		{
 			if (s_data->quad_index >= s_data->max_shape)
 			{
 				flush();
 			}
 
+
+			char c = text_string.text[index];
 			if (c == '\n')
 			{
-				starting_pos.x = transform.position.x;
+				size_t next_index = index + 1;
+				starting_pos = Text::center_single_line_text(text_string, trans, longest_size, next_index, &break_index);
+				starting_pos.x += padding.x;
+				starting_pos.y += (padding.y + ascender);
 				base_line += line_height;
+				continue;
+			}
+			if (c == '\t')
+			{
+				starting_pos.x += space_detail.advance * scale_x * 4.0f;
 				continue;
 			}
 
@@ -359,6 +446,41 @@ namespace ag
 			}
 
 			const TextLoader::Glyph& g = it->second;
+
+
+			if (state && state->active && state->caret_index == index && edit_state)
+			{
+				vec2f cursor_size = { 6.0f * scale_x , TextLoader::font.line_height * TextLoader::font.em_size * scale_y };
+				vec2f cursor_position = vec2f(starting_pos.x, base_line - ascender + cursor_size.y * 0.5);
+
+				state->blink_timer += delta_time;
+				bool visible = fmod(state->blink_timer, 1.0f) < 0.6f;
+				if (visible)
+				{
+					draw_curosr(cursor_size, cursor_position, text_string.mode, text_string.text_color, entity_id);
+				}
+			}
+
+
+			bool should_wrap = (index == break_index && break_index != 0);
+			if (longest_size.x > 0)
+			{
+				if (should_wrap)
+				{
+					size_t next_index = index;
+					starting_pos = Text::center_single_line_text(text_string, trans, longest_size, next_index, &break_index);
+					starting_pos.x += padding.x;
+					starting_pos.y += (padding.y + ascender);
+					base_line += line_height;
+
+					if (c == ' ')
+						continue;
+				}
+			}
+
+
+
+
 
 			Quad_Instance* instance = s_data->quad_instanced_ptr++;
 			instance->texture_size = s_data->text_texture->get_size();
@@ -373,13 +495,29 @@ namespace ag
 			instance->texture_slot = TEXTURE_TEXT;
 
 
+
+
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
-			instance->position.y = base_line - (g.plane_top * scale_y);
+			instance->position.y = starting_pos.y - (g.plane_top * scale_y);
 			instance->entity_id = entity_id;
+
 
 			starting_pos.x += g.advance * scale_x;
 
+
 			s_data->quad_index++;
+		}
+		if (state && state->active && state->caret_index == text_string.text.size() && edit_state)
+		{
+			vec2f cursor_size = { 6.0f * scale_x, TextLoader::font.line_height * TextLoader::font.em_size * scale_y };
+			vec2f cursor_position = vec2f(starting_pos.x, base_line - ascender + cursor_size.y * 0.5);
+
+			state->blink_timer += delta_time;
+			bool visible = fmod(state->blink_timer, 1.0f) < 0.6f;
+			if (visible)
+			{
+				draw_curosr(cursor_size, cursor_position, text_string.mode, text_string.text_color, entity_id);
+			}
 		}
 
 	}
@@ -394,7 +532,7 @@ namespace ag
 
 
 		s_data->text_texture->bind(TEXTURE_TEXT);
-		if(s_data->quad_texture)
+		if (s_data->quad_texture)
 		{
 			s_data->quad_texture->bind(TEXTURE_SPRITE);
 		}
