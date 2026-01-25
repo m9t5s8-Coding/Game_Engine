@@ -13,6 +13,7 @@ namespace ag
 		std::string confirm_name;
 		std::string close_name;
 		std::function<void()> draw_content;
+
 		std::function<void()> on_open;
 		std::function<void()> on_close;
 		std::function<void()> on_confirm;
@@ -30,12 +31,30 @@ namespace ag
 		bool is_confirm = false;
 	};
 
+	struct Button_Control_Value
+	{
+		vec2u tile_id;
+		vec2f button_size;
+		vec2i line_count;
+		vec2f screen_pos;
+		vec2i size;
+		vec2f scale;
+		ImDrawList* draw_list;
+	};
+
 	struct Extra_Settings
 	{
-		vec2f size;
+		vec2u size;
 		bool draw_lines = true;
-		bool use_size;
+		bool use_size = true;
 		bool create_buttons = true;
+
+		std::function<void()> controls_panel;
+		using button_control_callback = std::function<void(
+			const Button_Control_Value& details
+			)>;
+
+		button_control_callback button_controls;
 	};
 
 
@@ -45,7 +64,7 @@ namespace ag
 		static void draw_popup(PopUpModel& model,Extra_Settings& extra_settings, Entity entity);
 		static void draw_content(PopUpModel& model, PopUpSettings& settings, Extra_Settings& extra_settings, Entity entity);
 		static void draw_lines(const vec2f& screen_pos, const vec2f& screen_size, const vec2f& size, const vec2i& line_count, const vec2i& texture_size);
-		static void create_buttons(const vec2f& screen_pos, const vec2f& screen_size, const vec2i& size, const vec2i& line_count, const vec2i& texture_size, const vec2f& button_size);
+		static void create_buttons(const vec2f& screen_pos, const vec2f& screen_size, const vec2i& size, const vec2i& line_count, const vec2i& texture_size, const vec2f& button_size,const vec2f& scale,  Extra_Settings& settings);
 	};
 
 	struct Create_Open_Popup

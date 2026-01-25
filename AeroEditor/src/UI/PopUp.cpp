@@ -55,7 +55,7 @@ namespace ag
 
 			if (ImGui::Button(" X ", ImVec2(60, 40)))
 			{
-				//model.on_close();
+				model.on_close();
 			}
 			ImGui::SetWindowFontScale(1.0f);
 			ImGui::PopStyleColor(3);
@@ -211,8 +211,9 @@ namespace ag
 
 
 					vec2f button_size = Math::world_size_to_screen_size(tile_size, settings.view_size, container);
+					vec2f scale = screen_size / texture_size;
 					if (extra_settings.create_buttons)
-						create_buttons(screen_pos, screen_size, tile_size, line_count, texture_size, button_size);
+						create_buttons(screen_pos, screen_size, tile_size, line_count, texture_size, button_size, scale, extra_settings);
 
 				}
 
@@ -225,10 +226,13 @@ namespace ag
 		ImGui::SameLine(0.0f, 10.0f);
 		ImGui::BeginChild("Controls", ImVec2(right_width, 0), true);
 		{
-
+			if (extra_settings.controls_panel)
+			{
+				extra_settings.controls_panel();
+			}
+			
 			ImGui::EndChild();
 		}
-
 
 	}
 
@@ -253,24 +257,29 @@ namespace ag
 		}
 	}
 
-	void Texture_PopUp::create_buttons(const vec2f& screen_pos, const vec2f& screen_size, const vec2i& size,const vec2i& line_count, const vec2i& texture_size, const vec2f& button_size)
+	void Texture_PopUp::create_buttons(const vec2f& screen_pos, const vec2f& screen_size, const vec2i& size,const vec2i& line_count, const vec2i& texture_size, const vec2f& button_size,const vec2f& scale, Extra_Settings& extra_settings)
 	{
-		for (int x = 0; x < line_count.x; x++)
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		for (int y = 0; y < line_count.y; y++)
 		{
-			for (int y = 0; y < line_count.y; y++)
+			for (int x = 0; x < line_count.x; x++)
 			{
 				vec2u tile_id = { (AG_uint)x, (AG_uint)y };
-				if (ImGui::InvisibleButton("##Cell", button_size.to_imvec2()))
+
+				if (extra_settings.button_controls)
 				{
+					Button_Control_Value details;
+					details.button_size = button_size;
+					details.tile_id = tile_id;
+					details.line_count = line_count;
+					details.screen_pos = screen_pos;
+					details.size = size;
+					details.draw_list = draw_list;
+					details.scale = scale;
 
+					extra_settings.button_controls(details);
 				}
-
-				if (ImGui::IsItemHovered())
-				{
-					ImGui::BeginTooltip();
-
-					ImGui::EndTooltip();
-				}
+				
 			}
 		}
 

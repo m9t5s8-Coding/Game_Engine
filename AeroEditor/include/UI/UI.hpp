@@ -71,6 +71,8 @@ namespace ag
 		static void draw_texture(Entity entity);
 		static void draw_window();
 		static void draw_animation(Entity entity);
+		static void draw_frame_selector(Entity entity, const std::string& current_animation);
+
 		static void draw_tilemap_register(Entity entity);
 		static void draw_autotiling_register(Entity entity);
 		static bool texture_selector(Entity entity, uint_rect& texture_rect);

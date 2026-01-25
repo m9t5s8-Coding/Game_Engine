@@ -20,3 +20,6 @@
 	path = External/lua
 	url = https://github.com/lua/lua.git
 	branch = v5.4
+[submodule "External/openal"]
+	path = External/openal
+	url = https://github.com/kcat/openal-soft.git

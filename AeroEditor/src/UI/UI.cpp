@@ -21,6 +21,10 @@ namespace ag
 	static std::string new_name;
 	static std::string path;
 
+	static GUI_Button button;
+	
+
+
 
 	void UI::draw_menu_bar()
 	{
@@ -677,7 +681,7 @@ namespace ag
 					ImGui::TreePop();
 				}
 			}
-			
+
 			else if (is_right_file(path))
 			{
 				ImGuiTreeNodeFlags flags =
@@ -692,7 +696,7 @@ namespace ag
 
 				if (ImGui::IsItemClicked())
 					selected_path = path;
-				
+
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 				{
 					ImGui::BeginTooltip();
@@ -726,23 +730,12 @@ namespace ag
 		}
 	}
 
-
-
-
-
 	void UI::draw_animation(Entity entity)
 	{
-		static bool show_frame_selector = false;
-		static std::string current_anim_for_frames = "";
-		static std::vector<int> selected_frames;
-		static int grid_columns = 4;
-		static int grid_rows = 4;
-		static float cell_width = 100.0f;
-		static float cell_height = 100.0f;
-		static Texture_Component* texture_for_selection = nullptr;
+		static std::string current_animation = "";
 
-		std::string anim_to_delete;
-		std::pair<std::string, std::string> anim_to_rename;
+		std::string delete_animation;
+		std::pair<std::string, std::string> rename_animation;
 
 		auto& anim = entity.get_component<Animation_Component>();
 
@@ -759,7 +752,6 @@ namespace ag
 		}
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
-		//To show frame
 		ImGui::Text("Frame: %d / %s",
 			anim.current_frame,
 			anim.current_animation.empty() ? "N/A" :
@@ -800,6 +792,7 @@ namespace ag
 		}
 
 
+
 		ImGui::SeparatorText("Animation Management");
 
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
@@ -822,8 +815,7 @@ namespace ag
 		}
 
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
-		// If Animation Exists
-		if (ImGui::BeginPopupModal("Animation Exists", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		if (ImGui::BeginPopupModal("Animation Exists", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			ImGui::Text("An animation with that name already exists!");
 			if (ImGui::Button("OK"))
@@ -901,7 +893,7 @@ namespace ag
 
 				if (ImGui::Button("Yes", ImVec2(50, 0)))
 				{
-					anim_to_delete = name;
+					delete_animation = name;
 					ImGui::CloseCurrentPopup();
 				}
 
@@ -933,7 +925,7 @@ namespace ag
 							{
 								anim.current_animation = display_name;
 							}
-							anim_to_rename = { original_name, display_name };
+							rename_animation = { original_name, display_name };
 
 						}
 					}
@@ -950,43 +942,55 @@ namespace ag
 				ImGui::Dummy(ImVec2(0.0f, 2.0f));
 				ImGui::BeginGroup();
 
-				if (ImGui::Button("Select Frames from Image"))
+				float total_width = ImGui::GetContentRegionAvail().x;
+				float button_spacing = 10.0f;
+
+				GUI_Button button;
+				button.background.normal = Color(70, 70, 70);
+				button.background.hover = Color(95, 95, 95);
+				button.background.active = Color(55, 55, 55);
+				button.background.disabled = Color(45, 45, 45);
+
+				button.text.normal = Color(230, 230, 230);
+				button.text.hover = Color(255, 255, 255);
+				button.text.active = Color(210, 210, 210);
+				button.text.disabled = Color(120, 120, 120);
+
+				button.radius = 4.0f;
+
+				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
 				{
-					if (entity.has_component<Texture_Component>())
+					button.label = "Select Frames";
+					if (draw_button(button))
 					{
-						auto& texture_comp = entity.get_component<Texture_Component>();
-						if (texture_comp.texture)
+						if (entity.has_component<Texture_Component>())
 						{
-							current_anim_for_frames = name;
-							texture_for_selection = &texture_comp;
-							selected_frames.clear();
-							show_frame_selector = true;
+							auto& texture_comp = entity.get_component<Texture_Component>();
+							if (texture_comp.texture)
+							{
+								current_animation = name;
+								s_show_panels.animation_selector = true;
+							}
+							else
+							{
+								ImGui::OpenPopup("No Texture##FrameSelector");
+							}
 						}
 						else
 						{
 							ImGui::OpenPopup("No Texture##FrameSelector");
 						}
 					}
-					else
+				}
+				ImGui::SameLine();
+				{
+					button.label = "Clear Frames";
+					button.enabled = !animation.frames.empty();
+					if (draw_button(button))
 					{
-						ImGui::OpenPopup("No Texture##FrameSelector");
+						animation.frames.clear();
 					}
 				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Add Blank Frame"))
-				{
-					Frame new_frame;
-					new_frame.frame_rect = { 0, 0, 100, 100 };
-					animation.frames.push_back(new_frame);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Clear All"))
-				{
-					animation.frames.clear();
-				}
-
 
 				ImGui::EndGroup();
 
@@ -999,104 +1003,6 @@ namespace ag
 					}
 					ImGui::EndPopup();
 				}
-
-
-
-				if (!animation.frames.empty())
-				{
-					if (ImGui::Button("View Frames"))
-					{
-						ImGui::OpenPopup(("Frames_" + name + "_Popup").c_str());
-					}
-
-					bool has_texture = entity.has_component<Texture_Component>();
-					Texture_Component* texture_comp = nullptr;
-					AG_uint texture_id = 0;
-					if (has_texture)
-					{
-						texture_comp = &entity.get_component<Texture_Component>();
-						if (texture_comp->texture)
-						{
-							texture_id = texture_comp->texture->get_texture_id();
-						}
-						else
-						{
-							has_texture = false;
-						}
-					}
-
-					if (ImGui::BeginPopupModal(("Frames_" + name + "_Popup").c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
-					{
-						ImGui::Text("Frames for animation: %s", name.c_str());
-						ImGui::Separator();
-
-						float popup_width = ImGui::GetContentRegionAvail().x;
-						float frame_size = 80.0f;
-						float spacing = 5.0f;
-						int columns = std::max(1, (int)(popup_width / (frame_size + spacing)));
-
-						for (int i = 0; i < animation.frames.size(); i++)
-						{
-							ImGui::PushID(i);
-							Frame& frame = animation.frames[i];
-							bool is_current = (anim.current_animation == name && anim.current_frame == i);
-
-							if (is_current)
-							{
-								ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.5f, 0.8f, 1.0f));
-								ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
-							}
-
-							if (has_texture && texture_id != 0)
-							{
-								auto tex_size = texture_comp->texture->get_size();
-								float tex_w = tex_size.x;
-								float tex_h = tex_size.y;
-
-								ImVec2 uv0(frame.frame_rect.position.x / tex_w, frame.frame_rect.position.y / tex_h);
-								ImVec2 uv1((frame.frame_rect.position.x + frame.frame_rect.size.x) / tex_w,
-									(frame.frame_rect.position.y + frame.frame_rect.size.y) / tex_h);
-
-								if (ImGui::ImageButton(("Frame_" + std::to_string(i)).c_str(),
-									(ImTextureID)(intptr_t)texture_id,
-									ImVec2(frame_size, frame_size),
-									uv0, uv1))
-								{
-									anim.current_frame = i;
-									anim.timer = 0.0f;
-								}
-							}
-							else
-							{
-								if (ImGui::Button(std::to_string(i).c_str(), ImVec2(frame_size, frame_size)))
-								{
-									anim.current_frame = i;
-									anim.timer = 0.0f;
-								}
-							}
-
-							if (is_current)
-							{
-								ImGui::PopStyleVar();
-								ImGui::PopStyleColor();
-							}
-
-							ImGui::PopID();
-
-							if ((i + 1) % columns != 0)
-								ImGui::SameLine();
-						}
-
-						ImGui::Separator();
-						if (ImGui::Button("Close"))
-							ImGui::CloseCurrentPopup();
-
-						ImGui::EndPopup();
-					}
-
-
-				}
-
 
 				if (!animation.frames.empty())
 				{
@@ -1111,542 +1017,334 @@ namespace ag
 		}
 
 
-		if (!anim_to_rename.first.empty())
+		// rename animation
+		if (!rename_animation.first.empty())
 		{
-			auto node = anim.animations.extract(anim_to_rename.first);
-			node.key() = anim_to_rename.second;
+			auto node = anim.animations.extract(rename_animation.first);
+			node.key() = rename_animation.second;
 			anim.animations.insert(std::move(node));
 
-			if (anim.current_animation == anim_to_rename.first)
-				anim.current_animation = anim_to_rename.second;
+			if (anim.current_animation == rename_animation.first)
+				anim.current_animation = rename_animation.second;
 
 			return;
 		}
 
-		if (!anim_to_delete.empty())
+		// delete animation
+		if (!delete_animation.empty())
 		{
-			anim.animations.erase(anim_to_delete);
+			anim.animations.erase(delete_animation);
 
-			if (anim.current_animation == anim_to_delete)
+			if (anim.current_animation == delete_animation)
 				anim.current_animation.clear();
 
 			return;
 		}
 
 
-
-
-
-
-
-
-
-
-
-
-		if (show_frame_selector && texture_for_selection)
-		{
-			ImGui::OpenPopup("Select Frames from Texture");
-
-			UI::custom_popup("Select Frames from Texture", "Frame Selection",
-				[&]()
-				{
-					auto texture_size = texture_for_selection->texture->get_size();
-					float texture_width = texture_size.x;
-					float texture_height = texture_size.y;
-					ImTextureID texture_id = (ImTextureID)(intptr_t)texture_for_selection->texture->get_texture_id();
-
-					float available_width = ImGui::GetContentRegionAvail().x;
-					float left_width = available_width * 0.65f - 5.0f;
-					float right_width = available_width * 0.35f - 5.0f;
-
-
-					ImGui::BeginChild("TextureColumn", ImVec2(left_width, 0), true);
-					{
-						ImGui::Text("Texture Preview");
-						ImGui::Separator();
-
-
-						static float zoom_level = 1.0f;
-						static ImVec2 texture_offset = ImVec2(0, 0);
-						static bool is_panning = false;
-						static ImVec2 pan_start_mouse_pos;
-						static ImVec2 pan_start_offset;
-
-						/*ImGui::BeginChild("TextureColumn", ImVec2(left_width, 50), true);
-						ImGui::Text("Zoom: %.0f%%", zoom_level * 100.0f);
-						ImGui::SameLine();
-						ImGui::SetWindowFontScale(1.5f);
-						if (ImGui::Button("-", ImVec2(30, 30))) zoom_level = std::max(0.1f, zoom_level - 0.1f);
-						ImGui::SameLine();
-						if (ImGui::Button("+", ImVec2(30, 30))) zoom_level = std::min(5.0f, zoom_level + 0.1f);
-						ImGui::SetWindowFontScale(1.0f);
-						ImGui::SameLine();
-						if (ImGui::Button("Reset", ImVec2(60, 30)))
-						{
-							zoom_level = 1.0f;
-							texture_offset = ImVec2(0, 0);
-						}
-						ImGui::EndChild();*/
-
-
-						ImGui::BeginChild("TextureContainer", ImVec2(0, 0), false);
-						{
-							float max_display_width = left_width - 20.0f;
-							float max_display_height = ImGui::GetContentRegionAvail().y - 50.0f;
-
-							// Apply zoom to texture dimensions
-							float zoomed_texture_width = texture_width * zoom_level;
-							float zoomed_texture_height = texture_height * zoom_level;
-
-							float display_width = zoomed_texture_width;
-							float display_height = zoomed_texture_height;
-							float scale = zoom_level;
-
-							if (zoomed_texture_width > max_display_width || zoomed_texture_height > max_display_height)
-							{
-								display_width = std::min(zoomed_texture_width, max_display_width);
-								display_height = std::min(zoomed_texture_height, max_display_height);
-							}
-
-							float cell_display_width = cell_width * zoom_level;
-							float cell_display_height = cell_height * zoom_level;
-
-
-
-							ImVec2 container_start_pos = ImGui::GetCursorScreenPos();
-							float container_width = ImGui::GetContentRegionAvail().x;
-							float container_height = ImGui::GetContentRegionAvail().y;
-
-							bool is_hovering_container = ImGui::IsMouseHoveringRect(
-								container_start_pos,
-								ImVec2(container_start_pos.x + container_width,
-									container_start_pos.y + container_height)
-							);
-
-							if (is_hovering_container && ImGui::IsMouseClicked(1))
-							{
-								is_panning = true;
-								pan_start_mouse_pos = ImGui::GetMousePos();
-								pan_start_offset = texture_offset;
-							}
-
-							if (is_panning)
-							{
-								if (ImGui::IsMouseDown(1))
-								{
-									ImVec2 mouse_delta = { ImGui::GetMousePos().x - pan_start_mouse_pos.x, ImGui::GetMousePos().y - pan_start_mouse_pos.y };
-									texture_offset.x = pan_start_offset.x + mouse_delta.x;
-									texture_offset.y = pan_start_offset.y + mouse_delta.y;
-
-									float max_offset_x = std::max(0.0f, zoomed_texture_width - max_display_width);
-									float max_offset_y = std::max(0.0f, zoomed_texture_height - max_display_height);
-									texture_offset.x = std::clamp(texture_offset.x, -max_offset_x, max_offset_x);
-									texture_offset.y = std::clamp(texture_offset.y, -max_offset_y, max_offset_y);
-
-									ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-								}
-								else
-								{
-									is_panning = false;
-								}
-							}
-
-							if (is_hovering_container && ImGui::GetIO().MouseWheel != 0)
-							{
-								float zoom_speed = 0.1f;
-								float old_zoom = zoom_level;
-
-
-								zoom_level += ImGui::GetIO().MouseWheel * zoom_speed;
-								zoom_level = std::clamp(zoom_level, 0.1f, 5.0f);
-
-								if (zoomed_texture_width > max_display_width || zoomed_texture_height > max_display_height)
-								{
-									ImVec2 mouse_pos_rel = { ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x,
-																					 ImGui::GetMousePos().y - ImGui::GetCursorScreenPos().y };
-									float zoom_factor = zoom_level / old_zoom;
-
-									texture_offset.x = texture_offset.x * zoom_factor + mouse_pos_rel.x * (1 - zoom_factor);
-									texture_offset.y = texture_offset.y * zoom_factor + mouse_pos_rel.y * (1 - zoom_factor);
-								}
-							}
-
-							float actual_max_display_width = container_width;
-							float actual_max_display_height = container_height;
-
-							float texture_x = (container_width - std::min(zoomed_texture_width, actual_max_display_width)) * 0.5f;
-							float texture_y = (container_height - std::min(zoomed_texture_height, actual_max_display_height)) * 0.5f;
-
-							ImGui::SetCursorPosX(texture_x);
-							ImGui::SetCursorPosY(texture_y);
-
-							ImVec2 texture_start_pos = ImGui::GetCursorScreenPos();
-
-							// Calculate visible portion of texture
-							ImVec2 visible_min = ImVec2(
-								std::max(0.0f, -texture_offset.x),
-								std::max(0.0f, -texture_offset.y)
-							);
-							ImVec2 visible_max = ImVec2(
-								std::min(zoomed_texture_width, -texture_offset.x + actual_max_display_width),
-								std::min(zoomed_texture_height, -texture_offset.y + actual_max_display_height)
-							);
-
-							// Calculate UV coordinates for visible portion
-							ImVec2 uv0 = ImVec2(
-								visible_min.x / zoomed_texture_width,
-								visible_min.y / zoomed_texture_height
-							);
-							ImVec2 uv1 = ImVec2(
-								visible_max.x / zoomed_texture_width,
-								visible_max.y / zoomed_texture_height
-							);
-
-							// Draw the visible portion of texture
-							ImGui::Image(texture_id,
-								ImVec2(visible_max.x - visible_min.x, visible_max.y - visible_min.y),
-								uv0, uv1);
-
-							ImVec2 texture_pos = ImGui::GetItemRectMin();
-
-							// Draw grid overlay
-							ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-
-
-							if (zoom_level > 0.6f)
-							{
-								int start_col = std::max(0, (int)(-texture_offset.x / cell_display_width));
-								int end_col = std::min(grid_columns,
-									(int)((-texture_offset.x + actual_max_display_width) / cell_display_width) + 1);
-
-								for (int col = start_col; col <= end_col; col++)
-								{
-									float x = texture_start_pos.x + texture_offset.x + col * cell_display_width;
-									if (x >= texture_start_pos.x && x <= texture_start_pos.x + actual_max_display_width)
-									{
-										float line_start_y = texture_start_pos.y + texture_offset.y;
-										float line_end_y = line_start_y + zoomed_texture_height;
-
-										// Clip to visible area
-										line_start_y = std::max(line_start_y, texture_start_pos.y);
-										line_end_y = std::min(line_end_y, texture_start_pos.y + actual_max_display_height);
-
-										draw_list->AddLine(
-											ImVec2(x, line_start_y),
-											ImVec2(x, line_end_y),
-											IM_COL32(255, 255, 255, 150),
-											std::max(1.0f, 2.0f / zoom_level) // Thinner lines when zoomed out
-										);
-									}
-								}
-
-
-								int start_row = std::max(0, (int)(-texture_offset.y / cell_display_height));
-								int end_row = std::min(grid_rows,
-									(int)((-texture_offset.y + actual_max_display_height) / cell_display_height) + 1);
-
-								for (int row = start_row; row <= end_row; row++)
-								{
-									float y = texture_start_pos.y + texture_offset.y + row * cell_display_height;
-									if (y >= texture_start_pos.y && y <= texture_start_pos.y + actual_max_display_height)
-									{
-										float line_start_x = texture_start_pos.x + texture_offset.x;
-										float line_end_x = line_start_x + zoomed_texture_width;
-
-										line_start_x = std::max(line_start_x, texture_start_pos.x);
-										line_end_x = std::min(line_end_x, texture_start_pos.x + actual_max_display_width);
-
-										draw_list->AddLine(
-											ImVec2(line_start_x, y),
-											ImVec2(line_end_x, y),
-											IM_COL32(255, 255, 255, 150),
-											std::max(1.0f, 2.0f / zoom_level)
-										);
-									}
-								}
-
-								for (int row = start_row; row < end_row; row++)
-								{
-									for (int col = start_col; col < end_col; col++)
-									{
-										int cell_index = row * grid_columns + col;
-										ImVec2 cell_min = ImVec2(
-											texture_start_pos.x + texture_offset.x + col * cell_display_width,
-											texture_start_pos.y + texture_offset.y + row * cell_display_height
-										);
-										ImVec2 cell_max = ImVec2(
-											cell_min.x + cell_display_width,
-											cell_min.y + cell_display_height
-										);
-
-										bool is_selected = std::find(selected_frames.begin(), selected_frames.end(), cell_index) != selected_frames.end();
-
-										if (is_selected)
-										{
-											draw_list->AddRectFilled(cell_min, cell_max, IM_COL32(0, 255, 0, 80));
-											draw_list->AddRect(cell_min, cell_max, IM_COL32(0, 255, 0, 200), 0.0f, 0, 3.0f);
-										}
-
-										ImGui::PushID(cell_index);
-										ImGui::SetCursorScreenPos(cell_min);
-										if (ImGui::InvisibleButton("##Cell", ImVec2(cell_display_width, cell_display_height)))
-										{
-											bool ctrl_down = ImGui::GetIO().KeyCtrl;
-											bool shift_down = ImGui::GetIO().KeyShift;
-
-											if (ctrl_down)
-											{
-												auto it = std::find(selected_frames.begin(), selected_frames.end(), cell_index);
-												if (it != selected_frames.end())
-													selected_frames.erase(it);
-												else
-													selected_frames.push_back(cell_index);
-											}
-											else if (shift_down && !selected_frames.empty())
-											{
-												int last_selected = selected_frames.back();
-												int start = std::min(last_selected, cell_index);
-												int end = std::max(last_selected, cell_index);
-
-												for (int i = start; i <= end; i++)
-												{
-													if (std::find(selected_frames.begin(), selected_frames.end(), i) == selected_frames.end())
-													{
-														selected_frames.push_back(i);
-													}
-												}
-											}
-											else
-											{
-												selected_frames.clear();
-												selected_frames.push_back(cell_index);
-											}
-										}
-
-										if (ImGui::IsItemHovered())
-										{
-											ImGui::BeginTooltip();
-											ImGui::Text("Cell %d", cell_index);
-											ImGui::Text("Grid Position: (%d, %d)", col, row);
-											ImGui::Text("Texture Rect:");
-											ImGui::Text("  Position: (%.0f, %.0f)", col * cell_width, row * cell_height);
-											ImGui::Text("  Size: %.0fx%.0f", cell_width, cell_height);
-											ImGui::Text("Zoom: %.0f%%", zoom_level * 100.0f);
-											if (is_selected)
-											{
-												ImGui::TextColored(ImVec4(0, 1, 0, 1), "Selected");
-											}
-											ImGui::EndTooltip();
-										}
-
-										ImGui::PopID();
-									}
-								}
-							}
-
-						}
-
-						ImGui::EndChild();
-					}
-					ImGui::EndChild();
-					ImGui::SameLine(0, 10.0f);
-
-
-
-					ImGui::BeginChild("ControlsColumn", ImVec2(right_width, 0), true);
-					{
-						float available_height = ImGui::GetContentRegionAvail().y;
-						ImGui::Text("Frame Selection Controls");
-						ImGui::Separator();
-						ImGui::Dummy(ImVec2(0, 3));
-						// Grid settings
-						ImGui::Text("Grid Settings:");
-						if (UI::draw_value("Columns", grid_columns, 0, 20))
-						{
-							grid_columns = std::clamp(grid_columns, 1, 100);
-							cell_width = texture_width / grid_columns;
-						}
-						ImGui::Dummy(ImVec2(0, 3));
-						if (UI::draw_value("Rows", grid_rows, 0, 20))
-						{
-							grid_rows = std::clamp(grid_rows, 1, 100);
-							cell_height = texture_height / grid_rows;
-						}
-						ImGui::Dummy(ImVec2(0, 3));
-						// Cell info
-						cell_width = texture_width / grid_columns;
-						cell_height = texture_height / grid_rows;
-
-						ImGui::Text("Cell Size: %.0f x %.0f", cell_width, cell_height);
-						ImGui::Dummy(ImVec2(0, 3));
-						ImGui::Text("Total Cells: %d", grid_columns * grid_rows);
-						ImGui::Dummy(ImVec2(0, 3));
-						if (cell_width < 10 || cell_height < 10)
-						{
-							ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "Warning: Cells are very small!");
-						}
-
-						ImGui::Separator();
-
-						ImGui::Text("Selection:");
-						ImGui::Text("Selected: %d/%d frames",
-							(int)selected_frames.size(), grid_columns * grid_rows);
-
-						float button_width = ImGui::GetContentRegionAvail().x * 0.5f - 5.0f;
-						if (!selected_frames.empty())
-						{
-							ImGui::Text("Selection Order:");
-							std::string selection_display;
-							const int max_display = 8;
-
-							for (size_t i = 0; i < std::min(selected_frames.size(), (size_t)max_display); i++)
-							{
-								if (i > 0) selection_display += " -> ";
-								selection_display += std::to_string(selected_frames[i]);
-							}
-
-							if (selected_frames.size() > max_display)
-							{
-								selection_display += " -> ...";
-							}
-
-							ImGui::TextWrapped("%s", selection_display.c_str());
-
-
-
-							// Selection management buttons
-							ImGui::BeginGroup();
-							if (ImGui::Button("Select All", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-								for (int i = 0; i < grid_columns * grid_rows; i++)
-								{
-									selected_frames.push_back(i);
-								}
-							}
-							ImGui::SameLine(0.0f, 5.0f);
-							if (ImGui::Button("Clear All", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-							}
-
-							if (ImGui::Button("Reverse Order", ImVec2(button_width, 0)) && selected_frames.size() > 1)
-							{
-								std::reverse(selected_frames.begin(), selected_frames.end());
-							}
-							ImGui::SameLine(0.0f, 5.0f);
-							if (ImGui::Button("Sort Numerically", ImVec2(button_width, 0)))
-							{
-								std::sort(selected_frames.begin(), selected_frames.end());
-							}
-							ImGui::EndGroup();
-
-
-
-
-
-
-
-
-
-							ImGui::Separator();
-							ImGui::Text("Quick Select:");
-
-							if (ImGui::Button("First Row", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-								for (int col = 0; col < grid_columns; col++)
-								{
-									selected_frames.push_back(col);
-								}
-							}
-							ImGui::SameLine(0.0f, 5.0f);
-							if (ImGui::Button("First Column", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-								for (int row = 0; row < grid_rows; row++)
-								{
-									selected_frames.push_back(row * grid_columns);
-								}
-							}
-
-							if (ImGui::Button("Diagonal Right", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-								int cells = std::min(grid_columns, grid_rows);
-								for (int i = 0; i < cells; i++)
-								{
-									selected_frames.push_back(i * grid_columns + i);
-								}
-							}
-							ImGui::SameLine(0.0f, 5.0f);
-							if (ImGui::Button("Diagonal Left", ImVec2(button_width, 0)))
-							{
-								selected_frames.clear();
-								int cells = std::min(grid_columns, grid_rows);
-								for (int i = cells - 1; i >= 0; i--)
-								{
-									selected_frames.push_back(i * grid_columns + (cells - 1 - i));
-								}
-							}
-						}
-						else
-						{
-							ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No frames selected");
-							ImGui::TextWrapped("Click on cells in the texture to select frames");
-							ImGui::TextWrapped("• Click: Select single");
-							ImGui::TextWrapped("• Ctrl+Click: Toggle selection");
-							ImGui::TextWrapped("• Shift+Click: Select range");
-						}
-
-						ImGui::Separator();
-
-
-						float button_height = 35.0f;
-						ImGui::SetCursorPosY(available_height - button_height);
-
-						if (ImGui::Button("Add Frames", ImVec2(button_width, button_height)) && !selected_frames.empty())
-						{
-							auto it = anim.animations.find(current_anim_for_frames);
-							if (it != anim.animations.end())
-							{
-								Animation& target_anim = it->second;
-
-								for (int cell_index : selected_frames)
-								{
-									int row = cell_index / grid_columns;
-									int col = cell_index % grid_columns;
-
-									Frame new_frame;
-									new_frame.frame_rect.position.x = col * cell_width;
-									new_frame.frame_rect.position.y = row * cell_height;
-									new_frame.frame_rect.size.x = cell_width;
-									new_frame.frame_rect.size.y = cell_height;
-									target_anim.frames.push_back(new_frame);
-								}
-								show_frame_selector = false;
-								selected_frames.clear();
-							}
-						}
-						ImGui::SameLine(0.0f, 10.0f);
-						if (ImGui::Button("Cancel", ImVec2(button_width, button_height)))
-						{
-							show_frame_selector = false;
-							selected_frames.clear();
-						}
-					}
-					ImGui::EndChild();
-				}, []() { show_frame_selector = false; selected_frames.clear(); });
-		}
+		// show animation selector
+		if (s_show_panels.animation_selector)
+			draw_frame_selector(entity, current_animation);
 	}
 
+	void UI::draw_frame_selector(Entity entity, const std::string& current_animation)
+	{
+		static std::vector<int> selected_frames;
+		static vec2u grid_size = { 10 ,10 };
+		static bool use_size = false;
+
+		vec2f cell_size;
+		vec2i total_grid;
+
+		auto& anim = entity.get_component<Animation_Component>();
+
+		PopUpModel model;
+		model.name = "Frame Selection";
+		model.id = "Select Frames from Texture";
+		model.confirm_name = "Add Frames";
+		model.close_name = "Cancel";
+
+
+		model.on_close = [&]()
+			{
+				s_show_panels.animation_selector = false;
+				selected_frames.clear();
+			};
+
+		Extra_Settings extra_settings;
+		extra_settings.size = grid_size;
+		extra_settings.use_size = use_size;
+
+		vec2f texture_size = entity.get_component<Texture_Component>().texture->get_size();
+
+		extra_settings.button_controls = [&](const Button_Control_Value& details)
+			{
+				int cell_index = details.tile_id.y * details.line_count.x + details.tile_id.x;
+
+				cell_size = details.size;
+				total_grid = details.line_count;
+				bool is_selected = std::find(selected_frames.begin(), selected_frames.end(), cell_index) != selected_frames.end();
+
+				vec2f cell_min = details.screen_pos + vec2f(details.tile_id.x * details.size.x, details.tile_id.y * details.size.y) * details.scale;
+				vec2f cell_max = details.screen_pos + vec2f((details.tile_id.x + 1) * details.size.x, (details.tile_id.y + 1) * details.size.y) * details.scale;
+
+
+				if (is_selected)
+				{
+					details.draw_list->AddRectFilled(cell_min.to_imvec2(), cell_max.to_imvec2(), IM_COL32(0, 255, 0, 80));
+					details.draw_list->AddRect(cell_min.to_imvec2(), cell_max.to_imvec2(), IM_COL32(0, 255, 0, 200), 0.0f, 0, 3.0f);
+				}
+
+
+				ImGui::PushID(cell_index);
+				ImGui::SetCursorScreenPos(cell_min.to_imvec2());
+				if (ImGui::InvisibleButton("##Cell", details.button_size.to_imvec2()))
+				{
+					bool ctrl_down = ImGui::GetIO().KeyCtrl;
+					bool shift_down = ImGui::GetIO().KeyShift;
+
+					if (ctrl_down)
+					{
+						auto it = std::find(selected_frames.begin(), selected_frames.end(), cell_index);
+						if (it != selected_frames.end())
+							selected_frames.erase(it);
+						else
+							selected_frames.push_back(cell_index);
+					}
+					else if (shift_down && !selected_frames.empty())
+					{
+						int last_selected = selected_frames.back();
+						int start = std::min(last_selected, cell_index);
+						int end = std::max(last_selected, cell_index);
+
+						for (int i = start; i <= end; i++)
+						{
+							if (std::find(selected_frames.begin(), selected_frames.end(), i) == selected_frames.end())
+							{
+								selected_frames.push_back(i);
+							}
+						}
+					}
+					else
+					{
+						selected_frames.clear();
+						selected_frames.push_back(cell_index);
+					}
+				}
+
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::Text("Cell %d", cell_index);
+					ImGui::Text("Grid Position: (%d, %d)", details.tile_id.x, details.tile_id.y);
+					/*ImGui::Text("Texture Rect:");
+					ImGui::Text("  Position: (%.0f, %.0f)", details.tile_id.y * cell_width, details.tile_id.x * cell_height);
+					ImGui::Text("  Size: %.0fx%.0f", cell_width, cell_height);*/
+					if (is_selected)
+					{
+						ImGui::TextColored(ImVec4(0, 1, 0, 1), "Selected");
+					}
+					ImGui::EndTooltip();
+				}
+
+				ImGui::PopID();
+			};
+		extra_settings.controls_panel = [&]()
+			{
+				float available_height = ImGui::GetContentRegionAvail().y;
+				ImGui::Text("Frame Selection Controls");
+				ImGui::Separator();
+				ImGui::Dummy(ImVec2(0, 3));
+
+
+				ImGui::Text("Grid Settings:");
+				if (UI::draw_vec2("Size", grid_size))
+				{
+					selected_frames.clear();
+				}
+				ImGui::Dummy(ImVec2(0, 2));
+				UI::draw_bool("Use Size", use_size);
+
+				ImGui::Dummy(ImVec2(0, 3));
+				
+
+				ImGui::Text("Cell Size: %.0f x %.0f", cell_size.x, cell_size.y);
+				ImGui::Dummy(ImVec2(0, 3));
+				ImGui::Text("Total Cells: %d", total_grid.x * total_grid.y);
+				ImGui::Dummy(ImVec2(0, 3));
+
+				ImGui::Separator();
+
+				ImGui::Text("Selection:");
+				ImGui::Text("Selected: %d/%d frames",
+					(int)selected_frames.size(), total_grid.x * total_grid.y);
+
+				float total_width = ImGui::GetContentRegionAvail().x;
+				float button_spacing = 6.0f;
+
+				GUI_Button button;
+				button.background.normal = Color(70, 70, 70);
+				button.background.hover = Color(95, 95, 95);
+				button.background.active = Color(55, 55, 55);
+				button.background.disabled = Color(45, 45, 45);
+
+				button.text.normal = Color(230, 230, 230);
+				button.text.hover = Color(255, 255, 255);
+				button.text.active = Color(210, 210, 210);
+				button.text.disabled = Color(120, 120, 120);
+
+				button.radius = 4.0f;
+
+				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
+
+
+				if (!selected_frames.empty())
+				{
+					ImGui::Text("Selection Order:");
+					std::string selection_display;
+					const int max_display = 8;
+
+					for (size_t i = 0; i < std::min(selected_frames.size(), (size_t)max_display); i++)
+					{
+						if (i > 0) selection_display += " -> ";
+						selection_display += std::to_string(selected_frames[i]);
+					}
+
+					if (selected_frames.size() > max_display)
+					{
+						selection_display += " -> ...";
+					}
+
+					ImGui::TextWrapped("%s", selection_display.c_str());
 
 
 
+					
+					ImGui::BeginGroup();
+					button.label = "Select All";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+						for (int i = 0; i < total_grid.y * total_grid.x; i++)
+						{
+							selected_frames.push_back(i);
+						}
+					}
+					ImGui::SameLine(0.0f, button_spacing);
+					button.label = "Clear All";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+					}
+
+					button.label = "Reverse Order";
+					if (draw_button(button) && selected_frames.size() > 1)
+					{
+						std::reverse(selected_frames.begin(), selected_frames.end());
+					}
+					ImGui::SameLine(0.0f, 5.0f);
+					button.label = "Sort Numerically";
+					if (draw_button(button))
+					{
+						std::sort(selected_frames.begin(), selected_frames.end());
+					}
+					ImGui::EndGroup();
 
 
+					ImGui::Separator();
+					ImGui::Text("Quick Select:");
+
+					button.label = "First Row";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+						for (int col = 0; col < total_grid.x; col++)
+						{
+							selected_frames.push_back(col);
+						}
+					}
+					ImGui::SameLine(0.0f, button_spacing);
+					button.label = "First Column";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+						for (int row = 0; row < total_grid.y; row++)
+						{
+							selected_frames.push_back(row * total_grid.x);
+						}
+					}
+
+					button.label = "Diagonal Right";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+						int cells = std::min(total_grid.y, total_grid.x);
+						for (int i = 0; i < cells; i++)
+						{
+							selected_frames.push_back(i * total_grid.x + i);
+						}
+					}
+					ImGui::SameLine(0.0f, button_spacing);
+					button.label = "Diagonal Left";
+					if (draw_button(button))
+					{
+						selected_frames.clear();
+						int cells = std::min(total_grid.y, total_grid.x);
+						for (int i = cells - 1; i >= 0; i--)
+						{
+							selected_frames.push_back(i * total_grid.y + (cells - 1 - i));
+						}
+					}
+				}
+				else
+				{
+					ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No frames selected");
+					ImGui::TextWrapped("Click on cells in the texture to select frames");
+					ImGui::TextWrapped("• Click: Select single");
+					ImGui::TextWrapped("• Ctrl+Click: Toggle selection");
+					ImGui::TextWrapped("• Shift+Click: Select range");
+				}
+
+				ImGui::Separator();
+
+
+				ImGui::SetCursorPosY(available_height - button.size.y);
+
+				button.label = "Add Frames";
+				if (draw_button(button) && !selected_frames.empty())
+				{
+					auto it = anim.animations.find(current_animation);
+					if (it != anim.animations.end())
+					{
+						Animation& target_anim = it->second;
+						target_anim.frames.clear();
+						for (int cell_index : selected_frames)
+						{
+							int row = cell_index / total_grid.x;
+							int col = cell_index % total_grid.x;
+
+							Frame new_frame;
+							new_frame.frame_rect.position.x = col * cell_size.x;
+							new_frame.frame_rect.position.y = row * cell_size.y;
+							new_frame.frame_rect.size.x = cell_size.x;
+							new_frame.frame_rect.size.y = cell_size.y;
+							target_anim.frames.push_back(new_frame);
+						}
+						s_show_panels.animation_selector = false;
+						selected_frames.clear();
+					}
+				}
+				ImGui::SameLine(0.0f, button_spacing);
+				button.label = "Cancel";
+				if (draw_button(button))
+				{
+					s_show_panels.animation_selector = false;
+					selected_frames.clear();
+				}
+			};
+
+		Texture_PopUp::draw_popup(model, extra_settings, entity);
+	}
 
 	void UI::draw_tilemap_register(Entity entity)
 	{
