@@ -8,6 +8,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <icons.h>
+
 
 #include <Core/Application.hpp>
 
@@ -28,8 +30,6 @@ namespace ag
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
-
-		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -39,54 +39,39 @@ namespace ag
 		font_cfg.OversampleH = 1;
 		font_cfg.OversampleV = 1;
 
+		// Load main font FIRST
 		ImFont* main_font = io.Fonts->AddFontFromFileTTF(
 			"assets/fonts/OpenSans-Regular.ttf",
 			20.0f,
 			&font_cfg
 		);
 
+		// Font Awesome icon ranges - FIXED!
+		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+
+		// Merge icons into main font
+		ImFontConfig icon_cfg;
+		icon_cfg.MergeMode = true;  // IMPORTANT: Merge into previous font
+		icon_cfg.PixelSnapH = true;
+		icon_cfg.OversampleH = 1;
+		icon_cfg.OversampleV = 1;
+		icon_cfg.GlyphMinAdvanceX = 14.0f;
+
+		io.Fonts->AddFontFromFileTTF(
+			"assets/fonts/fa-solid-900.ttf",
+			16.0f,
+			&icon_cfg,
+			icon_ranges
+		);	
+
+		// Load large font
 		ImFont* large_font = io.Fonts->AddFontFromFileTTF(
 			"assets/fonts/OpenSans-Regular.ttf",
 			28.0f,
 			&font_cfg
 		);
 
-		ImFontConfig icon_cfg;
-		icon_cfg.MergeMode = true;
-		icon_cfg.PixelSnapH = true;
-		icon_cfg.OversampleH = 1;
-		icon_cfg.OversampleV = 1;
-		icon_cfg.GlyphMinAdvanceX = 20.0f;
-
-		static const ImWchar icon_ranges[] = {
-				0xf000, 0xf8ff,
-				0
-		};
-
-		io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/fa-solid-900.ttf",
-			20.0f,
-			&icon_cfg,
-			icon_ranges
-		);
-
-		ImFontConfig large_icon_cfg;
-		large_icon_cfg.MergeMode = true;
-		large_icon_cfg.PixelSnapH = true;
-		large_icon_cfg.OversampleH = 1; 
-		large_icon_cfg.OversampleV = 1;
-		large_icon_cfg.GlyphMinAdvanceX = 28.0f;
-
-		io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/fa-solid-900.ttf",
-			28.0f,
-			&large_icon_cfg,
-			icon_ranges
-		);
-
 		io.FontDefault = main_font;
-
-		// ImGui::StyleColorsDark();
 
 		set_engine_theme();
 
@@ -99,10 +84,10 @@ namespace ag
 
 		Application& app = Application::get();
 		GLFWwindow* window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
-
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 450");
 	}
+
 	void ImGuiLayer::on_detach()
 	{
 		ImGui_ImplOpenGL3_Shutdown();
@@ -145,76 +130,118 @@ namespace ag
 		ImGuiStyle& style = ImGui::GetStyle();
 		ImVec4* colors = style.Colors;
 
-		colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-		colors[ImGuiCol_TextDisabled] = ImVec4(0.33f, 0.33f, 0.33f, 1.00f);
-		colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
-		colors[ImGuiCol_ChildBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.00f);
-		colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.94f);
-		colors[ImGuiCol_Border] = ImVec4(0.04f, 0.04f, 0.04f, 0.99f);
-		colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		colors[ImGuiCol_FrameBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.54f);
-		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.38f, 0.51f, 0.51f, 0.80f);
-		colors[ImGuiCol_FrameBgActive] = ImVec4(0.03f, 0.03f, 0.04f, 0.67f);
-		colors[ImGuiCol_TitleBg] = ImVec4(0.01f, 0.01f, 0.01f, 1.00f);
-		colors[ImGuiCol_TitleBgActive] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
-		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
-		colors[ImGuiCol_MenuBarBg] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
-		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
-		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.07f, 0.07f, 0.07f, 1.00f);
-		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.18f, 0.17f, 0.17f, 1.00f);
-		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
-		colors[ImGuiCol_CheckMark] = ImVec4(0.30f, 0.60f, 0.10f, 1.00f);
-		colors[ImGuiCol_SliderGrab] = ImVec4(0.30f, 0.60f, 0.10f, 1.00f);
-		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.43f, 0.90f, 0.11f, 1.00f);
-		colors[ImGuiCol_Button] = ImVec4(0.21f, 0.22f, 0.23f, 0.40f);
-		colors[ImGuiCol_ButtonHovered] = ImVec4(0.38f, 0.51f, 0.51f, 0.80f);
-		colors[ImGuiCol_ButtonActive] = ImVec4(0.54f, 0.55f, 0.55f, 1.00f);
-		colors[ImGuiCol_Header] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
-		colors[ImGuiCol_HeaderHovered] = ImVec4(0.38f, 0.51f, 0.51f, 0.80f);
-		colors[ImGuiCol_HeaderActive] = ImVec4(0.03f, 0.03f, 0.03f, 1.00f);
-		colors[ImGuiCol_Separator] = ImVec4(0.16f, 0.16f, 0.16f, 0.50f);
-		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
-		colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
-		colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
-		colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-		colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-		colors[ImGuiCol_TabHovered] = ImVec4(0.23f, 0.23f, 0.24f, 0.80f);
-		colors[ImGuiCol_Tab] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
-		colors[ImGuiCol_TabSelected] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
-		colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.13f, 0.78f, 0.07f, 1.00f);
-		colors[ImGuiCol_TabDimmed] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
-		colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
-		colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.10f, 0.60f, 0.12f, 1.00f);
-		colors[ImGuiCol_DockingPreview] = ImVec4(0.26f, 0.59f, 0.98f, 0.70f);
-		colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-		colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.14f, 0.87f, 0.05f, 1.00f);
-		colors[ImGuiCol_PlotHistogram] = ImVec4(0.30f, 0.60f, 0.10f, 1.00f);
-		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.23f, 0.78f, 0.02f, 1.00f);
-		colors[ImGuiCol_TableHeaderBg] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
-		colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
-		colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
-		colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.46f, 0.47f, 0.46f, 0.06f);
-		colors[ImGuiCol_TextLink] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-		colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
-		colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-		colors[ImGuiCol_NavCursor] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-		colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.78f, 0.69f, 0.69f, 0.20f);
-		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+		// Text Colors - terminal green/white
+		colors[ImGuiCol_Text] = Color(200, 200, 200).to_imvec4();
+		colors[ImGuiCol_TextDisabled] = Color(120, 140, 120).to_imvec4();
 
-		style.WindowRounding = 4.0f;
-		style.FrameRounding = 4.0f;
-		style.GrabRounding = 3.0f;
-		style.PopupRounding = 4.0f;
-		style.TabRounding = 4.0f;
+		// Window Backgrounds - deep terminal black
+		colors[ImGuiCol_WindowBg] = Color(10, 15, 10).to_imvec4();
+		colors[ImGuiCol_ChildBg] = Color(5, 10, 5).to_imvec4();
+		colors[ImGuiCol_PopupBg] = Color(8, 12, 8).to_imvec4();
+
+		// Borders - subtle green tint
+		colors[ImGuiCol_Border] = Color(30, 50, 30).to_imvec4();
+		colors[ImGuiCol_BorderShadow] = Color(0, 0, 0, 0).to_imvec4();
+
+		// Frame backgrounds - dark with green tint
+		colors[ImGuiCol_FrameBg] = Color(18, 28, 18).to_imvec4();
+		colors[ImGuiCol_FrameBgHovered] = Color(28, 45, 28).to_imvec4();
+		colors[ImGuiCol_FrameBgActive] = Color(38, 60, 38).to_imvec4();
+
+		// Title bars - terminal black
+		colors[ImGuiCol_TitleBg] = Color(5, 10, 5).to_imvec4();
+		colors[ImGuiCol_TitleBgActive] = Color(10, 20, 10).to_imvec4();
+		colors[ImGuiCol_TitleBgCollapsed] = Color(5, 10, 5, 200).to_imvec4();
+
+		// Menu & Scrollbar
+		colors[ImGuiCol_MenuBarBg] = Color(8, 15, 8).to_imvec4();
+		colors[ImGuiCol_ScrollbarBg] = Color(5, 10, 5).to_imvec4();
+		colors[ImGuiCol_ScrollbarGrab] = Color(40, 65, 40).to_imvec4();
+		colors[ImGuiCol_ScrollbarGrabHovered] = Color(60, 90, 60).to_imvec4();
+		colors[ImGuiCol_ScrollbarGrabActive] = Color(80, 120, 80).to_imvec4();
+
+		// Interactive elements - bright terminal green
+		colors[ImGuiCol_CheckMark] = Color(100, 255, 100).to_imvec4();
+		colors[ImGuiCol_SliderGrab] = Color(80, 200, 80).to_imvec4();
+		colors[ImGuiCol_SliderGrabActive] = Color(120, 255, 120).to_imvec4();
+
+		// Buttons - dark green with bright hover
+		colors[ImGuiCol_Button] = Color(20, 35, 20).to_imvec4();
+		colors[ImGuiCol_ButtonHovered] = Color(40, 70, 40).to_imvec4();
+		colors[ImGuiCol_ButtonActive] = Color(60, 100, 60).to_imvec4();
+
+		// Headers - subtle green shades
+		colors[ImGuiCol_Header] = Color(25, 40, 25).to_imvec4();
+		colors[ImGuiCol_HeaderHovered] = Color(40, 65, 40).to_imvec4();
+		colors[ImGuiCol_HeaderActive] = Color(55, 85, 55).to_imvec4();
+
+		// Separators - green accent
+		colors[ImGuiCol_Button] = Color(25, 40, 25).to_imvec4();
+		colors[ImGuiCol_ButtonHovered] = Color(45, 75, 45).to_imvec4();
+		colors[ImGuiCol_ButtonActive] = Color(65, 105, 65).to_imvec4();
+
+		// Resize grips - bright green
+		colors[ImGuiCol_ResizeGrip] = Color(60, 120, 60, 80).to_imvec4();
+		colors[ImGuiCol_ResizeGripHovered] = Color(90, 180, 90, 170).to_imvec4();
+		colors[ImGuiCol_ResizeGripActive] = Color(120, 240, 120).to_imvec4();
+
+		// Tabs - terminal style
+		colors[ImGuiCol_Tab] = Color(15, 25, 15).to_imvec4();
+		colors[ImGuiCol_TabHovered] = Color(35, 55, 35).to_imvec4();
+		colors[ImGuiCol_TabSelected] = Color(20, 35, 20).to_imvec4();
+		colors[ImGuiCol_TabSelectedOverline] = Color(100, 255, 100).to_imvec4();
+		colors[ImGuiCol_TabDimmed] = Color(10, 15, 10, 200).to_imvec4();
+		colors[ImGuiCol_TabDimmedSelected] = Color(15, 25, 15).to_imvec4();
+		colors[ImGuiCol_TabDimmedSelectedOverline] = Color(80, 200, 80, 180).to_imvec4();
+
+		// Docking
+		colors[ImGuiCol_DockingPreview] = Color(80, 200, 80, 140).to_imvec4();
+		colors[ImGuiCol_DockingEmptyBg] = Color(8, 12, 8).to_imvec4();
+
+		// Plots - terminal green
+		colors[ImGuiCol_PlotLines] = Color(120, 200, 120).to_imvec4();
+		colors[ImGuiCol_PlotLinesHovered] = Color(150, 255, 150).to_imvec4();
+		colors[ImGuiCol_PlotHistogram] = Color(80, 180, 80).to_imvec4();
+		colors[ImGuiCol_PlotHistogramHovered] = Color(120, 240, 120).to_imvec4();
+
+		// Tables - dark with green alternating
+		colors[ImGuiCol_TableHeaderBg] = Color(25, 40, 25).to_imvec4();
+		colors[ImGuiCol_TableBorderStrong] = Color(30, 50, 30).to_imvec4();
+		colors[ImGuiCol_TableBorderLight] = Color(20, 35, 20).to_imvec4();
+		colors[ImGuiCol_TableRowBg] = Color(0, 0, 0, 0).to_imvec4();
+		colors[ImGuiCol_TableRowBgAlt] = Color(20, 35, 20, 40).to_imvec4();
+
+		// Links & Selection
+		colors[ImGuiCol_TextLink] = Color(100, 255, 100).to_imvec4();
+		colors[ImGuiCol_TextSelectedBg] = Color(50, 100, 50, 90).to_imvec4();
+
+		// Special states
+		colors[ImGuiCol_DragDropTarget] = Color(150, 255, 150).to_imvec4();
+		colors[ImGuiCol_NavCursor] = Color(100, 255, 100).to_imvec4();
+		colors[ImGuiCol_NavWindowingHighlight] = Color(200, 255, 200, 180).to_imvec4();
+		colors[ImGuiCol_NavWindowingDimBg] = Color(8, 12, 8, 150).to_imvec4();
+		colors[ImGuiCol_ModalWindowDimBg] = Color(8, 12, 8, 180).to_imvec4();
+
+		// Style settings for terminal look
+		style.WindowRounding = 2.0f;
+		style.FrameRounding = 2.0f;
+		style.GrabRounding = 2.0f;
+		style.PopupRounding = 2.0f;
+		style.TabRounding = 2.0f;
+		style.ScrollbarRounding = 0.0f;
 		style.WindowMenuButtonPosition = ImGuiDir_Right;
-		style.ScrollbarSize = 10.0f;
-		style.GrabMinSize = 10.0f;
+		style.ScrollbarSize = 14.0f;
+		style.GrabMinSize = 12.0f;
 		style.DockingSeparatorSize = 1.0f;
-		style.SeparatorTextBorderSize = 2.0f;
+		style.SeparatorTextBorderSize = 1.0f;
+		style.WindowPadding = ImVec2(6.0f, 6.0f);
+		style.FramePadding = ImVec2(6.0f, 6.0f);
+		style.ItemSpacing = ImVec2(6.0f, 4.0f);
+		style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
+		style.IndentSpacing = 12.0f;
 	}
+	
+	
 	void ImGuiLayer::on_imgui_render()
 	{
 	}

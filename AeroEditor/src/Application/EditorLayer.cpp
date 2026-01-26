@@ -2,6 +2,7 @@
 #include <UI/StyleScope.hpp>
 #include <algorithm>
 #include <UI/UI.hpp>
+#include <icons.h>
 
 namespace ag
 {
@@ -74,7 +75,7 @@ namespace ag
 		}
 
 		m_framebuffer->bind();
-		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
+		RenderCommand::set_clear_color(ag::Color(38, 45, 42));
 		RenderCommand::clear();
 
 		m_framebuffer->clear_attachment(1, -1);
@@ -264,11 +265,11 @@ namespace ag
 					std::string scene_name = name;
 					if (scene->is_save_required())
 					{
-						scene_name =  scene_name + " *";
+						scene_name = "  " + scene_name + "  *";
 					}
 					else
 					{
-						scene_name = scene_name + "  ";
+						scene_name = "  " + scene_name + "   ";
 					}
 
 					if (ImGui::Button(scene_name.c_str(), ImVec2(0, 30)))
@@ -279,7 +280,7 @@ namespace ag
 
 				// Close button
 				ImGui::SameLine(0, 1);
-				if (ImGui::Button("x", ImVec2(0, 30)))
+				if (ImGui::Button(ICON_FA_X, ImVec2(30, 30)))
 				{
 					m_scene_to_remove = name;
 					set_active_scene(scene);
@@ -304,12 +305,10 @@ namespace ag
 			StyleScope style;
 			style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(5, 0));
 
-			ImGui::SetWindowFontScale(1.5f);
-			if (ImGui::Button("+", ImVec2(0, 30)))
+			if (ImGui::Button(ICON_FA_PLUS, ImVec2(30, 30)))
 			{
 				UI::get_uistate_panels().create_new_scene = true;
 			}
-			ImGui::SetWindowFontScale(1.0f);
 		}
 	}
 

@@ -13,6 +13,11 @@ namespace ag
 	{
 		m_scene = Scene::get_active_scene();
 	}
+	Entity::Entity(AG_uint id)
+		:m_entity_handler((entt::entity)(id))
+	{
+		m_scene = Scene::get_active_scene();
+	}
 
 	Entity::~Entity()
 	{

@@ -43,10 +43,7 @@ namespace ag
 
 			ImGui::PushID(name.c_str());
 
-
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 6));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
-			ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 12.0f);
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 6.0f));
 
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen |
 				ImGuiTreeNodeFlags_Framed |
@@ -122,8 +119,8 @@ namespace ag
 				ImGui::TreePop();
 			}
 
-			ImGui::PopStyleVar(3);
 			ImGui::PopID();
+			ImGui::PopStyleVar();
 
 			if (remove)
 			{

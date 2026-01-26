@@ -1,6 +1,7 @@
 ﻿#include <Node/NodeProperties.hpp>
 #include <Aero.hpp>
 #include <UI/UI.hpp>
+#include <icons.h>
 
 namespace ag
 {
@@ -56,21 +57,10 @@ namespace ag
 
 		ImGui::SetCursorPosX(button_x);
 
-
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-
-		if (ImGui::Button("Add Component", ImVec2(button_width, 30)))
+		if (ImGui::Button( ICON_FA_PLUS "  Add Component", ImVec2(button_width, 35)))
 		{
 			ImGui::OpenPopup("AddComponentModal");
 		}
-
-
-		ImGui::PopStyleColor(3);
-
-
 		if (ImGui::BeginPopup("AddComponentModal"))
 		{
 			for (auto& info : comps)
@@ -103,10 +93,7 @@ namespace ag
 			[](Border_Component& props)
 			{
 				UI::draw_value("Thickness", props.thickness, 0.0f);
-
-				ImGui::Dummy(spacing);
 				UI::draw_color("Color", props.color);
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Corner_Component::imgui_render(Entity entity)
@@ -114,12 +101,8 @@ namespace ag
 		NodeProperties::draw_component_node<Corner_Component>("Corner Component", entity,
 			[](Corner_Component& props)
 			{
-
 				UI::draw_bool("Uniform", props.uniform);
-				ImGui::Dummy(spacing);
-
 				UI::draw_value("Corner", props.corner, 0.0f);
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void UI_Component::imgui_render(Entity entity)
@@ -130,9 +113,7 @@ namespace ag
 				std::vector<std::string> options;
 				options.push_back("Screen");
 				options.push_back("World");
-
 				UI::draw_enum("Mode", props.mode, options);
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Render2D_Component::imgui_render(Entity entity)
@@ -140,7 +121,6 @@ namespace ag
 		NodeProperties::draw_component_node<Render2D_Component >("Render2D Component", entity,
 			[entity](Render2D_Component& props) mutable
 			{
-
 				vec2f reset_value;
 				{
 					if (entity.has_component<Texture_Component>() && entity.get_component<Texture_Component>().texture)
@@ -154,11 +134,7 @@ namespace ag
 					}
 				}
 				UI::draw_vec2("Size", props.size, reset_value);
-
-				ImGui::Dummy(spacing);
-
 				UI::draw_color("Color", props.color);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Texture_Component::imgui_render(Entity entity)
@@ -167,7 +143,6 @@ namespace ag
 			[entity](Texture_Component& props)
 			{
 				UI::draw_texture(entity);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void TextureRect_Component::imgui_render(Entity entity, bool can_remove)
@@ -175,10 +150,8 @@ namespace ag
 		NodeProperties::draw_component_node<TextureRect_Component>("TextureRect Component", entity,
 			[entity](TextureRect_Component& props) mutable
 			{
-				ImGui::Dummy(spacing);
 				bool changed = false;
 				changed = UI::draw_vec2("Position", props.rect.position);
-				ImGui::Dummy(spacing);
 
 				vec2u reset_value;
 				if (entity.has_component<Texture_Component>())
@@ -194,7 +167,6 @@ namespace ag
 					}
 				}
 				changed = UI::draw_vec2("Size", props.rect.size, reset_value);
-				ImGui::Dummy(spacing);
 			}, can_remove);
 	}
 	void TextureFlip_Component::imgui_render(Entity entity)
@@ -203,10 +175,7 @@ namespace ag
 			[entity](TextureFlip_Component& props) mutable
 			{
 				UI::draw_bool("Horizontal", props.horizontal);
-				ImGui::Dummy(spacing);
-
 				UI::draw_bool("Vertical", props.vertical);
-				ImGui::Dummy(spacing);
 
 			}, true);
 	}
@@ -216,14 +185,8 @@ namespace ag
 			[](Transform_Component& transform)
 			{
 				UI::draw_vec2("Position", transform.position, { 0, 0 });
-
-				ImGui::Dummy(spacing);
 				UI::draw_vec2("Scale", transform.scale, { 1.0f, 1.0f });
-
-				ImGui::Dummy(spacing);
-				UI::draw_value("Rotation", transform.rotation);
-				ImGui::Dummy(spacing);
-
+				UI::draw_value("Rotation", transform.rotation, 0.0f, 360.0f);
 			}, false);
 	}
 	void Tag_Component::imgui_render(Entity entity)
@@ -232,13 +195,8 @@ namespace ag
 			[](Tag_Component& tag)
 			{
 				UI::draw_string("Name", tag.name);
-				ImGui::Dummy(spacing);
-
 				UI::draw_bool("Visible", tag.visible);
-				ImGui::Dummy(spacing);
-
 				UI::draw_bool("Lock", tag.locked);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Script_Component::imgui_render(Entity entity)
@@ -247,7 +205,6 @@ namespace ag
 			[entity](Script_Component& props) mutable
 			{
 				UI::draw_script_selector(entity);
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Camera_Component::imgui_render(Entity entity)
@@ -256,10 +213,7 @@ namespace ag
 			[](Camera_Component& props)
 			{
 				UI::draw_vec2("Size", props.size, { 1280, 720 });
-
-				ImGui::Dummy(spacing);
 				UI::draw_vec2("Center", props.center, props.size / 2);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Window_Component::imgui_render(Entity entity)
@@ -268,7 +222,6 @@ namespace ag
 			[](Window_Component& props)
 			{
 				UI::draw_vec2("Size", props.size, { 1280, 720 });
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void Animation_Component::imgui_render(Entity entity)
@@ -277,7 +230,6 @@ namespace ag
 			[entity](Animation_Component& anim)
 			{
 				UI::draw_animation(entity);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Tile_Component::imgui_render(Entity entity)
@@ -286,10 +238,7 @@ namespace ag
 			[entity](Tile_Component& tile)
 			{
 				UI::draw_vec2("Size", tile.size, { 32, 32 });
-
-				ImGui::Dummy(spacing);
 				UI::draw_vec2("Offset", tile.offset, { 0, 0 });
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void TileSet_Component::imgui_render(Entity entity)
@@ -298,7 +247,6 @@ namespace ag
 			[entity](TileSet_Component& tile)
 			{
 				UI::draw_tilemap_register(entity);
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void PhysicsBody_Component::imgui_render(Entity entity)
@@ -312,10 +260,7 @@ namespace ag
 				options.push_back("Kinematic");
 
 				UI::draw_enum("Body Type", props.body_type, options);
-				ImGui::Dummy(spacing);
-
 				UI::draw_bool("Rotation", props.rotation);
-				ImGui::Dummy(spacing);
 			}, true);
 		CollisionShape_Component::imgui_render(entity);
 	}
@@ -329,7 +274,6 @@ namespace ag
 				options.push_back("Circle");
 
 				UI::draw_enum("Shape Type", props.shape_type, options);
-				ImGui::Dummy(spacing);
 				switch (props.shape_type)
 				{
 				case ShapeType::Rectangle:
@@ -342,9 +286,7 @@ namespace ag
 					UI::draw_vec2("Size", props.size);
 					break;
 				}
-				ImGui::Dummy(spacing);
 				ImGui::SliderInt("Group Number", &props.group, 1, 5);
-				ImGui::Dummy(spacing);
 				ImGui::Text("Collides With:");
 				for (int i = 0; i < 5; i++)
 				{
@@ -352,7 +294,6 @@ namespace ag
 					sprintf(label, "Group %d", i + 1);
 					ImGui::Checkbox(label, &props.collide_with[i]);
 				}
-				ImGui::Dummy(spacing);
 			}, true);
 	}
 	void AutoTiling_Component::imgui_render(Entity entity)
@@ -368,13 +309,8 @@ namespace ag
 		NodeProperties::draw_component_node<Text_Component>("Text Component", entity,
 			[entity](Text_Component& comp) mutable
 			{
-				ImGui::Dummy(spacing);
-				//UI::draw_string_multiline("Description", comp.text, 2048, ImVec2(0, 150));
+				UI::draw_string_multiline("Description", comp.text, 2048, ImVec2(0, 150));
 				UI::draw_value("Size", comp.font_size, 10.0f);
-				ImGui::Dummy(spacing);
-
-
-
 			}, false);
 	}
 	void FontStyle_Component::imgui_render(Entity entity)
@@ -382,30 +318,19 @@ namespace ag
 		NodeProperties::draw_component_node<FontStyle_Component>("FontStyle Component", entity,
 			[entity](FontStyle_Component& props) mutable
 			{
-				ImGui::Dummy(spacing);
 				UI::draw_color("Text Color", props.color);
-				ImGui::Dummy(spacing);
 				std::vector<std::string> allignment;
 				allignment.push_back("Left");
 				allignment.push_back("Center");
 				allignment.push_back("Right");
 				UI::draw_enum("Horizontal", props.h_allignment, allignment);
-				ImGui::Dummy(ImVec2(0, 2));
 				allignment.clear();
 				allignment.push_back("Top");
 				allignment.push_back("Center");
 				allignment.push_back("Bottom");
 				UI::draw_enum("Vertical", props.v_allignment, allignment);
-				ImGui::Dummy(spacing);
-
 				UI::draw_value("Line Height", props.line_height, 1.0f, 5.0f);
-				ImGui::Dummy(spacing);
-
 				UI::draw_vec2("Bounds", props.bounds);
-				ImGui::Dummy(spacing);
-
-
-
 			}, true);
 	}
 	void Button_Visual::imgui_render(Entity entity)
@@ -414,29 +339,17 @@ namespace ag
 			[entity](Button_Component& comps) mutable
 			{
 				bool changed = false;
-				ImGui::Dummy(spacing);
 				changed = UI::draw_color("Background", comps.base.background);
-
-				ImGui::Dummy(spacing);
 				changed = UI::draw_color("Border", comps.base.border);
-
-				ImGui::Dummy(spacing);
 				changed = UI::draw_color("Text", comps.base.text);
-
-				ImGui::Dummy(spacing);
 				changed = UI::draw_value("Thickness", comps.base.border_thickness);
-
-				ImGui::Dummy(spacing);
 				float size = comps.layout.size.y;
 				changed = UI::draw_value("Corner", comps.base.corner, 0.0f, size * 0.5f);
-
-
 				if (changed)
 				{
 					comps.overrides[comps.current_state] = comps.base;
 				}
 
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Button_Layout::imgui_render(Entity entity)
@@ -444,25 +357,18 @@ namespace ag
 		NodeProperties::draw_component_node<Button_Component>("Button_Layout", entity,
 			[entity](Button_Component& comps) mutable
 			{
-				ImGui::Dummy(spacing);
 				UI::draw_vec2("Size", comps.layout.size);
-				ImGui::Dummy(spacing);
-
 				std::vector<std::string> allignment;
 				allignment.push_back("Left");
 				allignment.push_back("Center");
 				allignment.push_back("Right");
 				UI::draw_enum("Horizontal", comps.layout.h_allignment, allignment);
-				ImGui::Dummy(ImVec2(0, 2));
 				allignment.clear();
 				allignment.push_back("Top");
 				allignment.push_back("Center");
 				allignment.push_back("Bottom");
 				UI::draw_enum("Vertical", comps.layout.v_allignment, allignment);
-				ImGui::Dummy(spacing);
-
 				UI::draw_bool("Uniform", comps.layout.uniform);
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Button_Component::imgui_render(Entity entity)
@@ -470,7 +376,6 @@ namespace ag
 		NodeProperties::draw_component_node<Button_Component>("Button Component", entity,
 			[entity](Button_Component& comps) mutable
 			{
-				ImGui::Dummy(spacing);
 				std::vector<std::string> visual_states = Button_Visual::all_states();
 				bool exists = false;
 				if (UI::draw_enum("State", comps.current_state, visual_states))
@@ -489,22 +394,8 @@ namespace ag
 
 				float total_width = ImGui::GetContentRegionAvail().x;
 				float button_spacing = 10.0f;
-				ImGui::Dummy(spacing);
-
 				GUI_Button button;
-				button.background.normal = Color(70, 70, 70);
-				button.background.hover = Color(95, 95, 95);
-				button.background.active = Color(55, 55, 55);
-				button.background.disabled = Color(45, 45, 45);
-
-				button.text.normal = Color(230, 230, 230);
-				button.text.hover = Color(255, 255, 255);
-				button.text.active = Color(210, 210, 210);
-				button.text.disabled = Color(120, 120, 120);
-
 				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
-
-
 				button.label = "Create New";
 				button.enabled = !exists;
 				if (UI::draw_button(button))
@@ -524,7 +415,6 @@ namespace ag
 						comps.current_state = Button_Visual_State::Normal;
 					}
 				}
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Textured_Button_Component::imgui_render(Entity entity)
@@ -532,7 +422,6 @@ namespace ag
 		NodeProperties::draw_component_node<Textured_Button_Component>("Texture Button Component", entity,
 			[entity](Textured_Button_Component& comps) mutable
 			{
-				ImGui::Dummy(spacing);
 				std::vector<std::string> visual_states = Button_Visual::all_states();
 				bool exists = false;
 				if (UI::draw_enum("State", comps.current_state, visual_states))
@@ -558,18 +447,8 @@ namespace ag
 
 				float total_width = ImGui::GetContentRegionAvail().x;
 				float button_spacing = 10.0f;
-				ImGui::Dummy(spacing);
 
 				GUI_Button button;
-				button.background.normal = Color(70, 70, 70);
-				button.background.hover = Color(95, 95, 95);
-				button.background.active = Color(55, 55, 55);
-				button.background.disabled = Color(45, 45, 45);
-
-				button.text.normal = Color(230, 230, 230);
-				button.text.hover = Color(255, 255, 255);
-				button.text.active = Color(210, 210, 210);
-				button.text.disabled = Color(120, 120, 120);
 
 				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
 
@@ -593,7 +472,6 @@ namespace ag
 						comps.current_state = Button_Visual_State::Normal;
 					}
 				}
-				ImGui::Dummy(spacing);
 			}, false);
 	}
 	void Audio_Component::imgui_render(Entity entity)
@@ -601,11 +479,6 @@ namespace ag
 		NodeProperties::draw_component_node<Audio_Component>("Audio Component", entity,
 			[entity](Audio_Component& comps) mutable
 			{
-				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 12));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
-
-				ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Sound File");
-
 				if (!comps.path.empty())
 				{
 					ImGui::BeginGroup();
@@ -642,15 +515,6 @@ namespace ag
 				ImGui::BeginGroup();
 
 				GUI_Button button;
-				button.background.normal = Color(70, 70, 70);
-				button.background.hover = Color(95, 95, 95);
-				button.background.active = Color(55, 55, 55);
-				button.background.disabled = Color(45, 45, 45);
-
-				button.text.normal = Color(230, 230, 230);
-				button.text.hover = Color(255, 255, 255);
-				button.text.active = Color(210, 210, 210);
-				button.text.disabled = Color(120, 120, 120);
 
 				if (comps.audio_buffer == 0)
 				{
@@ -696,7 +560,6 @@ namespace ag
 
 					ImGui::BeginGroup();
 
-					// Get playback state
 					bool isPlaying = comps.source.is_playing();
 
 					button.label = isPlaying ? "Pause" : "Play";
@@ -751,7 +614,7 @@ namespace ag
 
 
 					bool loop = comps.source.is_looping();
-					if (ImGui::Checkbox("Loop", &loop))
+					if (UI::draw_bool("Loop", loop))
 					{
 						comps.source.set_loop(loop);
 					}
@@ -798,8 +661,6 @@ namespace ag
 					}
 					ImGui::EndDragDropTarget();
 				}
-
-				ImGui::PopStyleVar(2);
 			}, false);
 	}
 

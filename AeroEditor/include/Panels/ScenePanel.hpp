@@ -28,6 +28,13 @@ namespace ag
 		Paint, Eraser
 	};
 
+	enum class DropPosition
+	{
+		Before,
+		After,
+		LastChild
+	};
+
 	struct CreatePanelState {
 		NodeType selected_prefab = NodeType::Rectangle;
 		std::string search_filter;
@@ -146,13 +153,18 @@ namespace ag
 		void draw_hierarchy_context_menu(Entity* entity);
 		bool draw_toolbar_button(const char* icon, const char* tooltip);
 		void push_entity_style(Entity entity, bool is_selected);
-		std::string get_icon_for_entity(Entity entity);
-
+		const char* get_node_icon(Entity entity);
 		void select_entity(Entity entity);
 		void update_filter();
 		void expand_all_nodes();
 		void collapse_all_nodes();
 		void reparent_entity(EntityID child_id, EntityID new_parent_id);
+
+		void draw_drop_zone_between(Entity entity, DropPosition position, int level, Entity parent = Entity{});
+		void insert_entity_before(EntityID dragged_id, EntityID target_id);
+		void insert_entity_after(EntityID dragged_id, EntityID target_id);
+		void insert_entity_as_last_child(EntityID dragged_id, EntityID parent_id);
+		bool is_parent(Entity parent, Entity entity);
 
 
 		void duplicate_entity();

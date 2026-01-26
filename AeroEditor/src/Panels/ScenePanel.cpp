@@ -3,6 +3,7 @@
 #include <Node/NodeProperties.hpp>
 #include <UI/UI.hpp>
 #include <queue>
+#include <icons.h>
 
 namespace ag
 {
@@ -388,7 +389,6 @@ namespace ag
 
 		ImGui::Begin("Scene", nullptr, window_flags);
 
-		//Tool Bar the Bar above the Scene
 		draw_hierarchy_toolbar();
 
 		ImGui::Separator();
@@ -414,19 +414,18 @@ namespace ag
 					root_entities.push_back(entity);
 				}
 			}
-
-			// Draw root entities
-			for (auto& entity : root_entities) {
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 0.0f));
+			for (auto& entity : root_entities)
+			{
 				draw_entity_node(entity, 0);
 			}
+			ImGui::PopStyleVar();
 
-			// Draw unparented entities that might have been filtered
 			if (!m_hierarchy_state.filter_text.empty()) {
-				//draw_filtered_entities();
+				
 			}
 
-			// Handle drag and drop target
-			//handle_drag_drop_target();
+
 
 			if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
@@ -446,29 +445,28 @@ namespace ag
 		ImGui::End();
 	}
 
-	//Draw Entity Node
-	void ScenePanel::draw_entity_node(Entity entity, int level) {
+	void ScenePanel::draw_entity_node(Entity entity, int level)
+	{
 		if (!entity || !entity.has_component<Tag_Component>()) return;
-
 		auto& tag = entity.get_component<Tag_Component>();
 		EntityID entity_id = entity.get_id();
 
-		// Skip filtered out entities
 		if (m_hierarchy_state.filtered_out_entities.find(entity_id) !=
-			m_hierarchy_state.filtered_out_entities.end()) {
+			m_hierarchy_state.filtered_out_entities.end())
+		{
 			return;
 		}
 
-		// Apply filter
-		if (!m_hierarchy_state.filter_text.empty()) {
+		if (!m_hierarchy_state.filter_text.empty())
+		{
 			std::string entity_name_lower = tag.name;
 			std::transform(entity_name_lower.begin(), entity_name_lower.end(),
 				entity_name_lower.begin(), ::tolower);
 			std::string filter_lower = m_hierarchy_state.filter_text;
 			std::transform(filter_lower.begin(), filter_lower.end(),
 				filter_lower.begin(), ::tolower);
-
-			if (entity_name_lower.find(filter_lower) == std::string::npos) {
+			if (entity_name_lower.find(filter_lower) == std::string::npos)
+			{
 				m_hierarchy_state.filtered_out_entities.insert(entity_id);
 				return;
 			}
@@ -482,28 +480,30 @@ namespace ag
 		bool is_expanded = m_hierarchy_state.expanded_nodes.find(entity_id) !=
 			m_hierarchy_state.expanded_nodes.end();
 
-		if (is_selected) {
+		if (is_selected)
+		{
 			flags |= ImGuiTreeNodeFlags_Selected;
 			if (m_hierarchy_state.auto_expand_to_selection && !is_expanded) {
 				flags |= ImGuiTreeNodeFlags_DefaultOpen;
 			}
 		}
 
-		if (tag.children.empty()) {
+		if (tag.children.empty())
+		{
 			flags |= ImGuiTreeNodeFlags_Leaf;
 		}
 
-		// Push unique ID for this node
 		ImGui::PushID(static_cast<int>(entity_id));
-
-
 		ImGui::Indent(level * m_hierarchy_state.indent_size);
+
+		draw_drop_zone_between(entity, DropPosition::Before, level);
+
 		push_entity_style(entity, is_selected);
 
-		// Tree node
-		bool node_open = ImGui::TreeNodeEx("##node", flags, "%s", tag.name.c_str());
+		std::string name = std::string(get_node_icon(entity)) + "  " + tag.name;
+		bool node_open = ImGui::TreeNodeEx("##node", flags, "%s", name.c_str());
 
-		// Handle interactions
+
 		handle_entity_interactions(entity);
 
 		bool should_start_drag = ImGui::IsItemActive() &&
@@ -515,7 +515,7 @@ namespace ag
 			{
 				m_hierarchy_state.dragged_entity = entity;
 				ImGui::SetDragDropPayload("ENTITY_NODE", &entity_id, sizeof(EntityID));
-				ImGui::Text("%s", tag.name.c_str());
+				ImGui::Text(ICON_FA_DROPLET " %s", tag.name.c_str());
 				ImGui::EndDragDropSource();
 			}
 		}
@@ -527,8 +527,7 @@ namespace ag
 			}
 		}
 
-
-		// Drag and drop target
+		// make child
 		if (ImGui::BeginDragDropTarget())
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
@@ -542,18 +541,22 @@ namespace ag
 			ImGui::EndDragDropTarget();
 		}
 
-		// Pop style
 		ImGui::PopStyleColor(3);
 		ImGui::PopStyleVar();
 
-		// Draw children if node is open
 		if (node_open)
 		{
 			m_hierarchy_state.expanded_nodes.insert(entity_id);
 
-			for (auto& child : tag.children)
+			for (size_t i = 0; i < tag.children.size(); i++)
 			{
-				draw_entity_node(child, level + 1);
+				draw_entity_node(tag.children[i], level + 1);
+			}
+
+			
+			if (node_open && !tag.children.empty())
+			{
+				draw_drop_zone_between(Entity{}, DropPosition::LastChild, level + 1, entity);
 			}
 
 			ImGui::TreePop();
@@ -564,19 +567,216 @@ namespace ag
 		}
 
 		ImGui::Unindent(level * m_hierarchy_state.indent_size);
+		ImGui::PopID();
+	}
+
+
+
+	void ScenePanel::draw_drop_zone_between(Entity entity, DropPosition position,
+		int level, Entity parent)
+	{
+
+		ImGui::PushID(("drop_zone_" + std::to_string((uint32_t)entity.get_id()) +
+			"_" + std::to_string((int)position)).c_str());
+
+
+		ImVec2 drop_zone_size(ImGui::GetContentRegionAvail().x, 2.0f);
+		ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
+		
+		ImGui::InvisibleButton("##drop_zone", drop_zone_size);
+
+
+		bool is_hovered = ImGui::IsItemHovered();
+
+		if (is_hovered && m_hierarchy_state.dragged_entity)
+		{
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			float indent = level * m_hierarchy_state.indent_size;
+			float y = cursor_pos.y - 1.0f;
+
+			ImVec2 line_start = ImVec2(cursor_pos.x + indent, y);
+			ImVec2 line_end = ImVec2(cursor_pos.x + drop_zone_size.x, y);
+
+			draw_list->AddLine(
+				line_start,
+				line_end,
+				IM_COL32(0, 150, 255, 255),
+				2.0f
+			);
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
+			{
+				EntityID dragged_id = *(const EntityID*)payload->Data;
+				m_scene->set_save_required();
+				if (position == DropPosition::Before)
+				{
+					insert_entity_before(dragged_id, entity.get_id());
+				}
+				else if (position == DropPosition::After)
+				{
+					insert_entity_after(dragged_id, entity.get_id());
+				}
+				else if (position == DropPosition::LastChild)
+				{
+					insert_entity_as_last_child(dragged_id, parent.get_id());
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
 
 		ImGui::PopID();
 	}
 
-	//Draw the tool bar
-	void ScenePanel::draw_hierarchy_toolbar() {
-		ImGui::BeginChild("HierarchyToolbar", ImVec2(0, 50), false);
+	void ScenePanel::insert_entity_before(EntityID dragged_id, EntityID target_id)
+	{
+		Entity dragged = Entity(dragged_id);
+		Entity target = Entity(target_id);
+
+		if (!dragged || !target) return;
+		if (dragged_id == target_id) return;
+
+		if (is_parent(dragged, target)) return;
+
+		auto& dragged_tag = dragged.get_component<Tag_Component>();
+		auto& target_tag = target.get_component<Tag_Component>();
+
+
+		if (dragged_tag.parent)
 		{
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 8));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
+			auto& parent_tag = dragged_tag.parent.get_component<Tag_Component>();
+			parent_tag.children.erase(
+				std::remove(parent_tag.children.begin(), parent_tag.children.end(), dragged),
+				parent_tag.children.end()
+			);
+		}
+		else
+		{
+		/*	auto& root_entities = m_scene->get_root_entities();
+			root_entities.erase(
+				std::remove(root_entities.begin(), root_entities.end(), dragged),
+				root_entities.end()
+			);*/
+		}
+
+		dragged_tag.parent = target_tag.parent;
+
+		if (target_tag.parent)
+		{
+			auto& parent_tag = target_tag.parent.get_component<Tag_Component>();
+
+			auto it = std::find(parent_tag.children.begin(), parent_tag.children.end(), target);
+			if (it != parent_tag.children.end())
+			{
+				parent_tag.children.insert(it, dragged);
+			}
+		}
+		else
+		{
+			/*auto& root_entities = m_scene->get_root_entities();
+			auto it = std::find(root_entities.begin(), root_entities.end(), target);
+			if (it != root_entities.end())
+			{
+				root_entities.insert(it, dragged);
+			}*/
+		}
+	}
+
+	void ScenePanel::insert_entity_after(EntityID dragged_id, EntityID target_id)
+	{
+		Entity dragged = Entity(dragged_id);
+		Entity target = Entity(target_id);
+
+		if (!dragged || !target) return;
+		if (dragged_id == target_id) return;
+
+		if (is_parent(dragged, target)) return;
+
+		auto& dragged_tag = dragged.get_component<Tag_Component>();
+		auto& target_tag = target.get_component<Tag_Component>();
+
+		
+			if (dragged_tag.parent)
+			{
+				auto& parent_tag = dragged_tag.parent.get_component<Tag_Component>();
+				parent_tag.children.erase(
+					std::remove(parent_tag.children.begin(), parent_tag.children.end(), dragged),
+					parent_tag.children.end()
+				);
+			}
+		else
+		{
+			/*auto& root_entities = m_scene->get_root_entities();
+			root_entities.erase(
+				std::remove(root_entities.begin(), root_entities.end(), dragged),
+				root_entities.end()
+			);*/
+		}
+
+		// Set new parent (same as target's parent)
+		dragged_tag.parent = target_tag.parent;
+
+		// Insert after target
+		if (target_tag.parent)
+		{
+			auto& parent_tag = target_tag.parent.get_component<Tag_Component>();
+
+			auto it = std::find(parent_tag.children.begin(), parent_tag.children.end(), target);
+			if (it != parent_tag.children.end())
+			{
+				parent_tag.children.insert(it + 1, dragged);
+			}
+		}
+		else
+		{
+			/*auto& root_entities = m_scene->get_root_entities();
+			auto it = std::find(root_entities.begin(), root_entities.end(), target);
+			if (it != root_entities.end())
+			{
+				root_entities.insert(it + 1, dragged);
+			}*/
+		}
+	}
+
+	void ScenePanel::insert_entity_as_last_child(EntityID dragged_id, EntityID parent_id)
+	{
+		reparent_entity(dragged_id, parent_id);
+	}
+
+	bool ScenePanel::is_parent(Entity parent, Entity entity)
+	{
+		if (!entity || !parent) return false;
+
+		auto& tag = entity.get_component<Tag_Component>();
+		EntityID parent_id = tag.parent.get_id();
+
+		while (parent_id)
+		{
+			if (parent_id == parent.get_id())
+				return true;
+
+			auto parent = Entity(parent_id);
+			if (!parent) break;
+
+			auto& parent_tag = parent.get_component<Tag_Component>();
+			parent_id = parent_tag.parent;
+		}
+
+		return false;
+	}
 
 
-			if (draw_toolbar_button(Icons::PLUS, "Create new object"))
+
+
+
+	void ScenePanel::draw_hierarchy_toolbar()
+	{
+		ImGui::BeginChild("HierarchyToolbar", ImVec2(0, 35), false);
+		{
+
+			if (draw_toolbar_button(ICON_FA_PLUS, "Create new object"))
 			{
 				m_show_create_panel = true;
 			}
@@ -585,7 +785,8 @@ namespace ag
 
 
 			ImGui::BeginDisabled(!m_selected_entity);
-			if (draw_toolbar_button(Icons::TRASH, "Delete selected")) {
+			if (draw_toolbar_button(ICON_FA_TRASH, "Delete selected"))
+			{
 				//delete_selected_entity();
 			}
 			ImGui::EndDisabled();
@@ -594,7 +795,8 @@ namespace ag
 
 			// Duplicate button
 			ImGui::BeginDisabled(!m_selected_entity);
-			if (draw_toolbar_button(Icons::CLONE, "Duplicate selected")) {
+			if (draw_toolbar_button(ICON_FA_CLONE, "Duplicate selected"))
+			{
 				//duplicate_selected_entity();
 			}
 			ImGui::EndDisabled();
@@ -603,7 +805,7 @@ namespace ag
 
 			// Filter toggle
 			if (draw_toolbar_button(
-				m_hierarchy_state.show_filter ? Icons::FILTER : Icons::SEARCH,
+				m_hierarchy_state.show_filter ? ICON_FA_FILTER : ICON_FA_MAGNIFYING_GLASS,
 				"Toggle filter")) {
 				m_hierarchy_state.show_filter = !m_hierarchy_state.show_filter;
 			}
@@ -611,25 +813,28 @@ namespace ag
 			ImGui::SameLine();
 
 			// Expand all
-			if (draw_toolbar_button(Icons::EXPAND_ALL, "Expand all")) {
+			if (draw_toolbar_button(ICON_FA_CHEVRON_DOWN, "Expand all"))
+			{
 				expand_all_nodes();
 			}
 
 			ImGui::SameLine();
 
 			// Collapse all
-			if (draw_toolbar_button(Icons::COLLAPSE_ALL, "Collapse all")) {
+			if (draw_toolbar_button(ICON_FA_CHEVRON_RIGHT, "Collapse all"))
+			{
 				collapse_all_nodes();
 			}
 
 			// Right-aligned buttons
-			ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80);
 
 			// Visibility toggle
-			if (m_selected_entity && m_selected_entity.has_component<Tag_Component>()) {
+			if (m_selected_entity && m_selected_entity.has_component<Tag_Component>())
+			{
 				auto& vis = m_selected_entity.get_component<Tag_Component>();
 				if (draw_toolbar_button(
-					vis.visible ? Icons::EYE : Icons::EYE_SLASH,
+					vis.visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH,
 					vis.visible ? "Hide object" : "Show object")) {
 					vis.visible = !vis.visible;
 				}
@@ -641,13 +846,13 @@ namespace ag
 			if (m_selected_entity && m_selected_entity.has_component<Tag_Component>()) {
 				auto& lock = m_selected_entity.get_component<Tag_Component>();
 				if (draw_toolbar_button(
-					lock.locked ? Icons::LOCK : Icons::UNLOCK,
+					lock.locked ? ICON_FA_LOCK : ICON_FA_UNLOCK,
 					lock.locked ? "Unlock object" : "Lock object")) {
 					lock.locked = !lock.locked;
 				}
 			}
 
-			ImGui::PopStyleVar(2);
+			//ImGui::PopStyleVar();
 		}
 		ImGui::EndChild();
 	}
@@ -684,48 +889,53 @@ namespace ag
 	//Handle Interaction
 	void ScenePanel::handle_entity_interactions(Entity entity) {
 		// Left click (select entity)
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+		{
 			select_entity(entity);
 		}
 
-		// Right click (context menu)
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		{
 			ImGui::OpenPopup("EntityContextMenu");
 			set_selected_entity(entity);
 		}
 
 
-		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		{
 			//focus_entity_in_viewport(entity);
 		}
 
 		// Context menu
-		if (ImGui::BeginPopup("EntityContextMenu")) {
+		if (ImGui::BeginPopup("EntityContextMenu"))
+		{
 			draw_entity_context_menu(entity);
 			ImGui::EndPopup();
 		}
 	}
 
-	void ScenePanel::draw_entity_context_menu(Entity entity) {
-		if (ImGui::MenuItem("Rename", "F2"))
+	void ScenePanel::draw_entity_context_menu(Entity entity)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 6.0f));
+		if (ImGui::MenuItem(ICON_FA_PEN "  Rename", "F2"))
 		{
 			//start_renaming_entity(entity);
 			m_scene->set_save_required(true);
 		}
 
-		if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
+		if (ImGui::MenuItem(ICON_FA_CLONE "  Duplicate", "Ctrl+D"))
 		{
 			duplicate_entity();
 			m_scene->set_save_required(true);
 		}
 
-		if (ImGui::MenuItem("Delete", "Del"))
+		if (ImGui::MenuItem(ICON_FA_TRASH "  Delete", "Del"))
 		{
 			delete_entity();
 			m_scene->set_save_required(true);
 		}
 
-		if (ImGui::MenuItem("Make Root", "Ctrl+Shift+R"))
+		if (ImGui::MenuItem(ICON_FA_DIAGRAM_PROJECT"  Make Root", "Ctrl+Shift+R"))
 		{
 			make_root_entity();
 			m_scene->set_save_required(true);
@@ -733,19 +943,19 @@ namespace ag
 
 		ImGui::Separator();
 
-		if (ImGui::BeginMenu("Create Child")) {
+		if (ImGui::BeginMenu(ICON_FA_PLUS "  Create Child")) {
 
-			if (ImGui::MenuItem("Empty"))
+			if (ImGui::MenuItem(ICON_FA_SHAPES "  Empty"))
 			{
 				//create_child_entity(entity, "Empty", NodeType::Empty);
 				m_scene->set_save_required(true);
 			}
-			if (ImGui::MenuItem("Cube"))
+			if (ImGui::MenuItem(ICON_FA_CUBE "  Cube"))
 			{
 				//create_child_entity(entity, "Cube", NodeType::Cube);
 				m_scene->set_save_required(true);
 			}
-			if (ImGui::MenuItem("Light"))
+			if (ImGui::MenuItem(ICON_FA_LIGHTBULB "  Light"))
 			{
 				//create_child_entity(entity, "Light", NodeType::PointLight);
 				m_scene->set_save_required(true);
@@ -755,11 +965,11 @@ namespace ag
 
 		ImGui::Separator();
 
-		if (ImGui::MenuItem("Copy Path")) {
+		if (ImGui::MenuItem(ICON_FA_COPY "  Copy Path")) {
 			//copy_entity_path(entity);
 		}
 
-		if (ImGui::MenuItem("Find in Project")) {
+		if (ImGui::MenuItem(ICON_FA_MAGNIFYING_GLASS "  Find in Project")) {
 			//find_entity_in_project(entity);
 		}
 
@@ -769,7 +979,7 @@ namespace ag
 		if (entity.has_component<Tag_Component>())
 		{
 			auto& vis = entity.get_component<Tag_Component>();
-			if (ImGui::MenuItem(vis.visible ? "Hide" : "Show"))
+			if (ImGui::MenuItem(vis.visible ? ICON_FA_EYE_SLASH "  Hide" : ICON_FA_EYE "  Show"))
 			{
 				vis.visible = !vis.visible;
 				m_scene->set_save_required(true);
@@ -779,7 +989,7 @@ namespace ag
 		if (entity.has_component<Tag_Component>())
 		{
 			auto& lock = entity.get_component<Tag_Component>();
-			if (ImGui::MenuItem(lock.locked ? "Unlock" : "Lock"))
+			if (ImGui::MenuItem(lock.locked ? ICON_FA_UNLOCK "  Unlock" : ICON_FA_LOCK "  Lock"))
 			{
 				lock.locked = !lock.locked;
 				m_scene->set_save_required(true);
@@ -788,10 +998,12 @@ namespace ag
 
 		ImGui::Separator();
 
-		if (ImGui::MenuItem("Properties", "Alt+Enter"))
+		if (ImGui::MenuItem(ICON_FA_GEAR "  Properties", "Alt+Enter"))
 		{
 			// Show properties panel
 		}
+
+		ImGui::PopStyleVar();
 	}
 
 	void ScenePanel::draw_hierarchy_context_menu(Entity* entity) {
@@ -838,15 +1050,9 @@ namespace ag
 	}
 
 	// Drawing Each Tool Bar
-	bool ScenePanel::draw_toolbar_button(const char* icon, const char* tooltip) {
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.6f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
-
-		ImGui::SetWindowFontScale(1.2f);
-		bool clicked = ImGui::Button(icon, ImVec2(40, 40));
-		ImGui::SetWindowFontScale(1.0f);
-		ImGui::PopStyleColor(3);
+	bool ScenePanel::draw_toolbar_button(const char* icon, const char* tooltip)
+	{
+		bool clicked = ImGui::Button(icon, ImVec2(30, 30));
 
 		if (tooltip && ImGui::IsItemHovered())
 		{
@@ -867,17 +1073,10 @@ namespace ag
 			bg_color = m_hierarchy_state.selected_color;
 		}
 
-		// Disabled entity
 		if (entity.has_component<Tag_Component>() &&
 			!entity.get_component<Tag_Component>().visible) {
 			text_color = m_hierarchy_state.disabled_color;
 		}
-
-		// Prefab instance
-		/*if (entity.has_component<PrefabInstance>()) {
-			text_color = m_hierarchy_state.prefab_color;
-		}*/
-
 		// Locked entity
 		if (entity.has_component<Tag_Component>() &&
 			entity.get_component<Tag_Component>().locked)
@@ -891,27 +1090,25 @@ namespace ag
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, frame_rounding);
 	}
 
-	std::string ScenePanel::get_icon_for_entity(Entity entity) {
-		if (!entity.has_component<Tag_Component>()) return "?";
-
-		auto& tag = entity.get_component<Tag_Component>();
-
-		switch (tag.node_type) {
-			//case NodeType::Empty: return ICON_FA_CUBE;
-		case NodeType::Camera: return "ICON_FA_VIDEO";
-			//case NodeType::Light: return ICON_FA_LIGHTBULB;
-			//case NodeType::Mesh: return ICON_FA_CUBES;
-		case NodeType::Sprite: return "ICON_FA_IMAGE";
-		case NodeType::Text: return "ICON_FA_FONT";
-		case NodeType::Button: return "ICON_FA_MOUSE_POINTER";
-			//case NodeType::AudioSource: return ICON_FA_VOLUME_UP;
-			//case NodeType::ParticleSystem: return ICON_FA_FIRE;
-			//case NodeType::RigidBody: return ICON_FA_WEIGHT;
-			//case NodeType::Collider: return ICON_FA_SHIELD_ALT;
-			//case NodeType::Script: return ICON_FA_CODE;
-			//case NodeType::Canvas: return ICON_FA_LAYER_GROUP;
-		case NodeType::TileMap: return "ICON_FA_TH";
-		default: return "ICON_FA_CUBE";
+	const char* ScenePanel::get_node_icon(Entity entity)
+	{
+		auto type = entity.get_component<Tag_Component>().node_type;
+		switch (type)
+		{
+		case NodeType::None:            return ICON_FA_SQUARE;
+		case NodeType::Rectangle:       return ICON_FA_SQUARE;
+		case NodeType::Circle:          return ICON_FA_CIRCLE;
+		case NodeType::Sprite:          return ICON_FA_IMAGE;
+		case NodeType::AnimatedSprite2D:return ICON_FA_FILM;
+		case NodeType::Camera:          return ICON_FA_VIDEO;
+		case NodeType::TileMap:         return ICON_FA_TABLE_CELLS;
+		case NodeType::Scene2D:         return ICON_FA_LAYER_GROUP;
+		case NodeType::Text:            return ICON_FA_FONT;
+		case NodeType::Button:          return ICON_FA_HAND_POINTER;
+		case NodeType::TextureButton:   return ICON_FA_IMAGE_PORTRAIT;
+		case NodeType::CollisionShape:  return ICON_FA_BORDER_ALL;
+		case NodeType::Audio:           return ICON_FA_MUSIC;
+		default:                        return ICON_FA_SQUARE;
 		}
 	}
 
@@ -1062,7 +1259,6 @@ namespace ag
 
 		const bool is_selected = (state.selected_prefab == type);
 
-		// Button style
 		ImVec4 button_color = is_selected ?
 			ImVec4(0.26f, 0.59f, 0.98f, 0.4f) :
 			ImVec4(0.2f, 0.2f, 0.2f, 0.3f);

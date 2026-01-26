@@ -6,6 +6,7 @@
 #include <string>
 #include <imgui.h>
 #include <chrono>
+#include <algorithm>
 
 namespace ag
 {
@@ -17,6 +18,8 @@ namespace ag
       std::string text;
       spdlog::level::level_enum level;
       std::string timestamp;
+      std::string logger_name;
+      size_t count = 1;
     };
 
     ImGuiConsoleSink(size_t max_messages = 1000) : m_max_messages(max_messages) {}
@@ -42,9 +45,25 @@ namespace ag
       char time_buffer[64];
       strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S", &tm);
 
+      std::string log_text = fmt::to_string(formatted);
+      std::string logger_name = std::string(msg.logger_name.begin(), msg.logger_name.end());
+
       {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_messages.push_back({ fmt::to_string(formatted), msg.level, std::string(time_buffer) });
+
+        // Collapse repeated messages
+        if (m_collapse_duplicates && !m_messages.empty() &&
+          m_messages.back().text == log_text &&
+          m_messages.back().level == msg.level &&
+          m_messages.back().logger_name == logger_name)
+        {
+          m_messages.back().count++;
+          m_messages.back().timestamp = std::string(time_buffer);
+        }
+        else
+        {
+          m_messages.push_back({ log_text, msg.level, std::string(time_buffer), logger_name, 1 });
+        }
 
         if (m_messages.size() > m_max_messages)
           m_messages.erase(m_messages.begin());
@@ -53,72 +72,132 @@ namespace ag
 
     void Draw(const char* title, bool* p_open = nullptr)
     {
-      ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowSize(ImVec2(700, 500), ImGuiCond_FirstUseEver);
       if (!ImGui::Begin(title, p_open))
       {
         ImGui::End();
         return;
       }
 
+      // Top toolbar
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f));
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 4.0f));
+
       if (ImGui::Button("Clear"))
         Clear();
-      ImGui::SameLine();
 
-      bool copy = ImGui::Button("Copy");
       ImGui::SameLine();
-      m_filter.Draw("Filter", -100.0f);
+      bool copy = ImGui::Button("Copy All");
+
+      ImGui::SameLine();
+      if (ImGui::Button("Export"))
+        ExportToFile();
+
+      ImGui::SameLine();
+      ImGui::Text("Messages: %zu", GetMessageCount());
+
+      ImGui::PopStyleVar(2);
 
       ImGui::Separator();
 
+      // Filter bar
+      m_filter.Draw("Filter", 200.0f);
+
+      ImGui::SameLine();
       ImGui::Checkbox("Auto-scroll", &m_auto_scroll);
+
       ImGui::SameLine();
-      ImGui::Checkbox("Show timestamps", &m_show_timestamps);
+      ImGui::Checkbox("Timestamps", &m_show_timestamps);
+
       ImGui::SameLine();
-      ImGui::Checkbox("Show level", &m_show_level);
+      ImGui::Checkbox("Logger", &m_show_logger_name);
+
+      ImGui::SameLine();
+      ImGui::Checkbox("Collapse", &m_collapse_duplicates);
 
       ImGui::Separator();
 
-      const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-      ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), false, ImGuiWindowFlags_HorizontalScrollbar);
+      // Log content area
+      const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+      ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height), false,
+        ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
       if (copy)
         ImGui::LogToClipboard();
 
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 2));
+
       {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        for (const auto& message : m_messages)
+        ImGuiListClipper clipper;
+        clipper.Begin((int)m_messages.size());
+
+        while (clipper.Step())
         {
-          if (!m_filter.PassFilter(message.text.c_str()))
-            continue;
+          for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+          {
+            const auto& message = m_messages[i];
 
-          ImVec4 color = GetColorForLevel(message.level);
-          ImGui::PushStyleColor(ImGuiCol_Text, color);
+            if (!m_filter.PassFilter(message.text.c_str()))
+              continue;
 
-          std::string display_text;
-          if (m_show_timestamps && m_show_level)
-          {
-            // Convert string_view to string
-            std::string level_str = spdlog::level::to_short_c_str(message.level);
-            display_text = "[" + message.timestamp + "][" + level_str + "] " + message.text;
-          }
-          else if (m_show_timestamps)
-          {
-            display_text = "[" + message.timestamp + "] " + message.text;
-          }
-          else if (m_show_level)
-          {
-            std::string level_str = spdlog::level::to_short_c_str(message.level);
-            display_text = "[" + level_str + "] " + message.text;
-          }
-          else
-          {
-            display_text = message.text;
-          }
+            ImVec4 color = GetColorForLevel(message.level);
+            ImGui::PushStyleColor(ImGuiCol_Text, color);
 
-          ImGui::TextUnformatted(display_text.c_str());
-          ImGui::PopStyleColor();
+            std::string display_text;
+
+            if (m_show_timestamps)
+              display_text += "[" + message.timestamp + "] ";
+
+            if (!message.logger_name.empty())
+              display_text +=  "[" + message.logger_name + "] : ";
+
+            display_text += message.text;
+
+            if (message.count > 1)
+              display_text += " (x" + std::to_string(message.count) + ")";
+
+            ImGui::TextUnformatted(display_text.c_str());
+
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+            {
+              m_selected_message = i;
+              ImGui::OpenPopup("LogContextMenu");
+            }
+
+            ImGui::PopStyleColor();
+          }
         }
+      }
+
+      ImGui::PopStyleVar();
+
+      // Context menu
+      if (ImGui::BeginPopup("LogContextMenu"))
+      {
+        if (m_selected_message >= 0 && m_selected_message < (int)m_messages.size())
+        {
+          const auto& msg = m_messages[m_selected_message];
+
+          if (ImGui::MenuItem("Copy Message"))
+            ImGui::SetClipboardText(msg.text.c_str());
+
+          if (ImGui::MenuItem("Copy with Timestamp"))
+          {
+            std::string full_msg = "[" + msg.timestamp + "] " + msg.logger_name + ": " + msg.text;
+            ImGui::SetClipboardText(full_msg.c_str());
+          }
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem("Clear All Above"))
+            ClearAbove(m_selected_message);
+
+          if (ImGui::MenuItem("Clear All Below"))
+            ClearBelow(m_selected_message);
+        }
+        ImGui::EndPopup();
       }
 
       if (copy)
@@ -128,6 +207,11 @@ namespace ag
         ImGui::SetScrollHereY(1.0f);
 
       ImGui::EndChild();
+
+      // Footer with stats
+      ImGui::Separator();
+      ImGui::Text("Total: %zu | Filtered: %zu", m_messages.size(), GetFilteredCount());
+
       ImGui::End();
     }
 
@@ -142,28 +226,74 @@ namespace ag
       m_formatter = std::move(formatter);
     }
 
+    size_t GetMessageCount() const
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      return m_messages.size();
+    }
+
   private:
     std::vector<Message> m_messages;
     size_t m_max_messages;
     bool m_auto_scroll = true;
     bool m_show_timestamps = true;
-    bool m_show_level = true;
+    bool m_show_logger_name = true;
+    bool m_collapse_duplicates = false;
     ImGuiTextFilter m_filter;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
     std::unique_ptr<spdlog::formatter> m_formatter;
+    int m_selected_message = -1;
 
     ImVec4 GetColorForLevel(spdlog::level::level_enum level) const
     {
       switch (level)
       {
       case spdlog::level::trace:    return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
-      case spdlog::level::debug:    return ImVec4(0.0f, 0.5f, 1.0f, 1.0f);
-      case spdlog::level::info:     return ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-      case spdlog::level::warn:     return ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-      case spdlog::level::err:      return ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
-      case spdlog::level::critical: return ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+      case spdlog::level::debug:    return ImVec4(0.4f, 0.7f, 1.0f, 1.0f);
+      case spdlog::level::info:     return ImVec4(0.6f, 0.9f, 0.6f, 1.0f);
+      case spdlog::level::warn:     return ImVec4(1.0f, 0.8f, 0.3f, 1.0f);
+      case spdlog::level::err:      return ImVec4(1.0f, 0.4f, 0.4f, 1.0f);
+      case spdlog::level::critical: return ImVec4(1.0f, 0.2f, 0.2f, 1.0f);
       default:                      return ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
       }
+    }
+
+    size_t GetFilteredCount() const
+    {
+      size_t count = 0;
+      for (const auto& msg : m_messages)
+      {
+        if (m_filter.PassFilter(msg.text.c_str()))
+          count++;
+      }
+      return count;
+    }
+
+    void ClearAbove(int index)
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      if (index > 0)
+        m_messages.erase(m_messages.begin(), m_messages.begin() + index);
+    }
+
+    void ClearBelow(int index)
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      if (index < (int)m_messages.size() - 1)
+        m_messages.erase(m_messages.begin() + index + 1, m_messages.end());
+    }
+
+    void ExportToFile()
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      // TODO: Implement file dialog and export
+      // For now, just copy to clipboard
+      std::string all_logs;
+      for (const auto& msg : m_messages)
+      {
+        all_logs += "[" + msg.timestamp + "] " + "[" + msg.logger_name +  "] : " + msg.text + "\n";
+      }
+      ImGui::SetClipboardText(all_logs.c_str());
     }
   };
 }

@@ -13,6 +13,7 @@ namespace ag
 	public:
 		Entity(const entt::entity handle);
 		Entity(const Entity& other) = default;
+		Entity(AG_uint id);
 		Entity();
 
 		~Entity();

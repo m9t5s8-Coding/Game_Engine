@@ -6,6 +6,7 @@
 #include <shellapi.h>
 #include <UI/PopUp.hpp>
 #include <UI/StyleScope.hpp>
+#include <icons.h>
 
 namespace ag
 {
@@ -30,23 +31,22 @@ namespace ag
 	{
 		if (!ImGui::BeginMainMenuBar()) return;
 
-
 		// File Menu
-		if (ImGui::BeginMenu("File")) {
-			// New Scene
-			if (ImGui::MenuItem("New Scene", "Ctrl+N"))
+		if (ImGui::BeginMenu("  File  "))
+		{
+			if (ImGui::MenuItem(ICON_FA_FILE "  New Scene", "Ctrl+N"))
 			{
 				UI::get_uistate_panels().create_new_scene = true;
 			}
 
 			// Open Scene
-			if (ImGui::MenuItem("Open Scene", "Ctrl+O"))
+			if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN "  Open Scene", "Ctrl+O"))
 			{
 				EditorLayer::get().open_scene();
 			}
 
 			// Recent Scenes submenu
-			if (ImGui::BeginMenu("Recent Scenes")) {
+			if (ImGui::BeginMenu(ICON_FA_CLOCK "  Recent Scenes")) {
 
 				ImGui::EndMenu();
 			}
@@ -54,35 +54,34 @@ namespace ag
 			ImGui::Separator();
 
 			// Save Scene
-			if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
+			if (ImGui::MenuItem(ICON_FA_SAVE "  Save Scene", "Ctrl+S"))
 			{
 				EditorLayer::get().save_scene();
 			}
 
 			// Save Scene As
-			if (ImGui::MenuItem("Save Scene As Default", "Ctrl+Shift+S"))
+			if (ImGui::MenuItem(ICON_FA_SAVE "  Save Scene As Default", "Ctrl+Shift+S"))
 			{
 				EditorLayer::get().save_scene_as_default();
 			}
 
 			// Save All
-			if (ImGui::MenuItem("Save All", "Ctrl+Alt+S"))
+			if (ImGui::MenuItem(ICON_FA_FLOPPY_DISK "  Save All", "Ctrl+Alt+S"))
 			{
 				EditorLayer::get().save_all_scene();
 			}
 
 			ImGui::Separator();
 
-
-			if (ImGui::BeginMenu("Project"))
+			if (ImGui::BeginMenu(ICON_FA_FOLDER "  Project"))
 			{
-				if (ImGui::MenuItem("New Project..."))
+				if (ImGui::MenuItem(ICON_FA_PLUS "  New Project..."))
 				{
 				}
-				if (ImGui::MenuItem("Open Project..."))
+				if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN "  Open Project..."))
 				{
 				}
-				if (ImGui::MenuItem("Project Settings"))
+				if (ImGui::MenuItem(ICON_FA_GEAR "  Project Settings"))
 				{
 					//state.show_project_settings = true;
 				}
@@ -94,7 +93,7 @@ namespace ag
 			ImGui::Separator();
 
 			// Exit
-			if (ImGui::MenuItem("Exit", "Alt+F4"))
+			if (ImGui::MenuItem(ICON_FA_POWER_OFF "  Exit", "Alt+F4"))
 			{
 				EditorLayer::get().try_exit();
 			}
@@ -102,71 +101,68 @@ namespace ag
 			ImGui::EndMenu();
 		}
 
-
-		if (ImGui::BeginMenu("Edit")) {
-			//bool can_undo = EditorLayer::get().can_undo();
-			//bool can_redo = EditorLayer::get().can_redo();
+		if (ImGui::BeginMenu("  Edit  "))
+		{
 			bool can_redo = false;
 			bool can_undo = false;
 
-			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, can_undo))
+			if (ImGui::MenuItem(ICON_FA_ARROW_ROTATE_LEFT "  Undo", "Ctrl+Z", false, can_undo))
 			{
 				//EditorLayer::get().undo();
 			}
 
-			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, can_redo))
+			if (ImGui::MenuItem(ICON_FA_ARROW_ROTATE_RIGHT "  Redo", "Ctrl+Y", false, can_redo))
 			{
 				//EditorLayer::get().redo();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Cut", "Ctrl+X"))
+			if (ImGui::MenuItem(ICON_FA_SCISSORS "  Cut", "Ctrl+X"))
 			{
 				//EditorLayer::get().cut_selection();
 			}
 
-			if (ImGui::MenuItem("Copy", "Ctrl+C"))
+			if (ImGui::MenuItem(ICON_FA_COPY "  Copy", "Ctrl+C"))
 			{
 				//EditorLayer::get().copy_selection();
 			}
 
-			if (ImGui::MenuItem("Paste", "Ctrl+V"))
+			if (ImGui::MenuItem(ICON_FA_PASTE "  Paste", "Ctrl+V"))
 			{
 				//EditorLayer::get().paste();
 			}
 
-			if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
+			if (ImGui::MenuItem(ICON_FA_CLONE "  Duplicate", "Ctrl+D"))
 			{
 				//EditorLayer::get().duplicate_selection();
 			}
 
-			if (ImGui::MenuItem("Delete", "Del"))
+			if (ImGui::MenuItem(ICON_FA_TRASH "  Delete", "Del"))
 			{
 				//EditorLayer::get().delete_selection();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Select All", "Ctrl+A"))
+			if (ImGui::MenuItem(ICON_FA_CHECK_DOUBLE "  Select All", "Ctrl+A"))
 			{
 				//EditorLayer::get().select_all();
 			}
 
-			if (ImGui::MenuItem("Deselect All", "Ctrl+Shift+A"))
+			if (ImGui::MenuItem(ICON_FA_XMARK "  Deselect All", "Ctrl+Shift+A"))
 			{
 				//EditorLayer::get().deselect_all();
 			}
 
-
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Editor Settings"))
+			if (ImGui::MenuItem(ICON_FA_SLIDERS "  Editor Settings"))
 			{
 				//state.show_editor_settings = true;
 			}
 
-			if (ImGui::MenuItem("Preferences", "Ctrl+,"))
+			if (ImGui::MenuItem(ICON_FA_GEAR "  Preferences", "Ctrl+,"))
 			{
 				//EditorLayer::get().show_preferences();
 			}
@@ -175,45 +171,44 @@ namespace ag
 		}
 
 		// View Menu
-		if (ImGui::BeginMenu("View"))
+		if (ImGui::BeginMenu("  View  "))
 		{
-
-			if (ImGui::MenuItem("Scene", nullptr, &s_show_panels.scene_panel))
+			if (ImGui::MenuItem(ICON_FA_IMAGE "  Scene", nullptr, &s_show_panels.scene_panel))
 			{
 				//EditorLayer::get().toggle_window("Scene", show_scene);
 			}
 
-			if (ImGui::MenuItem("Properties", nullptr, &s_show_panels.properties_panel))
+			if (ImGui::MenuItem(ICON_FA_LIST "  Properties", nullptr, &s_show_panels.properties_panel))
 			{
 				//EditorLayer::get().toggle_window("Inspector", show_inspector);
 			}
 
-			if (ImGui::MenuItem("Console", nullptr, &s_show_panels.console_panel))
+			if (ImGui::MenuItem(ICON_FA_TERMINAL "  Console", nullptr, &s_show_panels.console_panel))
 			{
 				//EditorLayer::get().toggle_window("Console", show_console);
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::BeginMenu("Layouts")) {
-				if (ImGui::MenuItem("Default Layout"))
+			if (ImGui::BeginMenu(ICON_FA_LAYER_GROUP "  Layouts")) {
+				if (ImGui::MenuItem(ICON_FA_HOUSE "  Default Layout"))
 				{
 					//EditorLayer::get().load_layout("default");
 				}
 
-				if (ImGui::MenuItem("Programming Layout"))
+				if (ImGui::MenuItem(ICON_FA_CODE "  Programming Layout"))
 				{
 					//EditorLayer::get().load_layout("programming");
 				}
 
-				if (ImGui::MenuItem("Design Layout"))
+				if (ImGui::MenuItem(ICON_FA_PAINTBRUSH "  Design Layout"))
 				{
 					//EditorLayer::get().load_layout("design");
 				}
 
 				ImGui::Separator();
 
-				if (ImGui::MenuItem("Save Current Layout..."))
+				if (ImGui::MenuItem(ICON_FA_FLOPPY_DISK "  Save Current Layout..."))
 				{
 					//EditorLayer::get().save_current_layout();
 				}
@@ -223,7 +218,7 @@ namespace ag
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Fullscreen", "F11"))
+			if (ImGui::MenuItem(ICON_FA_EXPAND "  Fullscreen", "F11"))
 			{
 				//EditorLayer::get().toggle_fullscreen();
 			}
@@ -232,23 +227,23 @@ namespace ag
 		}
 
 		// Create Menu
-		if (ImGui::BeginMenu("Create"))
+		if (ImGui::BeginMenu("  Create  "))
 		{
-			if (ImGui::BeginMenu("2D Nodes"))
+			if (ImGui::BeginMenu(ICON_FA_SQUARE "  2D Nodes"))
 			{
-				if (ImGui::MenuItem("Scene2D"))
+				if (ImGui::MenuItem(ICON_FA_IMAGE "  Scene2D"))
 				{
 					//EditorLayer::get().create_scene2d();
 				}
-				if (ImGui::MenuItem("Rectangle"))
+				if (ImGui::MenuItem(ICON_FA_SQUARE "  Rectangle"))
 				{
 					//EditorLayer::get().create_rectangle();
 				}
-				if (ImGui::MenuItem("Circle"))
+				if (ImGui::MenuItem(ICON_FA_CIRCLE "  Circle"))
 				{
 					//EditorLayer::get().create_circle();
 				}
-				if (ImGui::MenuItem("Sprite"))
+				if (ImGui::MenuItem(ICON_FA_IMAGE "  Sprite"))
 				{
 					//EditorLayer::get().create_sprite();
 				}
@@ -258,9 +253,9 @@ namespace ag
 		}
 
 		// Run Menu
-		if (ImGui::BeginMenu("Run"))
+		if (ImGui::BeginMenu("  Run  "))
 		{
-			if (ImGui::MenuItem("Run Default Scene", "F5", false))
+			if (ImGui::MenuItem(ICON_FA_PLAY "  Run Default Scene", "F5", false))
 			{
 				auto folder = FileDialogs::get_exe_folder();
 				std::wstring app = folder + L"\\Sandbox.exe";
@@ -268,7 +263,7 @@ namespace ag
 				FileDialogs::run_exe(app);
 			}
 
-			if (ImGui::MenuItem("Run Current Scene", "Ctrl+F5", false))
+			if (ImGui::MenuItem(ICON_FA_CIRCLE_PLAY "  Run Current Scene", "Ctrl+F5", false))
 			{
 				run_current_scene();
 				auto folder = FileDialogs::get_exe_folder();
@@ -279,13 +274,13 @@ namespace ag
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Window")) {
-			if (ImGui::MenuItem("Minimize", "Ctrl+M"))
+		if (ImGui::BeginMenu("  Window  ")) {
+			if (ImGui::MenuItem(ICON_FA_WINDOW_MINIMIZE "  Minimize", "Ctrl+M"))
 			{
 				//EditorLayer::get().minimize_window();
 			}
 
-			if (ImGui::MenuItem("Maximize", "Ctrl+Shift+M"))
+			if (ImGui::MenuItem(ICON_FA_WINDOW_MAXIMIZE "  Maximize", "Ctrl+Shift+M"))
 			{
 				//EditorLayer::get().maximize_window();
 			}
@@ -293,26 +288,27 @@ namespace ag
 		}
 
 		// Help Menu
-		if (ImGui::BeginMenu("Help")) {
-			if (ImGui::MenuItem("Documentation", "F1"))
+		if (ImGui::BeginMenu("  Help  "))
+		{
+			if (ImGui::MenuItem(ICON_FA_BOOK "  Documentation", "F1"))
 			{
 				//EditorLayer::get().open_documentation();
 			}
 
-			if (ImGui::MenuItem("Keyboard Shortcuts"))
+			if (ImGui::MenuItem(ICON_FA_KEYBOARD "  Keyboard Shortcuts"))
 			{
 				//state.show_shortcuts_dialog = true;
 			}
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Check for Updates"))
+			if (ImGui::MenuItem(ICON_FA_DOWNLOAD "  Check for Updates"))
 			{
 				//EditorLayer::get().check_for_updates();
 			}
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("About"))
+			if (ImGui::MenuItem(ICON_FA_CIRCLE_INFO "  About"))
 			{
 				//state.show_about_dialog = true;
 			}
@@ -320,15 +316,14 @@ namespace ag
 			ImGui::EndMenu();
 		}
 
-		// Status info on the right
 		ImGui::SameLine(ImGui::GetWindowWidth() - 300);
-		// Show FPS
+
 		ImGui::SameLine();
-		ImGui::TextDisabled("FPS: %.1f", ImGui::GetIO().Framerate);
+		ImGui::TextDisabled(ICON_FA_GAUGE "  FPS: %.1f", ImGui::GetIO().Framerate);
 
 		ImGui::EndMainMenuBar();
-
 	}
+
 
 	void UI::draw_texture(Entity entity)
 	{
@@ -525,10 +520,6 @@ namespace ag
 
 		float button_width = ImGui::GetContentRegionAvail().x * 0.48f;
 
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
 		if (ImGui::Button("Load Texture", ImVec2(button_width, 0)))
 		{
 			EditorLayer::get().load_texture(entity);
@@ -557,7 +548,6 @@ namespace ag
 			}
 		}
 
-		ImGui::PopStyleColor(3);
 		ImGui::Spacing();
 
 
@@ -581,9 +571,61 @@ namespace ag
 		std::string ext = path.extension().string();
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-		return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+		if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
-			ext == ".tiff" || ext == ".tif" || ext == ".webp" || ext == ".json" || ext == ".aeroscene" || ext == ".lua";
+			ext == ".tiff" || ext == ".tif" || ext == ".webp" ||
+			ext == ".gif" || ext == ".psd" || ext == ".svg")
+			return true;
+
+		if (ext == ".aeroscene" || ext == ".scene" || ext == ".prefab")
+			return true;
+
+		if (ext == ".lua")
+			return true;
+
+		/*if (ext == ".lua" || ext == ".py" || ext == ".js")
+			return true;*/
+
+		/*if (ext == ".cpp" || ext == ".h" || ext == ".hpp" || ext == ".c" ||
+			ext == ".cs" || ext == ".java")
+			return true;*/
+
+		/*if (ext == ".glsl" || ext == ".hlsl" || ext == ".vert" || ext == ".frag" ||
+			ext == ".shader" || ext == ".compute")
+			return true;*/
+
+		/*if (ext == ".obj" || ext == ".fbx" || ext == ".gltf" || ext == ".glb" ||
+			ext == ".dae" || ext == ".blend" || ext == ".3ds")
+			return true;*/
+
+		if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" ||
+			ext == ".aiff" || ext == ".wma")
+			return true;
+
+		/*if (ext == ".mp4" || ext == ".avi" || ext == ".mov" || ext == ".mkv" ||
+			ext == ".webm" || ext == ".flv")
+			return true;*/
+
+		if (ext == ".ttf" || ext == ".otf" || ext == ".woff" || ext == ".woff2")
+			return true;
+
+		/*if (ext == ".json" || ext == ".xml" || ext == ".yaml" || ext == ".yml" ||
+			ext == ".ini" || ext == ".cfg" || ext == ".toml")
+			return true;*/
+
+		/*if (ext == ".txt" || ext == ".md" || ext == ".log" || ext == ".csv")
+			return true;*/
+
+		/*if (ext == ".mat" || ext == ".material")
+			return true;*/
+
+		/*if (ext == ".anim" || ext == ".animation")
+			return true;*/
+
+		/*if (ext == ".zip" || ext == ".rar" || ext == ".7z")
+			return true;*/
+
+		return false;
 	}
 
 	bool UI::is_image(const std::filesystem::path& path)
@@ -595,10 +637,9 @@ namespace ag
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
 			ext == ".tiff" || ext == ".tif" || ext == ".webp";
 	}
-
+	
 	void UI::draw_folder_node(const std::filesystem::path& directory, int depth)
 	{
-
 		std::vector<std::filesystem::directory_entry> entries;
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
 		{
@@ -625,13 +666,8 @@ namespace ag
 			static std::filesystem::path selected_path;
 			bool is_selected = (selected_path == path);
 
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
-			//ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f);
-
 			if (entry.is_directory())
 			{
-
 				ImGuiTreeNodeFlags flags =
 					ImGuiTreeNodeFlags_Framed |
 					ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -639,16 +675,24 @@ namespace ag
 					ImGuiTreeNodeFlags_OpenOnArrow |
 					(is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 
-				bool is_open = ImGui::TreeNodeEx((name).c_str(), flags);
+				// Get folder icon based on open/closed state
+				bool is_open = ImGui::TreeNodeEx(
+					(std::string(ICON_FA_FOLDER) + "  " + name).c_str(),
+					flags
+				);
 
 				if (ImGui::IsItemClicked())
 				{
 					selected_path = path;
 				}
 
-
 				if (ImGui::BeginPopupContextItem())
 				{
+					if (ImGui::MenuItem(ICON_FA_FOLDER_PLUS "  New Folder")) {}
+					if (ImGui::MenuItem(ICON_FA_FILE "  New File")) {}
+					ImGui::Separator();
+					if (ImGui::MenuItem(ICON_FA_TRASH "  Delete")) {}
+					if (ImGui::MenuItem(ICON_FA_PEN_TO_SQUARE "  Rename")) {}
 					ImGui::EndPopup();
 				}
 
@@ -656,13 +700,11 @@ namespace ag
 				{
 					std::string p = path.string();
 					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
-
 					ImGui::BeginTooltip();
-					ImGui::Text(name.c_str());
+					ImGui::Text(ICON_FA_FOLDER " %s", name.c_str());
 					ImGui::Separator();
 					ImGui::TextDisabled("Drag to move folder");
 					ImGui::EndTooltip();
-
 					ImGui::EndDragDropSource();
 				}
 
@@ -670,7 +712,7 @@ namespace ag
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
 					{
-
+						// Handle drop
 					}
 					ImGui::EndDragDropTarget();
 				}
@@ -681,7 +723,6 @@ namespace ag
 					ImGui::TreePop();
 				}
 			}
-
 			else if (is_right_file(path))
 			{
 				ImGuiTreeNodeFlags flags =
@@ -692,7 +733,12 @@ namespace ag
 					ImGuiTreeNodeFlags_NoTreePushOnOpen |
 					(is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 
-				ImGui::TreeNodeEx(name.c_str(), flags);
+				const char* file_icon = get_file_icon(ext);
+
+				ImGui::TreeNodeEx(
+					(std::string(file_icon) + "  " + name).c_str(),
+					flags
+				);
 
 				if (ImGui::IsItemClicked())
 					selected_path = path;
@@ -700,13 +746,17 @@ namespace ag
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 				{
 					ImGui::BeginTooltip();
-					ImGui::Text(name.c_str());
+					ImGui::Text("%s %s", file_icon, name.c_str());
 					ImGui::EndTooltip();
 				}
 
-
 				if (ImGui::BeginPopupContextItem())
 				{
+					if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN "  Open")) {}
+					if (ImGui::MenuItem(ICON_FA_PEN_TO_SQUARE "  Rename")) {}
+					ImGui::Separator();
+					if (ImGui::MenuItem(ICON_FA_COPY "  Copy")) {}
+					if (ImGui::MenuItem(ICON_FA_TRASH "  Delete")) {}
 					ImGui::EndPopup();
 				}
 
@@ -714,22 +764,79 @@ namespace ag
 				{
 					std::string p = path.string();
 					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", p.c_str(), p.size() + 1);
-
 					ImGui::BeginTooltip();
-					ImGui::Text(name.c_str());
+					ImGui::Text("%s  %s", file_icon, name.c_str());
 					ImGui::Separator();
 					ImGui::TextDisabled("Drag to move file");
 					ImGui::EndTooltip();
-
 					ImGui::EndDragDropSource();
 				}
-
 			}
-			ImGui::PopStyleVar(2);
+
 			ImGui::PopID();
 		}
 	}
 
+	const char* UI::get_file_icon(const std::string& extension)
+	{
+		// Convert to lowercase for comparison
+		std::string ext = extension;
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+		// Image files
+		if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+			ext == ".bmp" || ext == ".gif" || ext == ".tga")
+			return ICON_FA_IMAGE;
+
+		// Code files
+		if (ext == ".cpp" || ext == ".h" || ext == ".hpp" ||
+			ext == ".c" || ext == ".cs" || ext == ".java")
+			return ICON_FA_FILE_CODE;
+
+		// Script files
+		if (ext == ".py" || ext == ".js" || ext == ".lua" || ext == ".sh")
+			return ICON_FA_FILE_CODE;
+
+		// Text files
+		if (ext == ".txt" || ext == ".md" || ext == ".log")
+			return ICON_FA_FILE_LINES;
+
+		// Scene/prefab files
+		if (ext == ".scene" || ext == ".prefab")
+			return ICON_FA_CUBE;
+
+		// Audio files
+		if (ext == ".mp3" || ext == ".wav" || ext == ".ogg")
+			return ICON_FA_FILE_AUDIO;
+
+		// Video files
+		if (ext == ".mp4" || ext == ".avi" || ext == ".mov")
+			return ICON_FA_FILE_VIDEO;
+
+		// 3D model files
+		if (ext == ".obj" || ext == ".fbx" || ext == ".gltf" || ext == ".glb")
+			return ICON_FA_CUBE;
+
+		// Shader files
+		if (ext == ".glsl" || ext == ".vert" || ext == ".frag" || ext == ".shader")
+			return ICON_FA_WAND_MAGIC_SPARKLES;
+
+		// Config/data files
+		if (ext == ".json" || ext == ".xml" || ext == ".yaml" || ext == ".ini")
+			return ICON_FA_FILE_CODE;
+
+		// Archive files
+		if (ext == ".zip" || ext == ".rar" || ext == ".7z")
+			return ICON_FA_FILE_ZIPPER;
+
+		// PDF files
+		if (ext == ".pdf")
+			return ICON_FA_FILE_PDF;
+
+		// Default file icon
+		return ICON_FA_FILE;
+	}
+	
 	void UI::draw_animation(Entity entity)
 	{
 		static std::string current_animation = "";
@@ -946,19 +1053,10 @@ namespace ag
 				float button_spacing = 10.0f;
 
 				GUI_Button button;
-				button.background.normal = Color(70, 70, 70);
-				button.background.hover = Color(95, 95, 95);
-				button.background.active = Color(55, 55, 55);
-				button.background.disabled = Color(45, 45, 45);
-
-				button.text.normal = Color(230, 230, 230);
-				button.text.hover = Color(255, 255, 255);
-				button.text.active = Color(210, 210, 210);
-				button.text.disabled = Color(120, 120, 120);
-
-				button.radius = 4.0f;
 
 				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
+
+
 				{
 					button.label = "Select Frames";
 					if (draw_button(button))
@@ -1183,17 +1281,6 @@ namespace ag
 				float button_spacing = 6.0f;
 
 				GUI_Button button;
-				button.background.normal = Color(70, 70, 70);
-				button.background.hover = Color(95, 95, 95);
-				button.background.active = Color(55, 55, 55);
-				button.background.disabled = Color(45, 45, 45);
-
-				button.text.normal = Color(230, 230, 230);
-				button.text.hover = Color(255, 255, 255);
-				button.text.active = Color(210, 210, 210);
-				button.text.disabled = Color(120, 120, 120);
-
-				button.radius = 4.0f;
 
 				button.size = { (total_width - button_spacing) * 0.5f , 35.0f };
 
@@ -2750,48 +2837,6 @@ namespace ag
 
 	bool UI::draw_button(const GUI_Button& btn)
 	{
-		StyleScope scope;
-
-		scope.push_style_var(ImGuiStyleVar_FrameRounding, btn.radius);
-
-		if (!btn.enabled)
-		{
-			scope.push_style_var(
-				ImGuiStyleVar_Alpha,
-				ImGui::GetStyle().Alpha * 0.5f
-			);
-		}
-
-		scope.push_style_color(
-			ImGuiCol_Button,
-			(btn.enabled ? btn.background.normal : btn.background.disabled).to_imvec4()
-		);
-
-		scope.push_style_color(
-			ImGuiCol_ButtonHovered,
-			btn.background.hover.to_imvec4()
-		);
-
-		scope.push_style_color(
-			ImGuiCol_ButtonActive,
-			btn.background.active.to_imvec4()
-		);
-
-		scope.push_style_color(
-			ImGuiCol_Text,
-			(btn.enabled ? btn.text.normal : btn.text.disabled).to_imvec4()
-		);
-
-		scope.push_style_color(
-			ImGuiCol_Text,
-			btn.text.hover.to_imvec4()
-		);
-
-		scope.push_style_color(
-			ImGuiCol_TextDisabled,
-			btn.text.disabled.to_imvec4()
-		);
-
 		bool clicked = false;
 
 		if (btn.enabled)
@@ -2825,7 +2870,7 @@ namespace ag
 		PopUpModel model;
 		model.id = "##CreateNewScene";
 		model.name = "New Scene";
-		model.window_size = { 500, 270 };
+		model.window_size = { 500, 275 };
 
 		model.draw_content = [&]() {
 			ImGui::Text("Scene Name");
@@ -2854,16 +2899,6 @@ namespace ag
 			ImGui::SameLine();
 
 			GUI_Button button;
-			button.background.normal = Color(70, 70, 70);
-			button.background.hover = Color(95, 95, 95);
-			button.background.active = Color(55, 55, 55);
-			button.background.disabled = Color(45, 45, 45);
-
-			button.text.normal = Color(230, 230, 230);
-			button.text.hover = Color(255, 255, 255);
-			button.text.active = Color(210, 210, 210);
-			button.text.disabled = Color(120, 120, 120);
-
 
 			{
 				button.label = "...";
@@ -2893,7 +2928,6 @@ namespace ag
 				button.label = "Create";
 				button.size = button_size;
 				button.enabled = can_create;
-				button.radius = 3.0f;
 				if (draw_button(button))
 				{
 					if (can_create)
@@ -2975,15 +3009,6 @@ namespace ag
 			ImGui::SameLine();
 
 			GUI_Button button;
-			button.background.normal = Color(70, 70, 70);
-			button.background.hover = Color(95, 95, 95);
-			button.background.active = Color(55, 55, 55);
-			button.background.disabled = Color(45, 45, 45);
-
-			button.text.normal = Color(230, 230, 230);
-			button.text.hover = Color(255, 255, 255);
-			button.text.active = Color(210, 210, 210);
-			button.text.disabled = Color(120, 120, 120);
 
 
 			{
@@ -3014,7 +3039,6 @@ namespace ag
 				button.label = "Create";
 				button.size = button_size;
 				button.enabled = can_create;
-				button.radius = 3.0f;
 				if (draw_button(button))
 				{
 					if (can_create)
@@ -3145,30 +3169,16 @@ namespace ag
 			ImGui::EndChild();
 
 			GUI_Button button;
-			button.background.normal = Color(70, 70, 70);
-			button.background.hover = Color(95, 95, 95);
-			button.background.active = Color(55, 55, 55);
-			button.background.disabled = Color(45, 45, 45);
 
-			button.text.normal = Color(230, 230, 230);
-			button.text.hover = Color(255, 255, 255);
-			button.text.active = Color(210, 210, 210);
-			button.text.disabled = Color(120, 120, 120);
-
-
-			vec2f button_size;
-			button_size.x = (available_width - (spacing * 4)) * 0.33f;
-			button_size.y = 35.0f;
+			
+			button.size.x = (available_width - (spacing * 4)) * 0.33f;
+			button.size.y = 35.0f;
 
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - button_size.y - spacing);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - button.size.y - spacing);
 
-			Color color = Color(94, 94, 94);
-			Color hover_color = Color(112, 112, 112);
 			{
 				button.label = "Save";
-				button.size = button_size;
-				button.radius = 3.0f;
 				if (draw_button(button))
 				{
 					if (Application::get().m_is_closing)
@@ -3188,8 +3198,6 @@ namespace ag
 			ImGui::SameLine(0, spacing);
 			{
 				button.label = "Don't Save";
-				button.size = button_size;
-				button.radius = 3.0f;
 				if (draw_button(button))
 				{
 					if (Application::get().m_is_closing)
@@ -3208,7 +3216,6 @@ namespace ag
 			ImGui::SameLine(0, spacing);
 			{
 				button.label = "Cancel";
-				button.size = button_size;
 				if (draw_button(button))
 				{
 					if (Application::get().m_is_closing)

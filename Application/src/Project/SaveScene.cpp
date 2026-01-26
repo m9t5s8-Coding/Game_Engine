@@ -12,6 +12,12 @@ namespace ag
 {
 	void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
 	{
+		if (!scene->is_save_required())
+		{
+			AERO_CORE_INFO("Scene Saved! {0}  {1}", scene->get_name(), scene->get_directory());
+			return;
+		}
+
 		json j;
 		Helper::save_json(j["Scene"], "Name", scene->get_name());
 		Helper::save_json(j["Scene"], "Path", scene->get_directory());
@@ -68,7 +74,7 @@ namespace ag
 
 		file << j.dump(4);
 		file.close();
-		AERO_CORE_INFO("Scene saved successfully to {}", path);
+		AERO_CORE_INFO("Scene Saved! {0}  {1}", scene->get_name(), scene->get_directory());
 		scene->set_save_required(false);
 		Helper::makefile_read_only(path);
 	}
@@ -157,7 +163,7 @@ namespace ag
 		}
 		id_map.clear();
 		index_map.clear();
-		AERO_CORE_INFO("Scene Loaded Successfully: {0}", scene->get_name());
+		AERO_CORE_INFO("Scene Loaded! {0}  {1}", scene->get_name(), scene->get_directory());
 		return scene;
 	}
 }

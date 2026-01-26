@@ -13,11 +13,7 @@ namespace ag
 {
 
 	struct PropertyStyle {
-		ImVec4 label_color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
-		ImVec4 value_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-		ImVec4 button_color = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
-		ImVec4 input_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-		float min_width = 150.0f;
+		float min_width = 100.0f;
 		float speed = 1.0f;
 		const char* format = "%.3f";
 		bool show_reset_buttons = true;
@@ -41,28 +37,13 @@ namespace ag
 		bool create_new_scene = false;
 		bool create_new_script = false;
 	};
-	struct ButtonColors
-	{
-		Color normal;
-		Color hover;
-		Color active;
-		Color disabled;
-	};
-	struct ButtonTextColors
-	{
-		Color normal;
-		Color hover;
-		Color active;
-		Color disabled;
-	};
+
+
 	struct GUI_Button
 	{
-		ButtonColors background;
-		ButtonTextColors text;
 		std::string label;
-		vec2f size = { 0, 0 };
-		float radius = 4.0f;
 		bool enabled = true;
+		vec2f size;
 	};
 
 	class UI
@@ -78,6 +59,7 @@ namespace ag
 		static bool texture_selector(Entity entity, uint_rect& texture_rect);
 		static void content_browser();
 		static bool is_right_file(const std::filesystem::path& path);
+		static const char* get_file_icon(const std::string& extension);
 		static bool is_image(const std::filesystem::path& path);
 		static void draw_folder_node(const std::filesystem::path& directory, int depth = 0);
 		static void draw_script_selector(Entity entity);
@@ -108,18 +90,28 @@ namespace ag
 		}
 
 		// Helper functions
-		inline static void BeginProperty(const char* label, const char* tooltip = nullptr, bool same_line = true) {
+		inline static void begin_property(const char* label, const char* tooltip = nullptr, bool same_line = true)
+		{
 			const float label_width = s_property_style.min_width;
 
 			ImGui::PushID(label);
 
-			if (s_property_style.show_labels) {
-				ImGui::Columns(2);
+			if (s_property_style.show_labels)
+			{
+				ImGui::Columns(2, nullptr, false);
 				ImGui::SetColumnWidth(0, label_width);
-				ImGui::TextColored(s_property_style.label_color, "%s", label);
-				if (tooltip && ImGui::IsItemHovered()) {
+
+				// Better vertical alignment
+				ImGui::AlignTextToFramePadding();
+				//ImGui::TextColored(s_property_style.label_color, "%s", label);
+				ImGui::Text("%s", label);
+
+				if (tooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+				{
 					ImGui::BeginTooltip();
+					ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 					ImGui::TextUnformatted(tooltip);
+					ImGui::PopTextWrapPos();
 					ImGui::EndTooltip();
 				}
 
@@ -128,35 +120,28 @@ namespace ag
 			}
 		}
 
-		inline static void EndProperty() {
-			if (s_property_style.show_labels) {
+		inline static void end_property()
+		{
+			if (s_property_style.show_labels)
+			{
 				ImGui::PopItemWidth();
 				ImGui::Columns(1);
 			}
 			ImGui::PopID();
 		}
 
-		inline static bool DrawResetButton(const char* label, const ImVec4& color) {
+		inline static bool draw_reset_button(const char* label)
+		{
 			const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
 			const ImVec2 button_size = { line_height + 3.0f, line_height };
-
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-				ImVec4(color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, color.w));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-				ImVec4(color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w));
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
 			const bool clicked = ImGui::Button(label, button_size);
-
-			ImGui::PopStyleColor(4);
-
 			return clicked;
 		}
 
 		template<typename T>
-		inline bool DrawDragScalar(const char* id, T* value, ImGuiDataType data_type,
-			float speed = 1.0f, const char* format = "%.3f") {
+		inline bool draw_drag_scalar(const char* id, T* value, ImGuiDataType data_type,
+			float speed = 1.0f, const char* format = "%.3f")
+		{
 			if (s_property_style.drag_enabled)
 			{
 				return ImGui::DragScalar(id, data_type, value, speed, nullptr, nullptr, format);
@@ -170,43 +155,54 @@ namespace ag
 		// Main property widgets
 		template<typename T>
 		static bool draw_vec2(const char* label, T& vec, const vec2f& reset_value = vec2f(0, 0),
-			const char* tooltip = nullptr) {
+			const char* tooltip = nullptr)
+		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
 			const float total_width = ImGui::CalcItemWidth();
 			const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
-			const ImVec2 button_size = { line_height + 3.0f, line_height };
+			const ImVec2 button_size = { line_height, line_height };
 			const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-			// Calculate input field width
 			float input_width = total_width;
-			if (s_property_style.show_reset_buttons) {
+			if (s_property_style.show_reset_buttons)
+			{
 				input_width = (total_width - (button_size.x * 2.0f) - spacing * 3.0f) / 2.0f;
 			}
-			else {
+			else
+			{
 				input_width = (total_width - spacing) / 2.0f;
 			}
 
 			ImGuiDataType data_type;
-			if constexpr (std::is_same_v<T, vec2f>) {
+			const char* format = nullptr;
+
+			if constexpr (std::is_same_v<T, vec2f>)
+			{
 				data_type = ImGuiDataType_Float;
+				format = "%.3f";
 			}
-			else if constexpr (std::is_same_v<T, vec2i>) {
+			else if constexpr (std::is_same_v<T, vec2i>)
+			{
 				data_type = ImGuiDataType_S32;
+				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, vec2u>) {
+			else if constexpr (std::is_same_v<T, vec2u>)
+			{
 				data_type = ImGuiDataType_U32;
+				format = "%u";
 			}
 			else {
 				static_assert(!sizeof(T*), "Unsupported vec2 type");
 			}
 
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 0 });
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ spacing * 0.5f, 0 });
 
-			// X Component
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("X", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("X"))
+				{
 					vec.x = reset_value.x;
 					changed = true;
 				}
@@ -214,21 +210,24 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
+			ImGui::SameLine(0, 2);
 
-			if (ImGui::InputScalar("##X", data_type, &vec.x))
+			if (ImGui::InputScalar("##X", data_type, &vec.x, nullptr, nullptr, format))
 			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("X: %.3f", (float)vec.x);
+			}
+
 			ImGui::PopItemWidth();
 
-
-			// Y Component
 			ImGui::SameLine();
 			if (s_property_style.show_reset_buttons)
 			{
-				if (DrawResetButton("Y", s_property_style.button_color))
+				if (draw_reset_button("Y"))
 				{
 					vec.y = reset_value.y;
 					changed = true;
@@ -237,102 +236,161 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (ImGui::InputScalar("##Y", data_type, &vec.y))
+
+			ImGui::SameLine(0, 2);
+
+			if (ImGui::InputScalar("##Y", data_type, &vec.y, nullptr, nullptr, format))
 			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Y: %.3f", (float)vec.y);
+			}
+
 			ImGui::PopItemWidth();
 
-			// Quick actions
-			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1)) {
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
 				ImGui::OpenPopup("vec2_context_menu");
 			}
 
-			if (ImGui::BeginPopup("vec2_context_menu")) {
-				if (ImGui::MenuItem("Copy")) {
+			if (ImGui::BeginPopup("vec2_context_menu"))
+			{
+				ImGui::SetWindowSize(ImVec2(400, 0));
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Vector Operations");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy", "Ctrl+C"))
+				{
 					ImGui::SetClipboardText(fmt::format("{}, {}", vec.x, vec.y).c_str());
 				}
-				if (ImGui::MenuItem("Paste")) {
+
+				if (ImGui::MenuItem("Paste", "Ctrl+V"))
+				{
 					const char* clipboard = ImGui::GetClipboardText();
-					if (clipboard) {
+					if (clipboard)
+					{
 						std::string str(clipboard);
 						size_t comma = str.find(',');
-						if (comma != std::string::npos) {
-							try {
+						if (comma != std::string::npos)
+						{
+							try
+							{
 								vec.x = static_cast<decltype(vec.x)>(std::stof(str.substr(0, comma)));
 								vec.y = static_cast<decltype(vec.y)>(std::stof(str.substr(comma + 1)));
 								changed = true;
 							}
-							catch (...) {
-								// Invalid paste
+							catch (...)
+							{
+								
 							}
 						}
 					}
 				}
+
 				ImGui::Separator();
-				if (ImGui::MenuItem("Normalize")) {
-					if constexpr (std::is_same_v<T, vec2f>) {
+
+				if constexpr (std::is_same_v<T, vec2f>)
+				{
+					if (ImGui::MenuItem("Normalize")) {
 						vec = vec.normalized();
 						changed = true;
 					}
 				}
-				if (ImGui::MenuItem("Zero")) {
+
+				if (ImGui::MenuItem("Zero", "0"))
+				{
 					vec.x = vec.y = 0;
 					changed = true;
 				}
+
+				if (ImGui::MenuItem("Reset"))
+				{
+					vec.x = reset_value.x;
+					vec.y = reset_value.y;
+					changed = true;
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Swap X/Y"))
+				{
+					std::swap(vec.x, vec.y);
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("Negate"))
+				{
+					vec.x = -vec.x;
+					vec.y = -vec.y;
+					changed = true;
+				}
+
 				ImGui::EndPopup();
 			}
 
 			ImGui::PopStyleVar();
-			EndProperty();
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
 
 			return changed;
 		}
-
+	
 		template<typename T>
 		static bool draw_vec3(const char* label, T& vec, const vec3f& reset_value = vec3f(0, 0, 0),
-			const char* tooltip = nullptr) {
+			const char* tooltip = nullptr)
+		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
 			const float total_width = ImGui::CalcItemWidth();
-			const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 3.0f;
-			const ImVec2 button_size = { line_height + 5.0f, line_height };
+			const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
+			const ImVec2 button_size = { line_height + 3.0f, line_height };
 			const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-
 			float input_width = total_width;
-			if (s_property_style.show_reset_buttons) {
+			if (s_property_style.show_reset_buttons)
+			{
 				input_width = (total_width - (button_size.x * 3.0f) - spacing * 4.0f) / 3.0f;
 			}
-			else {
+			else
+			{
 				input_width = (total_width - spacing * 2.0f) / 3.0f;
 			}
 
 			ImGuiDataType data_type;
-			if constexpr (std::is_same_v<T, vec3f>) {
+			const char* format = nullptr;
+
+			if constexpr (std::is_same_v<T, vec3f>)
+			{
 				data_type = ImGuiDataType_Float;
+				format = "%.3f";
 			}
-			else if constexpr (std::is_same_v<T, vec3i>) {
+			else if constexpr (std::is_same_v<T, vec3i>)
+			{
 				data_type = ImGuiDataType_S32;
+				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, vec3u>) {
+			else if constexpr (std::is_same_v<T, vec3u>)
+			{
 				data_type = ImGuiDataType_U32;
+				format = "%u";
 			}
-			else {
+			else
+			{
 				static_assert(!sizeof(T*), "Unsupported vec3 type");
 			}
 
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 0 });
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ spacing * 0.5f, 0 });
 
-
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("X", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("X"))
+				{
 					vec.x = static_cast<decltype(vec.x)>(reset_value.x);
 					changed = true;
 				}
@@ -340,17 +398,21 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, s_property_style.format)) {
+			if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("X: %s", format_value(vec.x).c_str());
+			}
 			ImGui::PopItemWidth();
 
-			// Y Component
 			ImGui::SameLine();
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("Y", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("Y"))
+				{
 					vec.y = static_cast<decltype(vec.y)>(reset_value.y);
 					changed = true;
 				}
@@ -358,34 +420,126 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##Y", &vec.y, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##Y", &vec.y, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Y: %s", format_value(vec.y).c_str());
+			}
 			ImGui::PopItemWidth();
 
-			// Z Component
 			ImGui::SameLine();
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("Z", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("Z"))
+				{
 					vec.z = static_cast<decltype(vec.z)>(reset_value.z);
 					changed = true;
 				}
-
+				ImGui::SameLine();
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##Z", &vec.z, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##Z", &vec.z, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Z: %s", format_value(vec.z).c_str());
+			}
 			ImGui::PopItemWidth();
 
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
+				ImGui::OpenPopup("vec3_context_menu");
+			}
+
+			if (ImGui::BeginPopup("vec3_context_menu"))
+			{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Vector3 Operations");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy", "Ctrl+C"))
+				{
+					ImGui::SetClipboardText(fmt::format("{}, {}, {}", vec.x, vec.y, vec.z).c_str());
+				}
+				if (ImGui::MenuItem("Paste", "Ctrl+V"))
+				{
+					const char* clipboard = ImGui::GetClipboardText();
+					if (clipboard)
+					{
+						std::string str(clipboard);
+						std::vector<std::string> parts;
+						size_t pos = 0;
+						while ((pos = str.find(',')) != std::string::npos)
+						{
+							parts.push_back(str.substr(0, pos));
+							str.erase(0, pos + 1);
+						}
+						parts.push_back(str);
+
+						if (parts.size() >= 3)
+						{
+							try
+							{
+								vec.x = static_cast<decltype(vec.x)>(std::stof(parts[0]));
+								vec.y = static_cast<decltype(vec.y)>(std::stof(parts[1]));
+								vec.z = static_cast<decltype(vec.z)>(std::stof(parts[2]));
+								changed = true;
+							}
+							catch (...) {}
+						}
+					}
+				}
+
+				ImGui::Separator();
+
+				if constexpr (std::is_same_v<T, vec3f>)
+				{
+					if (ImGui::MenuItem("Normalize"))
+					{
+						vec = vec.normalized();
+						changed = true;
+					}
+				}
+				if (ImGui::MenuItem("Zero"))
+				{
+					vec.x = vec.y = vec.z = 0;
+					changed = true;
+				}
+				if (ImGui::MenuItem("Reset"))
+				{
+					vec.x = reset_value.x;
+					vec.y = reset_value.y;
+					vec.z = reset_value.z;
+					changed = true;
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Negate"))
+				{
+					vec.x = -vec.x;
+					vec.y = -vec.y;
+					vec.z = -vec.z;
+					changed = true;
+				}
+				if (ImGui::MenuItem("Abs"))
+				{
+					vec.x = std::abs(vec.x);
+					vec.y = std::abs(vec.y);
+					vec.z = std::abs(vec.z);
+					changed = true;
+				}
+
+				ImGui::EndPopup();
+			}
+
 			ImGui::PopStyleVar();
-			EndProperty();
-			ImGui::Spacing();
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -395,39 +549,50 @@ namespace ag
 
 		template<typename T>
 		static bool draw_vec4(const char* label, T& vec, const vec4f& reset_value = vec4f(0, 0, 0, 0),
-			const char* tooltip = nullptr) {
+			const char* tooltip = nullptr)
+		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
-			// For vec4, use two rows
 			const float total_width = ImGui::CalcItemWidth();
 			const float line_height = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
 			const ImVec2 button_size = { line_height + 3.0f, line_height };
 			const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-			// Calculate input field width
-			float input_width = (total_width - (button_size.x * 2.0f) - spacing * 3.0f) / 2.0f;
+			float input_width = s_property_style.show_reset_buttons ?
+				(total_width - (button_size.x * 2.0f) - spacing * 3.0f) / 2.0f :
+				(total_width - spacing) / 2.0f;
 
 			ImGuiDataType data_type;
-			if constexpr (std::is_same_v<T, vec4f>) {
+			const char* format = nullptr;
+
+			if constexpr (std::is_same_v<T, vec4f>)
+			{
 				data_type = ImGuiDataType_Float;
+				format = "%.3f";
 			}
-			else if constexpr (std::is_same_v<T, vec4i>) {
+			else if constexpr (std::is_same_v<T, vec4i>)
+			{
 				data_type = ImGuiDataType_S32;
+				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, vec4u>) {
+			else if constexpr (std::is_same_v<T, vec4u>)
+			{
 				data_type = ImGuiDataType_U32;
+				format = "%u";
 			}
-			else {
+			else
+			{
 				static_assert(!sizeof(T*), "Unsupported vec4 type");
 			}
 
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 0 });
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ spacing * 0.5f, spacing * 0.5f });
 
 			// First row (X, Y)
-			// X Component
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("X", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("X", ImVec4(0.8f, 0.3f, 0.3f, 1.0f)))
+				{
 					vec.x = static_cast<decltype(vec.x)>(reset_value.x);
 					changed = true;
 				}
@@ -435,17 +600,18 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##X", &vec.x, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##X", &vec.x, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("X: %s", format_value(vec.x).c_str());
 			ImGui::PopItemWidth();
 
-			// Y Component
 			ImGui::SameLine();
-			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("Y", s_property_style.button_color)) {
+			if (s_property_style.show_reset_buttons)
+			{
+				if (draw_reset_button("Y"))
+				{
 					vec.y = static_cast<decltype(vec.y)>(reset_value.y);
 					changed = true;
 				}
@@ -453,19 +619,17 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##Y", &vec.y, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##Y", &vec.y, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Y: %s", format_value(vec.y).c_str());
 			ImGui::PopItemWidth();
 
 			// Second row (Z, W)
-			ImGui::NewLine();
-
-			// Z Component
 			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("Z", s_property_style.button_color)) {
+				if (draw_reset_button("Z"))
+				{
 					vec.z = static_cast<decltype(vec.z)>(reset_value.z);
 					changed = true;
 				}
@@ -473,17 +637,17 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##Z", &vec.z, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##Z", &vec.z, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Z: %s", format_value(vec.z).c_str());
 			ImGui::PopItemWidth();
 
-			// W Component
 			ImGui::SameLine();
 			if (s_property_style.show_reset_buttons) {
-				if (DrawResetButton("W", s_property_style.button_color)) {
+				if (draw_reset_button("W"))
+				{
 					vec.w = static_cast<decltype(vec.w)>(reset_value.w);
 					changed = true;
 				}
@@ -491,15 +655,38 @@ namespace ag
 			}
 
 			ImGui::PushItemWidth(input_width);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, s_property_style.input_color);
-			if (DrawDragScalar("##W", &vec.w, data_type, s_property_style.speed, s_property_style.format)) {
+			if (draw_drag_scalar("##W", &vec.w, data_type, s_property_style.speed, format))
+			{
 				changed = true;
 			}
-			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("W: %s", format_value(vec.w).c_str());
 			ImGui::PopItemWidth();
 
+			// Context menu
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1)) {
+				ImGui::OpenPopup("vec4_context_menu");
+			}
+
+			if (ImGui::BeginPopup("vec4_context_menu")) {
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Vector4 Operations");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy")) {
+					ImGui::SetClipboardText(fmt::format("{}, {}, {}, {}", vec.x, vec.y, vec.z, vec.w).c_str());
+				}
+				if (ImGui::MenuItem("Zero")) {
+					vec.x = vec.y = vec.z = vec.w = 0;
+					changed = true;
+				}
+				if (ImGui::MenuItem("Reset")) {
+					vec = reset_value;
+					changed = true;
+				}
+				ImGui::EndPopup();
+			}
+
 			ImGui::PopStyleVar();
-			EndProperty();
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -511,127 +698,130 @@ namespace ag
 		static bool draw_value(const char* label, T& value, T min = std::numeric_limits<T>::lowest(),
 			T max = std::numeric_limits<T>::max(), const char* tooltip = nullptr) {
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
 			ImGuiDataType data_type;
 			const char* format = s_property_style.format;
 
-			if constexpr (std::is_same_v<T, float>) {
+			if constexpr (std::is_same_v<T, float>)
+			{
 				data_type = ImGuiDataType_Float;
 			}
-			else if constexpr (std::is_same_v<T, double>) {
+			else if constexpr (std::is_same_v<T, double>)
+			{
 				data_type = ImGuiDataType_Double;
 				format = "%.6f";
 			}
-			else if constexpr (std::is_same_v<T, int>) {
+			else if constexpr (std::is_same_v<T, int>)
+			{
 				data_type = ImGuiDataType_S32;
 				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, unsigned int>) {
+			else if constexpr (std::is_same_v<T, unsigned int>)
+			{
 				data_type = ImGuiDataType_U32;
 				format = "%u";
 			}
-			else if constexpr (std::is_same_v<T, int8_t>) {
+			else if constexpr (std::is_same_v<T, int8_t>)
+			{
 				data_type = ImGuiDataType_S8;
 				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, uint8_t>) {
+			else if constexpr (std::is_same_v<T, uint8_t>)
+			{
 				data_type = ImGuiDataType_U8;
 				format = "%u";
 			}
-			else if constexpr (std::is_same_v<T, int16_t>) {
+			else if constexpr (std::is_same_v<T, int16_t>)
+			{
 				data_type = ImGuiDataType_S16;
 				format = "%d";
 			}
-			else if constexpr (std::is_same_v<T, uint16_t>) {
+			else if constexpr (std::is_same_v<T, uint16_t>)
+			{
 				data_type = ImGuiDataType_U16;
 				format = "%u";
 			}
-			else if constexpr (std::is_same_v<T, int64_t>) {
+			else if constexpr (std::is_same_v<T, int64_t>)
+			{
 				data_type = ImGuiDataType_S64;
 				format = "%lld";
 			}
-			else if constexpr (std::is_same_v<T, uint64_t>) {
+			else if constexpr (std::is_same_v<T, uint64_t>)
+			{
 				data_type = ImGuiDataType_U64;
 				format = "%llu";
 			}
-			else {
+			else
+			{
 				static_assert(!sizeof(T*), "Unsupported value type");
 			}
 
-			if (s_property_style.slider_enabled && std::is_floating_point_v<T>) {
+			if (s_property_style.slider_enabled && std::is_floating_point_v<T>)
+			{
 				float float_value = static_cast<float>(value);
 				if (ImGui::SliderFloat("##value", &float_value,
-					static_cast<float>(min),
-					static_cast<float>(max), format)) {
+					static_cast<float>(min), static_cast<float>(max), format))
+				{
 					value = static_cast<T>(float_value);
 					changed = true;
 				}
 			}
-			else if (s_property_style.drag_enabled) {
+			else if (s_property_style.drag_enabled)
+			{
 				if (ImGui::DragScalar("##value", data_type, &value,
-					static_cast<float>(s_property_style.speed),
-					&min, &max, format)) {
+					static_cast<float>(s_property_style.speed), &min, &max, format))
+				{
 					changed = true;
 				}
 			}
 			else {
-				if (ImGui::InputScalar("##value", data_type, &value, nullptr, nullptr, format)) {
+				if (ImGui::InputScalar("##value", data_type, &value, nullptr, nullptr, format))
+				{
 					changed = true;
 				}
 			}
 
-			// Context menu for additional options
+
+			// Context menu
 			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1)) {
 				ImGui::OpenPopup("value_context_menu");
 			}
 
 			if (ImGui::BeginPopup("value_context_menu")) {
-				if (ImGui::MenuItem("Copy")) {
-					if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-						ImGui::SetClipboardText(fmt::format("{}", value).c_str());
-					}
-					else {
-						ImGui::SetClipboardText(fmt::format("{}", value).c_str());
-					}
-				}
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Value Operations");
+				ImGui::Separator();
 
-				if (ImGui::MenuItem("Paste")) {
+				if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+					ImGui::SetClipboardText(fmt::format("{}", value).c_str());
+				}
+				if (ImGui::MenuItem("Paste", "Ctrl+V")) {
 					const char* clipboard = ImGui::GetClipboardText();
 					if (clipboard) {
 						try {
-							if constexpr (std::is_same_v<T, float>) {
-								value = std::stof(clipboard);
-								changed = true;
+							if constexpr (std::is_floating_point_v<T>) {
+								value = static_cast<T>(std::stod(clipboard));
 							}
-							else if constexpr (std::is_same_v<T, int>) {
-								value = std::stoi(clipboard);
-								changed = true;
+							else {
+								value = static_cast<T>(std::stoll(clipboard));
 							}
-							else if constexpr (std::is_same_v<T, unsigned int>) {
-								value = static_cast<unsigned int>(std::stoul(clipboard));
-								changed = true;
-							}
+							changed = true;
 						}
-						catch (...) {
-							// Invalid paste
-						}
+						catch (...) {}
 					}
 				}
 
 				ImGui::Separator();
 
-				if (ImGui::MenuItem("Reset to Zero")) {
+				if (ImGui::MenuItem("Zero")) {
 					value = T{ 0 };
 					changed = true;
 				}
-
-				if (ImGui::MenuItem("Set to Min")) {
+				if (ImGui::MenuItem("Min")) {
 					value = min;
 					changed = true;
 				}
-
-				if (ImGui::MenuItem("Set to Max")) {
+				if (ImGui::MenuItem("Max")) {
 					value = max;
 					changed = true;
 				}
@@ -639,8 +829,7 @@ namespace ag
 				ImGui::EndPopup();
 			}
 
-			EndProperty();
-
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -649,21 +838,22 @@ namespace ag
 		}
 
 		static bool draw_color(const char* label, Color& color,
-			ImGuiColorEditFlags flags = ImGuiColorEditFlags_None,
-			const char* tooltip = nullptr)
+			ImGuiColorEditFlags flags = ImGuiColorEditFlags_None, const char* tooltip = nullptr)
 		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
-			vec4f normalized =
-			{
-					color.r / 255.0f,
-					color.g / 255.0f,
-					color.b / 255.0f,
-					color.a / 255.0f
+			vec4f normalized = {
+				color.r / 255.0f,
+				color.g / 255.0f,
+				color.b / 255.0f,
+				color.a / 255.0f
 			};
 
-			if (ImGui::ColorEdit4("##color", &normalized.x, flags))
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 4 });
+
+			if (ImGui::ColorEdit4("##color", &normalized.x,
+				flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreviewHalf))
 			{
 				color.r = static_cast<uint8_t>(normalized.x * 255.0f);
 				color.g = static_cast<uint8_t>(normalized.y * 255.0f);
@@ -672,8 +862,8 @@ namespace ag
 				changed = true;
 			}
 
-			ImGui::SameLine(0, 4);
-			if (ImGui::Button("Picker", ImVec2(60, 0)))
+			ImGui::SameLine();
+			if (ImGui::Button("Pick", ImVec2(50, 0)))
 			{
 				ImGui::OpenPopup("color_picker_popup");
 			}
@@ -683,9 +873,10 @@ namespace ag
 				ImGui::ColorPicker4("##picker", &normalized.x,
 					flags | ImGuiColorEditFlags_DisplayRGB |
 					ImGuiColorEditFlags_DisplayHSV |
-					ImGuiColorEditFlags_DisplayHex);
+					ImGuiColorEditFlags_DisplayHex |
+					ImGuiColorEditFlags_AlphaBar);
 
-				if (ImGui::Button("Apply"))
+				if (ImGui::Button("Apply", ImVec2(80, 0)))
 				{
 					color.r = static_cast<uint8_t>(normalized.x * 255.0f);
 					color.g = static_cast<uint8_t>(normalized.y * 255.0f);
@@ -696,7 +887,7 @@ namespace ag
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Cancel"))
+				if (ImGui::Button("Cancel", ImVec2(80, 0)))
 				{
 					ImGui::CloseCurrentPopup();
 				}
@@ -704,6 +895,7 @@ namespace ag
 				ImGui::EndPopup();
 			}
 
+			// Enhanced context menu
 			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
 			{
 				ImGui::OpenPopup("color_context_menu");
@@ -711,61 +903,40 @@ namespace ag
 
 			if (ImGui::BeginPopup("color_context_menu"))
 			{
-				if (ImGui::MenuItem("Copy as Hex"))
-				{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Color Presets");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy as Hex")) {
 					ImGui::SetClipboardText(fmt::format("#{:02X}{:02X}{:02X}{:02X}",
 						color.r, color.g, color.b, color.a).c_str());
 				}
-
-				if (ImGui::MenuItem("Copy as RGB"))
-				{
+				if (ImGui::MenuItem("Copy as RGB")) {
 					ImGui::SetClipboardText(fmt::format("rgb({}, {}, {})",
 						color.r, color.g, color.b).c_str());
 				}
-
-				if (ImGui::MenuItem("Copy as RGBA"))
-				{
-					ImGui::SetClipboardText(fmt::format("rgba({}, {}, {}, {})",
+				if (ImGui::MenuItem("Copy as RGBA")) {
+					ImGui::SetClipboardText(fmt::format("rgba({}, {}, {}, {:.2f})",
 						color.r, color.g, color.b, color.a / 255.0f).c_str());
 				}
 
 				ImGui::Separator();
+				ImGui::Text("Quick Colors");
+				ImGui::Separator();
 
-				if (ImGui::MenuItem("Set to Black"))
-				{
-					color = Color::Black;
-					changed = true;
-				}
-
-				if (ImGui::MenuItem("Set to White"))
-				{
-					color = Color::White;
-					changed = true;
-				}
-
-				if (ImGui::MenuItem("Set to Red"))
-				{
-					color = Color::Red;
-					changed = true;
-				}
-
-				if (ImGui::MenuItem("Set to Green"))
-				{
-					color = Color::Green;
-					changed = true;
-				}
-
-				if (ImGui::MenuItem("Set to Blue"))
-				{
-					color = Color::Blue;
-					changed = true;
-				}
+				if (ImGui::MenuItem("Black")) { color = Color::Black; changed = true; }
+				if (ImGui::MenuItem("White")) { color = Color::White; changed = true; }
+				if (ImGui::MenuItem("Red")) { color = Color::Red; changed = true; }
+				if (ImGui::MenuItem("Green")) { color = Color::Green; changed = true; }
+				if (ImGui::MenuItem("Blue")) { color = Color::Blue; changed = true; }
+				if (ImGui::MenuItem("Yellow")) { color = Color(255, 255, 0); changed = true; }
+				if (ImGui::MenuItem("Cyan")) { color = Color(0, 255, 255); changed = true; }
+				if (ImGui::MenuItem("Magenta")) { color = Color(255, 0, 255); changed = true; }
 
 				ImGui::EndPopup();
 			}
 
-			EndProperty();
-
+			ImGui::PopStyleVar();
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -775,13 +946,21 @@ namespace ag
 
 		static bool draw_bool(const char* label, bool& value, const char* tooltip = nullptr) {
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
-			if (ImGui::Checkbox("##value", &value)) {
+
+			if (ImGui::Checkbox("##value", &value))
+			{
 				changed = true;
 			}
 
-			EndProperty();
+			// Visual feedback on hover
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("%s", value ? "Enabled" : "Disabled");
+			}
+
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
@@ -789,22 +968,25 @@ namespace ag
 			return changed;
 		}
 
-		static bool draw_string(const char* label, std::string& value, size_t buffer_size = 256,
-			const char* tooltip = nullptr) {
+		static bool draw_string(const char* label, std::string& value,
+			size_t buffer_size = 256, const char* tooltip = nullptr)
+		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
-
+			begin_property(label, tooltip);
 
 			static std::unordered_map<std::string, std::vector<char>> buffers;
 
-			std::string key = std::string(label) + "##" + value;
+			// Stable key per property
+			std::string key = std::string(label) + "##string";
 			auto& buffer = buffers[key];
 
-			if (buffer.empty() || std::string(buffer.data()) != value) {
+			if (buffer.empty() || std::string(buffer.data()) != value)
+			{
 				buffer.resize(buffer_size);
 				std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
 				buffer[buffer_size - 1] = '\0';
 			}
+
 
 			if (ImGui::InputText("##value", buffer.data(), buffer_size))
 			{
@@ -813,14 +995,99 @@ namespace ag
 			}
 
 
-			EndProperty();
+			// Character count on hover
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Characters: %zu / %zu", value.length(), buffer_size - 1);
+			}
 
+			// Context menu
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
+				ImGui::OpenPopup("string_context_menu");
+			}
+
+			if (ImGui::BeginPopup("string_context_menu"))
+			{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Text Operations");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy", "Ctrl+C"))
+				{
+					ImGui::SetClipboardText(value.c_str());
+				}
+
+				if (ImGui::MenuItem("Paste", "Ctrl+V"))
+				{
+					const char* clipboard = ImGui::GetClipboardText();
+					if (clipboard)
+					{
+						value = std::string(clipboard);
+						std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+						buffer[buffer_size - 1] = '\0';
+						changed = true;
+					}
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Clear"))
+				{
+					value.clear();
+					buffer[0] = '\0';
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("Trim"))
+				{
+					size_t start = value.find_first_not_of(" \t");
+					size_t end = value.find_last_not_of(" \t");
+					if (start != std::string::npos && end != std::string::npos)
+					{
+						value = value.substr(start, end - start + 1);
+						std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+						changed = true;
+					}
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("To Uppercase"))
+				{
+					std::transform(value.begin(), value.end(), value.begin(), ::toupper);
+					std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("To Lowercase"))
+				{
+					std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+					std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+					changed = true;
+				}
+
+				ImGui::EndPopup();
+			}
+
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
 
 			return changed;
 		}
+
+
+		template<typename T>
+		static std::string format_value(const T& value) {
+			if constexpr (std::is_floating_point_v<T>) {
+				return fmt::format("{:.3f}", value);
+			}
+			else {
+				return fmt::format("{}", value);
+			}
+		}
+
 
 		static bool draw_string_multiline(
 			const char* label,
@@ -830,7 +1097,7 @@ namespace ag
 			const char* tooltip = nullptr)
 		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
 			static std::unordered_map<std::string, std::vector<char>> buffers;
 
@@ -845,6 +1112,7 @@ namespace ag
 				buffer[buffer_size - 1] = '\0';
 			}
 
+
 			if (ImGui::InputTextMultiline(
 				"##value",
 				buffer.data(),
@@ -856,71 +1124,187 @@ namespace ag
 				changed = true;
 			}
 
-			EndProperty();
+
+			// Character count indicator
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Characters: %zu / %zu", value.length(), buffer_size - 1);
+			}
+
+			// Enhanced context menu
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
+				ImGui::OpenPopup("multiline_context_menu");
+			}
+
+			if (ImGui::BeginPopup("multiline_context_menu"))
+			{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Text Operations");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy All", "Ctrl+C"))
+				{
+					ImGui::SetClipboardText(value.c_str());
+				}
+
+				if (ImGui::MenuItem("Paste", "Ctrl+V"))
+				{
+					const char* clipboard = ImGui::GetClipboardText();
+					if (clipboard)
+					{
+						value = std::string(clipboard);
+						std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+						buffer[buffer_size - 1] = '\0';
+						changed = true;
+					}
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Clear"))
+				{
+					value.clear();
+					buffer[0] = '\0';
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("Trim Whitespace"))
+				{
+					// Trim leading and trailing whitespace
+					size_t start = value.find_first_not_of(" \t\n\r");
+					size_t end = value.find_last_not_of(" \t\n\r");
+					if (start != std::string::npos && end != std::string::npos)
+					{
+						value = value.substr(start, end - start + 1);
+						std::strncpy(buffer.data(), value.c_str(), buffer_size - 1);
+						changed = true;
+					}
+				}
+
+				ImGui::Separator();
+
+				ImGui::Text("Info: %zu chars, %zu lines",
+					value.length(),
+					std::count(value.begin(), value.end(), '\n') + 1);
+
+				ImGui::EndPopup();
+			}
+
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
 
 			return changed;
 		}
-
 
 		template<typename Enum>
 		static bool draw_enum(const char* label, Enum& value, const std::vector<std::string>& options,
-			const char* tooltip = nullptr) {
+			const char* tooltip = nullptr)
+		{
 			bool changed = false;
-			BeginProperty(label, tooltip);
+			begin_property(label, tooltip);
 
 			int current_item = static_cast<int>(value);
-			if (ImGui::Combo("##value", &current_item,
-				[](void* data, int idx, const char** out_text) {
-					auto& opts = *static_cast<std::vector<std::string>*>(data);
-					*out_text = opts[idx].c_str();
-					return true;
-				},
-				(void*)&options, static_cast<int>(options.size()))) {
-				value = static_cast<Enum>(current_item);
-				changed = true;
+			const std::string& current_text = options[current_item];
+
+
+			if (ImGui::BeginCombo("##value", current_text.c_str()))
+			{
+				for (int i = 0; i < static_cast<int>(options.size()); i++)
+				{
+					const bool is_selected = (current_item == i);
+
+					if (is_selected)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.26f, 0.59f, 0.98f, 1.0f));
+					}
+
+					if (ImGui::Selectable(options[i].c_str(), is_selected))
+					{
+						value = static_cast<Enum>(i);
+						changed = true;
+					}
+
+					if (is_selected)
+					{
+						ImGui::PopStyleColor();
+						ImGui::SetItemDefaultFocus();
+					}
+
+					// Show index number on hover
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::SetTooltip("Index: %d", i);
+					}
+				}
+				ImGui::EndCombo();
 			}
 
-			EndProperty();
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("%s (Index: %d / %zu)",
+					current_text.c_str(),
+					current_item,
+					options.size() - 1);
+			}
+
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+			{
+				ImGui::OpenPopup("enum_context_menu");
+			}
+
+			if (ImGui::BeginPopup("enum_context_menu"))
+			{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Enum Navigation");
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Previous", current_item > 0 ? "↑" : nullptr, false, current_item > 0))
+				{
+					value = static_cast<Enum>(current_item - 1);
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("Next", current_item < static_cast<int>(options.size()) - 1 ? "↓" : nullptr,
+					false, current_item < static_cast<int>(options.size()) - 1))
+				{
+					value = static_cast<Enum>(current_item + 1);
+					changed = true;
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("First"))
+				{
+					value = static_cast<Enum>(0);
+					changed = true;
+				}
+
+				if (ImGui::MenuItem("Last"))
+				{
+					value = static_cast<Enum>(options.size() - 1);
+					changed = true;
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Copy Name"))
+				{
+					ImGui::SetClipboardText(current_text.c_str());
+				}
+
+				ImGui::EndPopup();
+			}
+
+			end_property();
 
 			if (changed)
 				Scene::get_active_scene()->set_save_required();
 
 			return changed;
 		}
-
-		// Style configuration functions
-		static void SetPropertyStyle(const PropertyStyle& style) {
-			s_property_style = style;
-		}
-
-		static PropertyStyle& GetPropertyStyle() {
-			return s_property_style;
-		}
-
-		static void PushPropertyStyle() {
-
-		}
-
-		static void PopPropertyStyle() {
-			s_property_style.label_color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
-			s_property_style.value_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-			s_property_style.button_color = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
-			s_property_style.input_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-			s_property_style.min_width = 150.0f;
-			s_property_style.speed = 1.0f;
-			s_property_style.format = "%.3f";
-			s_property_style.show_reset_buttons = true;
-			s_property_style.show_labels = true;
-			s_property_style.drag_enabled = true;
-			s_property_style.slider_enabled = false;
-			s_property_style.slider_min = 0.0f;
-			s_property_style.slider_max = 1.0f;
-		}
-
-
+		
 	private:
 		static Panels s_show_panels;
 		static PropertyStyle s_property_style;

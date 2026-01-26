@@ -133,6 +133,7 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/json/single_include
     ${CMAKE_SOURCE_DIR}/External/sol2/include
     ${CMAKE_SOURCE_DIR}/External/audio
+    ${CMAKE_SOURCE_DIR}/External/icons
 )
 
 target_compile_definitions(External PRIVATE

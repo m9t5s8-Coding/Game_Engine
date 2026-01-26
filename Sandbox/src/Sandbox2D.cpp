@@ -39,7 +39,7 @@ namespace ag
 
 		m_framebuffer->bind();
 
-		RenderCommand::set_clear_color(ag::Color(42, 42, 42));
+		RenderCommand::set_clear_color(ag::Color(38, 45, 42));
 		RenderCommand::clear();
 		m_framebuffer->clear_attachment(1, -1);
 
