@@ -21,6 +21,16 @@ namespace ag::NodeHelper
 		auto texture = Texture2D::create(new_path);
 		return texture;
 	}
+
+	AG_uint create_sound(const std::string& path)
+	{
+		auto project = Project::get_active_project();
+		auto& project_path = project->get_directory();
+		auto& assets_path = project->get_assets_directory();
+		std::string new_path = project_path + assets_path + path;
+		auto sound_buffer = AudioManager::load(new_path);
+		return sound_buffer;
+	}
 	
 	AG_ref<Texture2D> load_texture(std::string& path)
 	{
@@ -39,6 +49,25 @@ namespace ag::NodeHelper
 		Helper::normalize_path(path);
 
 		return create_texture(path);
+	}
+
+	AG_uint load_sound(std::string& path)
+	{
+		auto project = Project::get_active_project();
+
+		Helper::normalize_path(path);
+
+		std::string project_dir = project->get_directory();
+		std::string assets_dir = project->get_assets_directory();
+
+		std::string base_path = project_dir + assets_dir;
+
+		if (path.find(base_path) == 0)
+			path = path.substr(base_path.size());
+
+		Helper::normalize_path(path);
+
+		return create_sound(path);
 	}
 	
 	bool has_capability(Node_Capability a, Node_Capability b)

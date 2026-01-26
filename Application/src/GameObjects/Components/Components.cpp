@@ -1,5 +1,4 @@
 ﻿#include<GameObjects/Components/Components.hpp>
-
 #include <GameObjects/GameObjects.hpp>
 #include <Renderer/Renderer2D.hpp>
 
@@ -1439,7 +1438,7 @@ namespace ag
 		return size;
 	}
 
-	vec2f Text::calc_line_text_size(const Text& text, const vec2f& s,const vec2f& longest_size, size_t start_index, size_t* break_index)
+	vec2f Text::calc_line_text_size(const Text& text, const vec2f& s, const vec2f& longest_size, size_t start_index, size_t* break_index)
 	{
 		vec2f scale = s * (text.font_size / TextLoader::font.em_size);
 
@@ -1473,7 +1472,7 @@ namespace ag
 				continue;
 			}
 
-			
+
 			float word_width = 0.0f;
 			size_t word_start = i;
 
@@ -1573,7 +1572,7 @@ namespace ag
 		case Text_Allignment_Horizontal::Right:
 		{
 			vec2f size = calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
-			position.x =  transform.position.x + longest_size.x - size.x;
+			position.x = transform.position.x + longest_size.x - size.x;
 			break;
 		}
 		}
@@ -1767,4 +1766,66 @@ namespace ag
 			props.rect = comps.base_rect;
 		}
 	}
+
+
+
+	json Audio_Component::save_json(Entity entity)
+	{
+		json j;
+
+		auto& props = entity.get_component<Audio_Component>();
+		Helper::save_json(j, "Path", props.path);
+		Helper::save_json(j, "Loop", props.source.is_looping());
+		Helper::save_json(j, "Pitch", props.source.get_pitch());
+		Helper::save_json(j, "Volume", props.source.get_volume());
+		return j;
+	}
+	void Audio_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<Audio_Component>())
+			entity.add_component<Audio_Component>();
+
+		auto& props = entity.get_component<Audio_Component>();
+		Helper::load_json(j, "Path", props.path);
+
+
+		bool loop;
+		float pitch, volume;
+		Helper::load_json(j, "Loop", loop);
+		Helper::load_json(j, "Pitch", pitch);
+		Helper::load_json(j, "Volume", volume);
+
+		if (!props.path.empty())
+		{
+			props.audio_buffer = NodeHelper::create_sound(props.path);
+			if (props.audio_buffer)
+			{
+				props.source.set_buffer(props.audio_buffer);
+				props.source.set_loop(loop);
+				props.source.set_pitch(pitch);
+				props.source.set_volume(volume);
+
+				if (Engine::is_runtime())
+				{
+					props.source.play();
+				}
+			}
+		}
+	}
+	void Audio_Component::clone_entity(Entity original, Entity clone)
+	{
+		if (!original.has_component<Audio_Component>())
+			return;
+
+		const auto& original_props = original.get_component<Audio_Component>();
+		Audio_Component comps;
+		comps.path = original_props.path;
+		comps.audio_buffer = original_props.audio_buffer;
+
+		comps.source = AudioSource();
+		comps.source.set_buffer(comps.audio_buffer);
+
+		clone.add_component<Audio_Component>(comps);
+	}
+	
 }

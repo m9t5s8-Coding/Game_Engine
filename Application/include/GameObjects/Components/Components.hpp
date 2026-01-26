@@ -4,6 +4,8 @@
 #include <Scene/Entity.hpp>
 #include <Scene/SceneComponent.hpp>
 #include <string>
+#include <Audio/AudioManager.hpp>
+
 
 namespace ag
 {
@@ -776,6 +778,24 @@ namespace ag
 
 		static void imgui_render(Entity entity);
 
+	};
+
+
+
+	struct Audio_Component : Base_Component<Audio_Component>
+	{
+		AG_uint audio_buffer = 0;
+		AudioSource source;
+		std::string path;
+
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static void clone_entity(Entity original, Entity clone);
+		static const char* get_name()
+		{
+			return "Audio";
+		}
+		static void imgui_render(Entity entity);
 	};
 
 }

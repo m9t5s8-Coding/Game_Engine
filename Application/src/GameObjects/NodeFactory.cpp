@@ -27,6 +27,7 @@ namespace ag
 		create_map[NodeType::Text] = TextNode::create_node;
 		create_map[NodeType::Button] = ButtonNode::create_node;
 		create_map[NodeType::TextureButton] = TextureButtonNode::create_node;
+		create_map[NodeType::Audio] = AudioNode::create_node;
 
 
 		// Draw Function
@@ -40,6 +41,7 @@ namespace ag
 		draw_map[NodeType::Text] = TextNode::draw;
 		draw_map[NodeType::Button] = ButtonNode::draw;
 		draw_map[NodeType::TextureButton] = TextureButtonNode::draw;
+		draw_map[NodeType::Audio] = AudioNode::draw;
 
 		update_map[NodeType::Rectangle] = RectangleNode::update;
 		update_map[NodeType::Circle] = CircleNode::update;
@@ -51,6 +53,8 @@ namespace ag
 		update_map[NodeType::Text] = TextNode::update;
 		update_map[NodeType::Button] = ButtonNode::update;
 		update_map[NodeType::TextureButton] = TextureButtonNode::update;
+		update_map[NodeType::Audio] = AudioNode::update;
+
 
 
 	
@@ -67,6 +71,7 @@ namespace ag
 		clone_map[NodeType::Text] = TextNode::clone_node;
 		clone_map[NodeType::Button] = ButtonNode::clone_node;
 		clone_map[NodeType::TextureButton] = TextureButtonNode::clone_node;
+		clone_map[NodeType::Audio] = AudioNode::clone_node;
 
 
 		save_map[NodeType::Rectangle] = RectangleNode::save_json;
@@ -79,6 +84,7 @@ namespace ag
 		save_map[NodeType::Text] = TextNode::save_json;
 		save_map[NodeType::Button] = ButtonNode::save_json;
 		save_map[NodeType::TextureButton] = TextureButtonNode::save_json;
+		save_map[NodeType::Audio] = AudioNode::save_json;
 
 
 		load_map[NodeType::Rectangle] = RectangleNode::load_json;
@@ -91,6 +97,7 @@ namespace ag
 		load_map[NodeType::Text] = TextNode::load_json;
 		load_map[NodeType::Button] = ButtonNode::load_json;
 		load_map[NodeType::TextureButton] = TextureButtonNode::load_json;
+		load_map[NodeType::Audio] = AudioNode::load_json;
 
 
 		clear_map[NodeType::Rectangle] = RectangleNode::delete_node;
@@ -103,6 +110,7 @@ namespace ag
 		clear_map[NodeType::Text] = TextNode::delete_node;
 		clear_map[NodeType::Button] = ButtonNode::delete_node;
 		clear_map[NodeType::TextureButton] = TextureButtonNode::delete_node;
+		clear_map[NodeType::Audio] = AudioNode::delete_node;
 
 
 		nodes[NodeType::Rectangle] = "Rectangle2D";
@@ -115,6 +123,7 @@ namespace ag
 		nodes[NodeType::Text] = "Text2D";
 		nodes[NodeType::Button] = "Button2D";
 		nodes[NodeType::TextureButton] = "TextureButton2D";
+		nodes[NodeType::Audio] = "Audio2D";
 
 	}
 

@@ -47,6 +47,7 @@ namespace ag
 		NodeFactory::properties_map[NodeType::Text] = NodeProperties::text_2D;
 		NodeFactory::properties_map[NodeType::Button] = NodeProperties::button_2D;
 		NodeFactory::properties_map[NodeType::TextureButton] = NodeProperties::texture_button_2D;
+		NodeFactory::properties_map[NodeType::Audio] = NodeProperties::audio_2D;
 
 	}
 

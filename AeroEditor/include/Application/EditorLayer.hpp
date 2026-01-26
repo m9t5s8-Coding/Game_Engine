@@ -70,6 +70,7 @@ namespace ag
     AG_ref<ScenePanel> m_panel;
 		std::unordered_map<std::string, AG_ref<Scene>> m_scenes;
 
+
 		vec2i m_viewport_size;
 		vec2f m_current_mouse_pos;
 		vec2i m_mouse_position;

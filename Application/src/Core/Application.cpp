@@ -24,8 +24,10 @@ namespace ag
   void Application::init(const WindowProps& props)
   {
     m_Window = std::unique_ptr<Window>(Window::create(props));
+    m_audio_device = AG_cscope<Audio_Device>();
     m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
 
+    m_audio_device->init();
     m_imgui_layer = new ImGuiLayer();
     push_overlay(m_imgui_layer);
   }

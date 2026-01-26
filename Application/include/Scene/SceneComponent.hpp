@@ -43,7 +43,8 @@ namespace ag
 		Text = 7,
 		Button = 8,
 		TextureButton = 9,
-		CollisionShape = 10
+		CollisionShape = 10,
+		Audio = 11,
 	};
 
 	enum class Node_Capability : uint32_t

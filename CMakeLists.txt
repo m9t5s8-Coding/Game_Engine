@@ -23,6 +23,40 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/External/glfw)
 
+
+
+
+
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_UTILS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_CONFIG OFF CACHE BOOL "" FORCE)
+
+set(ALSOFT_REQUIRE_OPENSL OFF CACHE BOOL "" FORCE)
+set(ALSOFT_REQUIRE_WINMM ON CACHE BOOL "" FORCE)
+set(ALSOFT_REQUIRE_DSOUND ON CACHE BOOL "" FORCE)
+set(ALSOFT_REQUIRE_WASAPI ON CACHE BOOL "" FORCE)
+
+set(ALSOFT_BACKEND_WINMM ON CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_DSOUND ON CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_WASAPI ON CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_PORTAUDIO OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_PULSEAUDIO OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_ALSA OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_COREAUDIO OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_OSS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_SNDIO OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_SOLARIS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_SOUNDIO OFF CACHE BOOL "" FORCE)
+set(ALSOFT_BACKEND_WAVE OFF CACHE BOOL "" FORCE)
+
+set(LIBTYPE "STATIC" CACHE STRING "Library type" FORCE)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/External/openal)
+
+
 set(LUA_SRC
     "${CMAKE_SOURCE_DIR}/External/lua/lapi.c"
     "${CMAKE_SOURCE_DIR}/External/lua/lauxlib.c"
@@ -98,6 +132,7 @@ target_include_directories(External PUBLIC
     ${CMAKE_SOURCE_DIR}/External/stb_image
     ${CMAKE_SOURCE_DIR}/External/json/single_include
     ${CMAKE_SOURCE_DIR}/External/sol2/include
+    ${CMAKE_SOURCE_DIR}/External/audio
 )
 
 target_compile_definitions(External PRIVATE
@@ -109,6 +144,15 @@ target_link_libraries(External PUBLIC glfw)
 
 if(WIN32)
     target_link_libraries(External PRIVATE opengl32.lib)
+endif()
+
+if(WIN32)
+    target_link_libraries(External PRIVATE
+        winmm
+        ole32
+        user32
+        uuid
+    )
 endif()
 
 file(GLOB_RECURSE APP_SRC "${CMAKE_SOURCE_DIR}/Application/src/*.cpp")
@@ -124,10 +168,13 @@ target_link_libraries(Application PUBLIC
     lua
     box2d
     External
+    OpenAL
 )
 
 target_compile_definitions(Application PRIVATE 
     STB_IMAGE_IMPLEMENTATION
+    DR_MP3_IMPLEMENTATION
+    DR_WAV_IMPLEMENTATION
 )
 
 if(WIN32)
@@ -173,3 +220,9 @@ target_precompile_headers(AeroEditor PRIVATE
 target_precompile_headers(Sandbox PRIVATE
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
+
+get_target_property(_openal_type OpenAL TYPE)
+get_target_property(_openal_includes OpenAL INTERFACE_INCLUDE_DIRECTORIES)
+
+message(STATUS "OpenAL TYPE = ${_openal_type}")
+message(STATUS "OpenAL INCLUDES = ${_openal_includes}")

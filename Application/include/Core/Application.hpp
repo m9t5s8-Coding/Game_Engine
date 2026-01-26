@@ -18,6 +18,7 @@
 #include <Renderer/Shader.hpp>
 
 #include <Renderer/View.hpp>
+#include <Audio/AudioDevice.hpp>
 
 #include <Core/TimeStamp.hpp>
 
@@ -59,12 +60,16 @@ namespace ag
     bool m_running = true;
     bool m_is_closing = false;
     float delta_time = 0.0f;
+
+  protected:
+    std::unique_ptr<Window> m_Window;
+    AG_scope<Audio_Device> m_audio_device;
   private:
     bool on_window_close(WindowCloseEvent &e);
     bool on_window_resize(WindowResizeEvent &e);
     bool on_key_pressed(KeyPressedEvent &e);
 
-    std::unique_ptr<Window> m_Window;
+    
     
     bool m_minimized = false;
 

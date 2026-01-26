@@ -17,6 +17,8 @@ namespace ag
     void begin();
     void end();
 
+    void set_engine_theme();
+
     void on_imgui_render() override;
 
     void block_events(bool block) { m_block_events = block; }

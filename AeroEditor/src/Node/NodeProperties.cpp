@@ -596,8 +596,213 @@ namespace ag
 				ImGui::Dummy(spacing);
 			}, false);
 	}
-	
-	
+	void Audio_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Audio_Component>("Audio Component", entity,
+			[entity](Audio_Component& comps) mutable
+			{
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 12));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
+
+				ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Sound File");
+
+				if (!comps.path.empty())
+				{
+					ImGui::BeginGroup();
+
+					std::filesystem::path p(comps.path);
+					std::string filename = p.filename().string();
+					std::string folder = p.parent_path().string();
+
+					if (folder.length() > 40)
+					{
+						folder = "..." + folder.substr(folder.length() - 37);
+					}
+
+					ImGui::TextDisabled("Loaded:");
+					ImGui::SameLine();
+					ImGui::TextUnformatted(filename.c_str());
+
+					ImGui::TextDisabled("Path:");
+					ImGui::SameLine();
+					ImGui::TextDisabled("%s", folder.c_str());
+
+					ImGui::EndGroup();
+
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::TextUnformatted(comps.path.c_str());
+						ImGui::EndTooltip();
+					}
+
+					ImGui::Spacing();
+				}
+
+				ImGui::BeginGroup();
+
+				GUI_Button button;
+				button.background.normal = Color(70, 70, 70);
+				button.background.hover = Color(95, 95, 95);
+				button.background.active = Color(55, 55, 55);
+				button.background.disabled = Color(45, 45, 45);
+
+				button.text.normal = Color(230, 230, 230);
+				button.text.hover = Color(255, 255, 255);
+				button.text.active = Color(210, 210, 210);
+				button.text.disabled = Color(120, 120, 120);
+
+				if (comps.audio_buffer == 0)
+				{
+					button.label = "Load Sound";
+				}
+				else
+				{
+					button.label = "Change Sound";
+				}
+
+				button.size.x = (ImGui::GetContentRegionAvail().x - 8) * 0.5f;
+				button.size.y = 35.0f;
+
+				if (UI::draw_button(button))
+				{
+					auto full_path = FileDialogs::open_file("Audio Files\0*.mp3;*.wav;*.ogg;*.flac\0All Files\0*.*\0");
+					if (!full_path.empty())
+					{
+						comps.path = full_path;
+						comps.audio_buffer = NodeHelper::load_sound(comps.path);
+						comps.source.set_buffer(comps.audio_buffer);
+					}
+				}
+
+				ImGui::SameLine(0, 4.0f);
+				button.label = "Unload";
+				button.enabled = !comps.path.empty();
+				if (UI::draw_button(button))
+				{
+					comps.audio_buffer = 0;
+					comps.path.clear();
+					comps.source.set_buffer(0);
+				}
+
+				ImGui::EndGroup();
+
+				if (comps.audio_buffer != 0)
+				{
+					ImGui::Separator();
+					ImGui::Spacing();
+
+					ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Playback");
+
+					ImGui::BeginGroup();
+
+					// Get playback state
+					bool isPlaying = comps.source.is_playing();
+
+					button.label = isPlaying ? "Pause" : "Play";
+
+					button.size.x = (ImGui::GetContentRegionAvail().x - 10) / 3.0f;
+
+					if (UI::draw_button(button))
+					{
+						if (isPlaying)
+						{
+							comps.source.pause();
+						}
+						else
+						{
+							comps.source.play();
+						}
+					}
+
+					ImGui::SameLine(0, 5.0f);
+
+					button.label = "Stop";
+					if (UI::draw_button(button))
+					{
+						comps.source.stop();
+					}
+
+					ImGui::SameLine(0, 5.0f);
+
+					button.label = "Restart";
+					if (UI::draw_button(button))
+					{
+						comps.source.stop();
+						comps.source.play();
+					}
+
+					ImGui::EndGroup();
+
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					float volume = comps.source.get_volume();
+					if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f, "Volume: %.2f"))
+					{
+						comps.source.set_volume(volume);
+					}
+
+					float pitch = comps.source.get_pitch();
+					if (ImGui::SliderFloat("##Pitch", &pitch, 0.5f, 2.0f, "Pitch: %.2f"))
+					{
+						comps.source.set_pitch(pitch);
+					}
+
+
+					bool loop = comps.source.is_looping();
+					if (ImGui::Checkbox("Loop", &loop))
+					{
+						comps.source.set_loop(loop);
+					}
+
+					ImGui::PopItemWidth();
+
+					ImGui::Spacing();
+					ImGui::Separator();
+					ImGui::Spacing();
+
+					ImGui::BeginGroup();
+					ImGui::TextDisabled("Status:");
+					ImGui::SameLine();
+
+					if (isPlaying)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(50, 220, 50, 255));
+						ImGui::Text("Playing");
+						ImGui::PopStyleColor();
+					}
+					else if (comps.source.is_paused())
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(220, 220, 50, 255));
+						ImGui::Text("Paused");
+						ImGui::PopStyleColor();
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(150, 150, 150, 255));
+						ImGui::Text("Stopped");
+						ImGui::PopStyleColor();
+					}
+					ImGui::EndGroup();
+				}
+
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("AUDIO_FILE"))
+					{
+						const char* dropped_path = (const char*)payload->Data;
+						comps.path = dropped_path;
+						comps.audio_buffer = NodeHelper::load_sound(comps.path);
+						comps.source.set_buffer(comps.audio_buffer);
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				ImGui::PopStyleVar(2);
+			}, false);
+	}
+
 	void NodeProperties::animated_sprite_2D(Entity entity)
 	{
 		Tag_Component::imgui_render(entity);
@@ -713,4 +918,14 @@ namespace ag
 		add_component(entity);
 		draw_added_components(entity);
 	}
+
+	void NodeProperties::audio_2D(Entity entity)
+	{
+		Tag_Component::imgui_render(entity);
+		Audio_Component::imgui_render(entity);
+
+		add_component(entity);
+		draw_added_components(entity);
+	}
+
 }

@@ -72,7 +72,7 @@ namespace ag
 		void draw_entity_recursive(Entity entity);
 		void draw_entity(Entity entity);
 
-
+		void clear_destroyed_entity();
 
 	private:
 		entt::registry m_registry;

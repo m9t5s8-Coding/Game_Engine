@@ -31,6 +31,7 @@ namespace ag
 		static void text_2D(Entity entity);
 		static void texture_button_2D(Entity entity);
 		static void tilemap_2D(Entity entity);
+		static void audio_2D(Entity entity);
 
 
 		template<typename T>
@@ -43,7 +44,7 @@ namespace ag
 			ImGui::PushID(name.c_str());
 
 
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 6));
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
 			ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 12.0f);
 

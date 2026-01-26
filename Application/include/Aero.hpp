@@ -1,6 +1,10 @@
 #pragma once
 
 
+#include<Audio/AudioBuffer.hpp>
+#include<Audio/AudioSource.hpp>
+#include<Audio/AudioDevice.hpp>
+
 #include <Core/Application.hpp>
 #include <Core/Core.hpp>
 #include <Core/EntryPoint.hpp>

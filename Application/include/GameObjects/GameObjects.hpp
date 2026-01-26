@@ -8,8 +8,10 @@ namespace ag::NodeHelper
 	NodeType get_nodetype(Entity entity);
 
 	AG_ref<Texture2D> create_texture(const std::string& path);
+	AG_uint create_sound(const std::string& path);
 
 	AG_ref<Texture2D> load_texture(std::string& path);
+	AG_uint load_sound(std::string& path);
 
 
 	//C = Component R = ReturnType  D = DefaultValue

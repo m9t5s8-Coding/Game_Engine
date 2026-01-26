@@ -25,7 +25,7 @@ namespace ag
 	Entity Scene::create_entity(const std::string& name, const NodeType type, bool is_cloning)
 	{
 		Entity entity(m_registry.create());
-		
+
 		Tag_Component tag;
 		tag.name = name;
 		tag.index = m_next_index++;
@@ -95,38 +95,8 @@ namespace ag
 				continue;
 			draw_entity_recursive(e);
 		}
+		clear_destroyed_entity();
 
-		{
-			while (!m_to_delete_entity.empty())
-			{
-				Entity entity = m_to_delete_entity.back();
-				m_to_delete_entity.pop_back();
-
-				auto& tag = entity.get_component<Tag_Component>();
-
-				// Remove From The Parent Entity
-				if (tag.parent.get_id() != INVALID_ENTITY)
-				{
-					auto& parent_tag = tag.parent.get_component<Tag_Component>();
-					parent_tag.children.erase(
-						std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end());
-				}
-
-				for (auto& children : tag.children)
-				{
-					auto& child_tag = children.get_component<Tag_Component>();
-					child_tag.parent = Entity{};
-					destroy_entity(children);
-				}
-
-				tag.children.clear();
-
-				auto it = NodeFactory::clear_map.find(tag.node_type);
-				if (it != NodeFactory::clear_map.end())
-					it->second(entity);
-			}
-			m_to_delete_entity.clear();
-		}
 	}
 
 	void Scene::destroy()
@@ -135,45 +105,46 @@ namespace ag
 		{
 
 		}
-		// auto view = m_registry.view<Tag_Component>();
-		// for (auto entityID : view)
-		//{
-		//	Entity e(entityID);
-		//	destroy_entity(e);
-		//
-		// }
-		//{
-		//	while (!m_to_delete_entity.empty())
-		//	{
-		//		Entity entity = m_to_delete_entity.back();
-		//		m_to_delete_entity.pop_back();
+		auto view = m_registry.view<Tag_Component>();
+		for (auto entityID : view)
+		{
+			Entity e(entityID);
+			destroy_entity(e);
+		}
+		clear_destroyed_entity();
+	}
 
-		//		auto& tag = entity.get_component<Tag_Component>();
+	void Scene::clear_destroyed_entity()
+	{
+		while (!m_to_delete_entity.empty())
+		{
+			Entity entity = m_to_delete_entity.back();
+			m_to_delete_entity.pop_back();
 
-		//		//Remove From The Parent Entity
-		//		if (tag.parent.get_id() != INVALID_ENTITY)
-		//		{
-		//			auto& parent_tag = tag.parent.get_component<Tag_Component>();
-		//			parent_tag.children.erase(
-		//				std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end()
-		//			);
-		//		}
+			auto& tag = entity.get_component<Tag_Component>();
 
-		//		for (auto& children : tag.children)
-		//		{
-		//			auto& child_tag = children.get_component<Tag_Component>();
-		//			child_tag.parent = Entity{};
-		//			destroy_entity(children);
-		//		}
+			// Remove From The Parent Entity
+			if (tag.parent.get_id() != INVALID_ENTITY)
+			{
+				auto& parent_tag = tag.parent.get_component<Tag_Component>();
+				parent_tag.children.erase(
+					std::remove(parent_tag.children.begin(), parent_tag.children.end(), entity), parent_tag.children.end());
+			}
 
-		//		tag.children.clear();
+			for (auto& children : tag.children)
+			{
+				auto& child_tag = children.get_component<Tag_Component>();
+				child_tag.parent = Entity{};
+				destroy_entity(children);
+			}
 
-		//		auto it = NodeFactory::clear_map.find(tag.node_type);
-		//		if (it != NodeFactory::clear_map.end())
-		//			it->second(entity);
-		//	}
-		//	m_to_delete_entity.clear();
-		//}
+			tag.children.clear();
+
+			auto it = NodeFactory::clear_map.find(tag.node_type);
+			if (it != NodeFactory::clear_map.end())
+				it->second(entity);
+		}
+		m_to_delete_entity.clear();
 	}
 
 	void Scene::on_event(Event& event)
@@ -214,9 +185,9 @@ namespace ag
 	}
 	void Scene::draw_entity(Entity entity)
 	{
-			auto it = NodeFactory::draw_map.find(entity.get_component<Tag_Component>().node_type);
-			if (it != NodeFactory::draw_map.end())
-				it->second(entity);
+		auto it = NodeFactory::draw_map.find(entity.get_component<Tag_Component>().node_type);
+		if (it != NodeFactory::draw_map.end())
+			it->second(entity);
 	}
 	void Scene::draw_entity_recursive(Entity entity)
 	{
