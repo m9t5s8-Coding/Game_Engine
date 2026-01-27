@@ -44,7 +44,28 @@ namespace ag
 		m_framebuffer->clear_attachment(1, -1);
 
 		Renderer2D::begin_scene(m_view_controller->get_view(), Application::get().get_window().get_size());
-		m_scene->on_update(ts);
+		//m_scene->on_update(ts);
+
+		Rectangle rect;
+		rect.size = { 50, 50 };
+		rect.fill_color = Color::Black;
+		float spacing = 5.0f;
+		rect.corner_radius = 20.0f;
+		int shape_count = 40000;
+		Transform_Component transform;
+		int cols = 200;
+		for (int i = 0; i < shape_count; i++)
+		{
+			int col = i % cols;
+			int row = i / cols;
+
+			transform.position.x = col * rect.size.x + spacing;
+			transform.position.y = row * rect.size.y + spacing;
+
+			Renderer2D::draw_rectangle(rect, transform);
+		}
+
+
 		Renderer2D::end_scene();
 
 		entity_selection();

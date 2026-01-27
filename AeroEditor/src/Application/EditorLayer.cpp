@@ -97,6 +97,9 @@ namespace ag
 		m_panel->draw_collision_shapes();
 		m_panel->draw_tilemap_ghosts();
 		//m_panel->draw_selection_box();
+
+
+
 		Renderer2D::end_scene();
 
 		
@@ -1263,8 +1266,5 @@ namespace ag
 		}
 	}
 
-	
-
-	
 }
  

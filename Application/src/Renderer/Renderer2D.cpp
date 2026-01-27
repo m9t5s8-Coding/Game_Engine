@@ -12,7 +12,7 @@
 
 #include <Math/Math.hpp>
 #include <Renderer/Color.hpp>
-
+#include <Scene/SceneComponent.hpp>
 #include <GameObjects/Components/Components.hpp>
 #include <Core/Application.hpp>
 #include <cmath>
@@ -26,6 +26,7 @@ namespace ag
 		Sprite = 2,
 		Text = 3
 	};
+
 	struct Quad_Instance
 	{
 		vec2f size;
@@ -52,51 +53,42 @@ namespace ag
 	constexpr int TEXTURE_SCENE = 2;
 	constexpr int TEXTURE_SPRITE = 1;
 
-
 	struct Renderer2D_Data
 	{
 		// Max Shapes Data
 		AG_uint max_shape = 0;
 		AG_uint max_vertices = 0;
 		AG_uint max_indices = 0;
-		//Quad Data
+
+		// Quad Data
 		AG_ref<VertexArray> quad_vertex_array;
 		AG_ref<VertexBuffer> quad_instanced_buffer;
 		AG_ref<Shader> quad_shader;
 		AG_ref<Texture> quad_texture, text_texture;
-		AG_uint quad_index = 0;
-		Quad_Instance* quad_instanced_base = nullptr;
-		Quad_Instance* quad_instanced_ptr = nullptr;
-
 
 		AG_ref<VertexArray> fullscreen_vertex_array;
 		AG_ref<VertexBuffer> fullscreen_instanced_buffer;
 		AG_ref<Shader> fullscreen_shader;
 
-
-
 		View view;
 		vec2f viewport_size;
 		AG_uint slots;
+
+		std::unique_ptr<Renderer2D::AsyncData> async_data;
 	};
-	static Renderer2D_Data* s_data;
 
-
+	static Renderer2D_Data* s_data = nullptr;
 
 	void Renderer2D::init()
 	{
-
 		s_data = new Renderer2D_Data();
-		s_data->max_shape = 10000;
+		s_data->max_shape = 100000;  // Large batch size
 		s_data->max_vertices = s_data->max_shape * 4;
 		s_data->max_indices = s_data->max_shape * 6;
 		s_data->slots = 3;
 
-
 		AG_uint indices[] = { 0, 1, 2, 0, 2, 3 };
-
 		AG_ref<IndexBuffer> indexbuffer = ag::IndexBuffer::create(indices, 6);
-
 
 		float vertices[] = {
 			0.f, 0.f,
@@ -105,61 +97,58 @@ namespace ag
 			1.f, 0.f
 		};
 
-
-
-
+		// Fullscreen quad setup
 		{
 			float full_vertices[] = {
-			-1.f, -1.f,0.f, 0.f,
-			-1.f, 1.f,0.f, 1.f,
-			1.f, 1.f,1.f, 1.f,
-			1.f, -1.f,1.f , 0.f
+				-1.f, -1.f, 0.f, 0.f,
+				-1.f, 1.f, 0.f, 1.f,
+				1.f, 1.f, 1.f, 1.f,
+				1.f, -1.f, 1.f, 0.f
 			};
 
 			BufferLayout layout = {
-					{ShaderDataType::Float2, "a_Position"},
-					{ShaderDataType::Float2, "a_texcoord"} };
+				{ShaderDataType::Float2, "a_Position"},
+				{ShaderDataType::Float2, "a_texcoord"}
+			};
 
 			s_data->fullscreen_vertex_array = VertexArray::create();
-
 			auto fullscreen_vertex_buffer = VertexBuffer::create(full_vertices, sizeof(full_vertices));
 			fullscreen_vertex_buffer->set_layout(layout);
 			s_data->fullscreen_vertex_array->add_vertex_buffer(fullscreen_vertex_buffer);
 			s_data->fullscreen_vertex_array->set_index_buffer(indexbuffer);
 			s_data->fullscreen_shader = Shader::create("assets/shaders/Sprite2D.glsl");
-
 		}
+
+		// Quad setup
 		{
-			s_data->quad_instanced_base = new Quad_Instance[s_data->max_shape];
 			s_data->quad_vertex_array = ag::VertexArray::create();
 
 			BufferLayout layout = {
-					{ShaderDataType::Float2, "a_Position"} };
+				{ShaderDataType::Float2, "a_Position"}
+			};
 
 			auto quad_vertex_buffer = ag::VertexBuffer::create(vertices, sizeof(vertices));
 			quad_vertex_buffer->set_layout(layout);
 			s_data->quad_vertex_array->add_vertex_buffer(quad_vertex_buffer);
 
 			BufferLayout instance_layout = {
-					{ShaderDataType::Float2, "a_InstanceSize"},
-					{ShaderDataType::Float2, "a_InstancePos"},
-					{ShaderDataType::Float2, "a_InstanceOrigin"},
-					{ShaderDataType::Float, "a_InstanceRotation"},
-					{ShaderDataType::Int, "a_RenderMode"},
-					{ShaderDataType::Int, "a_QuadMode"},
-					{ShaderDataType::Int, "a_TextureSlot"},
-
-					{ShaderDataType::Float, "a_BorderThickness"},
-					{ShaderDataType::Float4, "a_FillColor"},
-					{ShaderDataType::Float4, "a_BorderColor"},
-
-					{ShaderDataType::Float, "a_CornerRadius"},
-
-					{ShaderDataType::Float2, "a_Texture_Size" },
-					{ShaderDataType::Float4, "a_TextureRect"},
-					{ShaderDataType::Float2, "a_flip"},
-					{ShaderDataType::Int, "a_entity_id"},
+				{ShaderDataType::Float2, "a_InstanceSize"},
+				{ShaderDataType::Float2, "a_InstancePos"},
+				{ShaderDataType::Float2, "a_InstanceOrigin"},
+				{ShaderDataType::Float, "a_InstanceRotation"},
+				{ShaderDataType::Int, "a_RenderMode"},
+				{ShaderDataType::Int, "a_QuadMode"},
+				{ShaderDataType::Int, "a_TextureSlot"},
+				{ShaderDataType::Float, "a_BorderThickness"},
+				{ShaderDataType::Float4, "a_FillColor"},
+				{ShaderDataType::Float4, "a_BorderColor"},
+				{ShaderDataType::Float, "a_CornerRadius"},
+				{ShaderDataType::Float2, "a_Texture_Size"},
+				{ShaderDataType::Float4, "a_TextureRect"},
+				{ShaderDataType::Float2, "a_flip"},
+				{ShaderDataType::Int, "a_entity_id"},
 			};
+
 			s_data->quad_instanced_buffer = VertexBuffer::create(nullptr, sizeof(Quad_Instance) * s_data->max_shape);
 			s_data->quad_instanced_buffer->set_layout(instance_layout);
 			s_data->quad_vertex_array->add_vertex_buffer(s_data->quad_instanced_buffer, true);
@@ -170,14 +159,55 @@ namespace ag
 			s_data->text_texture = ag::Texture2D::create("assets/textures/atlas.png", false);
 			TextLoader::loadGlyph("assets/textures/atlas.json");
 		}
+
+		// Initialize async system with double buffering
+		s_data->async_data = std::make_unique<AsyncData>();
+
+		// OPTIMIZATION: Use aligned allocation for better cache performance
+#ifdef _MSC_VER
+		s_data->async_data->batch_a.instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
+		s_data->async_data->batch_b.instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
+#else
+		s_data->async_data->batch_a.instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
+		s_data->async_data->batch_b.instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
+#endif
+
+		s_data->async_data->batch_a.capacity = s_data->max_shape;
+		s_data->async_data->batch_a.count = 0;
+		s_data->async_data->batch_b.capacity = s_data->max_shape;
+		s_data->async_data->batch_b.count = 0;
+
+		s_data->async_data->current_batch = &s_data->async_data->batch_a;
+
+		// Start worker thread
+		s_data->async_data->worker_thread = std::thread(worker_thread_function);
 	}
 
 	void Renderer2D::shut_down()
 	{
 		if (s_data)
 		{
-			if (s_data->quad_instanced_base)
-				delete[] s_data->quad_instanced_base;
+			if (s_data->async_data)
+			{
+				// Signal shutdown
+				s_data->async_data->running = false;
+				s_data->async_data->command_cv.notify_one();
+
+				// Wait for worker
+				if (s_data->async_data->worker_thread.joinable())
+				{
+					s_data->async_data->worker_thread.join();
+				}
+
+				// Free aligned batch arrays
+#ifdef _MSC_VER
+				_aligned_free(s_data->async_data->batch_a.instances);
+				_aligned_free(s_data->async_data->batch_b.instances);
+#else
+				free(s_data->async_data->batch_a.instances);
+				free(s_data->async_data->batch_b.instances);
+#endif
+			}
 
 			delete s_data;
 			s_data = nullptr;
@@ -190,26 +220,24 @@ namespace ag
 		s_data->view = view;
 		s_data->viewport_size = viewport_size;
 		Renderer::enable_blend();
-		start_batch();
 	}
 
 	void Renderer2D::begin_scene()
 	{
-		start_batch();
+		// Don't flush on begin - let commands accumulate
 	}
 
 	void Renderer2D::end_scene()
 	{
+		
+		s_data->async_data->command_cv.notify_one();
 		flush();
 	}
 
-
 	void Renderer2D::start_batch()
 	{
+		s_data->async_data->command_cv.notify_one();
 		flush();
-
-		s_data->quad_index = 0;
-		s_data->quad_instanced_ptr = s_data->quad_instanced_base;
 	}
 
 	void Renderer2D::set_texture(const AG_ref<Texture>& texture)
@@ -221,7 +249,6 @@ namespace ag
 		s_data->quad_texture = texture;
 	}
 
-
 	void Renderer2D::draw_fullscreen_quad(AG_uint id)
 	{
 		Renderer::disable_blend();
@@ -231,314 +258,395 @@ namespace ag
 		Renderer::submit(s_data->fullscreen_vertex_array);
 	}
 
-
+	
 	void Renderer2D::draw_rectangle(const Rectangle& rect, const Transform_Component& transform, int entity_id)
 	{
-		if (s_data->quad_index >= s_data->max_shape)
 		{
-			flush();
+			std::lock_guard<std::mutex> lock(s_data->async_data->command_mutex);
+			s_data->async_data->command_queue.push(RectangleCommand{ rect, transform, entity_id });
+			s_data->async_data->total_commands++;
 		}
 
+		// OPTIMIZATION: Notify every 1000 commands instead of 500
+		static thread_local int notify_counter = 0;
+		if (++notify_counter >= 1000)
 		{
-			Quad_Instance* instance = s_data->quad_instanced_ptr++;
-			instance->size = rect.size * transform.scale;
-			instance->position = transform.position;
-			instance->origin = instance->size / 2;
-			instance->rotation = Math::to_radians(transform.rotation);
-			instance->mode = static_cast<int>(rect.mode);
-			instance->quad_mode = static_cast<int>(Quad_Type::Rectangle);
-
-			instance->border_thickness = rect.border_thickness * transform.scale.average();
-			rect.fill_color.normalize_color(instance->fill_color);
-			rect.border_color.normalize_color(instance->border_color);
-
-			instance->corner_radius = rect.corner_radius * (transform.scale.x + transform.scale.y) * 0.5;
-
-			instance->entity_id = entity_id;
+			s_data->async_data->command_cv.notify_one();
+			notify_counter = 0;
 		}
-		s_data->quad_index++;
-
-
 	}
 
 	void Renderer2D::draw_circle(const Circle& circle, const Transform_Component& transform, int entity_id)
 	{
-		if (s_data->quad_index >= s_data->max_shape)
 		{
-			flush();
+			std::lock_guard<std::mutex> lock(s_data->async_data->command_mutex);
+			s_data->async_data->command_queue.push(CircleCommand{ circle, transform, entity_id });
+			s_data->async_data->total_commands++;
 		}
+
+		static thread_local int notify_counter = 0;
+		if (++notify_counter >= 1000)
 		{
-			Quad_Instance* instance = s_data->quad_instanced_ptr++;
-			instance->size = circle.size * transform.scale;
-			instance->position = transform.position;
-			instance->origin = instance->size / 2;
-			instance->rotation = Math::to_radians(transform.rotation);
-			instance->mode = static_cast<int>(circle.mode);
-			instance->quad_mode = static_cast<int>(Quad_Type::Circle);
-
-
-			instance->border_thickness = circle.border_thickness * transform.scale.average();
-			circle.fill_color.normalize_color(instance->fill_color);
-			circle.border_color.normalize_color(instance->border_color);
-			instance->entity_id = entity_id;
+			s_data->async_data->command_cv.notify_one();
+			notify_counter = 0;
 		}
-		s_data->quad_index++;
 	}
 
 	void Renderer2D::draw_sprite(const Sprite& sprite, const Transform_Component& transform, int entity_id)
 	{
-		if (s_data->quad_index >= s_data->max_shape)
+		vec2f texture_size = { 0, 0 };
+		if (s_data->quad_texture)
 		{
-			flush();
+			texture_size = s_data->quad_texture->get_size();
 		}
 
 		{
-			Quad_Instance* instance = s_data->quad_instanced_ptr++;
-
-			instance->size = sprite.size * transform.scale;
-			instance->position = transform.position;
-			instance->origin = instance->size / 2;
-			instance->rotation = Math::to_radians(transform.rotation);
-			instance->mode = static_cast<int>(sprite.mode);
-			instance->quad_mode = static_cast<int>(Quad_Type::Sprite);
-			instance->texture_slot = TEXTURE_SPRITE;
-			sprite.fill_color.normalize_color(instance->fill_color);
-
-			if (s_data->quad_texture)
-			{
-				instance->texture_size = s_data->quad_texture->get_size();
-				sprite.texture_rect.to_vec4(instance->texture_rect);
-				if (sprite.texture_rect.size == 0)
-				{
-					instance->texture_rect.z = instance->texture_size.x;
-					instance->texture_rect.w = instance->texture_size.y;
-				}
-
-			}
-
-
-
-			instance->flip.x = (sprite.flip_horizontal) ? -1.0f : 1.0f;
-			instance->flip.y = (sprite.flip_vertical) ? -1.0f : 1.0f;
-			instance->entity_id = entity_id;
+			std::lock_guard<std::mutex> lock(s_data->async_data->command_mutex);
+			s_data->async_data->command_queue.push(SpriteCommand{ sprite, transform, entity_id, texture_size });
+			s_data->async_data->total_commands++;
 		}
-		s_data->quad_index++;
-	}
 
-	static void draw_curosr(const vec2f& size, const vec2f& position, RenderMode mode, const Color& color, int entity_id)
-	{
-		Rectangle rect;
-		rect.mode = mode;
-
-		rect.fill_color = color;
-		vec2f new_size = Math::screen_size_to_world_size(size, s_data->view.get_size(), s_data->viewport_size);
-		rect.size = { new_size.x, size.y };
-
-		rect.mode = mode;
-
-		Transform_Component trans;
-		trans.position = { position.x + rect.size.x * 0.5f, position.y };
-
-		Renderer2D::draw_rectangle(rect, trans, entity_id);
+		static thread_local int notify_counter = 0;
+		if (++notify_counter >= 1000)
+		{
+			s_data->async_data->command_cv.notify_one();
+			notify_counter = 0;
+		}
 	}
 
 	void Renderer2D::draw_text(const Text& text_string, const Transform_Component& transform, int entity_id)
 	{
 		vec2f longest_size = Text::calc_longest_size(text_string, transform.scale);
+
+		{
+			std::lock_guard<std::mutex> lock(s_data->async_data->command_mutex);
+			s_data->async_data->command_queue.push(TextCommand{
+				text_string,
+				transform,
+				entity_id,
+				longest_size,
+				s_data->viewport_size,
+				s_data->view
+				});
+			s_data->async_data->total_commands++;
+		}
+
+		static thread_local int notify_counter = 0;
+		if (++notify_counter >= 1000)
+		{
+			s_data->async_data->command_cv.notify_one();
+			notify_counter = 0;
+		}
+	}
+
+	void Renderer2D::flush()
+	{
+		if (s_data->async_data->total_commands == 0)
+			return;
+
+		{
+			std::lock_guard<std::mutex> lock(s_data->async_data->command_mutex);
+			s_data->async_data->flush_requested = true;
+		}
+		s_data->async_data->command_cv.notify_one();
+
+		// Wait for processed batch with timeout
+		ProcessedBatch* batch = nullptr;
+		{
+			std::unique_lock<std::mutex> lock(s_data->async_data->processed_mutex);
+
+			// SAFETY: Add timeout to detect deadlocks
+			bool got_batch = s_data->async_data->processed_cv.wait_for(
+				lock,
+				std::chrono::seconds(5),
+				[] { return s_data->async_data->ready_batch.load() != nullptr; }
+			);
+
+			if (!got_batch)
+			{
+				// Timeout - worker thread might be stuck
+				return;
+			}
+
+			batch = s_data->async_data->ready_batch.exchange(nullptr);
+		}
+
+		flush_internal(batch);
+		s_data->async_data->total_commands = 0;
+	}
+
+	// FULLY OPTIMIZED WORKER THREAD
+	void Renderer2D::worker_thread_function()
+	{
+		ProcessedBatch* working_batch = &s_data->async_data->batch_a;
+		ProcessedBatch* standby_batch = &s_data->async_data->batch_b;
+
+		// Large local buffer to minimize lock contention
+		std::vector<DrawCommand> local_commands;
+		local_commands.reserve(100000);
+
+		while (s_data->async_data->running)
+		{
+			std::unique_lock<std::mutex> lock(s_data->async_data->command_mutex);
+
+			// OPTIMIZATION: Use wait_for with short timeout instead of blocking forever
+			s_data->async_data->command_cv.wait_for(
+				lock,
+				std::chrono::milliseconds(1),
+				[] {
+					return !s_data->async_data->command_queue.empty() ||
+						s_data->async_data->flush_requested ||
+						!s_data->async_data->running;
+				}
+			);
+
+			if (!s_data->async_data->running)
+				break;
+
+			// CRITICAL OPTIMIZATION: Copy ALL commands at once
+			local_commands.clear();
+			while (!s_data->async_data->command_queue.empty())
+			{
+				local_commands.push_back(std::move(s_data->async_data->command_queue.front()));
+				s_data->async_data->command_queue.pop();
+			}
+
+			bool should_flush = s_data->async_data->flush_requested;
+			s_data->async_data->flush_requested = false;
+
+			lock.unlock();  // UNLOCK IMMEDIATELY - critical for performance
+
+			// Process all commands WITHOUT holding lock
+			for (auto& cmd : local_commands)
+			{
+				std::visit([working_batch](auto&& arg) {
+					using T = std::decay_t<decltype(arg)>;
+					if constexpr (std::is_same_v<T, RectangleCommand>)
+						process_rectangle(arg, *working_batch);
+					else if constexpr (std::is_same_v<T, CircleCommand>)
+						process_circle(arg, *working_batch);
+					else if constexpr (std::is_same_v<T, SpriteCommand>)
+						process_sprite(arg, *working_batch);
+					else if constexpr (std::is_same_v<T, TextCommand>)
+						process_text(arg, *working_batch);
+					}, cmd);
+			}
+
+			// Handle flush
+			if (should_flush)
+			{
+				{
+					std::lock_guard<std::mutex> processed_lock(s_data->async_data->processed_mutex);
+					s_data->async_data->ready_batch.store(working_batch);
+				}
+				s_data->async_data->processed_cv.notify_one();
+
+				// Swap buffers
+				std::swap(working_batch, standby_batch);
+				working_batch->clear();
+			}
+		}
+	}
+
+	// OPTIMIZED: Pre-compute values, use restrict pointer
+	void Renderer2D::process_rectangle(const RectangleCommand& cmd, ProcessedBatch& batch)
+	{
+		Quad_Instance* __restrict instance = &batch.instances[batch.count];
+
+		// Pre-compute frequently used values
+		const vec2f scaled_size = cmd.rect.size * cmd.transform.scale;
+		const float avg_scale = (cmd.transform.scale.x + cmd.transform.scale.y) * 0.5f;
+
+		instance->size = scaled_size;
+		instance->position = cmd.transform.position;
+		instance->origin = scaled_size * 0.5f;
+		instance->rotation = Math::to_radians(cmd.transform.rotation);
+		instance->mode = static_cast<int>(cmd.rect.mode);
+		instance->quad_mode = 0;  // Quad_Type::Rectangle - use constant
+		instance->border_thickness = cmd.rect.border_thickness * avg_scale;
+		cmd.rect.fill_color.normalize_color(instance->fill_color);
+		cmd.rect.border_color.normalize_color(instance->border_color);
+		instance->corner_radius = cmd.rect.corner_radius * avg_scale;
+		instance->entity_id = cmd.entity_id;
+
+		batch.count++;
+	}
+
+	void Renderer2D::process_circle(const CircleCommand& cmd, ProcessedBatch& batch)
+	{
+		Quad_Instance* __restrict instance = &batch.instances[batch.count];
+
+		const vec2f scaled_size = cmd.circle.size * cmd.transform.scale;
+		const float avg_scale = (cmd.transform.scale.x + cmd.transform.scale.y) * 0.5f;
+
+		instance->size = scaled_size;
+		instance->position = cmd.transform.position;
+		instance->origin = scaled_size * 0.5f;
+		instance->rotation = Math::to_radians(cmd.transform.rotation);
+		instance->mode = static_cast<int>(cmd.circle.mode);
+		instance->quad_mode = 1;  // Quad_Type::Circle
+		instance->border_thickness = cmd.circle.border_thickness * avg_scale;
+		cmd.circle.fill_color.normalize_color(instance->fill_color);
+		cmd.circle.border_color.normalize_color(instance->border_color);
+		instance->entity_id = cmd.entity_id;
+
+		batch.count++;
+	}
+
+	void Renderer2D::process_sprite(const SpriteCommand& cmd, ProcessedBatch& batch)
+	{
+		Quad_Instance* __restrict instance = &batch.instances[batch.count];
+
+		const vec2f scaled_size = cmd.sprite.size * cmd.transform.scale;
+
+		instance->size = scaled_size;
+		instance->position = cmd.transform.position;
+		instance->origin = scaled_size * 0.5f;
+		instance->rotation = Math::to_radians(cmd.transform.rotation);
+		instance->mode = static_cast<int>(cmd.sprite.mode);
+		instance->quad_mode = 2;  // Quad_Type::Sprite
+		instance->texture_slot = TEXTURE_SPRITE;
+		cmd.sprite.fill_color.normalize_color(instance->fill_color);
+
+		instance->texture_size = cmd.texture_size;
+		cmd.sprite.texture_rect.to_vec4(instance->texture_rect);
+
+		// OPTIMIZATION: Avoid branches when possible
+		if (cmd.sprite.texture_rect.size == 0)
+		{
+			instance->texture_rect.z = instance->texture_size.x;
+			instance->texture_rect.w = instance->texture_size.y;
+		}
+
+		instance->flip.x = cmd.sprite.flip_horizontal ? -1.0f : 1.0f;
+		instance->flip.y = cmd.sprite.flip_vertical ? -1.0f : 1.0f;
+		instance->entity_id = cmd.entity_id;
+
+		batch.count++;
+	}
+
+	void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
+	{
 		size_t index = 0;
 		size_t break_index = 0;
 		Transform_Component trans;
-		trans.position = transform.position - (text_string.bounds * 0.5);
-		trans.scale = transform.scale;
-		trans.rotation = transform.rotation;
+		trans.position = cmd.transform.position - (cmd.text.bounds * 0.5);
+		trans.scale = cmd.transform.scale;
+		trans.rotation = cmd.transform.rotation;
 
-		Entity entity;
-		bool edit_state = false;
-		if (entity_id >= 0)
-		{
-			entity = Entity((entt::entity)(entity_id));
-		}
-		Text_Editor_State* state = nullptr;
+		const float scale_x = trans.scale.x * cmd.text.font_size / TextLoader::font.em_size;
+		const float scale_y = trans.scale.y * cmd.text.font_size / TextLoader::font.em_size;
+		const vec2f scale_vec(scale_x, scale_y);
 
-		if (entity && entity.has_component<Text_Editor_State>())
-		{
-			edit_state = true;
-			state = &entity.get_component<Text_Editor_State>();
-		}
-		float delta_time = Application::get().delta_time;
-
-
-
-
-		//starting_pos = 
-		const float scale_x = trans.scale.x * text_string.font_size / TextLoader::font.em_size;
-		const float scale_y = trans.scale.y * text_string.font_size / TextLoader::font.em_size;
-
-		vec2f starting_pos = Text::center_single_line_text(text_string, trans, longest_size, index, &break_index);
-		vec2f padding = text_string.padding * vec2f(scale_x, scale_y);
-		starting_pos.x += padding.x;
-		starting_pos.y += padding.y;
-
+		vec2f starting_pos = Text::center_single_line_text(cmd.text, trans, cmd.longest_size, index, &break_index);
+		const vec2f padding = cmd.text.padding * scale_vec;
+		starting_pos += padding;
 
 		const float ascender = TextLoader::font.ascender * TextLoader::font.em_size * scale_y;
-		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y * text_string.line_height;
+		const float line_height = TextLoader::font.line_height * TextLoader::font.em_size * scale_y * cmd.text.line_height;
 
 		starting_pos.y += ascender;
-		float base_line = starting_pos.y;
 
 		auto space_it = TextLoader::font.glyphs.find(' ');
 		if (space_it == TextLoader::font.glyphs.end())
 			return;
 
-		if (text_string.draw_rect)
-		{
-			Rectangle rect;
-			rect.size = longest_size + (padding * 2);
-			rect.fill_color = Color::Transparent;
-			rect.mode = text_string.mode;
-			rect.border_color = text_string.text_color;
-			vec2f thickness = { 1.0f, 1.0f };
-
-			rect.border_thickness = Math::screen_size_to_world_size(thickness, s_data->view.get_size(), s_data->viewport_size).x;
-
-
-			Transform_Component rect_trans;
-			rect_trans.position = trans.position + rect.size * 0.5f;
-			//rect_trans.scale = trans.scale;
-			draw_rectangle(rect, rect_trans, entity_id);
-		}
-
-
 		const TextLoader::Glyph& space_detail = space_it->second;
+		const float tab_advance = space_detail.advance * scale_x * 4.0f;
 
-		if (s_data->quad_index >= s_data->max_shape)
+		// Pre-compute text color once
+		vec4f normalized_color;
+		cmd.text.text_color.normalize_color(normalized_color);
+
+		const size_t text_length = cmd.text.text.size();
+		for (; index < text_length; ++index)
 		{
-			flush();
-		}
-		for (; index < text_string.text.size(); ++index)
-		{
-			if (s_data->quad_index >= s_data->max_shape)
-			{
-				flush();
-			}
+			const char c = cmd.text.text[index];
 
-
-			char c = text_string.text[index];
 			if (c == '\n')
 			{
 				size_t next_index = index + 1;
-				starting_pos = Text::center_single_line_text(text_string, trans, longest_size, next_index, &break_index);
-				starting_pos.x += padding.x;
-				starting_pos.y += (padding.y + ascender);
-				base_line += line_height;
+				starting_pos = Text::center_single_line_text(cmd.text, trans, cmd.longest_size, next_index, &break_index);
+				starting_pos += padding;
+				starting_pos.y += ascender + line_height;
 				continue;
 			}
+
 			if (c == '\t')
 			{
-				starting_pos.x += space_detail.advance * scale_x * 4.0f;
+				starting_pos.x += tab_advance;
 				continue;
 			}
 
 			auto it = TextLoader::font.glyphs.find(c);
 			if (it == TextLoader::font.glyphs.end())
-			{
 				continue;
-			}
 
 			const TextLoader::Glyph& g = it->second;
 
-
-			if (state && state->active && state->caret_index == index && edit_state)
+			if (cmd.longest_size.x > 0 && index == break_index && break_index != 0)
 			{
-				vec2f cursor_size = { 6.0f * scale_x , TextLoader::font.line_height * TextLoader::font.em_size * scale_y };
-				vec2f cursor_position = vec2f(starting_pos.x, base_line - ascender + cursor_size.y * 0.5);
+				size_t next_index = index;
+				starting_pos = Text::center_single_line_text(cmd.text, trans, cmd.longest_size, next_index, &break_index);
+				starting_pos += padding;
+				starting_pos.y += ascender + line_height;
 
-				state->blink_timer += delta_time;
-				bool visible = fmod(state->blink_timer, 1.0f) < 0.6f;
-				if (visible)
-				{
-					draw_curosr(cursor_size, cursor_position, text_string.mode, text_string.text_color, entity_id);
-				}
+				if (c == ' ')
+					continue;
 			}
 
+			// Direct array write
+			Quad_Instance* __restrict instance = &batch.instances[batch.count];
 
-			bool should_wrap = (index == break_index && break_index != 0);
-			if (longest_size.x > 0)
-			{
-				if (should_wrap)
-				{
-					size_t next_index = index;
-					starting_pos = Text::center_single_line_text(text_string, trans, longest_size, next_index, &break_index);
-					starting_pos.x += padding.x;
-					starting_pos.y += (padding.y + ascender);
-					base_line += line_height;
-
-					if (c == ' ')
-						continue;
-				}
-			}
-
-
-
-
-
-			Quad_Instance* instance = s_data->quad_instanced_ptr++;
-			instance->texture_size = s_data->text_texture->get_size();
-
-			instance->size = g.texture_rect.size * vec2f(scale_x, scale_y);
-			instance->origin = instance->size / 2;
-
+			instance->texture_size = vec2f(1024, 1024);
+			instance->size = g.texture_rect.size * scale_vec;
+			instance->origin = instance->size * 0.5f;
 			g.texture_rect.to_vec4(instance->texture_rect);
-			text_string.text_color.normalize_color(instance->fill_color);
-			instance->mode = static_cast<int>(text_string.mode);
-			instance->quad_mode = static_cast<int>(Quad_Type::Text);
+			instance->fill_color = normalized_color;  // Use pre-computed color
+			instance->mode = static_cast<int>(cmd.text.mode);
+			instance->quad_mode = 3;  // Quad_Type::Text
 			instance->texture_slot = TEXTURE_TEXT;
-
-
-
-
 			instance->position.x = starting_pos.x + g.plane_left * scale_x;
 			instance->position.y = starting_pos.y - (g.plane_top * scale_y);
-			instance->entity_id = entity_id;
+			instance->entity_id = cmd.entity_id;
 
-
+			batch.count++;
 			starting_pos.x += g.advance * scale_x;
-
-
-			s_data->quad_index++;
 		}
-		if (state && state->active && state->caret_index == text_string.text.size() && edit_state)
-		{
-			vec2f cursor_size = { 6.0f * scale_x, TextLoader::font.line_height * TextLoader::font.em_size * scale_y };
-			vec2f cursor_position = vec2f(starting_pos.x, base_line - ascender + cursor_size.y * 0.5);
-
-			state->blink_timer += delta_time;
-			bool visible = fmod(state->blink_timer, 1.0f) < 0.6f;
-			if (visible)
-			{
-				draw_curosr(cursor_size, cursor_position, text_string.mode, text_string.text_color, entity_id);
-			}
-		}
-
 	}
 
-	void Renderer2D::flush()
+	void Renderer2D::flush_internal(ProcessedBatch* batch)
 	{
-		if (s_data->quad_index == 0)
+		if (!batch || batch->is_empty())
 			return;
 
-		size_t data_size = (uint8_t*)s_data->quad_instanced_ptr - (uint8_t*)s_data->quad_instanced_base;
-		s_data->quad_instanced_buffer->set_data(s_data->quad_instanced_base, data_size);
-
-
+		// Bind textures once outside loop
 		s_data->text_texture->bind(TEXTURE_TEXT);
 		if (s_data->quad_texture)
 		{
 			s_data->quad_texture->bind(TEXTURE_SPRITE);
 		}
-		Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, s_data->quad_index);
 
-		s_data->quad_index = 0;
-		s_data->quad_instanced_ptr = s_data->quad_instanced_base;
+		const size_t MAX_PER_DRAW = 65536;  // OpenGL typical limit
+		size_t remaining = batch->count;
+		size_t offset = 0;
+
+		while (remaining > 0)
+		{
+			const size_t draw_count = std::min(remaining, MAX_PER_DRAW);
+			const size_t data_size = draw_count * sizeof(Quad_Instance);
+
+			// Upload data
+			s_data->quad_instanced_buffer->set_data(
+				&batch->instances[offset],
+				data_size
+			);
+
+			// Draw
+			Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, draw_count);
+
+			offset += draw_count;
+			remaining -= draw_count;
+		}
 	}
 }
