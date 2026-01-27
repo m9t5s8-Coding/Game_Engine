@@ -25,5 +25,12 @@ namespace ag
   private:
     float m_time = 0.0f;
     bool m_block_events = true;
+
+
+    void set_cyberpunk_theme();
+    void set_warm_amber_theme();
+    void set_ocean_blue_theme();
+    void set_blood_red_theme();
+    void set_monochrome_slate_theme();
   };
 }

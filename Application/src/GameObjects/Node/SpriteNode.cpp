@@ -76,7 +76,7 @@ namespace ag
   
   void SpriteNode::draw(Entity entity)
   {
-    if (!entity.get_component<Tag_Component>().visible)
+    if (!Tag_Component::get_visibility(entity))
       return;
 
     int entity_id = (int)(entity.get_id());

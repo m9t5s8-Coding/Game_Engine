@@ -92,17 +92,26 @@ namespace ag
 		NodeProperties::draw_component_node<Border_Component>("Border Component", entity,
 			[](Border_Component& props)
 			{
-				UI::draw_value("Thickness", props.thickness, 0.0f);
+				UI::draw_value("Thickness", props.thickness);
 				UI::draw_color("Color", props.color);
 			}, true);
 	}
 	void Corner_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Corner_Component>("Corner Component", entity,
-			[](Corner_Component& props)
+			[entity](Corner_Component& props) mutable
 			{
 				UI::draw_bool("Uniform", props.uniform);
-				UI::draw_value("Corner", props.corner, 0.0f);
+
+				float max = 100.0f;
+				if (entity.has_component<Render2D_Component>())
+				{
+					auto& size = entity.get_component<Render2D_Component>().size;
+					max = std::min(size.x, size.y);
+					max *= 0.5f;
+				}
+
+				UI::draw_value("Corner", props.corner, 0.0f, max);
 			}, true);
 	}
 	void UI_Component::imgui_render(Entity entity)

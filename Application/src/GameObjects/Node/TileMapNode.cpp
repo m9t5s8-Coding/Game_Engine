@@ -50,7 +50,7 @@ namespace ag
 	}
 	void TileMapNode::draw(Entity entity)
 	{
-		if (!entity.get_component<Tag_Component>().visible)
+		if (!Tag_Component::get_visibility(entity))
 			return;
 
 		if (entity.has_component<Texture_Component>())
