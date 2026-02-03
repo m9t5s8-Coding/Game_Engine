@@ -35,21 +35,15 @@ namespace ag
 		LastChild
 	};
 
-	struct CreatePanelState {
-		NodeType selected_prefab = NodeType::Rectangle;
-		std::string search_filter;
-		bool show_categories = true;
-		bool show_3d_objects = false;
-		bool show_lights = false;
-		bool show_ui = true;
-		bool show_primitives = true;
-		ImVec2 icon_size = { 200.0f, 35.0f };
-		ImVec2 scroll_position;
-		std::unordered_map<NodeType, bool> favorites;
-		std::chrono::steady_clock::time_point last_created_time;
-	};
 
-	struct HierarchyState {
+	struct CreateObjectState
+	{
+		NodeType selected_type = NodeType::Rectangle;
+		std::string object_name = "";
+		bool should_close = false;
+	};
+	struct HierarchyState
+	{
 		Entity dragged_entity;
 		Entity drop_target;
 		ImGuiID drag_drop_id = 0;
@@ -100,13 +94,9 @@ namespace ag
 
 		Entity get_selected_entity() const { return m_selected_entity; }
 		void set_selected_entity(Entity entity);
+		void set_properties_entity(Entity entity) { m_properties_entity = entity; }
 
-		std::string categorize_node_type(NodeType type);
-		bool should_show_category(const std::string& category, const CreatePanelState& state);
-		void draw_object_button(NodeType type, const std::string& name, CreatePanelState& state);
-		void draw_object_list_item(NodeType type, const std::string& name, CreatePanelState& state);
 		void create_selected_object(NodeType type);
-		bool string_contains_case_insensitive(const std::string& str, const std::string& substr);
 
 		void draw_scene_hierarchy();
 
@@ -154,7 +144,6 @@ namespace ag
 		bool draw_toolbar_button(const char* icon, const char* tooltip);
 		void push_entity_style(Entity entity, bool is_selected);
 		const char* get_node_icon(Entity entity);
-		void select_entity(Entity entity);
 		void update_filter();
 		void expand_all_nodes();
 		void collapse_all_nodes();
@@ -170,9 +159,12 @@ namespace ag
 		void duplicate_entity();
 		void delete_entity();
 		void make_root_entity();
+		void find_entity_in_project(Entity entity);
 
 
 		void paint_eraser_tiles_helper(TileSet_Component& tile_set, const vec2i& pos);
+		void solid_paint_erase_helper(SolidSet_Component& solid_set,const vec2i& position);
+
 		void paint_eraser_tiles_helper(const vec2i& pos);
 		void paint_tiles(TileSet_Component& tile_set, const vec2i& pos);
 		void erase_tiles(TileSet_Component& tile_set, const vec2i& pos);
@@ -187,13 +179,17 @@ namespace ag
 
 		
 		bool check_if_clicked(Entity entity);
+
+
 		
 	private:
 		AG_ref<Scene> m_scene;
 		Entity m_selected_entity;
+		Entity m_properties_entity;
 		bool m_show_create_panel = false;
 
 		HierarchyState m_hierarchy_state;
+		CreateObjectState m_state;
 
 		vec2f m_last_mouse_position;
 		vec2f m_current_mouse_position;

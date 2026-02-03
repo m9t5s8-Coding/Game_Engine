@@ -77,6 +77,20 @@ namespace ag
 		}
 	}
 
+
+	void ScriptManager::run_script_in_env(const std::string& code, LuaEnv& env)
+	{
+		auto& e = env.get();
+
+		auto result = s_lua_state.script(code, e);
+		if (!result.valid())
+		{
+			sol::error err = result;
+			throw err;
+		}
+	}
+
+
 	void ScriptManager::run_script(const std::string& script)
 	{
 		s_lua_state.script(script);

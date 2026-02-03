@@ -25,6 +25,9 @@ namespace ag
 		View& get_view() { return m_view; };
 		const View& get_view() const { return m_view; };
 
+		void set_size(const vec2f& size) { m_view.set_size(size); }
+		void set_center(const vec2f& center) { m_view.set_center(center); }
+
 		void set_viewport_mouse(const vec2f& mouse_pos) { m_mouse_in_viewport = mouse_pos; }
 		void set_viewport_size(const vec2f& viewport_size) { m_viewport_size = viewport_size; }
 

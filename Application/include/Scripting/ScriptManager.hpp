@@ -19,6 +19,7 @@ namespace ag
 
 		static void load_script(const std::string& path);
 		static void load_script(const std::string& path, LuaEnv& env);
+		static void run_script_in_env(const std::string& code, LuaEnv& env);
 
 		static void run_script(const std::string& script);
 

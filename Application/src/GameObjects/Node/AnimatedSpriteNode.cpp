@@ -26,6 +26,7 @@ namespace ag
     Animation_Component::clone_entity(original, clone);
 
     Script_Component::clone_entity(original, clone);
+    Tween_Component::clone_entity(original, clone);
     TextureFlip_Component::clone_entity(original, clone);
     PhysicsBody_Component::clone_entity(original, clone);
   }
@@ -39,6 +40,7 @@ namespace ag
     NodeHelper::save_component<Animation_Component>(entity, j);
 
     NodeHelper::save_component<Script_Component>(entity, j);
+    NodeHelper::save_component<Tween_Component>(entity, j);
     NodeHelper::save_component<TextureFlip_Component>(entity, j);
     NodeHelper::save_component<PhysicsBody_Component>(entity, j);
 
@@ -52,12 +54,14 @@ namespace ag
     NodeHelper::load_component<Animation_Component>(entity, j);
 
     NodeHelper::load_component<Script_Component>(entity, j);
+    NodeHelper::load_component<Tween_Component>(entity, j);
     NodeHelper::load_component<TextureFlip_Component>(entity, j);
     NodeHelper::load_component<PhysicsBody_Component>(entity, j);
   }
   void AnimatedSpriteNode::update(Entity entity, TimeStamp ts)
   {
     Animation_Component::update(entity, ts);
+    Tween_Component::update(entity, ts);
     PhysicsBody_Component::update_entity(entity);
     Script_Component::update(entity, ts);
   }

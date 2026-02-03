@@ -24,6 +24,7 @@ namespace ag
     Transform_Component::clone_entity(original, clone);
     UI_Component::clone_entity(original, clone);
     ButtonState_Component::clone_entity(original, clone);
+    Tween_Component::clone_entity(original, clone);
     Button_Component::clone_entity(original, clone);
     Text_Component::clone_entity(original, clone);
   }
@@ -36,6 +37,7 @@ namespace ag
     NodeHelper::save_component<ButtonState_Component>(entity, j);
     NodeHelper::save_component<Button_Component>(entity, j);
     NodeHelper::save_component<Text_Component>(entity, j);
+    NodeHelper::save_component<Tween_Component>(entity, j);
 
     return j;
   }
@@ -47,23 +49,51 @@ namespace ag
     NodeHelper::load_component<ButtonState_Component>(entity, j);
     NodeHelper::load_component<Button_Component>(entity, j);
     NodeHelper::load_component<Text_Component>(entity, j);
+    NodeHelper::load_component<Tween_Component>(entity, j);
   }
   void ButtonNode::update(Entity entity, TimeStamp ts)
   {
     Script_Component::update(entity, ts);
+    Tween_Component::update(entity, ts);
 
-    if (!Engine::is_runtime())
+    if (!Engine::is_runtime() || !entity.has_component<Button_Component>())
       return;
+
 
     auto& comps = entity.get_component<Button_Component>();
     if (entity.has_component<ButtonState_Component>())
     {
       auto& state = entity.get_component<ButtonState_Component>().button_state;
-      if (state & Button_State::Hovered && Mouse::is_mouse_pressed(Button::ButtonLeft))
+
+      if (state & Button_State::Disabled)
       {
-        state |= Button_State::Active;
+        comps.current_state = Button_Visual_State::Disabled;
+        return;
       }
 
+      bool mouse_pressed = Mouse::is_mouse_pressed(Button::ButtonLeft);
+      bool mouse_just_released = Mouse::is_mouse_released(Button::ButtonLeft);
+
+      if (state & Button_State::Hovered)
+      {
+        if (state & Button_State::Pressed)
+        {
+          state |= Button_State::Active;
+        }
+        else if (state & Button_State::Active && mouse_pressed)
+        {
+          state |= Button_State::Active;
+          state &= ~Button_State::Pressed;
+        }
+        else if (state & Button_State::Active && mouse_just_released)
+        {
+          state &= ~Button_State::Active;
+        }
+      }
+      else
+      {
+        state &= ~(Button_State::Pressed | Button_State::Active);
+      }
       comps.current_state = Button_Visual::get_active_state(state);
     }
     else
@@ -125,7 +155,7 @@ namespace ag
     if (entity.has_component<ButtonState_Component>())
     {
       auto& state = entity.get_component<ButtonState_Component>().button_state;
-      state = 0;
+      state &= ~(Button_State::Hovered | Button_State::Pressed);
     }
   }
 }

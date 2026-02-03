@@ -92,6 +92,11 @@ namespace ag
 			return ImVec2(x, y);
 		}
 
+		b2Vec2 to_b2vec2() const
+		{
+			return b2Vec2(x, y);
+		}
+
 		void to_vec2(const ImVec2& other)
 		{
 			x = other.x;

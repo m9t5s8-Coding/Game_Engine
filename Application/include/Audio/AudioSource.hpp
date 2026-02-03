@@ -26,6 +26,8 @@ namespace ag
 		float get_volume() const;
 		void set_position(const vec2f& position) const;
 
+		void delete_source();
+
 	private:
 		AG_uint m_ID;
 		bool m_looping = false;

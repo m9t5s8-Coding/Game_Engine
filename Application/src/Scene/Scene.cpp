@@ -15,6 +15,8 @@ namespace ag
 		if (Engine::is_runtime())
 		{
 			m_world = AG_cscope<b2World>(b2Vec2(0.0f, 9.8 * 3.333));
+			m_contact_listener = std::make_unique<GroundContactListener>();
+			m_world->SetContactListener(m_contact_listener.get());
 		}
 	}
 
@@ -101,15 +103,13 @@ namespace ag
 
 	void Scene::destroy()
 	{
-		if (Engine::is_runtime())
-		{
-
-		}
 		auto view = m_registry.view<Tag_Component>();
 		for (auto entityID : view)
 		{
 			Entity e(entityID);
-			destroy_entity(e);
+			auto& tag = e.get_component<Tag_Component>();
+			if(tag.parent.get_id() == INVALID_ENTITY || !tag.parent)
+				destroy_entity(e);
 		}
 		clear_destroyed_entity();
 	}
@@ -122,8 +122,7 @@ namespace ag
 			m_to_delete_entity.pop_back();
 
 			auto& tag = entity.get_component<Tag_Component>();
-
-			// Remove From The Parent Entity
+			tag.name;
 			if (tag.parent.get_id() != INVALID_ENTITY)
 			{
 				auto& parent_tag = tag.parent.get_component<Tag_Component>();

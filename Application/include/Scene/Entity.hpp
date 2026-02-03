@@ -49,6 +49,7 @@ namespace ag
 
 
 
+
 		AG_uint get_id() const { return static_cast<AG_uint>(m_entity_handler); }
 
 		operator bool() const { return m_entity_handler != entt::null; }

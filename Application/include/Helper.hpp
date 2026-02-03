@@ -32,6 +32,12 @@ namespace ag::Helper
   }
 
   template <typename T>
+  inline void load_json(const json& j, T& value)
+  {
+    value = j.get<T>();
+  }
+
+  template <typename T>
   inline void load_json(const json& j, rect<T>& value)
   {
     value.load(j);

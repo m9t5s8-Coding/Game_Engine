@@ -32,6 +32,7 @@ namespace ag
     UI_Component::clone_entity(original, clone);
     PhysicsBody_Component::clone_entity(original, clone);
     Script_Component::clone_entity(original, clone);
+    Tween_Component::clone_entity(original, clone);
   }
   
   json SpriteNode::save_json(Entity entity)
@@ -49,6 +50,7 @@ namespace ag
 
     NodeHelper::save_component<UI_Component>(entity, j);
     NodeHelper::save_component<PhysicsBody_Component>(entity, j);
+    NodeHelper::save_component<Tween_Component>(entity, j);
 
     return j;
   }
@@ -66,12 +68,14 @@ namespace ag
 
     NodeHelper::load_component<UI_Component>(entity, j);
     NodeHelper::load_component<PhysicsBody_Component>(entity, j);
+    NodeHelper::load_component<Tween_Component>(entity, j);
   }
   
   void SpriteNode::update(Entity entity, TimeStamp ts)
   {
     PhysicsBody_Component::update_entity(entity);
     Script_Component::update(entity, ts);
+    Tween_Component::update(entity, ts);
   }
   
   void SpriteNode::draw(Entity entity)

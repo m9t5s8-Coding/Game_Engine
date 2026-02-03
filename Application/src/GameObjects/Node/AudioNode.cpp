@@ -11,7 +11,8 @@ namespace ag
 	}
 	void AudioNode::delete_node(Entity entity)
 	{
-
+		Script_Component::destroy(entity);
+		Audio_Component::delete_entity(entity);
 		entity.delete_entity();
 	}
 	void AudioNode::clone_node(Entity original, Entity clone)

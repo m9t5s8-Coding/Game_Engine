@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 #include <Panels/ScenePanel.hpp>
+#include <Panels/Exportpanel.hpp>
 #include <unordered_map>
 
 namespace ag
@@ -42,6 +43,7 @@ namespace ag
 
 		void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) { m_scenes[scene_name] = scene; m_panel->set_scene(scene); }
 		void create_new_scene(const std::string& path);
+		void create_new_script(const std::string& path);
 		void open_scene();
 		void open_scene(std::string& path);
 		void save_scene();
@@ -49,6 +51,7 @@ namespace ag
 		void save_scene_as_default();
 		void save_all_scene();
 		void try_exit();
+
 
 		void load_texture(Entity entity);
 
@@ -61,6 +64,9 @@ namespace ag
 		void handle_scene_deletion();
 
 
+		void render_export_panel();
+		void open_export_panel();
+
 	private:
 		
 
@@ -68,6 +74,7 @@ namespace ag
 		AG_ref<FrameBuffer> m_framebuffer;
 		AG_ref<Scene> m_scene;
     AG_ref<ScenePanel> m_panel;
+		ExportPanel m_export_panel;
 		std::unordered_map<std::string, AG_ref<Scene>> m_scenes;
 
 

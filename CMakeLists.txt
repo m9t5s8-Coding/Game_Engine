@@ -9,6 +9,7 @@ project("Game_Engine" LANGUAGES C CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
+  add_compile_options(/bigobj)
 endif()
 
 # C++ Standard
@@ -189,9 +190,14 @@ endif()
 file(GLOB_RECURSE AERO_SRC "${CMAKE_SOURCE_DIR}/AeroEditor/src/*.cpp")
 add_executable(AeroEditor ${AERO_SRC})
 
+if (WIN32)
+    target_link_libraries(AeroEditor PRIVATE Shell32 Ole32)
+endif()
+
 target_include_directories(AeroEditor PRIVATE
     ${CMAKE_SOURCE_DIR}/AeroEditor/include
 )
+
 
 target_link_libraries(AeroEditor PRIVATE Application)
 

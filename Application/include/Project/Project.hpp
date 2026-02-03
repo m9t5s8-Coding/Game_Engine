@@ -42,7 +42,7 @@ namespace ag
 		std::string m_assets_directory;
 		std::string m_scenes_directory;
 		std::string m_scripts_directory;
-
+		bool m_from_pak = false;
 		
 
 

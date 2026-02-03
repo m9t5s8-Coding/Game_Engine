@@ -1,6 +1,7 @@
 ﻿#include <Application/ProjectManagerLayer.hpp>
 #include <Application/AppSettings.hpp>
 #include <imgui.h>
+#include <fstream>
 
 
 namespace ag
@@ -13,6 +14,7 @@ namespace ag
 
 	void ProjectManagerLayer::on_attach()
 	{
+		load_projects();
 	}
 
 	void ProjectManagerLayer::on_detach()
@@ -24,6 +26,172 @@ namespace ag
 	{
 
 	}
+
+	void ProjectManagerLayer::load_projects()
+	{
+		m_projects.clear();
+		m_projects_file_path = AppSettings::get_recent_projects_path();
+
+		if (!std::filesystem::exists(m_projects_file_path))
+		{
+			AERO_CORE_INFO("No recent projects file found, starting with empty list");
+			return;
+		}
+
+		Helper::makefile_read_only(m_projects_file_path, false);
+		std::ifstream file(m_projects_file_path);
+
+		if (!file.is_open())
+		{
+			AERO_CORE_ERROR("Failed to open recent projects file: {0}", m_projects_file_path);
+			return;
+		}
+		try
+		{
+			json j;
+			file >> j;
+			if (j.contains("Projects"))
+			{
+				for (const auto& proj : j["Projects"])
+				{
+					ProjectEntry entry;
+					Helper::load_json(proj, "Name", entry.name);
+					Helper::load_json(proj, "File Path", entry.path);
+					std::string timestamp_str;
+					Helper::load_json(proj, "Last Modified", timestamp_str);
+
+					std::tm tm = {};
+					std::istringstream ss(timestamp_str);
+					ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+					entry.timestamp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+
+					entry.last_modified = format_date_time(entry.timestamp);
+
+					m_projects.push_back(entry);
+				}
+			}
+			file.close();
+		}
+		catch (const std::exception& e)
+		{
+			AERO_CORE_ERROR("Error Loading the Projects:{0}", e.what());
+			m_projects.clear();
+		}
+	}
+
+
+	void ProjectManagerLayer::save_projects()
+	{
+		if (m_projects_file_path.empty())
+		{
+			AERO_CORE_ERROR("Cannot save projects: file path is empty");
+			return;
+		}
+
+		try
+		{
+			std::filesystem::path file_path(m_projects_file_path);
+			std::filesystem::path parent_dir = file_path.parent_path();
+
+			if (!parent_dir.empty() && !std::filesystem::exists(parent_dir))
+			{
+				AERO_CORE_INFO("Creating directory: {0}", parent_dir.string());
+				std::filesystem::create_directories(parent_dir);
+			}
+		}
+		catch (const std::exception& e)
+		{
+			AERO_CORE_ERROR("Failed to create directory: {0}", e.what());
+			return;
+		}
+
+		json j;
+		j["Projects"] = json::array();
+
+		for (const auto& proj : m_projects)
+		{
+			std::time_t time = std::chrono::system_clock::to_time_t(proj.timestamp);
+			std::tm tm = *std::localtime(&time);
+			std::ostringstream oss;
+			oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+
+			nlohmann::json proj_json;
+			proj_json["Name"] = proj.name;
+			proj_json["File Path"] = proj.path;
+			proj_json["Last Modified"] = oss.str();
+
+			j["Projects"].push_back(proj_json);
+		}
+
+		
+		std::ofstream file(m_projects_file_path);
+
+		if (!file.is_open())
+		{
+			AERO_CORE_ERROR("Failed to open file for writing: {0}", m_projects_file_path);
+			AERO_CORE_ERROR("Error: {0}", strerror(errno));
+			return;
+		}
+
+		try
+		{
+			file << j.dump(4);
+			file.close();
+			Helper::makefile_read_only(m_projects_file_path);
+			AERO_CORE_INFO("Successfully saved {0} projects to: {1}", m_projects.size(), m_projects_file_path);
+		}
+		catch (const std::exception& e)
+		{
+			AERO_CORE_ERROR("Failed to write to file: {0}", e.what());
+			file.close();
+			Helper::makefile_read_only(m_projects_file_path);
+		}
+	}
+
+
+	void ProjectManagerLayer::add_recent_project(const std::string& name, std::string path)
+	{
+		m_projects.erase(
+			std::remove_if(m_projects.begin(), m_projects.end(),
+				[&path](const ProjectEntry& p) { return p.path == path; }),
+			m_projects.end()
+		);
+
+		ProjectEntry entry;
+		entry.name = name;
+		entry.path = path;
+		entry.timestamp = std::chrono::system_clock::now();
+		entry.last_modified = format_date_time(entry.timestamp);
+
+		m_projects.insert(m_projects.begin(), entry);
+
+		if (m_projects.size() > 10)
+			m_projects.resize(10);
+
+		save_projects();
+	}
+
+
+	std::string ProjectManagerLayer::format_date_time(const std::chrono::system_clock::time_point& time)
+	{
+		auto now = std::chrono::system_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - time);
+
+		auto seconds = duration.count();
+		auto minutes = seconds / 60;
+		auto hours = minutes / 60;
+		auto days = hours / 24;
+		auto weeks = days / 7;
+
+		if (seconds < 60) return "Just now";
+		else if (minutes < 60) return std::to_string(minutes) + (minutes == 1 ? " minute ago" : " minutes ago");
+		else if (hours < 24) return std::to_string(hours) + (hours == 1 ? " hour ago" : " hours ago");
+		else if (days == 1) return "Yesterday";
+		else if (days < 7) return std::to_string(days) + " days ago";
+		else if (weeks < 4) return std::to_string(weeks) + (weeks == 1 ? " week ago" : " weeks ago");
+		else return "Over a month ago";
+	}
+
 
 	void ProjectManagerLayer::on_imgui_render()
 	{
@@ -43,7 +211,6 @@ namespace ag
 		ImGui::SetNextWindowPos({ window_pos.x, window_pos.y });
 		ImGui::SetNextWindowSize({ (float)window_size.x, (float)window_size.y });
 
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.12f, 1.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
 
 		ImGui::Begin("MainWindow", nullptr, window_flags);
@@ -70,15 +237,6 @@ namespace ag
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5));
 
-		ImVec4 text_color = ImVec4(0.89f, 0.89f, 0.89f, 1.0f);
-		ImVec4 bg_color = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-		ImVec4 bg_hovered = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-
-		ImGui::PushStyleColor(ImGuiCol_Button, bg_color);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bg_hovered);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, bg_hovered);
-		ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-
 		if (ImGui::Button("Create", ImVec2(80, 35)))
 		{
 			create_new_project();
@@ -93,17 +251,11 @@ namespace ag
 		static char search_buffer[128] = "";
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.25f, 0.25f, 0.3f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.25f, 0.25f, 0.3f, 1.0f));
-
 		ImGui::SetNextItemWidth(420);
 		ImGui::InputTextWithHint("##SearchProjects", "Search Projects...", search_buffer, IM_ARRAYSIZE(search_buffer));
 
-		ImGui::PopStyleColor(3);
 		ImGui::PopStyleVar();
 
-		ImGui::PopStyleColor(4);
 		ImGui::PopStyleVar(2);
 
 		ImGui::Spacing();
@@ -125,20 +277,6 @@ namespace ag
 		ImVec2 box_size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
 		ImGui::BeginChild("RecentProjectsBox", box_size, false, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoScrollbar);
 
-		struct ProjectEntry
-		{
-			const char* name;
-			const char* path;
-			const char* lastModified;
-		};
-
-		static ProjectEntry projects[] = {
-		{ "AeroGameEngine", "C:\\Projects\\AeroGameEngine", "2 hours ago"},
-		{ "Sandbox Editor", "D:\\Engines\\SandboxEditor", "Yesterday"},
-		{ "Prototype 01", "D:\\Workspace\\Prototype01", "3 days ago"},
-		{ "Game Demo", "D:\\Projects\\GameDemo", "Last week"},
-		{ "Demo Test", "D:\\Tests\\PhysicsTest", "2 weeks ago"}
-		};
 		float item_width = ImGui::GetContentRegionAvail().x - 5.0f;
 		float item_height = 70.0f;
 
@@ -147,16 +285,13 @@ namespace ag
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 10.0f));
 
 
-		ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.35f, 0.35f, 0.40f, 1.0f));
-		for (int i = 0; i < IM_ARRAYSIZE(projects); i++)
+		for (int i = 0; i < m_projects.size(); i++)
 		{
 			ImGui::PushID(i);
-
+			
 			ImVec2 item_size(item_width, item_height);
 
-		
+
 			bool selected = false;
 			if (ImGui::Selectable("##ProjectItem", &selected,
 				ImGuiSelectableFlags_AllowDoubleClick,
@@ -164,7 +299,7 @@ namespace ag
 			{
 				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 				{
-					// open_project(projects[i].path);
+					open_project(m_projects[i].path);
 				}
 			}
 
@@ -185,7 +320,7 @@ namespace ag
 			{
 				if (ImGui::MenuItem("Open"))
 				{
-					// open_project(projects[i].path);
+					open_project(m_projects[i].path);
 				}
 				if (ImGui::MenuItem("Remove from list"))
 				{
@@ -193,12 +328,20 @@ namespace ag
 				}
 				if (ImGui::MenuItem("Show in Explorer"))
 				{
+					if (m_projects[i].path.empty()) return;
 
+					std::filesystem::path abs_path = std::filesystem::absolute(m_projects[i].path);
+
+#ifdef _WIN32
+					std::string command = "explorer /select,\"" + abs_path.string() + "\"";
+					system(command.c_str());
+#endif
 				}
+				
 				ImGui::EndPopup();
 			}
 
-		
+
 			ImGui::SameLine();
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - item_width + 5.0f);
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
@@ -206,37 +349,30 @@ namespace ag
 			ImGui::BeginGroup();
 
 			ImGui::SetWindowFontScale(1.2f);
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-			ImGui::Text("%s", projects[i].name);
+			ImGui::Text("%s", m_projects[i].name.c_str());
 			ImGui::SetWindowFontScale(1.0f);
-			ImGui::PopStyleColor();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-			ImGui::Text("%s", projects[i].path);
-			ImGui::PopStyleColor();
+			ImGui::Text("%s", m_projects[i].path.c_str());
 
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.7f, 1.0f));
 			std::string text = "Last opened: ";
-			text += projects[i].lastModified;
+			text += m_projects[i].last_modified;
 			ImGui::SameLine();
 			ImGui::SetWindowFontScale(0.9f);
 			ImVec2 size = ImGui::CalcTextSize(text.c_str());
 			float width = size.x;
 
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() +	ImGui::GetContentRegionAvail().x - width - 10.0f);
-			ImGui::Text("Last opened: %s", projects[i].lastModified);
-			ImGui::PopStyleColor();
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - width - 10.0f);
+			ImGui::Text("Last opened: %s", m_projects[i].last_modified.c_str());
 			ImGui::SetWindowFontScale(1.f);
 			ImGui::EndGroup();
 
 			ImGui::Spacing();
 			ImGui::PopID();
 		}
-		ImGui::PopStyleColor(3);
 
 		ImGui::PopStyleVar(3);
 
-		if (IM_ARRAYSIZE(projects) == 0)
+		if (m_projects.size() == 0)
 		{
 			float empty_text_width = ImGui::CalcTextSize("No recent projects").x;
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - empty_text_width) * 0.5f);
@@ -259,7 +395,6 @@ namespace ag
 
 		ImGui::End();
 		ImGui::PopStyleVar();
-		ImGui::PopStyleColor();
 	}
 
 
@@ -303,7 +438,7 @@ namespace ag
 		out_file << j.dump(4);
 		out_file.close();
 		Helper::makefile_read_only(AppSettings::get_settings_path());
-
+		add_recent_project(project->get_name(), project->get_directory());
 		AppSettings::reload_app();
 	}
 	void ProjectManagerLayer::open_existing_project()
@@ -330,7 +465,7 @@ namespace ag
 				AppSettings::reload_app();
 				return;
 			}
-			
+
 
 			Helper::makefile_read_only(AppSettings::get_settings_path(), false);
 			std::ifstream in_file(AppSettings::get_settings_path());
@@ -338,7 +473,7 @@ namespace ag
 				in_file >> j;
 
 			in_file.close();
-			
+
 
 			Helper::save_json(j["Project"], "Name", project->get_name());
 			Helper::save_json(j["Project"], "Directory", project->get_directory());
@@ -351,9 +486,56 @@ namespace ag
 			out_file.close();
 
 			Helper::makefile_read_only(AppSettings::get_settings_path());
+			add_recent_project(project->get_name(), project->get_directory());
 			AppSettings::reload_app();
 		}
 
+	}
+
+	void ProjectManagerLayer::open_project(const std::string& path)
+	{
+		std::string name = std::filesystem::path(path).filename().string();
+		add_recent_project(name, path);
+		json j;
+		auto project = ag::Project::load_project(path);
+		if (!project->m_project_loaded)
+		{
+			Helper::makefile_read_only(AppSettings::get_settings_path(), false);
+			std::ifstream in_file(AppSettings::get_settings_path());
+			if (in_file.is_open())
+				in_file >> j;
+
+			in_file.close();
+			Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+			std::ofstream out_file(AppSettings::get_settings_path());
+			out_file << j.dump(4);
+			out_file.close();
+			Helper::makefile_read_only(AppSettings::get_settings_path());
+			AppSettings::reload_app();
+			return;
+		}
+
+
+		Helper::makefile_read_only(AppSettings::get_settings_path(), false);
+		std::ifstream in_file(AppSettings::get_settings_path());
+		if (in_file.is_open())
+			in_file >> j;
+
+		in_file.close();
+
+
+		Helper::save_json(j["Project"], "Name", project->get_name());
+		Helper::save_json(j["Project"], "Directory", project->get_directory());
+		Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
+		Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::Editor));
+
+
+		std::ofstream out_file(AppSettings::get_settings_path());
+		out_file << j.dump(4);
+		out_file.close();
+
+		Helper::makefile_read_only(AppSettings::get_settings_path());
+		AppSettings::reload_app();
 	}
 }
 

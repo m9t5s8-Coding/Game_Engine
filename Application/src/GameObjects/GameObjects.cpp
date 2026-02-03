@@ -11,14 +11,14 @@ namespace ag::NodeHelper
 		}
 		return NodeType::None;
 	}
-	
-	AG_ref<Texture2D> create_texture(const std::string& path)
+
+	AG_ref<Texture2D> create_texture(const std::string& path, bool reload, Filter_Mode filter_mode)
 	{
 		auto project = Project::get_active_project();
 		auto& project_path = project->get_directory();
 		auto& assets_path = project->get_assets_directory();
 		std::string new_path = project_path + assets_path + path;
-		auto texture = Texture2D::create(new_path);
+		auto texture = Texture2D::create(new_path, reload, filter_mode);
 		return texture;
 	}
 
@@ -31,8 +31,8 @@ namespace ag::NodeHelper
 		auto sound_buffer = AudioManager::load(new_path);
 		return sound_buffer;
 	}
-	
-	AG_ref<Texture2D> load_texture(std::string& path)
+
+	AG_ref<Texture2D> load_texture(std::string& path, bool reload, Filter_Mode filter_mode)
 	{
 		auto project = Project::get_active_project();
 
@@ -48,7 +48,7 @@ namespace ag::NodeHelper
 
 		Helper::normalize_path(path);
 
-		return create_texture(path);
+		return create_texture(path, reload, filter_mode);
 	}
 
 	AG_uint load_sound(std::string& path)
@@ -69,12 +69,12 @@ namespace ag::NodeHelper
 
 		return create_sound(path);
 	}
-	
+
 	bool has_capability(Node_Capability a, Node_Capability b)
 	{
 		return ((AG_uint)a & (AG_uint)b) != 0;
 	}
-	
+
 	Node_Capability get_node_capabilities(NodeType type)
 	{
 		switch (type)
@@ -116,7 +116,8 @@ namespace ag::NodeHelper
 			return Node_Capability::TileMap;
 
 		case ag::NodeType::Scene2D:
-		
+			return Node_Capability::Transform;
+
 		case ag::NodeType::Button:
 		case ag::NodeType::TextureButton:
 			return Node_Capability::None;

@@ -8,6 +8,12 @@
 
 namespace ag
 {
+  enum Filter_Mode
+  {
+    AG_NEAREST = 0,
+    AG_LINEAR = 1
+  };
+
   class Texture
   {
   public:
@@ -25,6 +31,6 @@ namespace ag
   class Texture2D : public Texture
   {
   public:
-    static std::shared_ptr<Texture2D> create(const std::string& p_path, bool is_nearest = true);
+    static std::shared_ptr<Texture2D> create(const std::string& p_path, bool reload, Filter_Mode filter_mode);
   };
 }

@@ -2,61 +2,96 @@
 #include <Platform/OpenGL/OpenGLTexture.hpp>
 #include <glad/glad.h>
 #include <stb_image.h>
+#include <Project/Assetmanager.hpp>
 
 namespace ag
 {
-  OpenGLTexture2D::OpenGLTexture2D(const std::string &p_path, bool is_nearest)
-      : m_path(p_path)
+  OpenGLTexture2D::OpenGLTexture2D(const std::string& p_path, Filter_Mode filter_mode)
+    : m_path(p_path)
   {
-    // Load the image from the file
-    int width, height, channels;
+    int width = 0, height = 0, channels = 0;
+    stbi_uc* pixels = nullptr;
 
-    stbi_uc *data = stbi_load(p_path.c_str(), &width, &height, &channels, 4);
-    AERO_CORE_ASSERT(data, "Failed to load Image: {0}", p_path);
-    m_size = vec2u(width, height);
-
-    // Create and Bind the texture
-    glGenTextures(1, &m_ID);
-    glBindTexture(GL_TEXTURE_2D, m_ID);
-
-    // How to load images linear or nearest
-    // Upscaling and Downscaling
-    if (is_nearest)
+    // pak file
+    if (AssetManager::is_packed())
     {
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      auto bytes = AssetManager::read_bytes(p_path);
+      AERO_CORE_ASSERT(!bytes.empty(), "Failed to load texture from pak: {0}", p_path);
+
+      pixels = stbi_load_from_memory(
+        bytes.data(),
+        (int)bytes.size(),
+        &width,
+        &height,
+        &channels,
+        STBI_rgb_alpha
+      );
     }
     else
     {
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      pixels = stbi_load(
+        p_path.c_str(),
+        &width,
+        &height,
+        &channels,
+        STBI_rgb_alpha
+      );
     }
-    
 
-    // Repeat Horizontally and Vertically
+    AERO_CORE_ASSERT(pixels, "stb_image failed to load: {0}", p_path);
+
+    m_size = { (uint32_t)width, (uint32_t)height };
+
+
+    glGenTextures(1, &m_ID);
+    glBindTexture(GL_TEXTURE_2D, m_ID);
+
+
+    switch (filter_mode)
+    {
+    case AG_NEAREST:
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      break;
+
+    case AG_LINEAR:
+    default:
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      break;
+    }
+
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    // Upload the Image Data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
-    // Generate MipMaps
+    glTexImage2D(
+      GL_TEXTURE_2D,
+      0,
+      GL_RGBA8,
+      width,
+      height,
+      0,
+      GL_RGBA,
+      GL_UNSIGNED_BYTE,
+      pixels
+    );
+
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    stbi_image_free(data);
-
-    // Unbind Texture
+    stbi_image_free(pixels);
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 
-  OpenGLTexture2D::~OpenGLTexture2D()
-  {
-    glDeleteTextures(1, &m_ID);
-  }
+	OpenGLTexture2D::~OpenGLTexture2D()
+	{
+		glDeleteTextures(1, &m_ID);
+	}
 
-  void OpenGLTexture2D::bind(uint32_t p_slot) const
-  {
-    glActiveTexture(GL_TEXTURE0 + p_slot);
-    glBindTexture(GL_TEXTURE_2D, m_ID);
-  }
+	void OpenGLTexture2D::bind(uint32_t p_slot) const
+	{
+		glActiveTexture(GL_TEXTURE0 + p_slot);
+		glBindTexture(GL_TEXTURE_2D, m_ID);
+	}
 }

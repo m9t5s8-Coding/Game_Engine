@@ -5,6 +5,7 @@
 #include <Scene/SceneComponent.hpp>
 #include <string>
 #include <Audio/AudioManager.hpp>
+#include <limits>
 
 
 namespace ag
@@ -190,6 +191,7 @@ namespace ag
 	{
 		std::string path;
 		AG_ref<Texture2D> texture;
+		Filter_Mode filter_mode = Filter_Mode::AG_LINEAR;
 
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
@@ -269,6 +271,62 @@ namespace ag
 		}
 	};
 
+	struct CameraBounds_Component : Base_Component<CameraBounds_Component>
+	{
+		vec2f x_axis;
+		vec2f y_axis;
+
+		static void add_component(Entity entity);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+
+		static bool is_compatible(NodeType type);
+		static void on_update(Entity entity);
+		static void imgui_render(Entity entity);
+
+		static const char* get_name()
+		{
+			return "CameraBounds";
+		}
+	};
+
+	struct CameraFollow_Component : Base_Component<CameraFollow_Component>
+	{
+		enum class FollowType
+		{
+			NONE = 0,
+			LOCK_ON_TARGET = 1,
+			LERP_SMOOTH = 2,
+			SPRING = 3,
+			DEAD_ZONE = 4
+		};
+
+		FollowType type = FollowType::LOCK_ON_TARGET;
+		Entity target;
+
+		float lerp_speed = 5.0f;
+
+		float spring_stiffness = 150.0f;
+		float spring_damping = 20.0f;
+		vec2f velocity = vec2f(0.0f, 0.0f);
+
+		vec2f dead_zone = vec2f(100.0f, 100.0f);
+
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j, bool load = false);
+
+		static bool is_compatible(NodeType type);
+		static void on_update(Entity entity, TimeStamp ts);
+
+		static void imgui_render(Entity entity);
+
+		static const char* get_name()
+		{
+			return "CameraFollow";
+		}
+	};
+
+
 	struct Frame
 	{
 		uint_rect frame_rect;
@@ -300,7 +358,7 @@ namespace ag
 		static void load_json(Entity entity, const json& j);
 
 		static void update(Entity entity, TimeStamp ts);
-		static bool play_animation(Entity entity, const std::string& name);
+		static bool play_animation(Entity entity, const std::string& name, bool restart = false);
 		static void imgui_render(Entity entity);
 
 		static const char* get_name()
@@ -308,6 +366,41 @@ namespace ag
 			return "Animations";
 		}
 	};
+
+
+	struct Tween_Component : Base_Component<Tween_Component>
+	{
+		enum class State { STOPPED, PLAYING, PAUSED, COMPLETED };
+		enum class EaseType { LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT };
+		enum class LoopType { ONCE, LOOP, PING_PONG };
+
+		State state = State::STOPPED;
+		EaseType ease_type = EaseType::LINEAR;
+		LoopType loop_type = LoopType::ONCE;
+
+		vec2f start_position;
+		vec2f end_position;
+
+		float duration = 1.0f;
+		float elapsed_time = 0.f;
+		bool reverse_direction = false;
+
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static void update(Entity entity, TimeStamp ts);
+		static bool play_tween(Entity entity);
+		static bool is_compatible(NodeType type);
+		static const char* get_name()
+		{
+			return "Tween";
+		}
+		static void imgui_render(Entity entity);
+
+	private:
+		static float apply_ease(float t, EaseType ease_type);
+	};
+
+
 
 
 	enum AutoTileBit : uint16_t
@@ -363,6 +456,27 @@ namespace ag
 		}
 
 		static void imgui_render(Entity entity);
+	};
+
+
+	struct SolidSet_Component : Base_Component<SolidSet_Component>
+	{
+		std::unordered_map<vec2i, bool, vec2_hash<int>> placed_tiles;
+		b2Body* body = nullptr;
+
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static void clone_entity(Entity original, Entity clone);
+		static void update(Entity entity);
+		static void draw(Entity entity);
+		static bool is_compatible(NodeType type);
+		static void imgui_render(Entity entity);
+		static void create_body(Entity entity);
+
+		static const char* get_name()
+		{
+			return "SolidSet";
+		}
 	};
 
 	struct TileSet_Component : Base_Component<TileSet_Component>
@@ -449,6 +563,7 @@ namespace ag
 		int group = 1;
 		bool collide_with[5] = { true, true, true, true, true };
 
+
 		static void add_component(Entity entity);
 
 		static json save_json(Entity entity);
@@ -491,6 +606,137 @@ namespace ag
 		}
 
 	};
+
+	class GroundContactListener : public b2ContactListener
+	{
+	public:
+		std::unordered_map<uint32_t, int> ground_contacts;
+		std::unordered_map<uint32_t, std::unordered_set<uint32_t>> collisions;
+
+		void BeginContact(b2Contact* contact) override
+		{
+			b2Fixture* fixtureA = contact->GetFixtureA();
+			b2Fixture* fixtureB = contact->GetFixtureB();
+
+			AG_uint entity1 = (AG_uint)fixtureA->GetBody()->GetUserData().pointer;
+			AG_uint entity2 = (AG_uint)fixtureB->GetBody()->GetUserData().pointer;
+
+			if (entity1 != 0 && entity2 != 0)
+			{
+				collisions[entity1].insert(entity2);
+				collisions[entity2].insert(entity1);
+			}
+
+			// Check if either fixture is a foot sensor (user data = 1)
+			b2Fixture* sensor = nullptr;
+
+			if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1)
+				sensor = fixtureA;
+			else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1)
+				sensor = fixtureB;
+
+			if (sensor)
+			{
+				uint32_t entity_id = (uint32_t)sensor->GetBody()->GetUserData().pointer;
+				ground_contacts[entity_id]++;
+			}
+		}
+
+		void EndContact(b2Contact* contact) override
+		{
+			b2Fixture* fixtureA = contact->GetFixtureA();
+			b2Fixture* fixtureB = contact->GetFixtureB();
+
+
+			AG_uint entity1 = (AG_uint)fixtureA->GetBody()->GetUserData().pointer;
+			AG_uint entity2 = (AG_uint)fixtureB->GetBody()->GetUserData().pointer;
+
+			if (entity1 != 0 && entity2 != 0)
+			{
+				collisions[entity1].erase(entity2);
+				collisions[entity2].erase(entity1);
+
+				if (collisions[entity1].empty())
+					collisions.erase(entity1);
+				if (collisions[entity2].empty())
+					collisions.erase(entity2);
+			}
+
+
+			b2Fixture* sensor = nullptr;
+
+			if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1)
+				sensor = fixtureA;
+			else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1)
+				sensor = fixtureB;
+
+			if (sensor)
+			{
+				uint32_t entity_id = (uint32_t)sensor->GetBody()->GetUserData().pointer;
+				ground_contacts[entity_id]--;
+
+				if (ground_contacts[entity_id] <= 0)
+					ground_contacts.erase(entity_id);
+			}
+		}
+
+		bool is_grounded(uint32_t entity_id) const
+		{
+			auto it = ground_contacts.find(entity_id);
+			return it != ground_contacts.end() && it->second > 0;
+		}
+
+		bool is_collided(AG_uint entity_id) const
+		{
+			auto it = collisions.find(entity_id);
+			return it != collisions.end() && !it->second.empty();
+		}
+
+		bool is_collided(AG_uint entity_id_1, AG_uint entity_id_2) const
+		{
+			auto it = collisions.find(entity_id_1);
+			if (it == collisions.end())
+				return false;
+			return it->second.find(entity_id_2) != it->second.end();
+		}
+	};
+
+	enum class MaterialPreset
+	{
+		Custom = 0,
+		Wood = 1,
+		Metal = 2,
+		Rubber = 3,
+		Ice = 4,
+		Bouncy = 5,
+		Stone = 6
+	};
+	struct PhysicsMaterial_Component : Base_Component<PhysicsMaterial_Component>
+	{
+		float density = 1.0f;
+		float friction = 0.3f;
+		float restitution = 0.0f;
+
+		MaterialPreset preset = MaterialPreset::Custom;
+
+		static void apply_preset(PhysicsMaterial_Component& comps);
+		static json save_json(Entity entity);
+		static void load_json(Entity entity, const json& j);
+		static bool is_compatible(NodeType type);
+		static void imgui_render(Entity entity);
+		static const char* get_name() { return "PhysicsMaterial"; }
+	};
+
+
+
+
+
+
+
+
+
+
+
 
 
 	enum class Text_Allignment_Horizontal
@@ -796,6 +1042,7 @@ namespace ag
 			return "Audio";
 		}
 		static void imgui_render(Entity entity);
+		static void delete_entity(Entity entity);
 	};
 
 }

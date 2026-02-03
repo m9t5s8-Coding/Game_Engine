@@ -2,6 +2,7 @@
 
 #include <Scene/Entity.hpp>
 #include <functional>
+#include <icons.h>
 
 namespace ag
 {
@@ -56,61 +57,30 @@ namespace ag
 			bool open = ImGui::TreeNodeEx(name.c_str(), flags);
 			bool remove = false;
 
-			if (can_remove)
+			if (ImGui::BeginPopupContextItem("ComponentContextMenu"))
 			{
-				float button_width = 26.0f;
-				float button_x = start_x + available_width - button_width - ImGui::GetStyle().FramePadding.x * 2;
-
-				float saved_cursor_y = ImGui::GetCursorPosY();
-				float saved_cursor_x = ImGui::GetCursorPosX();
-
-				ImGui::SetCursorPosX(button_x);
-				ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
-				ImGui::Dummy(ImVec2(button_width * 2.0f, 28));
-
-				ImGui::SetCursorPosX(button_x);
-				ImGui::SetCursorPosY(saved_cursor_y - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.y);
-
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.25f, 0.29f, 1.00f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.67f));
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
-
-				if (ImGui::Button(" X ", ImVec2(button_width * 2.0f, 28)))
+				if (can_remove && ImGui::MenuItem("Remove"))
 				{
-					ImGui::OpenPopup("ConfirmRemove##Component");
+					remove = true;
 				}
-				ImGui::Dummy(ImVec2(0.0f, 0.0f));
-				ImGui::PopStyleVar();
-				ImGui::PopStyleColor(3);
 
-				ImGui::SetCursorPosY(saved_cursor_y);
-				ImGui::SetCursorPosX(saved_cursor_x);
-
-				if (ImGui::BeginPopup("ConfirmRemove##Component"))
+				if (ImGui::MenuItem("Reset to Default"))
 				{
-					ImGui::Text("Remove component!");
-					ImGui::Dummy(ImVec2(0, 3));
-					ImGui::Text("%s", name.c_str());
-					ImGui::Separator();
-
-					if (ImGui::Button("Yes", ImVec2(50, 0)))
-					{
-						remove = true;
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("No", ImVec2(50, 0)))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
 				}
+
+				if (ImGui::MenuItem("Copy Component"))
+				{
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Properties..."))
+				{
+				}
+
+				ImGui::EndPopup();
 			}
+
 
 			if (open)
 			{
@@ -125,7 +95,7 @@ namespace ag
 			if (remove)
 			{
 				T::remove_component(entity);
-				Scene::get_active_scene()->set_save_required();
+				Scene::save_required();
 			}
 
 			return open;

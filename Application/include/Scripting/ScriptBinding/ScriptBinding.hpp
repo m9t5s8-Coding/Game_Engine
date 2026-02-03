@@ -20,5 +20,9 @@ namespace ag
     static void register_vec2();
 
     static void register_node();
+
+    static void register_audio_functions();
+
+    static void register_physics();
   };
 }

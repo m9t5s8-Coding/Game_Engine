@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <entt.hpp>
 #include <Core/TimeStamp.hpp>
@@ -18,7 +18,7 @@ namespace ag
 	class SaveScene;
 	class EditorLayer;
 	enum class NodeType;
-
+	class GroundContactListener;
 	class Scene
 	{
 	public:
@@ -50,6 +50,8 @@ namespace ag
 		void set_next_index(AG_uint index) { m_next_index = index; }
 
 		inline b2World& get_world() { return *m_world; }
+		GroundContactListener* get_contact_listener() { return m_contact_listener.get(); }
+
 
 		template <typename T>
 		auto get_view()
@@ -62,8 +64,14 @@ namespace ag
 
 		static AG_ref<Scene> get_active_scene() { return s_active_scene; }
 		static void set_active_scene(const AG_ref<Scene>& scene) { s_active_scene = scene; }
-
+		inline static void save_required(bool required = true)
+		{
+			auto scene = get_active_scene();
+			scene->set_save_required(required);
+		}
 		static AG_ref<Scene> create(const std::string& name = "", const std::string& directory = "");
+
+
 
 	private:
 		void update_entity_recursive(Entity entity, TimeStamp ts);
@@ -81,11 +89,11 @@ namespace ag
 		std::string m_name = "";
 		std::string m_directory = "";
 		std::vector<Entity> m_to_delete_entity;
-		bool m_save_required = false;
+		bool m_save_required = true;
 
 		inline static AG_ref<Scene> s_active_scene;
 
-
+		AG_scope<GroundContactListener> m_contact_listener;
 
 
 		friend class Entity;

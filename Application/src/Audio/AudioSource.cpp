@@ -18,12 +18,19 @@ namespace ag
 	}
 	AudioSource::~AudioSource()
 	{
+		delete_source();
+	}
+
+	void AudioSource::delete_source()
+	{
 		if (m_ID != 0)
 		{
 			alSourceStop(m_ID);
 			alDeleteSources(1, &m_ID);
+			m_ID = 0;
 		}
 	}
+
 	void AudioSource::set_buffer(const AG_ref<AudioBuffer>& buffer) const
 	{
 		if (!buffer)

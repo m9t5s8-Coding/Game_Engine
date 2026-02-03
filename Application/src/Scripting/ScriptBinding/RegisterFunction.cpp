@@ -15,5 +15,7 @@ namespace ag
     
 
     ScriptBinding::register_node();
+    ScriptBinding::register_audio_functions();
+    ScriptBinding::register_physics();
   }
 }

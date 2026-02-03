@@ -142,8 +142,6 @@ namespace ag
             if (!m_filter.PassFilter(message.text.c_str()))
               continue;
 
-            ImVec4 color = GetColorForLevel(message.level);
-            ImGui::PushStyleColor(ImGuiCol_Text, color);
 
             std::string display_text;
 
@@ -166,7 +164,6 @@ namespace ag
               ImGui::OpenPopup("LogContextMenu");
             }
 
-            ImGui::PopStyleColor();
           }
         }
       }

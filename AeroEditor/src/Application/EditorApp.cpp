@@ -9,10 +9,9 @@ namespace ag
 
 	void EditorApp::on_create()
 	{
+		Engine::stop_runtime();
 		NodeFactory::init();
 		load_project_data();
-		
-
 		Renderer::init();
 
 		push_layer(new EditorLayer());

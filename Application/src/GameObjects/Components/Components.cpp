@@ -1,6 +1,8 @@
 ﻿#include<GameObjects/Components/Components.hpp>
 #include <GameObjects/GameObjects.hpp>
 #include <Renderer/Renderer2D.hpp>
+#include <Renderer/ViewController.hpp>
+#include <Project/Assetmanager.hpp>
 
 namespace ag
 {
@@ -217,6 +219,10 @@ namespace ag
 			transform.scale = world_transform.scale / parent_world.scale;
 			transform.rotation = world_transform.rotation - parent_world.rotation;
 		}
+		else
+		{
+			transform = world_transform;
+		}
 	}
 
 
@@ -345,9 +351,34 @@ namespace ag
 						return child;
 					}
 				}
-				return {}; });
+				return {};
+			});
 
-		ScriptManager::load_script(full_path, comp.env);
+		if (AssetManager::is_packed())
+		{
+			std::string code = AssetManager::read_string(full_path);
+			if (code.empty())
+			{
+				AERO_CORE_ERROR("Failed to load script from pak: {0}", full_path);
+				return;
+			}
+
+			try
+			{
+				ScriptManager::run_script_in_env(code, comp.env);
+			}
+			catch (const sol::error& e)
+			{
+				AERO_CORE_ERROR("Script error in {0}: {1}", full_path, e.what());
+				return;
+			}
+		}
+		else
+		{
+			ScriptManager::load_script(full_path, comp.env);
+		}
+
+
 		comp.on_create.set_function(comp.env, "on_create");
 		comp.on_update.set_function(comp.env, "on_update");
 		comp.on_destroy.set_function(comp.env, "on_destroy");
@@ -486,6 +517,7 @@ namespace ag
 
 		auto& props = entity.get_component<Texture_Component>();
 		Helper::save_json(j, "Path", props.path);
+		Helper::save_json(j, "Mode", (int)props.filter_mode);
 
 		return j;
 	}
@@ -496,8 +528,9 @@ namespace ag
 
 		auto& props = entity.get_component<Texture_Component>();
 		Helper::load_json(j, "Path", props.path);
+		Helper::load_json(j, "Mode", props.filter_mode);
 
-		props.texture = NodeHelper::load_texture(props.path);
+		props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 	}
 	bool Texture_Component::is_compatible(NodeType type)
 	{
@@ -594,10 +627,6 @@ namespace ag
 	}
 
 
-
-
-
-
 	json Window_Component::save_json(Entity entity)
 	{
 		json j;
@@ -620,6 +649,249 @@ namespace ag
 		auto caps = NodeHelper::get_node_capabilities(type);
 		return NodeHelper::has_capability(caps, Node_Capability::Camera);
 	}
+
+
+	vec2f apply_camera_bounds(const vec2f& position, Entity entity)
+	{
+		if (!entity.has_component<CameraBounds_Component>())
+			return position;
+
+		auto& bounds = entity.get_component<CameraBounds_Component>();
+		vec2f clamped = position;
+
+		// Clamp X axis
+		if (bounds.x_axis.x != std::numeric_limits<float>::min() &&
+			bounds.x_axis.y != std::numeric_limits<float>::max())
+		{
+			clamped.x = std::clamp(clamped.x, bounds.x_axis.x, bounds.x_axis.y);
+		}
+
+		// Clamp Y axis
+		if (bounds.y_axis.x != std::numeric_limits<float>::min() &&
+			bounds.y_axis.y != std::numeric_limits<float>::max())
+		{
+			clamped.y = std::clamp(clamped.y, bounds.y_axis.x, bounds.y_axis.y);
+		}
+
+		return clamped;
+	}
+
+	void CameraBounds_Component::add_component(Entity entity)
+	{
+		if (!entity.has_component<CameraBounds_Component>())
+		{
+			CameraBounds_Component comps;
+			comps.x_axis.x = std::numeric_limits<float>::min();
+			comps.x_axis.y = std::numeric_limits<float>::max();
+			comps.y_axis.x = std::numeric_limits<float>::min();
+			comps.y_axis.y = std::numeric_limits<float>::max();
+			entity.add_component<CameraBounds_Component>(comps);
+		}
+	}
+	json CameraBounds_Component::save_json(Entity entity)
+	{
+		json j;
+		auto& bounds = entity.get_component<CameraBounds_Component>();
+		Helper::save_json(j, "X_axis", bounds.x_axis);
+		Helper::save_json(j, "Y_axis", bounds.y_axis);
+		return j;
+	}
+	void CameraBounds_Component::load_json(Entity entity, const json& j)
+	{
+		CameraBounds_Component::add_component(entity);
+		auto& bounds = entity.get_component<CameraBounds_Component>();
+		Helper::load_json(j, "X_axis", bounds.x_axis);
+		Helper::load_json(j, "Y_axis", bounds.y_axis);
+	}
+	bool CameraBounds_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Camera);
+	}
+	void CameraBounds_Component::on_update(Entity entity)
+	{
+		// Apply bounds even without follow component
+		if (!Engine::is_runtime() || !entity.has_component<CameraBounds_Component>())
+			return;
+
+		auto& bounds = entity.get_component<CameraBounds_Component>();
+
+		// Check if bounds are actually set (not default values)
+		bool x_bounds_set = (bounds.x_axis.x != std::numeric_limits<float>::min() ||
+			bounds.x_axis.y != std::numeric_limits<float>::max());
+		bool y_bounds_set = (bounds.y_axis.x != std::numeric_limits<float>::min() ||
+			bounds.y_axis.y != std::numeric_limits<float>::max());
+
+		if (!x_bounds_set && !y_bounds_set)
+			return;  // No bounds actually set
+
+		auto view_controller = ViewController::get_main_controller();
+		auto& view = view_controller->get_view();
+		vec2f current_pos = view.get_center();
+		vec2f clamped_pos = current_pos;
+
+		// Clamp X axis
+		if (x_bounds_set)
+		{
+			clamped_pos.x = std::clamp(clamped_pos.x, bounds.x_axis.x, bounds.x_axis.y);
+		}
+
+		// Clamp Y axis
+		if (y_bounds_set)
+		{
+			clamped_pos.y = std::clamp(clamped_pos.y, bounds.y_axis.x, bounds.y_axis.y);
+		}
+
+		// Only update if position changed
+		if (clamped_pos.x != current_pos.x || clamped_pos.y != current_pos.y)
+		{
+			view.set_center(clamped_pos);
+		}
+	}
+
+
+
+	json CameraFollow_Component::save_json(Entity entity)
+	{
+		json j;
+		auto& comps = entity.get_component<CameraFollow_Component>();
+		int index = -1;
+		if (comps.target && comps.target.get_id() != INVALID_ENTITY)
+			index = comps.target.get_component<Tag_Component>().index;
+		Helper::save_json(j, "Type", (int)comps.type);
+		Helper::save_json(j, "FollowIndex", index);
+		Helper::save_json(j, "LerpSpeed", comps.lerp_speed);
+		Helper::save_json(j, "SpringStiffness", comps.spring_stiffness);
+		Helper::save_json(j, "SpringDamping", comps.spring_damping);
+		Helper::save_json(j, "DeadZone", comps.dead_zone);
+		return j;
+	}
+	void CameraFollow_Component::load_json(Entity entity, const json& j, bool load)
+	{
+		if (!entity.has_component<CameraFollow_Component>())
+			entity.add_component<CameraFollow_Component>();
+		auto& comps = entity.get_component<CameraFollow_Component>();
+		int index = -1;
+		Helper::load_json(j, "Type", comps.type);
+		Helper::load_json(j, "FollowIndex", index);
+		Helper::load_json(j, "LerpSpeed", comps.lerp_speed);
+		Helper::load_json(j, "SpringStiffness", comps.spring_stiffness);
+		Helper::load_json(j, "SpringDamping", comps.spring_damping);
+		Helper::load_json(j, "DeadZone", comps.dead_zone);
+		if (index >= 0)
+		{
+			auto it = index_map.find(index);
+			if (it != index_map.end())
+				comps.target = it->second;
+		}
+	}
+	bool CameraFollow_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Camera);
+	}
+	void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
+	{
+		if (!Engine::is_runtime() || !entity.has_component<CameraFollow_Component>())
+			return;
+
+		auto& props = entity.get_component<CameraFollow_Component>();
+		if (!props.target.has_component<Transform_Component>() || props.type == FollowType::NONE)
+			return;
+
+		auto view_controller = ViewController::get_main_controller();
+		auto& view = view_controller->get_view();
+
+		float dt = ts.get_seconds();
+		vec2f target_pos = Transform_Component::get_world_transform(props.target).position;
+		vec2f current_pos = view.get_center();
+		vec2f new_pos = current_pos;
+
+		switch (props.type)
+		{
+		case FollowType::LOCK_ON_TARGET:
+		{
+			new_pos = target_pos;
+			break;
+		}
+
+		case FollowType::LERP_SMOOTH:
+		{
+			// Smooth interpolation using lerp
+			// Default speed is 5.0f if not set
+			float speed = (props.lerp_speed > 0.0f) ? props.lerp_speed : 5.0f;
+			float t = 1.0f - std::exp(-speed * dt);
+			new_pos = current_pos + (target_pos - current_pos) * t;
+			break;
+		}
+
+		case FollowType::SPRING:
+		{
+			// Spring-damper system for smooth, natural following
+			// Defaults: stiffness = 150.0f, damping = 20.0f
+			float stiffness = (props.spring_stiffness > 0.0f) ? props.spring_stiffness : 150.0f;
+			float damping = (props.spring_damping > 0.0f) ? props.spring_damping : 20.0f;
+
+			// Calculate spring force
+			vec2f displacement = target_pos - current_pos;
+			vec2f spring_force = displacement * stiffness;
+
+			// Calculate damping force
+			vec2f damping_force = props.velocity * damping;
+
+			// Apply forces (F = ma, assuming mass = 1)
+			vec2f acceleration = spring_force - damping_force;
+
+			// Update velocity and position using semi-implicit Euler
+			props.velocity = props.velocity + acceleration * dt;
+			new_pos = current_pos + props.velocity * dt;
+			break;
+		}
+
+		case FollowType::DEAD_ZONE:
+		{
+			// Only move camera when target leaves the dead zone
+			// Default dead zone size
+			vec2f dead_zone = (props.dead_zone.x > 0.0f && props.dead_zone.y > 0.0f)
+				? props.dead_zone
+				: vec2f(100.0f, 100.0f);
+
+			vec2f offset = target_pos - current_pos;
+			vec2f half_dead_zone = dead_zone * 0.5f;
+
+			new_pos = current_pos;
+
+			// Check X axis
+			if (std::abs(offset.x) > half_dead_zone.x)
+			{
+				float excess = std::abs(offset.x) - half_dead_zone.x;
+				new_pos.x += (offset.x > 0.0f ? excess : -excess);
+			}
+
+			// Check Y axis
+			if (std::abs(offset.y) > half_dead_zone.y)
+			{
+				float excess = std::abs(offset.y) - half_dead_zone.y;
+				new_pos.y += (offset.y > 0.0f ? excess : -excess);
+			}
+
+			// Smooth the dead zone transition
+			float speed = (props.lerp_speed > 0.0f) ? props.lerp_speed : 10.0f;
+			float t = 1.0f - std::exp(-speed * dt);
+			new_pos = current_pos + (new_pos - current_pos) * t;
+			break;
+		}
+
+		default:
+			return;
+		}
+
+		// Apply camera bounds if they exist
+		new_pos = apply_camera_bounds(new_pos, entity);
+
+		view.set_center(new_pos);
+	}
+
 
 
 
@@ -783,7 +1055,7 @@ namespace ag
 
 		props.rect = anim.frames[props.current_frame].frame_rect;
 	}
-	bool Animation_Component::play_animation(Entity entity, const std::string& name)
+	bool Animation_Component::play_animation(Entity entity, const std::string& name, bool restart)
 	{
 		if (!entity.has_component<Animation_Component>())
 			return false;
@@ -793,7 +1065,7 @@ namespace ag
 		if (anim.animations.find(name) == anim.animations.end())
 			return false;
 
-		if (anim.current_animation == name)
+		if (anim.current_animation == name and !restart)
 			return false;
 
 		anim.current_animation = name;
@@ -862,6 +1134,177 @@ namespace ag
 		Helper::load_json(j, "Offset", tileset.offset);
 	}
 
+
+	json SolidSet_Component::save_json(Entity entity)
+	{
+		json j;
+		const auto& comps = entity.get_component<SolidSet_Component>();
+
+		for (const auto& [grid, value] : comps.placed_tiles)
+		{
+			std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
+			j["Grid"][key] = value;
+		}
+
+		return j;
+	}
+	void SolidSet_Component::load_json(Entity entity, const json& j)
+	{
+		SolidSet_Component::add_component(entity);
+		auto& comps = entity.get_component<SolidSet_Component>();
+		if (j.contains("Grid"))
+		{
+			for (auto& [key, id_json] : j["Grid"].items())
+			{
+				vec2u pos;
+				sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
+				bool value;
+				Helper::load_json(id_json, value);
+				comps.placed_tiles[pos] = value;
+			}
+		}
+
+	}
+	void SolidSet_Component::clone_entity(Entity original, Entity clone)
+	{
+		if (original.has_component<SolidSet_Component>())
+		{
+			auto& orig = original.get_component<SolidSet_Component>();
+			SolidSet_Component comps;
+
+			comps.placed_tiles = orig.placed_tiles;
+
+			clone.add_component<SolidSet_Component>(comps);
+		}
+	}
+	void SolidSet_Component::update(Entity entity)
+	{
+		if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>() || !Engine::is_runtime())
+			return;
+		create_body(entity);
+	}
+	void SolidSet_Component::draw(Entity entity)
+	{
+		if (Engine::is_runtime())
+			return;
+
+		if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>())
+			return;
+
+		auto& solid_set = entity.get_component<SolidSet_Component>();
+		auto& props = entity.get_component<Tile_Component>();
+		Transform_Component trans;
+		int entity_id = (int)(entity.get_id());
+		Rectangle rect;
+		rect.size = props.size;
+		rect.fill_color = Color(80, 180, 255, 150);
+
+		for (const auto& [position, tile] : solid_set.placed_tiles)
+		{
+			trans.position = (position * props.size) + props.size / 2 + props.offset;
+			Renderer2D::draw_rectangle(rect, trans);
+		}
+	}
+	bool SolidSet_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::TileMap);
+	}
+	void SolidSet_Component::create_body(Entity entity)
+	{
+		auto& props = entity.get_component<SolidSet_Component>();
+		if (props.body)
+			return;
+
+		auto& tile_comps = entity.get_component<Tile_Component>();
+
+		b2BodyDef body_def;
+		body_def.type = b2_staticBody;
+		body_def.position.Set(0.0f, 0.0f);
+
+		auto scene = Scene::get_active_scene();
+		auto& world = scene->get_world();
+		props.body = world.CreateBody(&body_def);
+
+		vec2i min_pos(INT_MAX, INT_MAX);
+		vec2i max_pos(INT_MIN, INT_MIN);
+
+		for (const auto& [pos, tile_detail] : props.placed_tiles)
+		{
+			min_pos.x = std::min(min_pos.x, pos.x);
+			min_pos.y = std::min(min_pos.y, pos.y);
+			max_pos.x = std::max(max_pos.x, pos.x);
+			max_pos.y = std::max(max_pos.y, pos.y);
+		}
+
+
+		std::vector<std::tuple<vec2i, vec2i>> rectangles;
+
+		for (int y = min_pos.y; y <= max_pos.y; ++y) {
+			for (int x = min_pos.x; x <= max_pos.x; ++x) {
+				vec2i start_pos(x, y);
+
+				if (props.placed_tiles.find(start_pos) == props.placed_tiles.end() || !props.placed_tiles[start_pos])
+				{
+					continue;
+				}
+
+				int width = 1;
+				while (props.placed_tiles.find(vec2i(x + width, y)) != props.placed_tiles.end() &&
+					props.placed_tiles[vec2i(x + width, y)])
+				{
+					width++;
+				}
+
+				int height = 1;
+				bool can_expand = true;
+				while (can_expand)
+				{
+					for (int dx = 0; dx < width; ++dx) {
+						vec2i check_pos(x + dx, y + height);
+						if (props.placed_tiles.find(check_pos) == props.placed_tiles.end() ||
+							!props.placed_tiles[check_pos]) {
+							can_expand = false;
+							break;
+						}
+					}
+					if (can_expand) {
+						height++;
+					}
+				}
+
+				for (int dy = 0; dy < height; ++dy)
+				{
+					for (int dx = 0; dx < width; ++dx)
+					{
+						props.placed_tiles[vec2i(x + dx, y + dy)] = false;
+					}
+				}
+
+				rectangles.push_back(std::make_tuple(start_pos, vec2i(width, height)));
+			}
+		}
+
+		for (const auto& [start_pos, size_in_tiles] : rectangles)
+		{
+			vec2f center = (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
+			Math::pixels_to_meters(center);
+
+			vec2f half_size = vec2f(size_in_tiles) * tile_comps.size * 0.5f;
+			Math::pixels_to_meters(half_size);
+
+			b2PolygonShape shape;
+			shape.SetAsBox(half_size.x, half_size.y, { center.x, center.y }, 0.0f);
+
+			b2FixtureDef fixture_def;
+			fixture_def.shape = &shape;
+			fixture_def.density = 0.0f;
+			fixture_def.friction = 0.0f;
+			fixture_def.restitution = 0.0f;
+
+			props.body->CreateFixture(&fixture_def);
+		}
+	}
 
 
 
@@ -990,11 +1433,8 @@ namespace ag
 	void TileSet_Component::create_body(Entity entity)
 	{
 		auto& props = entity.get_component<TileSet_Component>();
-		if (props.body)
-			return;
-
-		auto& tile = entity.get_component<Tile_Component>();
-
+		if (props.body) return;
+		auto& tile_comps = entity.get_component<Tile_Component>();
 
 		b2BodyDef body_def;
 		body_def.type = b2_staticBody;
@@ -1003,6 +1443,11 @@ namespace ag
 		auto scene = Scene::get_active_scene();
 		auto& world = scene->get_world();
 		props.body = world.CreateBody(&body_def);
+
+		// Changed from std::map to std::unordered_map
+		std::unordered_map<vec2i, bool, vec2_hash<int>> solid_grid;
+		vec2i min_pos(INT_MAX, INT_MAX);
+		vec2i max_pos(INT_MIN, INT_MIN);
 
 		for (const auto& [pos, tile_detail] : props.placed_tiles)
 		{
@@ -1014,21 +1459,81 @@ namespace ag
 			const Tile_Defination& def = tex_it->second;
 			if (def.is_solid)
 			{
-				vec2f position = (pos * tile.size) + tile.size / 2 + tile.offset;
-				Math::pixels_to_meters(position);
-				b2PolygonShape shape;
-				vec2f size = tile.size;
-				Math::pixels_to_meters(size);
-				shape.SetAsBox(size.x / 2, size.y / 2, { position.x, position.y }, 0.0f);
-
-				b2FixtureDef fixture_def;
-				fixture_def.shape = &shape;
-				fixture_def.density = 0.0f;
-				fixture_def.friction = 0.5f;
-				fixture_def.restitution = 0.1f;
-
-				props.body->CreateFixture(&fixture_def);
+				solid_grid[pos] = true;
+				min_pos.x = std::min(min_pos.x, pos.x);
+				min_pos.y = std::min(min_pos.y, pos.y);
+				max_pos.x = std::max(max_pos.x, pos.x);
+				max_pos.y = std::max(max_pos.y, pos.y);
 			}
+		}
+
+		if (solid_grid.empty()) return;
+
+		std::vector<std::tuple<vec2i, vec2i>> rectangles;
+
+		for (int y = min_pos.y; y <= max_pos.y; ++y) {
+			for (int x = min_pos.x; x <= max_pos.x; ++x) {
+				vec2i start_pos(x, y);
+
+				if (solid_grid.find(start_pos) == solid_grid.end() || !solid_grid[start_pos])
+				{
+					continue;
+				}
+
+				int width = 1;
+				while (solid_grid.find(vec2i(x + width, y)) != solid_grid.end() &&
+					solid_grid[vec2i(x + width, y)])
+				{
+					width++;
+				}
+
+				int height = 1;
+				bool can_expand = true;
+				while (can_expand)
+				{
+					for (int dx = 0; dx < width; ++dx) {
+						vec2i check_pos(x + dx, y + height);
+						if (solid_grid.find(check_pos) == solid_grid.end() ||
+							!solid_grid[check_pos]) {
+							can_expand = false;
+							break;
+						}
+					}
+					if (can_expand) {
+						height++;
+					}
+				}
+
+				for (int dy = 0; dy < height; ++dy)
+				{
+					for (int dx = 0; dx < width; ++dx)
+					{
+						solid_grid[vec2i(x + dx, y + dy)] = false;
+					}
+				}
+
+				rectangles.push_back(std::make_tuple(start_pos, vec2i(width, height)));
+			}
+		}
+
+		for (const auto& [start_pos, size_in_tiles] : rectangles)
+		{
+			vec2f center = (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
+			Math::pixels_to_meters(center);
+
+			vec2f half_size = vec2f(size_in_tiles) * tile_comps.size * 0.5f;
+			Math::pixels_to_meters(half_size);
+
+			b2PolygonShape shape;
+			shape.SetAsBox(half_size.x, half_size.y, { center.x, center.y }, 0.0f);
+
+			b2FixtureDef fixture_def;
+			fixture_def.shape = &shape;
+			fixture_def.density = 0.0f;
+			fixture_def.friction = 0.0f;
+			fixture_def.restitution = 0.0f;
+
+			props.body->CreateFixture(&fixture_def);
 		}
 	}
 
@@ -1127,6 +1632,7 @@ namespace ag
 			auto& props = entity.get_component<Render2D_Component>();
 			shape.size = props.size;
 		}
+		if (!entity.has_component<CollisionShape_Component>());
 		entity.add_component<CollisionShape_Component>(shape);
 	}
 	json CollisionShape_Component::save_json(Entity entity)
@@ -1170,9 +1676,11 @@ namespace ag
 
 	void PhysicsBody_Component::add_component(Entity entity)
 	{
-		entity.add_component<PhysicsBody_Component>();
+		if (!entity.has_component<PhysicsBody_Component>())
+			entity.add_component<PhysicsBody_Component>();
 		{
 			CollisionShape_Component::add_component(entity);
+			PhysicsMaterial_Component::add_component(entity);
 		}
 	}
 	void PhysicsBody_Component::remove_component(Entity entity)
@@ -1190,6 +1698,7 @@ namespace ag
 			entity.remove_component<PhysicsBody_Component>();
 		}
 		entity.remove_component<CollisionShape_Component>();
+		entity.remove_component<PhysicsMaterial_Component>();
 	}
 	json PhysicsBody_Component::save_json(Entity entity)
 	{
@@ -1199,6 +1708,7 @@ namespace ag
 		Helper::save_json(j, "Rotation", props.rotation);
 
 		NodeHelper::save_component<CollisionShape_Component>(entity, j);
+		NodeHelper::save_component<PhysicsMaterial_Component>(entity, j);
 
 		return j;
 	}
@@ -1207,11 +1717,13 @@ namespace ag
 		if (!entity.has_component<PhysicsBody_Component>())
 			entity.add_component<PhysicsBody_Component>();
 
+
 		auto& props = entity.get_component<PhysicsBody_Component>();
 		Helper::load_json(j, "Body", props.body_type);
 		Helper::load_json(j, "Rotation", props.rotation);
 
 		NodeHelper::load_component<CollisionShape_Component>(entity, j);
+		NodeHelper::load_component<PhysicsMaterial_Component>(entity, j);
 	}
 	void PhysicsBody_Component::clone_entity(Entity original, Entity clone)
 	{
@@ -1225,6 +1737,7 @@ namespace ag
 		clone.add_component<PhysicsBody_Component>(comps);
 
 		CollisionShape_Component::clone_entity(original, clone);
+		PhysicsMaterial_Component::clone_entity(original, clone);
 	}
 	void PhysicsBody_Component::update_entity(Entity entity)
 	{
@@ -1289,12 +1802,25 @@ namespace ag
 		fixture_def.shape = &shape_box;
 		fixture_def.isSensor = false;
 
-		if (props.body_type == BodyType::Dynamic)
-			fixture_def.density = 1.0f;
-		else
-			fixture_def.density = 0.0f;
+		if (entity.has_component<PhysicsMaterial_Component>())
+		{
+			auto& material_comps = entity.get_component<PhysicsMaterial_Component>();
+			if (material_comps.preset != MaterialPreset::Custom)
+				PhysicsMaterial_Component::apply_preset(material_comps);
 
-		fixture_def.friction = 0.0f;
+			if (props.body_type == BodyType::Dynamic)
+			{
+				fixture_def.density = material_comps.density;
+				fixture_def.friction = material_comps.friction;
+				fixture_def.restitution = material_comps.restitution;
+			}
+		}
+		else
+		{
+			fixture_def.density = 1.0f;
+			fixture_def.friction = 0.3f;
+			fixture_def.restitution = 0.0f;
+		}
 
 		b2Fixture* fixture = props.body->CreateFixture(&fixture_def);
 
@@ -1309,14 +1835,255 @@ namespace ag
 				if (shapes.collide_with[i])
 					filter.maskBits |= 1 << i;
 			}
-
 			fixture->SetFilterData(filter);
+
+			if (props.body_type == BodyType::Dynamic)
+			{
+				float sensor_width_percent = 0.8f;
+				float sensor_height_percent = 0.1f;
+
+				vec2f sensor_size;
+				sensor_size.x = size.x * sensor_width_percent;
+				sensor_size.y = size.y * sensor_height_percent;
+
+				vec2f sensor_offset;
+				sensor_offset.x = 0.0f;
+				sensor_offset.y = (size.y / 2.0f) + (sensor_size.y / 2.0f);
+
+
+				b2PolygonShape foot_shape;
+				foot_shape.SetAsBox(
+					sensor_size.x / 2,
+					sensor_size.y / 2,
+					b2Vec2(sensor_offset.x, sensor_offset.y),
+					0
+				);
+
+				b2FixtureDef sensor_def;
+				sensor_def.shape = &foot_shape;
+				sensor_def.isSensor = true;
+				sensor_def.density = 0.0f;
+
+				b2Fixture* sensor_fixture = props.body->CreateFixture(&sensor_def);
+
+				if (sensor_fixture)
+				{
+					sensor_fixture->SetFilterData(filter);
+					sensor_fixture->GetUserData().pointer = 1;
+				}
+			}
 		}
 
 
 		props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 
 	}
+
+
+	json PhysicsMaterial_Component::save_json(Entity entity)
+	{
+		json j;
+		const auto& comps = entity.get_component<PhysicsMaterial_Component>();
+
+		Helper::save_json(j, "Preset", (int)comps.preset);
+		if (comps.preset == MaterialPreset::Custom)
+		{
+			Helper::save_json(j, "Density", comps.density);
+			Helper::save_json(j, "Friction", comps.friction);
+			Helper::save_json(j, "Restitution", comps.restitution);
+		}
+		return j;
+	}
+	void PhysicsMaterial_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<PhysicsMaterial_Component>())
+			entity.add_component<PhysicsMaterial_Component>();
+
+		auto& comps = entity.get_component<PhysicsMaterial_Component>();
+
+		Helper::load_json(j, "Preset", comps.preset);
+		apply_preset(comps);
+		if (comps.preset == MaterialPreset::Custom)
+		{
+			Helper::load_json(j, "Density", comps.density);
+			Helper::load_json(j, "Friction", comps.friction);
+			Helper::load_json(j, "Restitution", comps.restitution);
+		}
+	}
+	void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps)
+	{
+		switch (comps.preset)
+		{
+		case MaterialPreset::Wood:
+			comps.density = 0.6f; comps.friction = 0.4f; comps.restitution = 0.2f;
+			break;
+		case MaterialPreset::Metal:
+			comps.density = 8.0f; comps.friction = 0.3f; comps.restitution = 0.1f;
+			break;
+		case MaterialPreset::Rubber:
+			comps.density = 1.5f; comps.friction = 0.9f; comps.restitution = 0.8f;
+			break;
+		case MaterialPreset::Ice:
+			comps.density = 0.9f; comps.friction = 0.05f; comps.restitution = 0.1f;
+			break;
+		case MaterialPreset::Bouncy:
+			comps.density = 0.5f; comps.friction = 0.3f; comps.restitution = 0.95f;
+			break;
+		case MaterialPreset::Stone:
+			comps.density = 2.5f; comps.friction = 0.6f; comps.restitution = 0.0f;
+			break;
+		}
+	}
+	bool PhysicsMaterial_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Physics2D);
+	}
+
+
+
+	json Tween_Component::save_json(Entity entity)
+	{
+		json j;
+		auto& comps = entity.get_component<Tween_Component>();
+
+		Helper::save_json(j, "State", (int)comps.state);
+		Helper::save_json(j, "EaseType", (int)comps.ease_type);
+		Helper::save_json(j, "LoopType", (int)comps.loop_type);
+		Helper::save_json(j, "StartPos", comps.start_position);
+		Helper::save_json(j, "EndPos", comps.end_position);
+		Helper::save_json(j, "Duration", comps.duration);
+		Helper::save_json(j, "ElapsedTime", comps.elapsed_time);
+		Helper::save_json(j, "Reverse", comps.reverse_direction);
+
+		return j;
+	}
+	void Tween_Component::load_json(Entity entity, const json& j)
+	{
+		if (!entity.has_component<Tween_Component>())
+			entity.add_component<Tween_Component>();
+
+		auto& comps = entity.get_component<Tween_Component>();
+
+		Helper::load_json(j, "State", comps.state);
+		Helper::load_json(j, "EaseType", comps.ease_type);
+		Helper::load_json(j, "LoopType", comps.loop_type);
+		Helper::load_json(j, "StartPos", comps.start_position);
+		Helper::load_json(j, "EndPos", comps.end_position);
+		Helper::load_json(j, "Duration", comps.duration);
+		Helper::load_json(j, "ElapsedTime", comps.elapsed_time);
+		Helper::load_json(j, "Reverse", comps.reverse_direction);
+	}
+	bool Tween_Component::is_compatible(NodeType type)
+	{
+		auto caps = NodeHelper::get_node_capabilities(type);
+		return NodeHelper::has_capability(caps, Node_Capability::Transform);
+	}
+	void Tween_Component::update(Entity entity, TimeStamp ts)
+	{
+		if (!entity.has_component<Tween_Component>())
+			return;
+
+		auto& tween = entity.get_component<Tween_Component>();
+
+		if (tween.state != State::PLAYING)
+			return;
+
+		float dt = ts.get_seconds();
+
+		tween.elapsed_time += dt;
+
+		float t = tween.duration > 0.0f ? (tween.elapsed_time / tween.duration) : 1.0f;
+
+		if (t >= 1.0f)
+		{
+			switch (tween.loop_type)
+			{
+			case LoopType::ONCE:
+				t = 1.0f;
+				tween.state = State::COMPLETED;
+				break;
+
+			case LoopType::LOOP:
+				tween.elapsed_time = 0.0f;
+				t = 0.0f;
+				break;
+
+			case LoopType::PING_PONG:
+				tween.reverse_direction = !tween.reverse_direction;
+				tween.elapsed_time = 0.0f;
+				t = 0.0f;
+				break;
+			}
+		}
+
+		if (tween.reverse_direction)
+			t = 1.0f - t;
+
+		float eased_t = Tween_Component::apply_ease(t, tween.ease_type);
+
+		vec2f current_position;
+		current_position.x = tween.start_position.x + (tween.end_position.x - tween.start_position.x) * eased_t;
+		current_position.y = tween.start_position.y + (tween.end_position.y - tween.start_position.y) * eased_t;
+
+
+		if (entity.has_component<Transform_Component>())
+		{
+			auto transform = Transform_Component::get_world_transform(entity);
+			transform.position = current_position;
+			Transform_Component::get_local_transform(entity, transform);
+			auto& trans = entity.get_component<Transform_Component>();
+		}
+	}
+	bool Tween_Component::play_tween(Entity entity)
+	{
+		if (!entity.has_component<Tween_Component>())
+			return false;
+
+		auto& tween = entity.get_component<Tween_Component>();
+
+		tween.elapsed_time = 0.0f;
+		tween.reverse_direction = false;
+		tween.state = State::PLAYING;
+
+		if (entity.has_component<Transform_Component>())
+		{
+			auto transform = Transform_Component::get_world_transform(entity);
+			transform.position = tween.start_position;
+			Transform_Component::get_local_transform(entity, transform);
+
+			return true;
+		}
+		return false;
+	}
+	float Tween_Component::apply_ease(float t, EaseType ease_type)
+	{
+		t = std::max(0.0f, std::min(1.0f, t));
+
+		switch (ease_type)
+		{
+		case ag::Tween_Component::EaseType::LINEAR:
+			return t;
+		case ag::Tween_Component::EaseType::EASE_IN:
+			return t * t;
+			break;
+		case ag::Tween_Component::EaseType::EASE_OUT:
+			return t * (2.0 - t);
+		case ag::Tween_Component::EaseType::EASE_IN_OUT:
+		{
+			if (t < 0.5f)
+				return 2.0f * t * t;
+			else
+				return -1.0f + (4.0f - 2.0f * t) * t;
+		}
+		default:
+			return t;
+		}
+	}
+
+
+
+
 
 
 	json Text_Component::save_json(Entity entity)
@@ -1804,11 +2571,6 @@ namespace ag
 				props.source.set_loop(loop);
 				props.source.set_pitch(pitch);
 				props.source.set_volume(volume);
-
-				if (Engine::is_runtime())
-				{
-					props.source.play();
-				}
 			}
 		}
 	}
@@ -1827,5 +2589,9 @@ namespace ag
 
 		clone.add_component<Audio_Component>(comps);
 	}
-	
+	void Audio_Component::delete_entity(Entity entity)
+	{
+		auto& source = entity.get_component<Audio_Component>().source;
+		source.delete_source();
+	}
 }

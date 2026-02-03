@@ -1,5 +1,6 @@
 #include <UI/PopUp.hpp>
 #include <Aero.hpp>
+#include <icons.h>
 
 namespace ag
 {
@@ -53,7 +54,7 @@ namespace ag
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
 
-			if (ImGui::Button(" X ", ImVec2(60, 40)))
+			if (ImGui::Button(ICON_FA_X, ImVec2(60, 40)))
 			{
 				model.on_close();
 			}

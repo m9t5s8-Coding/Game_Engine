@@ -10,6 +10,7 @@ namespace ag
 
 	void ProjectManagerApp::on_create()
 	{
+		Engine::stop_runtime();
 		WindowProps props;
 		props.Size = vec2u(650, 720);
 		props.Title = "Project Manager";

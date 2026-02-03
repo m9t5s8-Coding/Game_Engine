@@ -19,9 +19,10 @@ namespace ag
 		ag::vec2u window_size = Application::get().get_window().get_size();
 		ag::vec2f view_center;
 		m_view_controller = ag::AG_cref<ViewController>(window_size, view_center);
+		ViewController::set_main_controller(m_view_controller);
 
 		FrameBufferSpecification spec;
-		spec.attachments = { FrameBuffer_Texture_Format::RGBA8, FrameBuffer_Texture_Format::RED_INTEGER, FrameBuffer_Texture_Format::Depth};
+		spec.attachments = { FrameBuffer_Texture_Format::RGBA8, FrameBuffer_Texture_Format::RED_INTEGER, FrameBuffer_Texture_Format::Depth };
 
 		spec.size = window_size;
 
@@ -75,7 +76,7 @@ namespace ag
 		}
 
 		m_framebuffer->bind();
-		RenderCommand::set_clear_color(ag::Color(38, 45, 42));
+		RenderCommand::set_clear_color(ag::Color(56, 56, 56));
 		RenderCommand::clear();
 
 		m_framebuffer->clear_attachment(1, -1);
@@ -92,7 +93,7 @@ namespace ag
 		entity_selection();
 
 
-		
+
 		//m_panel->draw_selected_text();
 		m_panel->draw_collision_shapes();
 		m_panel->draw_tilemap_ghosts();
@@ -102,7 +103,7 @@ namespace ag
 
 		Renderer2D::end_scene();
 
-		
+
 		m_framebuffer->unbind();
 
 		m_last_mouse_pos = m_current_mouse_pos;
@@ -217,7 +218,7 @@ namespace ag
 			{
 				type = entity.get_component<Tag_Component>().node_type;
 			}
-			if(type != NodeType::TileMap)
+			if (type != NodeType::TileMap)
 			{
 				render_settings_button();
 			}
@@ -235,18 +236,7 @@ namespace ag
 		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
 		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
 
-		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-		ImVec4 active_scene_color = ImVec4(0.2f, 0.1f, 0.2f, 1.0f);
-
 		{
-			StyleScope button_style;
-			button_style.push_style_color(ImGuiCol_Button, bg_color);
-			button_style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
-			button_style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
-			button_style.push_style_color(ImGuiCol_Text, text_color);
-
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
 
@@ -262,9 +252,6 @@ namespace ag
 
 				// Scene button
 				{
-					StyleScope scene_button_style;
-					scene_button_style.push_style_color(ImGuiCol_Button,
-						(m_scene == scene) ? active_scene_color : bg_color);
 					std::string scene_name = name;
 					if (scene->is_save_required())
 					{
@@ -274,14 +261,20 @@ namespace ag
 					{
 						scene_name = "  " + scene_name + "   ";
 					}
-
-					if (ImGui::Button(scene_name.c_str(), ImVec2(0, 30)))
+					bool button_clicked = false;
+					if (m_scene == scene)
 					{
-						set_active_scene(scene);
+						ImGui::BeginDisabled();
+						button_clicked = ImGui::Button(scene_name.c_str(), ImVec2(0, 30));
+						ImGui::EndDisabled();
 					}
+					else
+						button_clicked = ImGui::Button(scene_name.c_str(), ImVec2(0, 30));
+
+					if (button_clicked)
+						set_active_scene(scene);
 				}
 
-				// Close button
 				ImGui::SameLine(0, 1);
 				if (ImGui::Button(ICON_FA_X, ImVec2(30, 30)))
 				{
@@ -376,30 +369,18 @@ namespace ag
 		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
 		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
 
-		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-		ImVec4 active_color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f);
-		ImVec4 disabled_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
-		ImVec4 disabled_text_color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
-
-		style.push_style_color(ImGuiCol_Button, bg_color);
-		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
-		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
-		style.push_style_color(ImGuiCol_Text, text_color);
-
 		bool has_selection = m_panel && m_panel->selected_has_transform();
 
 		// Move button
-		render_transform_button("G", "Grab ( G )", TransformSetting::Move, !has_selection);
+		render_transform_button(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, "Grab ( G )", TransformSetting::Move, !has_selection);
 		ImGui::SameLine(0, 8);
 
 		// Rotate button  
-		render_transform_button("R", "Rotate ( R )", TransformSetting::Rotate, !has_selection);
+		render_transform_button(ICON_FA_ROTATE, "Rotate ( R )", TransformSetting::Rotate, !has_selection);
 		ImGui::SameLine(0, 8);
 
 		// Scale button
-		render_transform_button("S", "Scale ( S )", TransformSetting::Scale, !has_selection);
+		render_transform_button(ICON_FA_EXPAND, "Scale ( S )", TransformSetting::Scale, !has_selection);
 	}
 
 	void EditorLayer::render_axis_constraints_group()
@@ -408,27 +389,15 @@ namespace ag
 		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
 		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
 
-		// Colors
-		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-		ImVec4 active_color = ImVec4(0.8f, 0.2f, 0.2f, 1.0f); // Red for active constraint
-		ImVec4 disabled_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
-
-		style.push_style_color(ImGuiCol_Button, bg_color);
-		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
-		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
-		style.push_style_color(ImGuiCol_Text, text_color);
-
 
 		auto current_transform_mode = m_panel->get_transform_setting();
 		bool can_constrain = current_transform_mode != TransformSetting::None &&
 			m_panel && m_panel->selected_has_transform();
 
-		render_axis_button("X", "Along X - axis ( X )", TransformAxis::X, !can_constrain);
+		render_axis_button(ICON_FA_X, "Along X - axis ( X )", TransformAxis::X, !can_constrain);
 		ImGui::SameLine(0, 5);
 
-		render_axis_button("Y", "Along Y - axis ( Y )", TransformAxis::Y, !can_constrain);
+		render_axis_button(ICON_FA_Y, "Along Y - axis ( Y )", TransformAxis::Y, !can_constrain);
 		ImGui::SameLine(0, 5);
 	}
 
@@ -438,52 +407,33 @@ namespace ag
 		style.push_style_var(ImGuiStyleVar_FrameRounding, 2.0f);
 		style.push_style_var(ImGuiStyleVar_FramePadding, ImVec2(8, 5));
 
-		ImVec4 text_color = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-		ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-		ImVec4 bg_hovered = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
-		ImVec4 active_color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f);
-
-		style.push_style_color(ImGuiCol_Button, bg_color);
-		style.push_style_color(ImGuiCol_ButtonHovered, bg_hovered);
-		style.push_style_color(ImGuiCol_ButtonActive, bg_hovered);
-		style.push_style_color(ImGuiCol_Text, text_color);
-
 
 		// Move button
-		render_paint_button("P", "Paint", TileMap_Paint_Settings::Paint);
+		render_paint_button(ICON_FA_PAINTBRUSH, "Paint", TileMap_Paint_Settings::Paint);
 		ImGui::SameLine(0, 8);
 
 		// Rotate button  
-		render_paint_button("L", "Line", TileMap_Paint_Settings::Line);
+		render_paint_button(ICON_FA_MINUS, "Line", TileMap_Paint_Settings::Line);
 		ImGui::SameLine(0, 8);
 
-		render_paint_button("R", "Rectangle", TileMap_Paint_Settings::Rectangle);
+		render_paint_button(ICON_FA_BORDER_ALL, "Rectangle", TileMap_Paint_Settings::Rectangle);
 		ImGui::SameLine(0, 8);
 
-		render_paint_button("F", "Fill", TileMap_Paint_Settings::Fill);
+		render_paint_button(ICON_FA_FILL_DRIP, "Fill", TileMap_Paint_Settings::Fill);
 
 	}
 
 	void EditorLayer::render_transform_button(const char* label, const char* shortcut, TransformSetting mode, bool disabled)
 	{
 		auto current_transform_mode = m_panel->get_transform_setting();
-		bool is_active = (current_transform_mode == mode);
 
-		if (disabled)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
-			ImGui::BeginDisabled();
-		}
+		GUI_Button button;
+		button.label = label;
+		button.size = { 60.0, 30.0 };
+		button.active = (current_transform_mode == mode);
+		button.enabled = !disabled;
 
-		if (is_active && !disabled)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-		}
-
-		std::string button_label = label;
-		ImVec2 button_size = ImVec2(60, 30);
-
-		if (ImGui::Button(button_label.c_str(), button_size))
+		if (UI::draw_button(button))
 		{
 			if (!disabled)
 			{
@@ -491,66 +441,33 @@ namespace ag
 			}
 		}
 
-		// Tooltip with shortcut
 		if (ImGui::IsItemHovered() && !disabled)
 		{
 			ImGui::SetTooltip("%s", shortcut);
-		}
-
-		// Pop styles
-		if (is_active && !disabled)
-		{
-			ImGui::PopStyleColor();
-		}
-
-		if (disabled)
-		{
-			ImGui::EndDisabled();
-			ImGui::PopStyleVar();
 		}
 	}
 
 	void EditorLayer::render_axis_button(const char* label, const char* shortcut, TransformAxis axis, bool disabled)
 	{
 		auto current_axis = m_panel->get_transform_axis();
-		bool is_active = current_axis == axis;
 
-		if (disabled)
+		GUI_Button button;
+		button.label = label;
+		button.size = { 60.0, 30.0 };
+		button.active = (current_axis == axis);
+		button.enabled = !disabled;
+
+		if (UI::draw_button(button))
 		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
-			ImGui::BeginDisabled();
-		}
-
-		
-		if (is_active && !disabled)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-		}
-
-	
-		ImVec2 button_size = ImVec2(50, 30); 
-
-		ImGui::Button(label, button_size);
-
-		if (ImGui::IsItemClicked() && !disabled)
-		{
-			set_axis_mode(axis);
+			if (!disabled)
+			{
+				set_axis_mode(axis);
+			}
 		}
 
 		if (ImGui::IsItemHovered() && !disabled)
 		{
 			ImGui::SetTooltip("%s", shortcut);
-		}
-
-		if (is_active && !disabled)
-		{
-			ImGui::PopStyleColor();
-		}
-
-		if (disabled)
-		{
-			ImGui::EndDisabled();
-			ImGui::PopStyleVar();
 		}
 	}
 
@@ -559,17 +476,12 @@ namespace ag
 		auto current_mode = m_panel->get_paint_settings();
 		bool is_active = current_mode == mode;
 
-		if (is_active)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-		}
+		GUI_Button button;
+		button.label = label;
+		button.size = { 50, 30 };
+		button.active = current_mode == mode;
 
-
-		ImVec2 button_size = ImVec2(50, 30);
-
-		ImGui::Button(label, button_size);
-
-		if (ImGui::IsItemClicked())
+		if (UI::draw_button(button))
 		{
 			set_paint_mode(mode);
 		}
@@ -578,18 +490,13 @@ namespace ag
 		{
 			ImGui::SetTooltip("%s", shortcut);
 		}
-
-		if (is_active)
-		{
-			ImGui::PopStyleColor();
-		}
 	}
 
 	float EditorLayer::calculate_transform_group_width() const
 	{
-		const float button_width = 60.0f; 
+		const float button_width = 60.0f;
 		const float spacing = 10.0f;
-		const int button_count = 3; 
+		const int button_count = 3;
 
 		return (button_count * button_width) + ((button_count - 1) * spacing);
 	}
@@ -598,7 +505,7 @@ namespace ag
 	{
 		const float button_width = 50.0f;
 		const float spacing = 8.0f;
-		const int button_count = 2; 
+		const int button_count = 2;
 
 		return (button_count * button_width) + ((button_count - 1) * spacing);
 	}
@@ -697,7 +604,7 @@ namespace ag
 			return;
 		}
 
-		
+
 		if (it->second == m_scene)
 		{
 			for (auto& [name, scene] : m_scenes)
@@ -751,7 +658,7 @@ namespace ag
 					const char* dropped_path = (const char*)payload->Data;
 
 					std::filesystem::path path(dropped_path);
-					if(path.extension() == ".aeroscene")
+					if (path.extension() == ".aeroscene")
 					{
 						std::string path_string = path.string();
 						open_scene(path_string);
@@ -825,19 +732,21 @@ namespace ag
 					Entity e((entt::entity)(pixel_data));
 					if (m_panel->has_selected_entity())
 					{
-						if ((m_panel->get_selected_entity().get_id() != e.get_id() || m_panel->get_selected_entity().has_component<Text_Editor_State>() ) && m_panel->get_transform_setting() == TransformSetting::None)
+						if ((m_panel->get_selected_entity().get_id() != e.get_id() || m_panel->get_selected_entity().has_component<Text_Editor_State>()) && m_panel->get_transform_setting() == TransformSetting::None)
 						{
 							m_panel->set_selected_entity(e);
+							m_panel->set_properties_entity(e);
 						}
 					}
 					else
 					{
 						m_panel->set_selected_entity(e);
+						m_panel->set_properties_entity(e);
 					}
 				}
 				else
 				{
-					if(m_panel->get_transform_setting() == TransformSetting::None)
+					if (m_panel->get_transform_setting() == TransformSetting::None)
 					{
 						m_panel->set_selected_entity(Entity());
 					}
@@ -984,7 +893,7 @@ namespace ag
 		try
 		{
 			std::ifstream file(file_path);
-			
+
 			if (!file.is_open())
 			{
 				AERO_CORE_WARN("Failed to Open File! {0}", file_path);
@@ -1013,7 +922,7 @@ namespace ag
 			}
 			out_file << j.dump(4);
 			out_file.close();
-			
+
 		}
 		catch (const std::exception& e)
 		{
@@ -1039,14 +948,48 @@ namespace ag
 			{
 				SaveScene::save_scene(scene, scene_path);
 			}
-			catch(const std::exception& e)
+			catch (const std::exception& e)
 			{
 				AERO_CORE_ERROR("Failed to save scene: {0}, {1}", scene->get_name(), e.what());
 			}
-			
+
 		}
 	}
 
+	void EditorLayer::create_new_script(const std::string& path)
+	{
+		auto project = Project::get_active_project();
+		std::string full_path = path;
+		Helper::normalize_path(full_path);
+
+		std::string project_dir = project->get_directory();
+		std::string script_dir = project->get_scripts_directory();
+
+		std::string base_path = project_dir + script_dir + "/";
+
+		std::string relative_path = full_path;
+		if (relative_path.find(base_path) == 0)
+			relative_path = relative_path.substr(base_path.size());
+
+		Helper::normalize_path(relative_path);
+
+		std::filesystem::path p(full_path);
+		std::string script_path = "/" + relative_path;
+
+		auto entity = m_panel->get_selected_entity();
+
+		if (!entity.has_component<Script_Component>())
+		{
+			Script_Component comp;
+			comp.path = script_path;
+			entity.add_component<Script_Component>(comp);
+		}
+		else
+		{
+			auto& comp = entity.get_component<Script_Component>();
+			comp.path = script_path;
+		}
+	}
 
 	void EditorLayer::try_exit()
 	{
@@ -1251,7 +1194,7 @@ namespace ag
 			try
 			{
 				props.path = selected_path;
-				props.texture = NodeHelper::load_texture(props.path);
+				props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 				if (entity.has_component<Render2D_Component>())
 				{
 					auto& render = entity.get_component<Render2D_Component>();
@@ -1266,5 +1209,14 @@ namespace ag
 		}
 	}
 
+
+	void EditorLayer::open_export_panel()
+	{
+		m_export_panel.open();
+	}
+
+	void EditorLayer::render_export_panel()
+	{
+		m_export_panel.render();
+	}
 }
- 

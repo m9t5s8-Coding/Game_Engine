@@ -1,7 +1,7 @@
 ﻿#include <Node/NodeProperties.hpp>
 #include <Aero.hpp>
 #include <UI/UI.hpp>
-#include <icons.h>
+
 
 namespace ag
 {
@@ -20,10 +20,19 @@ namespace ag
 		REGISTER_COMPONENT(TextureRect_Component);
 		REGISTER_COMPONENT(TextureFlip_Component);
 
+		REGISTER_COMPONENT(SolidSet_Component);
 		REGISTER_COMPONENT(TileSet_Component);
 		REGISTER_COMPONENT(AutoTiling_Component);
 
 		REGISTER_COMPONENT(Window_Component);
+		REGISTER_COMPONENT(CameraBounds_Component);
+		REGISTER_COMPONENT(CameraFollow_Component);
+
+
+		REGISTER_COMPONENT(Tween_Component);
+
+
+
 
 		REGISTER_COMPONENT(FontStyle_Component);
 		REGISTER_COMPONENT(UI_Component);
@@ -216,6 +225,8 @@ namespace ag
 				UI::draw_script_selector(entity);
 			}, true);
 	}
+	
+	
 	void Camera_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Camera_Component>("Camera Component", entity,
@@ -233,6 +244,154 @@ namespace ag
 				UI::draw_vec2("Size", props.size, { 1280, 720 });
 			}, true);
 	}
+	void CameraBounds_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<CameraBounds_Component>("Camera Bounds Component", entity,
+			[](CameraBounds_Component& props)
+			{
+				float max = std::numeric_limits<float>::max();
+				float min = std::numeric_limits<float>::min();
+				UI::draw_vec2("X Axis", props.x_axis, { min, max });
+				UI::draw_vec2("Y Axis", props.y_axis, { min, max });
+
+			}, true);
+	}
+	void CameraFollow_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<CameraFollow_Component>("Camera Follow Component", entity,
+			[](CameraFollow_Component& props)
+			{
+				std::vector<std::string> type;
+				type.push_back("None");
+				type.push_back("Lock on Target");
+				type.push_back("Lerp Smooth");
+				type.push_back("Spring");
+				type.push_back("Dead Zone");
+				UI::draw_enum("Follow Type", props.type, type);
+
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				ImGui::Text("Target Entity:");
+				std::string entity_name = "";
+				if (props.target)
+				{
+					entity_name = props.target.get_component<Tag_Component>().name;
+				}
+				GUI_Button button;
+				button.label = entity_name;
+				button.size = ImVec2(ImGui::GetContentRegionAvail().x, 35);
+				if (!entity_name.empty())
+				{
+					UI::draw_button(button);
+				}
+				else
+				{
+					button.label = "Drop Target Entity Here";
+					UI::draw_button(button);
+				}
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
+					{
+						AG_uint dragged_id = *(const AG_uint*)payload->Data;
+						Entity e(dragged_id);
+						props.target = e;
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				// Show parameters based on selected follow type
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				switch (props.type)
+				{
+				case FollowType::NONE:
+				{
+					ImGui::TextWrapped("No camera following. Camera will remain static or controlled manually.");
+					break;
+				}
+
+				case FollowType::LOCK_ON_TARGET:
+				{
+					ImGui::TextWrapped("Camera instantly locks onto target position with no smoothing.");
+					break;
+				}
+
+				case FollowType::LERP_SMOOTH:
+				{
+					ImGui::Text("Lerp Smooth Settings:");
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##LerpSpeed", &props.lerp_speed, 0.1f, 0.1f, 50.0f, "Speed: %.1f");
+					ImGui::PopItemWidth();
+
+					ImGui::TextWrapped("Speed: How fast the camera follows the target. Higher values = faster following.");
+					if (ImGui::Button("Reset to Default##Lerp", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+					{
+						props.lerp_speed = 5.0f;
+					}
+					break;
+				}
+
+				case FollowType::SPRING:
+				{
+					ImGui::Text("Spring Settings:");
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SpringStiffness", &props.spring_stiffness, 1.0f, 1.0f, 500.0f, "Stiffness: %.1f");
+					ImGui::PopItemWidth();
+					ImGui::TextWrapped("Stiffness: Spring strength. Higher values = tighter following.");
+
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##SpringDamping", &props.spring_damping, 0.5f, 0.1f, 100.0f, "Damping: %.1f");
+					ImGui::PopItemWidth();
+					ImGui::TextWrapped("Damping: Reduces oscillation/bounce. Higher values = less bouncy.");
+
+					if (ImGui::Button("Reset to Default##Spring", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+					{
+						props.spring_stiffness = 150.0f;
+						props.spring_damping = 20.0f;
+						props.velocity = vec2f(0.0f, 0.0f);
+					}
+					break;
+				}
+
+				case FollowType::DEAD_ZONE:
+				{
+					ImGui::Text("Dead Zone Settings:");
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat2("##DeadZone", &props.dead_zone.x, 1.0f, 0.0f, 1000.0f, "Size: %.0f px");
+					ImGui::PopItemWidth();
+					ImGui::TextWrapped("Dead Zone Size: Camera only moves when target leaves this rectangle.");
+
+					ImGui::Spacing();
+
+					ImGui::PushItemWidth(-1);
+					ImGui::DragFloat("##DeadZoneSpeed", &props.lerp_speed, 0.1f, 0.1f, 50.0f, "Speed: %.1f");
+					ImGui::PopItemWidth();
+					ImGui::TextWrapped("Speed: How fast camera moves when target leaves dead zone.");
+
+					if (ImGui::Button("Reset to Default##DeadZone", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+					{
+						props.dead_zone = vec2f(100.0f, 100.0f);
+						props.lerp_speed = 10.0f;
+					}
+					break;
+				}
+				}
+			}, true);
+	}
+	
 	void Animation_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<Animation_Component>("Animation Component", entity,
@@ -240,6 +399,79 @@ namespace ag
 			{
 				UI::draw_animation(entity);
 			}, false);
+	}
+	void Tween_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<Tween_Component>("Tween Component", entity,
+			[entity](Tween_Component& tween) mutable
+			{
+				std::vector<std::string> option;
+
+				option = { "STOPPED", "PLAYING", "PAUSED", "COMPLETED" };
+
+				UI::draw_enum("State", tween.state, option);
+
+				option.clear();
+				option = {"LINEAR", "EASE_IN", "EASE_OUT", "EASE_IN_OUT" };
+				UI::draw_enum("Ease Type", tween.ease_type, option);
+
+				option.clear();
+				option = { "ONCE", "LOOP", "PING_PONG" };
+				UI::draw_enum("Loop Type", tween.loop_type, option);
+				
+
+				vec2f reset_value;
+				if (entity.has_component<Transform_Component>())
+				{
+					reset_value = Transform_Component::get_world_transform(entity).position;
+				}
+				UI::draw_vec2("Start", tween.start_position, reset_value);
+				UI::draw_vec2("End", tween.end_position, reset_value);
+
+				UI::draw_value("Duration", tween.duration, 0.01f, 100.0f);
+
+				GUI_Button button;
+				ImGui::BeginGroup();
+
+				button.size.x = (ImGui::GetContentRegionAvail().x - 10) / 3.0f;
+				button.size.y = 35.0f;
+
+				button.label = ICON_FA_PLAY"  Play";
+				if (UI::draw_button(button))
+				{
+					Tween_Component::play_tween(entity);
+				}
+				ImGui::SameLine(0, 5.0f);
+
+				button.label = ICON_FA_PAUSE"  Pause";
+				button.enabled = tween.state == State::PLAYING;
+				if (UI::draw_button(button))
+				{
+					tween.state = State::PAUSED;
+				}
+
+				ImGui::SameLine(0, 5.0f);
+
+				button.label = ICON_FA_STOP"  Stop";
+				button.enabled = tween.state == State::PLAYING || tween.state == State::PAUSED;
+				if (UI::draw_button(button))
+				{
+					tween.state = State::STOPPED;
+					tween.elapsed_time = 0.0f;
+					tween.reverse_direction = false;
+				}
+				ImGui::EndGroup();
+
+			}, true);
+	}
+	
+	void SolidSet_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<SolidSet_Component>("SolidSet Component", entity,
+			[entity](SolidSet_Component& tile)
+			{
+				ImGui::Text("%d", tile.placed_tiles.size());
+			}, true);
 	}
 	void Tile_Component::imgui_render(Entity entity)
 	{
@@ -258,6 +490,8 @@ namespace ag
 				UI::draw_tilemap_register(entity);
 			}, true);
 	}
+	
+	
 	void PhysicsBody_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<PhysicsBody_Component>("PhysicsBody Component", entity,
@@ -272,6 +506,7 @@ namespace ag
 				UI::draw_bool("Rotation", props.rotation);
 			}, true);
 		CollisionShape_Component::imgui_render(entity);
+		PhysicsMaterial_Component::imgui_render(entity);
 	}
 	void CollisionShape_Component::imgui_render(Entity entity)
 	{
@@ -303,8 +538,41 @@ namespace ag
 					sprintf(label, "Group %d", i + 1);
 					ImGui::Checkbox(label, &props.collide_with[i]);
 				}
-			}, true);
+			}, false);
 	}
+	void PhysicsMaterial_Component::imgui_render(Entity entity)
+	{
+		NodeProperties::draw_component_node<PhysicsMaterial_Component>("PhysicsMaterials Component", entity,
+			[](PhysicsMaterial_Component& props)
+			{
+				std::vector<std::string> options;
+
+				options.push_back("Custom");
+				options.push_back("Wood");
+				options.push_back("Metal");
+				options.push_back("Rubber");
+				options.push_back("Ice");
+				options.push_back("Bouncy");
+				options.push_back("Stone");
+
+				if (UI::draw_enum("Material Type", props.preset, options))
+					apply_preset(props);
+				
+				ImGui::PushItemWidth(-1);
+				if (ImGui::SliderFloat("##Density", &props.density, 0.0f, 10.0f, "Density: %.2f"))
+					props.preset = MaterialPreset::Custom;
+
+				if (ImGui::SliderFloat("##Friction", &props.friction, 0.0f, 1.0f, "Friction: %.2f"))
+					props.preset = MaterialPreset::Custom;
+
+				if (ImGui::SliderFloat("##Restitution", &props.restitution, 0.0f, 1.5f, "Restitution: %.2f"))
+					props.preset = MaterialPreset::Custom;
+
+				ImGui::PopItemWidth();
+
+			}, false);
+	}
+	
 	void AutoTiling_Component::imgui_render(Entity entity)
 	{
 		NodeProperties::draw_component_node<AutoTiling_Component>("AutoTiling Component", entity,
@@ -672,6 +940,8 @@ namespace ag
 				}
 			}, false);
 	}
+	
+
 
 	void NodeProperties::animated_sprite_2D(Entity entity)
 	{

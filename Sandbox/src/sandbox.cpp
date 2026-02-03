@@ -12,13 +12,14 @@ public:
 
   virtual void on_create() override
   {
+    ag::Engine::start_runtime();
     ag::WindowProps props;
     props.Size = ag::vec2u(1289, 720);
     props.Title = "Aero Runtime";
     init(props);
     get().get_window().center_window();
 
-    ag::Engine::start_runtime();
+   
     ag::NodeFactory::init();
     ag::Renderer::init();
     ag::ScriptManager::init();

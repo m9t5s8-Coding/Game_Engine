@@ -2,35 +2,55 @@
 
 #include <Layers/Layer.hpp>
 
+
+struct ImGuiStyle;
 namespace ag
 {
-  class ImGuiLayer : public Layer
-  {
-  public:
-    ImGuiLayer();
-    ~ImGuiLayer();
+	
+	class ImGuiLayer : public Layer
+	{
+	public:
+		ImGuiLayer();
+		~ImGuiLayer();
 
-    virtual void on_attach() override;
-    virtual void on_detach() override;
-    virtual void on_event(Event& event) override;
+		virtual void on_attach() override;
+		virtual void on_detach() override;
+		virtual void on_event(Event& event) override;
 
-    void begin();
-    void end();
+		void begin();
+		void end();
 
-    void set_engine_theme();
+		void set_engine_theme();
 
-    void on_imgui_render() override;
+		void on_imgui_render() override;
 
-    void block_events(bool block) { m_block_events = block; }
-  private:
-    float m_time = 0.0f;
-    bool m_block_events = true;
+		void block_events(bool block) { m_block_events = block; }
+
+		static void set_cyberpunk_theme();
+		static void set_warm_amber_theme();
+		static void set_ocean_blue_theme();
+		static void set_blood_red_theme();
+		static void set_monochrome_slate_theme();
+		static void set_light_azure_theme();
+		static void set_sunset_orange_theme();
+		static void set_forest_green_theme();
+		static void set_purple_nebula_theme();
+		static void set_crimson_red_theme();
+		static void set_cyan_teal_theme();
+		static void set_soft_pink_theme();
+		static void set_golden_amber_theme();
+		static void set_light_lavender_theme();
+		static void set_midnight_blue_theme();
+		static void apply_default_style_settings(ImGuiStyle& style);
+		static void set_unity_dark_theme();
+		static void set_unity_light_theme();
+
+	private:
+		float m_time = 0.0f;
+		bool m_block_events = true;
 
 
-    void set_cyberpunk_theme();
-    void set_warm_amber_theme();
-    void set_ocean_blue_theme();
-    void set_blood_red_theme();
-    void set_monochrome_slate_theme();
-  };
+		
+		
+	};
 }

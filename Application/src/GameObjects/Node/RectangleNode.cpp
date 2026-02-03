@@ -32,6 +32,7 @@ namespace ag
 		Corner_Component::clone_entity(original, clone);
 		UI_Component::clone_entity(original, clone);
 		PhysicsBody_Component::clone_entity(original, clone);
+		Tween_Component::clone_entity(original, clone);
 	}
 
 	json RectangleNode::save_json(Entity entity)
@@ -46,6 +47,7 @@ namespace ag
 		NodeHelper::save_component<Corner_Component>(entity, j);
 		NodeHelper::save_component<UI_Component>(entity, j);
 		NodeHelper::save_component<PhysicsBody_Component>(entity, j);
+		NodeHelper::save_component<Tween_Component>(entity, j);
 
 		return j;
 	}
@@ -59,11 +61,13 @@ namespace ag
 		NodeHelper::load_component<Corner_Component>(entity, j);
 		NodeHelper::load_component<UI_Component>(entity, j);
 		NodeHelper::load_component<PhysicsBody_Component>(entity, j);
+		NodeHelper::load_component<Tween_Component>(entity, j);
 	}
 
 	void RectangleNode::update(Entity entity, TimeStamp ts)
 	{
 		PhysicsBody_Component::update_entity(entity);
+		Tween_Component::update(entity, ts);
 		Script_Component::update(entity, ts);
 	}
 

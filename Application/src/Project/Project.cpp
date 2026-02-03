@@ -3,6 +3,7 @@
 #include <Core/Application.hpp>
 #include <Helper.hpp>
 #include <Project/SaveScene.hpp>
+#include <Project/Assetmanager.hpp>
 
 namespace fs = std::filesystem;
 
@@ -32,63 +33,91 @@ namespace ag
 		return project;
 	}
 
-	AG_ref<Project> Project::load_project(const std::string& path)
-	{
-		std::string file_path = path;
-		std::string p = path;
-		Helper::normalize_path(file_path);
-		Helper::normalize_path(p);
+  AG_ref<Project> Project::load_project(const std::string& path)
+  {
+    auto project = AG_cref<Project>();
 
-		auto project = AG_cref<Project>();
+    if (AssetManager::is_packed())
+    {
+      std::string project_file_path = path;
 
-		if (std::filesystem::is_directory(file_path))
-		{
-			for (const auto& entry : std::filesystem::directory_iterator(file_path))
-			{
-				if (entry.path().extension() == ".aeroproj")
-				{
-					file_path = entry.path().string();
-					Helper::normalize_path(file_path);
-					break;
-				}
-			}
-			if (file_path == p)
-			{
-				AERO_CORE_INFO("Project not Found!");
-				project->m_project_loaded = false;
-				return project;
-			}
-		}
+      json j = AssetManager::read_json(project_file_path);
+      if (j.is_null())
+      {
+        AERO_CORE_ERROR("Project::load_project: Failed to read {0} from .pak", project_file_path);
+        project->m_project_loaded = false;
+        return project;
+      }
 
-		json j;
-		Helper::makefile_read_only(file_path, false);
-		std::ifstream in(file_path);
-		if (!in.is_open())
-		{
-			project->m_project_loaded = false;
-			return project;
-		}
-		in >> j;
-		in.close();
-		Helper::makefile_read_only(file_path);
+     
 
-		project->m_directory = std::filesystem::path(file_path).parent_path().string();
-		project->m_project_file_path = file_path;
-		project->m_project_loaded = true;
-		{
-			Helper::load_json(j["Project"], "Name", project->m_name);
-			Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
-			Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
-			Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
-		}
+      // Load project settings
+      Helper::load_json(j["Project"], "Name", project->m_name);
+      Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
+      Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
+      Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
 
-		AERO_CORE_INFO("Project Loaded Successfully ! {0}", project->m_name);
-		
-		Project::set_active_project(project);
-		
-		return project;
-	}
+			project->m_directory = project->m_name;
+			project->m_project_file_path = project_file_path;
+			project->m_project_loaded = true;
+    }
+    else
+    {
+      std::string file_path = path;
+      std::string p = path;
+      Helper::normalize_path(file_path);
+      Helper::normalize_path(p);
 
+      if (std::filesystem::is_directory(file_path))
+      {
+        for (const auto& entry : std::filesystem::directory_iterator(file_path))
+        {
+          if (entry.path().extension() == ".aeroproj")
+          {
+            file_path = entry.path().string();
+            Helper::normalize_path(file_path);
+            break;
+          }
+        }
+        if (file_path == p)
+        {
+          AERO_CORE_INFO("Project not Found!");
+          project->m_project_loaded = false;
+          return project;
+        }
+      }
+
+      Helper::makefile_read_only(file_path, false);
+      std::ifstream in(file_path);
+      if (!in.is_open())
+      {
+        project->m_project_loaded = false;
+        return project;
+      }
+
+      json j;
+      in >> j;
+      in.close();
+      Helper::makefile_read_only(file_path);
+
+      project->m_directory = std::filesystem::path(file_path).parent_path().string();
+      project->m_project_file_path = file_path;
+      project->m_project_loaded = true;
+
+      Helper::load_json(j["Project"], "Name", project->m_name);
+      Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
+      Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
+      Helper::load_json(j["Project"], "Scripts", project->m_scripts_directory);
+    }
+
+    AERO_CORE_INFO("Project Loaded Successfully: {0}", project->m_name);
+
+    project->m_from_pak = AssetManager::is_packed();
+
+    Project::set_active_project(project);
+
+    return project;
+  }
 	AG_ref<Project> Project::save_project()
 	{
 		auto project = get_active_project();

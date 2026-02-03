@@ -21,8 +21,7 @@ namespace ag
 	static const Color folder_color = Color::White;
 	static std::string new_name;
 	static std::string path;
-
-	static GUI_Button button;
+	constexpr float button_height = 32.0f;
 	
 
 
@@ -31,7 +30,6 @@ namespace ag
 	{
 		if (!ImGui::BeginMainMenuBar()) return;
 
-		// File Menu
 		if (ImGui::BeginMenu("  File  "))
 		{
 			if (ImGui::MenuItem(ICON_FA_FILE "  New Scene", "Ctrl+N"))
@@ -89,7 +87,10 @@ namespace ag
 			}
 
 			ImGui::Separator();
-
+			if (ImGui::MenuItem(ICON_FA_EXPAND"  Export Game"))
+			{
+				EditorLayer::get().open_export_panel();
+			}
 			ImGui::Separator();
 
 			// Exit
@@ -216,6 +217,65 @@ namespace ag
 				ImGui::EndMenu();
 			}
 
+			if (ImGui::BeginMenu(ICON_FA_PAINTBRUSH"  Themes"))
+			{
+				if (ImGui::MenuItem(" Default"))
+					ImGui::StyleColorsDark();
+
+				if (ImGui::MenuItem(" CyberPunk"))
+					ImGuiLayer::set_cyberpunk_theme();
+
+				if (ImGui::MenuItem(" Warm Amber"))
+					ImGuiLayer::set_warm_amber_theme();
+
+				if (ImGui::MenuItem(" Ocean Blue"))
+					ImGuiLayer::set_ocean_blue_theme();
+
+				if (ImGui::MenuItem(" Blood Red"))
+					ImGuiLayer::set_blood_red_theme();
+
+				if (ImGui::MenuItem(" Monochrome Slate"))
+					ImGuiLayer::set_monochrome_slate_theme();
+
+				if (ImGui::MenuItem(" Light Azure"))
+					ImGuiLayer::set_light_azure_theme();
+
+				if (ImGui::MenuItem(" Sunset Orange"))
+					ImGuiLayer::set_sunset_orange_theme();
+
+				if (ImGui::MenuItem(" Forest Green"))
+					ImGuiLayer::set_forest_green_theme();
+
+				if (ImGui::MenuItem(" Purple Nebula"))
+					ImGuiLayer::set_purple_nebula_theme();
+
+				if (ImGui::MenuItem(" Crimson Red"))
+					ImGuiLayer::set_crimson_red_theme();
+
+				if (ImGui::MenuItem(" Cyan Teal"))
+					ImGuiLayer::set_cyan_teal_theme();
+
+				if (ImGui::MenuItem(" Soft Pink"))
+					ImGuiLayer::set_soft_pink_theme();
+
+				if (ImGui::MenuItem(" Golden Amber"))
+					ImGuiLayer::set_golden_amber_theme();
+
+				if (ImGui::MenuItem(" Light Lavender"))
+					ImGuiLayer::set_light_lavender_theme();
+
+				if (ImGui::MenuItem(" MidNight Blue"))
+					ImGuiLayer::set_midnight_blue_theme();
+
+				if (ImGui::MenuItem(" Unity Light"))
+					ImGuiLayer::set_unity_light_theme();
+
+				if (ImGui::MenuItem(" Unity Dark"))
+					ImGuiLayer::set_unity_dark_theme();
+
+				ImGui::EndMenu();
+			}
+
 			ImGui::Separator();
 
 			if (ImGui::MenuItem(ICON_FA_EXPAND "  Fullscreen", "F11"))
@@ -273,6 +333,7 @@ namespace ag
 			}
 			ImGui::EndMenu();
 		}
+
 
 		if (ImGui::BeginMenu("  Window  ")) {
 			if (ImGui::MenuItem(ICON_FA_WINDOW_MINIMIZE "  Minimize", "Ctrl+M"))
@@ -414,7 +475,7 @@ namespace ag
 							try
 							{
 								props.path = dropped_path;
-								props.texture = NodeHelper::load_texture(props.path);
+								props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 							}
 							catch (const std::exception& e)
 							{
@@ -518,21 +579,31 @@ namespace ag
 		ImGui::Spacing();
 		ImGui::Separator();
 
-		float button_width = ImGui::GetContentRegionAvail().x * 0.48f;
 
-		if (ImGui::Button("Load Texture", ImVec2(button_width, 0)))
+		{
+			std::vector<std::string> load_mode;
+			load_mode.push_back("Linear");
+			load_mode.push_back("Nearest");
+			draw_enum("Filter Mode", props.filter_mode, load_mode);
+		}
+
+
+		float button_spacing = 5.0f;
+		float button_width = (ImGui::GetContentRegionAvail().x - button_spacing) * 0.5f;
+
+		if (ImGui::Button(ICON_FA_DOWNLOAD"  Load Texture", ImVec2(button_width, button_height)))
 		{
 			EditorLayer::get().load_texture(entity);
 		}
 
-		ImGui::SameLine();
+		ImGui::SameLine(0, 5.0f);
 
 		if (!props.path.empty())
 		{
-			if (ImGui::Button("Reload", ImVec2(button_width, 0))) {
+			if (ImGui::Button(ICON_FA_UPLOAD"  Reload", ImVec2(button_width, button_height))) {
 				try
 				{
-					props.texture = NodeHelper::load_texture(props.path);
+					props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 				}
 				catch (const std::exception& e)
 				{
@@ -2745,7 +2816,7 @@ namespace ag
 
 	}
 
-	void UI::draw_script_selector(Entity entity)
+	/*void UI::draw_script_selector(Entity entity)
 	{
 		if (!entity.has_component<Script_Component>())
 			return;
@@ -2769,41 +2840,280 @@ namespace ag
 			auto full_path = FileDialogs::open_file("Lua Scripts(*.lua)\0 * .lua\0All Files(*.*)\0 * .*\0");
 			if (!full_path.empty())
 			{
-				auto project = Project::get_active_project();
-				Helper::normalize_path(full_path);
-
-				std::string project_dir = project->get_directory();
-				std::string script_dir = project->get_scripts_directory();
-
-				std::string base_path = project_dir + script_dir + "/";
-
-				std::string relative_path = full_path;
-				if (relative_path.find(base_path) == 0)
-					relative_path = relative_path.substr(base_path.size());
-
-				Helper::normalize_path(relative_path);
-
-				std::filesystem::path p(full_path);
-				std::string script_path = "/" + relative_path;
-
-				if (!entity.has_component<Script_Component>())
-				{
-					Script_Component comp;
-					comp.path = script_path;
-					entity.add_component<Script_Component>(comp);
-				}
-				else
-				{
-					auto& comp = entity.get_component<Script_Component>();
-					comp.path = script_path;
-				}
+				EditorLayer::get().create_new_scene(full_path);
 			}
 		}
 
 		ImGui::Dummy(ImVec2(0, 5));
 
 		create_new_script(entity);
+	}*/
+
+
+	void UI::draw_script_selector(Entity entity)
+	{
+		if (!entity.has_component<Script_Component>())
+			return;
+
+		auto& props = entity.get_component<Script_Component>();
+
+		ImGui::Dummy(ImVec2(0, 5));
+
+		bool has_script = !props.path.empty();
+
+		if (has_script)
+		{
+			draw_loaded_script_panel(entity, props);
+		}
+		else
+		{
+			draw_script_drop_zone(entity, props);
+		}
+		draw_script_actions(entity, props, has_script);
+
+		create_new_script(entity);
 	}
+
+	void UI::draw_loaded_script_panel(Entity entity, Script_Component& props)
+	{
+		const float corner_radius = 8.0f;
+		const ImVec4 accent_color = ImVec4(0.1f, 0.5f, 0.9f, 1.0f);
+		const ImVec4 muted_color = ImVec4(0.5f, 0.5f, 0.55f, 1.0f);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, corner_radius);
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.08f, 0.1f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.2f, 0.2f, 0.25f, 1.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+
+		ImGui::BeginChild("##script_info", ImVec2(0, 100), true);
+
+		// Header with icon and filename
+		ImGui::PushStyleColor(ImGuiCol_Text, accent_color);
+		ImGui::Text(ICON_FA_FILE_CODE " LUA");
+		ImGui::PopStyleColor();
+
+		ImGui::SameLine(0, 12);
+		ImGui::BeginGroup();
+
+		std::filesystem::path file_path(props.path);
+		std::string filename = file_path.filename().string();
+
+		ImVec2 available_size = ImGui::GetContentRegionAvail();
+		
+		ImGui::PushStyleColor(ImGuiCol_Text, muted_color);
+
+		// Tooltip for full path
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+		{
+			ImGui::BeginTooltip();
+			ImGui::Text("%s", props.path.c_str());
+			ImGui::EndTooltip();
+		}
+		ImGui::PopStyleColor();
+
+		ImGui::EndGroup();
+		ImGui::EndChild();
+
+		ImGui::PopStyleColor(2);
+		ImGui::PopStyleVar(2);
+
+		if (ImGui::BeginPopupContextItem("##script_context_menu", ImGuiPopupFlags_MouseButtonRight))
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
+
+			if (ImGui::MenuItem(ICON_FA_CODE "  Open in VS Code", nullptr, false, !props.path.empty()))
+			{
+				auto project = Project::get_active_project();
+				std::string full_path = project->get_directory() + project->get_scripts_directory() + props.path;
+				open_in_vscode(full_path);
+			}
+
+			if (ImGui::MenuItem(ICON_FA_LINK "  Open Containing Folder", nullptr, false, !props.path.empty()))
+			{
+				auto project = Project::get_active_project();
+				std::string full_path = project->get_directory() + project->get_scripts_directory() + props.path;
+				show_in_explorer(full_path);
+			}
+
+			if (ImGui::MenuItem(ICON_FA_COPY "  Copy Path", nullptr, false, !props.path.empty()))
+			{
+				auto project = Project::get_active_project();
+				std::string full_path = project->get_directory() + project->get_scripts_directory() + props.path;
+				ImGui::SetClipboardText(full_path.c_str());
+			}
+
+			ImGui::Separator();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.35f, 0.35f, 1.0f));
+			if (ImGui::MenuItem(ICON_FA_TRASH "  Remove Script", nullptr, false, !props.path.empty()))
+			{
+				props.path.clear();
+				Scene::save_required();
+			}
+			ImGui::PopStyleColor();
+
+			ImGui::PopStyleVar();
+			ImGui::EndPopup();
+		}
+
+	
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM",
+				ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+
+			if (payload)
+			{
+				const char* data = static_cast<const char*>(payload->Data);
+				std::string file_path(data, payload->DataSize);
+				script_drag_drop(file_path);
+			}
+			ImGui::EndDragDropTarget();
+		}
+	}
+	
+	void UI::script_drag_drop(std::string& file_path)
+	{
+		file_path.erase(std::find(file_path.begin(), file_path.end(), '\0'), file_path.end());
+		file_path.erase(std::remove(file_path.begin(), file_path.end(), '\"'), file_path.end());
+
+		Helper::normalize_path(file_path);
+
+		std::filesystem::path path(file_path);
+		std::string ext = path.extension().string();
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+		if (ext == ".lua")
+		{
+			EditorLayer::get().create_new_script(file_path);
+		}
+	}
+
+	void UI::draw_script_drop_zone(Entity entity, Script_Component& props)
+	{
+		const float corner_radius = 10.0f;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, corner_radius);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 16));
+
+		ImVec2 drop_zone_size = ImVec2(ImGui::GetContentRegionAvail().x, 120);
+		ImGui::BeginChild("##drop_zone", drop_zone_size, true, ImGuiWindowFlags_NoScrollbar);
+
+		ImVec2 window_size = ImGui::GetWindowSize();
+		ImVec2 content_size = ImVec2(window_size.x - ImGui::GetStyle().WindowPadding.x * 2,
+			window_size.y - ImGui::GetStyle().WindowPadding.y * 2);
+
+		ImGui::SetCursorPos(ImVec2(
+			(window_size.x - content_size.x) * 0.5f,
+			(window_size.y - content_size.y) * 0.5f
+		));
+
+		ImGui::BeginGroup();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.45f, 1.0f));
+		ImGui::SetCursorPosX((content_size.x - ImGui::CalcTextSize(ICON_FA_FILE_CODE).x) * 0.5f);
+		ImGui::Text(ICON_FA_FILE_CODE);
+		ImGui::PopStyleColor();
+
+		ImGui::Dummy(ImVec2(0, 8));
+
+		// Title
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.75f, 1.0f));
+		ImGui::SetCursorPosX((content_size.x - ImGui::CalcTextSize("Drop Lua Script Here").x) * 0.5f);
+		ImGui::Text("Drop Lua Script Here");
+		ImGui::PopStyleColor();
+
+		ImGui::Dummy(ImVec2(0, 4));
+
+		// Subtitle
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.55f, 1.0f));
+		ImGui::SetCursorPosX((content_size.x - ImGui::CalcTextSize(".lua files supported").x) * 0.5f);
+		ImGui::Text(".lua files supported");
+		ImGui::PopStyleColor();
+
+		ImGui::EndGroup();
+		ImGui::EndChild();
+
+		bool is_dragging_over = false;
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM",
+				ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+			{
+				const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+				if (payload)
+				{
+					const char* data = static_cast<const char*>(payload->Data);
+					std::string file_path(data, payload->DataSize);
+					script_drag_drop(file_path);
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		// Optional: Add subtle hover effect
+		if (ImGui::IsItemHovered() && !is_dragging_over)
+		{
+			ImGui::GetWindowDrawList()->AddRect(
+				ImGui::GetItemRectMin(),
+				ImGui::GetItemRectMax(),
+				ImGui::GetColorU32(ImVec4(0.3f, 0.5f, 0.8f, 0.3f)),
+				corner_radius,
+				0,
+				1.0f
+			);
+		}
+
+		ImGui::PopStyleVar(2);
+	}
+	
+	void UI::draw_script_actions(Entity entity, Script_Component& props, bool has_script)
+	{
+		ImGui::Dummy(ImVec2(0, 10));
+		float button_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f;
+		float button_height = 32.0f;
+		if (ImGui::Button(ICON_FA_FILE "Create New", ImVec2(button_width, button_height)))
+		{
+			s_show_panels.create_new_script = true;
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button(ICON_FA_PLUS "Add Existing", ImVec2(button_width, button_height)))
+		{
+			auto full_path = FileDialogs::open_file("Lua Scripts(*.lua)\0 * .lua\0All Files(*.*)\0 * .*\0");
+			if (!full_path.empty())
+			{
+				EditorLayer::get().create_new_script(full_path);
+			}
+		}
+	}
+
+
+	void UI::open_in_vscode(const std::string& path)
+	{
+		if (path.empty()) return;
+
+		
+		std::filesystem::path abs_path = std::filesystem::absolute(path);
+
+#ifdef _WIN32
+		std::string command = "code \"" + abs_path.string() + "\"";
+		system(command.c_str());
+#endif
+	}
+	
+	void UI::show_in_explorer(const std::string& file_path)
+	{
+		if (file_path.empty()) return;
+
+		std::filesystem::path abs_path = std::filesystem::absolute(file_path);
+
+#ifdef _WIN32
+		std::string command = "explorer /select,\"" + abs_path.string() + "\"";
+		system(command.c_str());
+#endif
+	}
+
 
 	void UI::test_popup(Entity entity)
 	{
@@ -2839,6 +3149,12 @@ namespace ag
 	{
 		bool clicked = false;
 
+		if (btn.active)
+		{
+			ImVec4 old_active = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
+			ImGui::PushStyleColor(ImGuiCol_Button, old_active);
+		}
+
 		if (btn.enabled)
 		{
 			clicked = ImGui::Button(
@@ -2852,7 +3168,10 @@ namespace ag
 			ImGui::Button(btn.label.c_str(), btn.size.to_imvec2());
 			ImGui::EndDisabled();
 		}
-
+		if (btn.active)
+		{
+			ImGui::PopStyleColor();
+		}
 		return clicked;
 	}
 
@@ -2860,6 +3179,7 @@ namespace ag
 	{
 		create_new_scene();
 		save_changes();
+		EditorLayer::get().render_export_panel();
 	}
 
 	void UI::create_new_scene()
@@ -2922,8 +3242,6 @@ namespace ag
 
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
 
-			Color create_color = can_create ? Color(94, 94, 94) : Color(58, 58, 58);
-			Color hover_color = can_create ? Color(112, 112, 112) : Color(58, 58, 58);
 			{
 				button.label = "Create";
 				button.size = button_size;
@@ -3058,8 +3376,8 @@ namespace ag
 								file << "function on_update(dt)\n";
 								file << "  aero_print(\"Entity Updated\")\n";
 								file << "end\n\n";
-								file << "function on_delete()\n";
-								file << "  aero_print(\"Entity Deleted\")\n";
+								file << "function on_destroy()\n";
+								file << "  aero_print(\"Entity Destroyed\")\n";
 								file << "end\n\n";
 								file << "function on_event(event)\n";
 								file << "  aero_print(\"Entity Events\")\n";
@@ -3080,7 +3398,7 @@ namespace ag
 								Helper::normalize_path(relative_path);
 							}
 							auto& comps = entity.get_component<Script_Component>();
-							comps.path = relative_path;
+							comps.path =  "/" + relative_path;
 						}
 						new_name.clear();
 						path.clear();
@@ -3377,20 +3695,7 @@ namespace ag
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
 
 		ImGui::Begin("Console", nullptr, flags);
-		static bool show_console = true;
-		Log::draw_console("Console", &show_console);
-
-		if (ImGui::BeginMainMenuBar())
-		{
-			if (ImGui::BeginMenu("View"))
-			{
-				if (ImGui::MenuItem("Console", "Ctrl+`", &show_console))
-				{
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::EndMainMenuBar();
-		}
+		Log::draw_console("Console", &s_show_panels.console_panel);
 		ImGui::End();
 	}
 }

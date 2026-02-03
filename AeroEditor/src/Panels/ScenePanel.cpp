@@ -2,6 +2,7 @@
 #include <Application/EditorLayer.hpp>
 #include <Node/NodeProperties.hpp>
 #include <UI/UI.hpp>
+#include <UI/PopUp.hpp>
 #include <queue>
 #include <icons.h>
 
@@ -107,6 +108,7 @@ namespace ag
 
 
 		m_selected_entity = entity;
+		reset_transform_setting();
 	}
 
 	void ScenePanel::on_imgui_render()
@@ -217,165 +219,118 @@ namespace ag
 	}
 
 
-	void ScenePanel::draw_create_object() {
+	void ScenePanel::draw_create_object()
+	{
 		if (!m_show_create_panel) return;
 
-		static CreatePanelState state;
 
-		ImGuiWindowFlags window_flags =
-			ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_NoCollapse;
-		//ImGuiWindowFlags_AlwaysAutoResize;
 
-		ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
-		ImGui::Begin("Create Objects", &m_show_create_panel, window_flags);
+		PopUpModel model = {
+				.name = "Create Objects",
+				.id = "##CreateObjects",
+				.confirm_name = "Create",
+				.close_name = "Cancel",
+				.window_size = {450, 580}
+		};
 
-		// Header with search
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
-		{
-			ImGui::BeginGroup();
 
-			// Search bar
-			ImGui::SetNextItemWidth(-1);
-			ImGui::InputTextWithHint("##search", "Search objects...",
-				state.search_filter.data(), ImGuiInputTextFlags_AutoSelectAll);
+		model.on_close = [this]()
+			{
+				this->m_state.should_close = true;
+			};
 
-			// Quick filter buttons
-			ImGui::BeginGroup();
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 3));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
+		model.draw_content = [this]()
+			{
+				ImGui::BeginChild("##GameObjects", ImVec2(0, 500.0f));
 
-			if (ImGui::Button("All", ImVec2(80, 0))) {
-				state.show_3d_objects = state.show_lights =
-					state.show_ui = state.show_primitives = true;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("UI", ImVec2(80, 0))) {
-				state.show_ui = !state.show_ui;
-			}
-
-			ImGui::PopStyleVar(2);
-			ImGui::EndGroup();
-
-			ImGui::EndGroup();
-		}
-		ImGui::PopStyleVar();
-
-		ImGui::Separator();
-
-		// Content area
-		ImGui::BeginChild("ContentArea", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 1.5f));
-		{
-			// Group objects by category
-			std::unordered_map<std::string, std::vector<std::pair<NodeType, std::string>>> categorized_nodes;
-
-			for (const auto& [type, name] : NodeFactory::nodes) {
-				std::string category = categorize_node_type(type);
-				categorized_nodes[category].emplace_back(type, name);
-			}
-
-			// Display categories
-			for (const auto& [category, nodes] : categorized_nodes) {
-
-				if (!should_show_category(category, state)) continue;
-
-				// Filter by search
-				std::vector<std::pair<NodeType, std::string>> filtered_nodes;
-				for (const auto& [type, name] : nodes) {
-					if (state.search_filter.empty() ||
-						string_contains_case_insensitive(name, state.search_filter)) {
-						filtered_nodes.emplace_back(type, name);
-					}
-				}
-
-				if (filtered_nodes.empty()) continue;
-
-				// Category header
-				bool category_open = ImGui::CollapsingHeader(
-					fmt::format("{} ({})", category, filtered_nodes.size()).c_str(),
-					ImGuiTreeNodeFlags_DefaultOpen);
-
-				if (category_open) {
-					ImGui::Indent(10.0f);
-
-					if (state.show_categories)
-					{
-						for (const auto& [type, name] : filtered_nodes)
-						{
-							draw_object_button(type, name, state);
-							ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
-						}
-					}
-					else {
-
-						for (const auto& [type, name] : filtered_nodes) {
-							draw_object_list_item(type, name, state);
-						}
-					}
-
-					ImGui::Unindent(10.0f);
-					ImGui::Spacing();
-				}
-			}
-		}
-		ImGui::EndChild();
-
-		ImGui::Separator();
-
-		ImGui::BeginChild("FooterArea", ImVec2(0, 80), true);
-		{
-			auto it = NodeFactory::nodes.find(state.selected_prefab);
-
-			if (it != NodeFactory::nodes.end()) {
-				ImGui::Columns(2, "##footer_columns", false);
-				ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() - 120);
-
-				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.2f, 1.0f), "Selected:");
-				ImGui::SameLine();
-				ImGui::Text("%s", it->second.c_str());
-
-				ImGui::NextColumn();
-
-				bool can_create = NodeFactory::create_map.find(state.selected_prefab) !=
-					NodeFactory::create_map.end();
-
-				ImGui::BeginDisabled(!can_create);
-
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
-
-				if (ImGui::Button("CREATE", ImVec2(100, 0)))
+				for (const auto& [type, name] : NodeFactory::nodes)
 				{
-					create_selected_object(state.selected_prefab);
-					m_scene->set_save_required(true);
+					ImGui::PushID(static_cast<int>(type));
+
+					bool selected = m_state.selected_type == type;
+
+					if (!selected)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(1, 1, 1, 0.0f));
+						ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(1, 1, 1, 0.08f));
+						ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(1, 1, 1, 0.15f));
+					}
+
+
+					ImGuiTreeNodeFlags flags =
+						ImGuiTreeNodeFlags_Framed |
+						ImGuiTreeNodeFlags_Leaf |
+						ImGuiTreeNodeFlags_SpanAvailWidth |
+						ImGuiTreeNodeFlags_NoTreePushOnOpen |
+						(selected ? ImGuiTreeNodeFlags_Selected : 0);
+
+					ImGui::TreeNodeEx(name.c_str(), flags);
+
+					if (ImGui::IsItemClicked())
+					{
+						this->m_state.selected_type = type;
+					}
+
+					if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+					{
+						ImGui::SetTooltip("%s", name.c_str());
+					}
+					if(!selected)
+						ImGui::PopStyleColor(3);
+					ImGui::PopID();
 				}
 
-				ImGui::PopStyleColor(3);
-				ImGui::EndDisabled();
+				ImGui::EndChild();
+				float available_width = ImGui::GetContentRegionAvail().x;
 
-				ImGui::Columns(1);
 
-				// Status message
-				auto now = std::chrono::steady_clock::now();
-				auto time_since_creation = std::chrono::duration_cast<std::chrono::milliseconds>(
-					now - state.last_created_time).count();
+				float spacing = 10.0f;
+				vec2f button_size =
+				{
+						(available_width - (spacing * 3)) * 0.5f,
+						35.0f
+				};
 
-				if (time_since_creation < 1500) {
-					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Created successfully");
+				float cursor_y =
+					ImGui::GetCursorPosY() +
+					ImGui::GetContentRegionAvail().y -
+					button_size.y - spacing;
+
+				ImGui::SetCursorPosY(cursor_y);
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+
+				GUI_Button button;
+
+				button.label = ICON_FA_PLUS "  Create";
+				button.size = button_size;
+				button.enabled = true;
+
+				if (UI::draw_button(button))
+				{
+					create_selected_object(this->m_state.selected_type);
+					this->m_state.should_close = true;
+					ImGui::CloseCurrentPopup();
 				}
-			}
-			else {
-				// Centered "no selection" message
-				float text_width = ImGui::CalcTextSize("Select an object to begin").x;
-				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - text_width) * 0.5f);
-				ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.5f - ImGui::GetTextLineHeight() * 0.5f);
-				ImGui::TextDisabled("Select an object to begin");
-			}
+
+				ImGui::SameLine(0, spacing);
+
+				button.label = ICON_FA_XMARK "  Cancel";
+				button.size = button_size;
+				if (UI::draw_button(button))
+				{
+					this->m_state.should_close = true;
+					ImGui::CloseCurrentPopup();
+				}
+			};
+
+		Create_Open_Popup::draw_popup(model);
+
+		m_show_create_panel = !m_state.should_close;
+
+		if (m_state.should_close)
+		{
+			m_state.should_close = false;
 		}
-		ImGui::EndChild();
-		ImGui::End();
 	}
 
 
@@ -401,7 +356,7 @@ namespace ag
 		// Content area
 
 		const char* child_name = "HierarchyContent";
-		ImGui::BeginChild(child_name, ImVec2(0, 0), true);
+		ImGui::BeginChild(child_name, ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
 		{
 			// Get all root entities (no parent)
 			auto view = m_scene->m_registry.view<Tag_Component>();
@@ -422,7 +377,7 @@ namespace ag
 			ImGui::PopStyleVar();
 
 			if (!m_hierarchy_state.filter_text.empty()) {
-				
+
 			}
 
 
@@ -553,7 +508,7 @@ namespace ag
 				draw_entity_node(tag.children[i], level + 1);
 			}
 
-			
+
 			if (node_open && !tag.children.empty())
 			{
 				draw_drop_zone_between(Entity{}, DropPosition::LastChild, level + 1, entity);
@@ -582,7 +537,7 @@ namespace ag
 
 		ImVec2 drop_zone_size(ImGui::GetContentRegionAvail().x, 2.0f);
 		ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
-		
+
 		ImGui::InvisibleButton("##drop_zone", drop_zone_size);
 
 
@@ -654,11 +609,11 @@ namespace ag
 		}
 		else
 		{
-		/*	auto& root_entities = m_scene->get_root_entities();
-			root_entities.erase(
-				std::remove(root_entities.begin(), root_entities.end(), dragged),
-				root_entities.end()
-			);*/
+			/*	auto& root_entities = m_scene->get_root_entities();
+				root_entities.erase(
+					std::remove(root_entities.begin(), root_entities.end(), dragged),
+					root_entities.end()
+				);*/
 		}
 
 		dragged_tag.parent = target_tag.parent;
@@ -697,15 +652,15 @@ namespace ag
 		auto& dragged_tag = dragged.get_component<Tag_Component>();
 		auto& target_tag = target.get_component<Tag_Component>();
 
-		
-			if (dragged_tag.parent)
-			{
-				auto& parent_tag = dragged_tag.parent.get_component<Tag_Component>();
-				parent_tag.children.erase(
-					std::remove(parent_tag.children.begin(), parent_tag.children.end(), dragged),
-					parent_tag.children.end()
-				);
-			}
+
+		if (dragged_tag.parent)
+		{
+			auto& parent_tag = dragged_tag.parent.get_component<Tag_Component>();
+			parent_tag.children.erase(
+				std::remove(parent_tag.children.begin(), parent_tag.children.end(), dragged),
+				parent_tag.children.end()
+			);
+		}
 		else
 		{
 			/*auto& root_entities = m_scene->get_root_entities();
@@ -857,7 +812,7 @@ namespace ag
 		ImGui::EndChild();
 	}
 
-	//Draw Filter Box
+
 	void ScenePanel::draw_hierarchy_filter() {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 4));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
@@ -886,12 +841,12 @@ namespace ag
 		ImGui::PopStyleVar(2);
 	}
 
-	//Handle Interaction
+
 	void ScenePanel::handle_entity_interactions(Entity entity) {
-		// Left click (select entity)
+
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 		{
-			select_entity(entity);
+			set_selected_entity(entity);
 		}
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
@@ -903,10 +858,9 @@ namespace ag
 
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			//focus_entity_in_viewport(entity);
+			set_properties_entity(entity);
 		}
 
-		// Context menu
 		if (ImGui::BeginPopup("EntityContextMenu"))
 		{
 			draw_entity_context_menu(entity);
@@ -919,7 +873,6 @@ namespace ag
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 6.0f));
 		if (ImGui::MenuItem(ICON_FA_PEN "  Rename", "F2"))
 		{
-			//start_renaming_entity(entity);
 			m_scene->set_save_required(true);
 		}
 
@@ -943,39 +896,25 @@ namespace ag
 
 		ImGui::Separator();
 
-		if (ImGui::BeginMenu(ICON_FA_PLUS "  Create Child")) {
-
-			if (ImGui::MenuItem(ICON_FA_SHAPES "  Empty"))
-			{
-				//create_child_entity(entity, "Empty", NodeType::Empty);
-				m_scene->set_save_required(true);
-			}
-			if (ImGui::MenuItem(ICON_FA_CUBE "  Cube"))
-			{
-				//create_child_entity(entity, "Cube", NodeType::Cube);
-				m_scene->set_save_required(true);
-			}
-			if (ImGui::MenuItem(ICON_FA_LIGHTBULB "  Light"))
-			{
-				//create_child_entity(entity, "Light", NodeType::PointLight);
-				m_scene->set_save_required(true);
-			}
-			ImGui::EndMenu();
+		if (ImGui::MenuItem(ICON_FA_PLUS "  Create Child"))
+		{
+			m_show_create_panel = true;
 		}
 
 		ImGui::Separator();
 
-		if (ImGui::MenuItem(ICON_FA_COPY "  Copy Path")) {
+		if (ImGui::MenuItem(ICON_FA_COPY "  Copy Path"))
+		{
 			//copy_entity_path(entity);
 		}
 
-		if (ImGui::MenuItem(ICON_FA_MAGNIFYING_GLASS "  Find in Project")) {
-			//find_entity_in_project(entity);
+		if (ImGui::MenuItem(ICON_FA_MAGNIFYING_GLASS "  Find in Project"))
+		{
+			find_entity_in_project(entity);
 		}
 
 		ImGui::Separator();
 
-		// Component toggles
 		if (entity.has_component<Tag_Component>())
 		{
 			auto& vis = entity.get_component<Tag_Component>();
@@ -1000,7 +939,7 @@ namespace ag
 
 		if (ImGui::MenuItem(ICON_FA_GEAR "  Properties", "Alt+Enter"))
 		{
-			// Show properties panel
+			m_properties_entity = m_selected_entity;
 		}
 
 		ImGui::PopStyleVar();
@@ -1049,7 +988,6 @@ namespace ag
 		}
 	}
 
-	// Drawing Each Tool Bar
 	bool ScenePanel::draw_toolbar_button(const char* icon, const char* tooltip)
 	{
 		bool clicked = ImGui::Button(icon, ImVec2(30, 30));
@@ -1062,14 +1000,15 @@ namespace ag
 		return clicked;
 	}
 
-	void ScenePanel::push_entity_style(Entity entity, bool is_selected) {
-		// Default styles
+	void ScenePanel::push_entity_style(Entity entity, bool is_selected)
+	{
+
 		ImVec4 text_color = m_hierarchy_state.default_text_color;
 		ImVec4 bg_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 		float frame_rounding = 2.0f;
 
-		// Selected entity
-		if (is_selected) {
+		if (is_selected)
+		{
 			bg_color = m_hierarchy_state.selected_color;
 		}
 
@@ -1077,7 +1016,6 @@ namespace ag
 			!entity.get_component<Tag_Component>().visible) {
 			text_color = m_hierarchy_state.disabled_color;
 		}
-		// Locked entity
 		if (entity.has_component<Tag_Component>() &&
 			entity.get_component<Tag_Component>().locked)
 		{
@@ -1110,21 +1048,6 @@ namespace ag
 		case NodeType::Audio:           return ICON_FA_MUSIC;
 		default:                        return ICON_FA_SQUARE;
 		}
-	}
-
-	void ScenePanel::select_entity(Entity entity) {
-		m_selected_entity = entity;
-		m_move_flag = m_scale_flag = m_rotate_flag = false;
-
-		//// Handle tilemap specific logic
-		//if (m_selected_entity.has_component<Tag_Component>() &&
-		//	m_selected_entity.get_component<Tag_Component>().node_type == NodeType::TileMap) {
-		//	auto& props = m_selected_entity.get_component<TileMapNode::TileMapProp>();
-		//	props.display_ghost = true;
-		//}
-
-		// Notify selection change
-		//on_entity_selected(entity);
 	}
 
 	void ScenePanel::update_filter() {
@@ -1212,148 +1135,16 @@ namespace ag
 		transform = child_transform;
 	}
 
-
-
-
-
-	// Helper functions
-	std::string ScenePanel::categorize_node_type(NodeType type) {
-		switch (type) {
-		case NodeType::Rectangle:
-		case NodeType::Circle:
-		case NodeType::Sprite:
-		case NodeType::AnimatedSprite2D:
-		case NodeType::Text:
-			return "Primitives";
-
-		case NodeType::Button:
-		case NodeType::TextureButton:
-			return "UI";
-
-
-		case NodeType::Camera:
-		case NodeType::Scene2D:
-			return "Components";
-
-		default:
-			return "Other";
-		}
-	}
-
-	bool ScenePanel::should_show_category(const std::string& category, const CreatePanelState& state) {
-		if (!state.search_filter.empty()) return true;
-
-		if (category == "Primitives") return state.show_primitives;
-		if (category == "3D Objects") return state.show_3d_objects;
-		if (category == "Lights") return state.show_lights;
-		if (category == "UI") return state.show_ui;
-		if (category == "Empty") return true;
-		if (category == "Components") return true;
-		if (category == "Other") return true;
-
-		return true;
-	}
-
-	void ScenePanel::draw_object_button(NodeType type, const std::string& name, CreatePanelState& state) {
-		ImGui::PushID(static_cast<int>(type));
-
-		const bool is_selected = (state.selected_prefab == type);
-
-		ImVec4 button_color = is_selected ?
-			ImVec4(0.26f, 0.59f, 0.98f, 0.4f) :
-			ImVec4(0.2f, 0.2f, 0.2f, 0.3f);
-
-		ImGui::PushStyleColor(ImGuiCol_Button, button_color);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.6f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
-
-		// Draw button
-		ImVec2 button_size = state.icon_size;
-
-		std::string display_text = name;
-		ImVec2 text_size = ImGui::CalcTextSize(name.c_str());
-		const float max_text_width = button_size.x - 10.0f;
-		if (text_size.x > max_text_width)
+	void ScenePanel::find_entity_in_project(Entity entity)
+	{
+		if (entity)
 		{
-			float avg_char_width = text_size.x / display_text.length();
-			int max_chars = static_cast<int>(max_text_width / avg_char_width) - 3;
-			if (max_chars > 3)
-			{
-				display_text = display_text.substr(0, max_chars) + "...";
-				text_size = ImGui::CalcTextSize(display_text.c_str());
-			}
+			auto transform = Transform_Component::get_world_transform(entity);
+			ViewController::get_main_controller()->set_center(transform.position);
 		}
-
-		if (ImGui::Button(display_text.c_str(), button_size)) {
-			state.selected_prefab = type;
-		}
-
-		ImGui::PopStyleColor(3);
-
-
-		if (is_selected) {
-			ImDrawList* draw_list = ImGui::GetWindowDrawList();
-			ImVec2 rect_min = ImGui::GetItemRectMin();
-			ImVec2 rect_max = ImGui::GetItemRectMax();
-
-			draw_list->AddRect(rect_min, rect_max,
-				IM_COL32(100, 200, 255, 255),
-				4.0f, 0, 2.0f);
-		}
-
-
-		// Context menu
-		if (ImGui::BeginPopupContextItem()) {
-			if (ImGui::MenuItem("Select")) {
-				state.selected_prefab = type;
-			}
-			ImGui::Separator();
-			if (ImGui::MenuItem("Create Now")) {
-				create_selected_object(type);
-				m_show_create_panel = false;
-			}
-			ImGui::EndPopup();
-		}
-
-		// Tooltip
-		if (ImGui::IsItemHovered()) {
-			ImGui::BeginTooltip();
-			ImGui::Text("%s", name.c_str());
-			ImGui::TextDisabled("Click to select, Right-click for options");
-			ImGui::EndTooltip();
-		}
-
-		ImGui::PopID();
 	}
 
-	void ScenePanel::draw_object_list_item(NodeType type, const std::string& name, CreatePanelState& state) {
-		const bool is_selected = (state.selected_prefab == type);
 
-		ImGui::PushID(static_cast<int>(type));
-
-		// Selectable item
-		if (ImGui::Selectable(name.c_str(), is_selected)) {
-			state.selected_prefab = type;
-		}
-
-		// Context menu
-		if (ImGui::BeginPopupContextItem()) {
-			if (ImGui::MenuItem("Create")) {
-				create_selected_object(type);
-				m_show_create_panel = false;
-			}
-			ImGui::EndPopup();
-		}
-
-		// Drag and drop support
-		if (ImGui::BeginDragDropSource()) {
-			ImGui::SetDragDropPayload("NODE_TYPE", &type, sizeof(NodeType));
-			ImGui::Text("Create %s", name.c_str());
-			ImGui::EndDragDropSource();
-		}
-
-		ImGui::PopID();
-	}
 
 	void ScenePanel::create_selected_object(NodeType type)
 	{
@@ -1365,9 +1156,7 @@ namespace ag
 			return;
 		}
 
-		// Create the entity
 		Entity new_entity = m_scene->create_entity(it->second, type);
-		// Parent to selected entity if one is selected
 		if (m_selected_entity)
 		{
 			auto& selected_tag = m_selected_entity.get_component<Tag_Component>();
@@ -1376,39 +1165,20 @@ namespace ag
 			selected_tag.children.push_back(new_entity);
 		}
 
-		// Select the new entity
 		m_selected_entity = new_entity;
 		m_show_create_panel = false;
 	}
-
-	bool ScenePanel::string_contains_case_insensitive(const std::string& str, const std::string& substr) {
-		if (substr.empty()) return true;
-
-		auto it = std::search(
-			str.begin(), str.end(),
-			substr.begin(), substr.end(),
-			[](char ch1, char ch2) {
-				return std::tolower(ch1) == std::tolower(ch2);
-			}
-		);
-		return it != str.end();
-	}
-
-
-
-
-
 
 
 	void ScenePanel::draw_properties_panel()
 	{
 		ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoScrollbar);
-		if (m_selected_entity)
+		if (m_properties_entity)
 		{
-			const auto& tag = m_selected_entity.get_component<Tag_Component>();
+			const auto& tag = m_properties_entity.get_component<Tag_Component>();
 			auto it = NodeFactory::properties_map.find(tag.node_type);
 			if (it != NodeFactory::properties_map.end())
-				it->second(m_selected_entity);
+				it->second(m_properties_entity);
 		}
 		ImGui::End();
 	}
@@ -1457,7 +1227,7 @@ namespace ag
 				rect.mode = RenderMode::Screen;
 				rect.fill_color = Color(80, 180, 255, 40);
 				rect.border_color = Color(30, 140, 230, 220);
-				rect.border_thickness = -3.0f;
+				rect.border_thickness = -2.0f;
 				Renderer2D::draw_rectangle(rect, transform, entity_id);
 				break;
 			}
@@ -1465,10 +1235,10 @@ namespace ag
 			{
 				auto circle_size = Math::world_size_to_screen_size({ shapes.radius * 2,shapes.radius * 2 }, camera.get_size(), viewport_size);
 				circle.size = circle_size;
-				rect.mode = RenderMode::Screen;
+				circle.mode = RenderMode::Screen;
 				circle.fill_color = Color(80, 180, 255, 40);
 				circle.border_color = Color(30, 140, 230, 220);
-				circle.border_thickness = -3.0f;
+				circle.border_thickness = -2.0f;
 				Renderer2D::draw_circle(circle, transform, entity_id);
 				break;
 			}
@@ -1995,10 +1765,19 @@ namespace ag
 		}
 	}
 
+
+
 	void ScenePanel::tile_map_draw()
 	{
-		if (!m_selected_entity.has_component<Tile_Component>() || !m_selected_entity.has_component<TileSet_Component>())
+		bool has_tileset = m_selected_entity.has_component<Tile_Component>() && m_selected_entity.has_component<TileSet_Component>();
+		bool has_solidset = m_selected_entity.has_component<Tile_Component>() && m_selected_entity.has_component<SolidSet_Component>();
+
+		if (!has_tileset && !has_solidset)
+		{
 			return;
+		}
+
+		bool painting_solid = has_solidset && !has_tileset;
 
 		static bool dragging = false;
 		static vec2i start_tile;
@@ -2008,7 +1787,14 @@ namespace ag
 		bool is_right = Mouse::is_mouse_pressed(Button::ButtonRight);
 
 
-		auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
+		//auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
+
+		TileSet_Component* tile_set = nullptr;
+		SolidSet_Component* solid_set = nullptr;
+		if (painting_solid)
+			solid_set = &m_selected_entity.get_component<SolidSet_Component>();
+		else
+			tile_set = &m_selected_entity.get_component<TileSet_Component>();
 
 		if ((!is_left && !is_right) || (is_left && is_right))
 		{
@@ -2017,7 +1803,10 @@ namespace ag
 			{
 				for (const auto& [position, id] : temp_tiles)
 				{
-					paint_eraser_tiles_helper(tile_set, position);
+					if (painting_solid)
+						solid_paint_erase_helper(*solid_set, position);
+					else
+						paint_eraser_tiles_helper(*tile_set, position);
 				}
 			}
 			dragging = false;
@@ -2094,7 +1883,10 @@ namespace ag
 		case ag::TileMap_Paint_Settings::None:
 		{
 			{
-				paint_eraser_tiles_helper(tile_set, current_tile);
+				if (painting_solid)
+					solid_paint_erase_helper(*solid_set, current_tile);
+				else
+					paint_eraser_tiles_helper(*tile_set, current_tile);
 			}
 			break;
 		}
@@ -2105,7 +1897,10 @@ namespace ag
 				if (previous_tile.x == std::numeric_limits<int>::max())
 				{
 					previous_tile = current_tile;
-					paint_eraser_tiles_helper(tile_set, current_tile);
+					if (painting_solid)
+						solid_paint_erase_helper(*solid_set, current_tile);
+					else
+						paint_eraser_tiles_helper(*tile_set, current_tile);
 					break;
 				}
 				float dx = current_tile.x - previous_tile.x;
@@ -2118,11 +1913,17 @@ namespace ag
 					float t = (float)i / steps;
 					int x = previous_tile.x + dx * t;
 					int y = previous_tile.y + dy * t;
-					paint_eraser_tiles_helper(tile_set, { x, y });
+					if (painting_solid)
+						solid_paint_erase_helper(*solid_set, { x, y });
+					else
+						paint_eraser_tiles_helper(*tile_set, { x, y });
 				}
 				if (steps == 0)
 				{
-					paint_eraser_tiles_helper(tile_set, current_tile);
+					if (painting_solid)
+						solid_paint_erase_helper(*solid_set, current_tile);
+					else
+						paint_eraser_tiles_helper(*tile_set, current_tile);
 				}
 			}
 			break;
@@ -2142,6 +1943,7 @@ namespace ag
 					int x = start_tile.x + dx * t;
 					int y = start_tile.y + dy * t;
 					paint_eraser_tiles_helper({ x, y });
+
 				}
 				if (steps == 0)
 				{
@@ -2210,6 +2012,7 @@ namespace ag
 		}
 		previous_tile = current_tile;
 	}
+
 	void ScenePanel::paint_eraser_tiles_helper(const vec2i& pos)
 	{
 		switch (m_settings)
@@ -2228,6 +2031,7 @@ namespace ag
 			return;
 		}
 	}
+
 	void ScenePanel::paint_eraser_tiles_helper(TileSet_Component& tile_set, const vec2i& pos)
 	{
 		switch (m_settings)
@@ -2248,6 +2052,28 @@ namespace ag
 			return;
 		}
 	}
+
+	void ScenePanel::solid_paint_erase_helper(SolidSet_Component& solid_set, const vec2i& position)
+	{
+		switch (m_settings)
+		{
+		case ag::TileMap_Settings::Paint:
+		{
+			solid_set.placed_tiles[position] = true;
+			m_scene->set_save_required();
+			return;
+		}
+		case ag::TileMap_Settings::Eraser:
+		{
+			solid_set.placed_tiles.erase(position);
+			m_scene->set_save_required();
+			return;
+		}
+		default:
+			return;
+		}
+	}
+
 	void ScenePanel::paint_tiles(TileSet_Component& tile_set, const vec2i& pos)
 	{
 		if (!m_use_auto_tile)
@@ -2440,13 +2266,26 @@ namespace ag
 			if (has_selected_entity())
 			{
 				auto type = NodeHelper::get_nodetype(m_selected_entity);
-				if (type == NodeType::TileMap && m_selected_entity.has_component<Texture_Component>() &&
-					m_selected_entity.has_component<TileSet_Component>() && m_selected_entity.has_component<Tile_Component>())
+				if (type == NodeType::TileMap)
 				{
-					auto& tile_set = m_selected_entity.get_component<TileSet_Component>();
+					bool has_tileset = m_selected_entity.has_component<Tile_Component>() && m_selected_entity.has_component<TileSet_Component>() && m_selected_entity.has_component<Texture_Component>();
+					bool has_solidset = m_selected_entity.has_component<Tile_Component>() && m_selected_entity.has_component<SolidSet_Component>();
+
+					if (!has_tileset && !has_solidset)
+						return;
+
+					bool painting_solid = has_solidset && !has_tileset;
+
+					TileSet_Component* tile_set;
+					SolidSet_Component* solid_set;
+					if (painting_solid)
+						solid_set = &m_selected_entity.get_component<SolidSet_Component>();
+					else
+						tile_set = &m_selected_entity.get_component<TileSet_Component>();
+
 					auto& props = m_selected_entity.get_component<Tile_Component>();
 
-					if (!m_use_auto_tile)
+					if (!m_use_auto_tile && !painting_solid)
 					{
 						Transform_Component trans;
 						Sprite sprite;
@@ -2456,8 +2295,8 @@ namespace ag
 						{
 							for (const auto& [position, id] : temp_tiles)
 							{
-								auto tex_it = tile_set.tile_definitions.find(id);
-								if (tex_it == tile_set.tile_definitions.end())
+								auto tex_it = tile_set->tile_definitions.find(id);
+								if (tex_it == tile_set->tile_definitions.end())
 								{
 									continue;
 								}
@@ -2471,8 +2310,8 @@ namespace ag
 						}
 
 
-						auto def = tile_set.tile_definitions.find(m_tile_id);
-						if (def != tile_set.tile_definitions.end())
+						auto def = tile_set->tile_definitions.find(m_tile_id);
+						if (def != tile_set->tile_definitions.end())
 						{
 							auto texture_rect = def->second.texture_rect;
 							sprite.texture_rect = texture_rect;
@@ -2491,21 +2330,14 @@ namespace ag
 					}
 					else
 					{
+						// Draw Temp Tiles
 						Transform_Component trans;
 						Rectangle rect;
 						rect.size = props.size;
 						rect.fill_color.a = 200;
-						Renderer2D::set_texture(m_selected_entity.get_component<Texture_Component>().texture);
 						{
 							for (const auto& [position, id] : temp_tiles)
 							{
-								auto tex_it = tile_set.tile_definitions.find(id);
-								if (tex_it == tile_set.tile_definitions.end())
-								{
-									continue;
-								}
-								const Tile_Defination& def = tex_it->second;
-
 								trans.position = (position * props.size) + props.size / 2 + props.offset;
 
 								Renderer2D::draw_rectangle(rect, trans);
@@ -2513,21 +2345,14 @@ namespace ag
 						}
 
 
-						auto def = tile_set.tile_definitions.find(m_tile_id);
-						if (def != tile_set.tile_definitions.end())
-						{
-							Transform_Component trans;
-							vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
+						vec2f current_mouse = EditorLayer::get().get_viewport_mouse_position();
 
-							vec2i current_tile = {
-								(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
-								(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
-							};
-
-							trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
-
-							Renderer2D::draw_rectangle(rect, trans);
-						}
+						vec2i current_tile = {
+							(int)std::floor((current_mouse.x - props.offset.x) / props.size.x),
+							(int)std::floor((current_mouse.y - props.offset.y) / props.size.y)
+						};
+						trans.position = (current_tile * props.size) + props.size / 2 + props.offset;
+						Renderer2D::draw_rectangle(rect, trans);
 					}
 				}
 			}

@@ -1,0 +1,130 @@
+#pragma once
+#include <Project/GamePacker.hpp>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <memory>
+
+// nlohmann json — adjust include if yours is different
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
+namespace ag
+{
+  // ==========================================================
+  // AssetManager
+  // Single place to read ANY file — from pak or from disk.
+  // The game always calls AssetManager. It doesn't need to
+  // know whether it's running packed or in development.
+  // ==========================================================
+  class AssetManager
+  {
+  private:
+    static AssetManager& instance()
+    {
+      static AssetManager s_instance;
+      return s_instance;
+    }
+
+    std::unique_ptr<PakLoader> m_pak;
+    std::string                m_base_path; // used when running from disk
+    bool                       m_using_pak = false;
+
+  public:
+    // -------------------------------------------------------
+    // Initialize — call this once at app startup
+    //
+    // If a .pak file exists next to the exe, use it.
+    // Otherwise fall back to disk (development mode).
+    // -------------------------------------------------------
+    static void init(const std::string& pak_path, const std::string& fallback_base_path)
+    {
+      auto& mgr = instance();
+
+      // Try to load the pak
+      mgr.m_pak = std::make_unique<PakLoader>();
+      if (mgr.m_pak->load(pak_path))
+      {
+        mgr.m_using_pak = true;
+        std::cout << "[AssetManager] Running in PACKED mode." << std::endl;
+      }
+      else
+      {
+        mgr.m_pak.reset();
+        mgr.m_using_pak = false;
+        mgr.m_base_path = fallback_base_path;
+        std::cout << "[AssetManager] Running in DEVELOPMENT mode. Base: " << fallback_base_path << std::endl;
+      }
+    }
+
+    static bool is_packed() { return instance().m_using_pak; }
+
+    // -------------------------------------------------------
+    // Read raw bytes
+    // -------------------------------------------------------
+    static std::vector<uint8_t> read_bytes(const std::string& path)
+    {
+      auto& mgr = instance();
+
+      if (mgr.m_using_pak)
+      {
+        return mgr.m_pak->read(path);
+      }
+
+      // Disk fallback
+      std::ifstream f(path, std::ios::binary | std::ios::ate);
+      if (!f.is_open()) return {};
+
+      size_t size = f.tellg();
+      f.seekg(0);
+      std::vector<uint8_t> buf(size);
+      f.read((char*)buf.data(), size);
+      return buf;
+    }
+
+    // -------------------------------------------------------
+    // Read as string (for JSON files, Lua scripts, etc.)
+    // -------------------------------------------------------
+    static std::string read_string(const std::string& path)
+    {
+      auto data = read_bytes(path);
+      return std::string(data.begin(), data.end());
+    }
+
+    // -------------------------------------------------------
+    // Read and parse JSON
+    // -------------------------------------------------------
+    static json read_json(const std::string& path)
+    {
+      std::string content = read_string(path);
+      if (content.empty()) return {};
+      return json::parse(content);
+    }
+
+    // -------------------------------------------------------
+    // Check if file exists (in pak or on disk)
+    // -------------------------------------------------------
+    static bool exists(const std::string& path)
+    {
+      auto& mgr = instance();
+
+      if (mgr.m_using_pak)
+        return mgr.m_pak->exists(path);
+
+      std::string full = mgr.m_base_path + "/" + path;
+      std::ifstream f(full);
+      return f.good();
+    }
+
+    // -------------------------------------------------------
+    // List all files (only works in packed mode)
+    // -------------------------------------------------------
+    static std::vector<std::string> list_files()
+    {
+      auto& mgr = instance();
+      if (mgr.m_using_pak)
+        return mgr.m_pak->list_files();
+      return {};
+    }
+  };
+}

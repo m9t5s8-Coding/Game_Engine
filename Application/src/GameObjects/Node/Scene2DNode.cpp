@@ -20,7 +20,7 @@ namespace ag
 	{
 		Script_Component::clone_entity(original, clone);
 		Transform_Component::clone_entity(original, clone);
-
+		Tween_Component::clone_entity(original, clone);
 	}
 
 	json Scene2DNode::save_json(Entity entity)
@@ -29,7 +29,7 @@ namespace ag
 
 		NodeHelper::save_component<Transform_Component>(entity, j);
 		NodeHelper::save_component<Script_Component>(entity, j);
-
+		NodeHelper::save_component<Tween_Component>(entity, j);
 		return j;
 	}
 
@@ -37,11 +37,13 @@ namespace ag
 	{
 		NodeHelper::load_component<Transform_Component>(entity, j);
 		NodeHelper::load_component<Script_Component>(entity, j);
+		NodeHelper::load_component<Tween_Component>(entity, j);
 	}
 
 	void Scene2DNode::update(Entity entity, TimeStamp ts)
 	{
 		Script_Component::update(entity, ts);
+		Tween_Component::update(entity, ts);
 	}
 
 	void Scene2DNode::draw(Entity entity)

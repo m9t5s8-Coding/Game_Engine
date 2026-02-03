@@ -43,9 +43,10 @@ namespace ag
 	{
 		std::string label;
 		bool enabled = true;
+		bool active = false;
 		vec2f size;
 	};
-
+	struct Script_Component;
 	class UI
 	{
 	public:
@@ -62,7 +63,16 @@ namespace ag
 		static const char* get_file_icon(const std::string& extension);
 		static bool is_image(const std::filesystem::path& path);
 		static void draw_folder_node(const std::filesystem::path& directory, int depth = 0);
+		
+		
 		static void draw_script_selector(Entity entity);
+		static void draw_loaded_script_panel(Entity entity, Script_Component& props);
+		static void draw_script_drop_zone(Entity entity, Script_Component& props);
+		static void draw_script_actions(Entity entity, Script_Component& props, bool has_script);
+		static void open_in_vscode(const std::string& script_path);
+		static void show_in_explorer(const std::string& file_path);
+		static void script_drag_drop(std::string& path);
+
 		static bool draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile);
 
 		static void create_new_scene();

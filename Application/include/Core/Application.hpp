@@ -50,6 +50,7 @@ namespace ag
 
     inline static void set_mouse_position(const vec2f& mouse_pos) { s_mouse_position = mouse_pos; }
     inline static vec2f get_mouse_position() { return s_mouse_position; }
+    static std::string get_exe_directory();
 
     ImGuiLayer *get_imgui_layer() { return m_imgui_layer; }
 
@@ -73,7 +74,7 @@ namespace ag
     
     bool m_minimized = false;
 
-    ImGuiLayer *m_imgui_layer;
+    ImGuiLayer *m_imgui_layer = nullptr;
     LayerStack m_layerstack;
 
     float m_last_frametime = 0.0f;
