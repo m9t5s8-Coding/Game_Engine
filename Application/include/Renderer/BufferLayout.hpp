@@ -43,11 +43,11 @@ namespace ag
 
   struct BufferElement
   {
-    std::string name;
+    std::string name = "";
     ShaderDataType type;
     uint32_t offset;
     uint32_t size;
-    bool normalized;
+    bool normalized = false;
 
     BufferElement() {}
 

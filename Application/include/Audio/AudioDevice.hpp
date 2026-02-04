@@ -1,21 +1,16 @@
 #pragma once
 
-#include<AL/al.h>
-#include <AL/alc.h>
-
 namespace ag
 {
 	class Audio_Device
 	{
 	public:
-		Audio_Device();
-		~Audio_Device();
+		virtual ~Audio_Device() {};
 
-		bool init();
-		void shutdown();
+		virtual bool init() = 0;
+		virtual void shutdown() = 0;
 
-	private:
-		ALCdevice* device = nullptr;
-		ALCcontext* context = nullptr;
+		static Audio_Device* create();
+
 	};
 }

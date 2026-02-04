@@ -13,7 +13,6 @@ namespace ag
 	{
 		std::string project_path = path;
 		Helper::normalize_path(project_path);
-		AERO_CORE_INFO("Project Path:{0}", project_path);
 		auto project = AG_cref<Project>();
 
 		project->set_directory(project_path);
@@ -50,8 +49,6 @@ namespace ag
       }
 
      
-
-      // Load project settings
       Helper::load_json(j["Project"], "Name", project->m_name);
       Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
       Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);

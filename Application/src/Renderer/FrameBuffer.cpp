@@ -1,6 +1,5 @@
 #include <Apch.hpp>
 #include <Renderer/FrameBuffer.hpp>
-#include <glad/glad.h>
 #include <Renderer/Renderer.hpp>
 #include <Platform/OpenGL/OpenGLFrameBuffer.hpp>
 

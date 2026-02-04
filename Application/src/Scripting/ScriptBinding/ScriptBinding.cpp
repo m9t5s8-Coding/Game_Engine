@@ -635,48 +635,46 @@ namespace ag
 
 
 
-	// AUDIO FUNCTIONS REGISTRATION
 	void ScriptBinding::register_audio_functions()
 	{
 		auto& lua = ScriptManager::get_lua();
 
-		// Playback controls
 		lua.set_function("play_audio", [](Entity& entity) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.play();
+				entity.get_component<Audio_Component>().source->play();
 			}
 			});
 
 		lua.set_function("pause_audio", [](Entity& entity) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.pause();
+				entity.get_component<Audio_Component>().source->pause();
 			}
 			});
 
 		lua.set_function("stop_audio", [](Entity& entity) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.stop();
+				entity.get_component<Audio_Component>().source->stop();
 			}
 			});
 
 
 		lua.set_function("is_playing_audio", [](Entity& entity) -> bool {
 			if (detail::has_component<Audio_Component>(entity)) {
-				return entity.get_component<Audio_Component>().source.is_playing();
+				return entity.get_component<Audio_Component>().source->is_playing();
 			}
 			return false;
 			});
 
 		lua.set_function("is_paused_audio", [](Entity& entity) -> bool {
 			if (detail::has_component<Audio_Component>(entity)) {
-				return entity.get_component<Audio_Component>().source.is_paused();
+				return entity.get_component<Audio_Component>().source->is_paused();
 			}
 			return false;
 			});
 
 		lua.set_function("is_loop_audio", [](Entity& entity) -> bool {
 			if (detail::has_component<Audio_Component>(entity)) {
-				return entity.get_component<Audio_Component>().source.is_looping();
+				return entity.get_component<Audio_Component>().source->is_looping();
 			}
 			return false;
 			});
@@ -684,39 +682,38 @@ namespace ag
 
 		lua.set_function("set_loop_audio", [](Entity& entity, bool loop) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.set_loop(loop);
+				entity.get_component<Audio_Component>().source->set_loop(loop);
 			}
 			});
 
 		lua.set_function("set_pitch_audio", [](Entity& entity, float pitch) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.set_pitch(pitch);
+				entity.get_component<Audio_Component>().source->set_pitch(pitch);
 			}
 			});
 
 		lua.set_function("get_pitch_audio", [](Entity& entity) -> float {
 			if (detail::has_component<Audio_Component>(entity)) {
-				return entity.get_component<Audio_Component>().source.get_pitch();
+				return entity.get_component<Audio_Component>().source->get_pitch();
 			}
 			return 1.0f;
 			});
 
 		lua.set_function("set_volume_audio", [](Entity& entity, float volume) {
 			if (detail::has_component<Audio_Component>(entity)) {
-				entity.get_component<Audio_Component>().source.set_volume(volume);
+				entity.get_component<Audio_Component>().source->set_volume(volume);
 			}
 			});
 
 		lua.set_function("get_volume_audio", [](Entity& entity) -> float {
 			if (detail::has_component<Audio_Component>(entity)) {
-				return entity.get_component<Audio_Component>().source.get_volume();
+				return entity.get_component<Audio_Component>().source->get_volume();
 			}
 			return 1.0f;
 			});
 	}
 
 
-	// PHYSICS FUNCTIONS - EXTENDED BOX2D BINDINGS
 	void ScriptBinding::register_physics()
 	{
 		auto& lua = ScriptManager::get_lua();
@@ -808,6 +805,14 @@ namespace ag
 				world.SetGravity(gravity.to_b2vec2());
 			});
 
+		lua.set_function("set_world_gravity_scale", [](float scale)
+			{
+				auto& world = Scene::get_active_scene()->get_world();
+				vec2f gravity = world.GetGravity();
+				gravity *= scale;
+				world.SetGravity(gravity.to_b2vec2());
+			});
+
 		lua.set_function("set_gravity_scale", [](Entity& entity, float scale)
 			{
 				if (entity.has_component<PhysicsBody_Component>())
@@ -850,12 +855,12 @@ namespace ag
 
 
 
-			lua.set_function("get_mass", [](Entity& entity) -> float {
+		lua.set_function("get_mass", [](Entity& entity) -> float {
 			if (!detail::has_component<PhysicsBody_Component>(entity)) return 0.0f;
 			auto& body = entity.get_component<PhysicsBody_Component>().body;
 			if (!body) return 0.0f;
 			return body->GetMass();
-				});
+			});
 
 		lua.set_function("get_inertia", [](Entity& entity) -> float {
 			if (!detail::has_component<PhysicsBody_Component>(entity)) return 0.0f;
@@ -864,26 +869,30 @@ namespace ag
 			return body->GetInertia();
 			});
 
-		lua.set_function("get_center_of_mass", [](Entity& entity) -> vec2f {
-			if (!detail::has_component<PhysicsBody_Component>(entity)) return vec2f(0, 0);
-			auto& body = entity.get_component<PhysicsBody_Component>().body;
-			if (!body) return vec2f(0, 0);
-			vec2f com = body->GetWorldCenter();
-			Math::meters_to_pixels(com);
-			return com;
-			});
-
-		lua.set_function("get_local_center_of_mass", [](Entity& entity) -> vec2f {
-			if (!detail::has_component<PhysicsBody_Component>(entity)) return vec2f(0, 0);
-			auto& body = entity.get_component<PhysicsBody_Component>().body;
-			if (!body) return vec2f(0, 0);
-			vec2f com = body->GetLocalCenter();
-			Math::meters_to_pixels(com);
-			return com;
+		lua.set_function("get_center_of_mass", [](Entity& entity) -> vec2f
+			{
+				if (!detail::has_component<PhysicsBody_Component>(entity)) return vec2f(0, 0);
+				auto& body = entity.get_component<PhysicsBody_Component>().body;
+				if (!body) return vec2f(0, 0);
+				vec2f com = body->GetWorldCenter();
+				Math::meters_to_pixels(com);
+				return com;
 			});
 
 
-		lua.set_function("get_linear_damping", [](Entity& entity) -> float {
+		lua.set_function("get_local_center_of_mass", [](Entity& entity) -> vec2f
+			{
+				if (!detail::has_component<PhysicsBody_Component>(entity)) return vec2f(0, 0);
+				auto& body = entity.get_component<PhysicsBody_Component>().body;
+				if (!body) return vec2f(0, 0);
+				vec2f com = body->GetLocalCenter();
+				Math::meters_to_pixels(com);
+				return com;
+			});
+
+
+		lua.set_function("get_linear_damping", [](Entity& entity) -> float
+			{
 			if (!detail::has_component<PhysicsBody_Component>(entity)) return 0.0f;
 			auto& body = entity.get_component<PhysicsBody_Component>().body;
 			if (!body) return 0.0f;

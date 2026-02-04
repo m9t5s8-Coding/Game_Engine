@@ -1,21 +1,21 @@
-#include <Audio/AudioDevice.hpp>
-#include <Core/Log.hpp>
-#include<Audio/AudioManager.hpp>
+#ifdef PLATFORM_WINDOWS
 
+#include <Platform/OpenAL/OpenALAudioDevice.hpp>
+#include <Audio/AudioManager.hpp>
 
 namespace ag
 {
-	Audio_Device::Audio_Device()
+	OpenALAudioDevice::OpenALAudioDevice()
 	{
-		
+
 	}
 
-	Audio_Device::~Audio_Device()
+	OpenALAudioDevice::~OpenALAudioDevice()
 	{
-		shutdown();
+
 	}
 
-	bool Audio_Device::init()
+	bool OpenALAudioDevice::init()
 	{
 		device = alcOpenDevice(nullptr);
 		if (!device)
@@ -41,7 +41,7 @@ namespace ag
 		return true;
 	}
 
-	void Audio_Device::shutdown()
+	void OpenALAudioDevice::shutdown()
 	{
 		AudioManager::clear();
 		if (context)
@@ -59,4 +59,12 @@ namespace ag
 
 		AERO_CORE_INFO("Audio Shutdown");
 	}
+
+	Audio_Device* Audio_Device::create()
+	{
+		return new OpenALAudioDevice();
+	}
+
 }
+
+#endif

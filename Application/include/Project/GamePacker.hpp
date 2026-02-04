@@ -9,25 +9,7 @@
 
 namespace ag
 {
-  // ============================================================
-  // PAK FILE FORMAT
-  // ============================================================
-  // [Header]
-  //   uint32_t  magic          -> 0x41455241 ("AERA")
-  //   uint32_t  version        -> 1
-  //   uint32_t  entryCount
-  //   uint64_t  dataOffset     -> byte position where file data starts
-  //
-  // [Entry Table]  x entryCount
-  //   uint32_t  pathLen
-  //   char[]    path           -> relative path (forward slashes)
-  //   uint64_t  offset         -> offset from dataOffset
-  //   uint64_t  size           -> size in bytes
-  //
-  // [File Data]
-  //   raw bytes of every file, one after another
-  // ============================================================
-
+ 
   static constexpr uint32_t PAK_MAGIC = 0x41455241;
   static constexpr uint32_t PAK_VERSION = 1;
 
@@ -37,9 +19,7 @@ namespace ag
     uint64_t size;
   };
 
-  // ============================================================
-  // PACKER — runs at build/export time
-  // ============================================================
+ 
   class GamePacker
   {
   public:
@@ -165,9 +145,7 @@ namespace ag
     }
   };
 
-  // ============================================================
-  // RUNTIME PAK LOADER — included in the game exe
-  // ============================================================
+ 
   class PakLoader
   {
   private:
@@ -215,7 +193,7 @@ namespace ag
       return true;
     }
 
-    // Read a file's raw bytes from the pak
+   
     std::vector<uint8_t> read(const std::string& path)
     {
       auto it = m_index.find(path);
@@ -228,7 +206,7 @@ namespace ag
       return buf;
     }
 
-    // Read as string (for JSON, Lua scripts, etc.)
+   
     std::string read_string(const std::string& path)
     {
       auto data = read(path);

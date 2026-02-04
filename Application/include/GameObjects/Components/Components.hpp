@@ -923,7 +923,7 @@ namespace ag
 			case ag::Button_Visual_State::Disabled:
 				return "Disabled";
 			default:
-				break;
+				return "Normal";
 			}
 		}
 
@@ -1031,7 +1031,7 @@ namespace ag
 	struct Audio_Component : Base_Component<Audio_Component>
 	{
 		AG_uint audio_buffer = 0;
-		AudioSource source;
+		AG_scope<AudioSource> source;
 		std::string path;
 
 		static json save_json(Entity entity);

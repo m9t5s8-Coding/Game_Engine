@@ -24,6 +24,7 @@ namespace ag
     Key_Released,
     Key_Typed,
 
+    // TextInput Event
     Text_Input,
 
     // Mouse Event

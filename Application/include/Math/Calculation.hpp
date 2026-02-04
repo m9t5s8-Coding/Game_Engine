@@ -45,25 +45,29 @@ namespace ag::Math
     return std::sqrt(dx * dx + dy * dy);
   }
 
+
+  //Mid Point Calculation
   template <typename T>
   inline vec2f mid_point(const vec2<T>& first, const vec2<T>& second)
   {
     return vec2f((first + second) / 2);
   }
 
+  //Slope Calculation
   template <typename T>
   inline float slope(const vec2<T>& first, const vec2<T>& second)
   {
     return static_cast<float>((second.x - first.x) / (second.y - first.y));
   }
 
-
+  // Angle Between Points
   inline float angle_betn_points(const vec2f& first, const vec2f& second)
   {
     float radians = std::atan2(second.y - first.y, second.x - first.x);
     return to_degree(radians);
   }
 
+  // Angle Between Three Points
   inline float angle_betn_3points(const vec2f& a, const vec2f& b, const vec2f& c)
   {
     vec2f ba = { a.x - b.x, a.y - b.y };
@@ -87,6 +91,8 @@ namespace ag::Math
     return world;
   }
 
+
+  // Converting the world position to screen position
   inline vec2f world_to_screen(const vec2f& world, const float_rect& window_rect, const vec2f &size)
   {
     vec2f view_size = window_rect.size;
@@ -98,6 +104,8 @@ namespace ag::Math
     return screen;
   }
 
+
+  // Converting the world size to screen size
   inline vec2f world_size_to_screen_size(const vec2f& world_size, const vec2f& view_size, const vec2f& size)
   {
     return {
@@ -106,6 +114,8 @@ namespace ag::Math
     };
   }
 
+
+  // Converting the screen size to the world size
   inline vec2f screen_size_to_world_size( const vec2f& screen_size, const vec2f& view_size, const vec2f& window_size)
   {
     return {
@@ -114,6 +124,8 @@ namespace ag::Math
     };
   }
 
+
+  // Getting the Direction
   inline Direction get_direction(const vec2f& a, const vec2f& b)
   {
     vec2f d = b - a;
@@ -132,16 +144,21 @@ namespace ag::Math
     return Direction::None;
   }
 
+  // Getting Float Rect
   inline float_rect get_float_rect(const vec2f& view_size, const vec2f& view_center)
   {
     return float_rect(view_center - view_size / 2, view_size);
   }
 
+
+  // Converting the Pixels to Meters for Box2d
   inline float pixels_to_meters(float pixels)
   {
     return pixels / PPM;
   }
 
+
+  // Converting teh meters to pixels for Box2d
   inline float meters_to_pixels(float meters)
   {
     return meters * PPM;
@@ -156,7 +173,9 @@ namespace ag::Math
     meters *= PPM;
   }
 
-  // Getting the view matrix on the basis of the size and center
+
+
+  // Getting View matrix
   inline glm::mat3 get_view_matrix(const vec2f& size, const vec2f& center, float rotation = 0)
   {
     float cos_r = cos(glm::radians(rotation));

@@ -1,35 +1,36 @@
 #pragma once
 
-#include<Audio/AudioBuffer.hpp>
-#include<Math/Math.hpp>
+#include <Audio/AudioBuffer.hpp>
+#include <Math/Math.hpp>
 
 namespace ag
 {
 	class AudioSource
 	{
 	public:
-		AudioSource();
-		~AudioSource();
+		virtual ~AudioSource() {};
 
-		void set_buffer(const AG_ref<AudioBuffer>& buffer) const;
-		void set_buffer(AG_uint buffer_id) const;
-		void set_pitch(float pitch) const;
-		float get_pitch() const;
-		void play() const;
-		void pause() const;
-		bool is_paused() const;
-		void stop() const;
-		bool is_playing() const;
-		void set_loop(bool loop);
-		bool is_looping() const { return m_looping; };
-		void set_volume(float volume) const;
-		float get_volume() const;
-		void set_position(const vec2f& position) const;
 
-		void delete_source();
+		virtual void set_buffer(const AG_ref<AudioBuffer>& buffer) const = 0;
+		virtual void set_buffer(AG_uint buffer_id) const = 0;
+		virtual void play() const = 0;
+		virtual void pause() const = 0;
+		virtual bool is_paused() const = 0;
+		virtual void stop() const = 0;
+		virtual bool is_playing() const = 0;
 
-	private:
-		AG_uint m_ID;
-		bool m_looping = false;
+
+		virtual void set_loop(bool loop) = 0;
+		virtual bool is_looping() const = 0;
+
+		virtual void set_volume(float volume) const = 0;
+		virtual float get_volume() const = 0;
+
+		virtual void set_pitch(float pitch) const {}
+		virtual float get_pitch() const { return 1.0f; }
+		virtual void set_position(const vec2f& position) const {}
+
+
+		static AG_scope<AudioSource> create();
 	};
 }

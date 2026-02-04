@@ -2542,9 +2542,9 @@ namespace ag
 
 		auto& props = entity.get_component<Audio_Component>();
 		Helper::save_json(j, "Path", props.path);
-		Helper::save_json(j, "Loop", props.source.is_looping());
-		Helper::save_json(j, "Pitch", props.source.get_pitch());
-		Helper::save_json(j, "Volume", props.source.get_volume());
+		Helper::save_json(j, "Loop", props.source->is_looping());
+		Helper::save_json(j, "Pitch", props.source->get_pitch());
+		Helper::save_json(j, "Volume", props.source->get_volume());
 		return j;
 	}
 	void Audio_Component::load_json(Entity entity, const json& j)
@@ -2567,10 +2567,11 @@ namespace ag
 			props.audio_buffer = NodeHelper::create_sound(props.path);
 			if (props.audio_buffer)
 			{
-				props.source.set_buffer(props.audio_buffer);
-				props.source.set_loop(loop);
-				props.source.set_pitch(pitch);
-				props.source.set_volume(volume);
+				props.source = AudioSource::create();
+				props.source->set_buffer(props.audio_buffer);
+				props.source->set_loop(loop);
+				props.source->set_pitch(pitch);
+				props.source->set_volume(volume);
 			}
 		}
 	}
@@ -2584,14 +2585,13 @@ namespace ag
 		comps.path = original_props.path;
 		comps.audio_buffer = original_props.audio_buffer;
 
-		comps.source = AudioSource();
-		comps.source.set_buffer(comps.audio_buffer);
+		comps.source = AudioSource::create();
+		comps.source->set_buffer(comps.audio_buffer);
 
-		clone.add_component<Audio_Component>(comps);
+		clone.add_component<Audio_Component>(std::move(comps));
 	}
 	void Audio_Component::delete_entity(Entity entity)
 	{
-		auto& source = entity.get_component<Audio_Component>().source;
-		source.delete_source();
 	}
+
 }

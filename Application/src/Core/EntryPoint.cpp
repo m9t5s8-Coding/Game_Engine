@@ -1,4 +1,6 @@
-﻿#include <Core/EntryPoint.hpp>
+﻿#ifndef PLATFORM_ANDROID
+
+#include <Core/EntryPoint.hpp>
 #include <Core/Log.hpp>
 #include <iostream>
 
@@ -12,3 +14,5 @@ int main(int args, char **argv)
 
   return 0;
 }
+
+#endif

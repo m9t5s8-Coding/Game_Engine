@@ -6,9 +6,7 @@
 #include <Renderer/Renderer.hpp>
 #include <Renderer/Renderer2D.hpp>
 #include <GameObjects/NodeFactory.hpp>
-
-#include <GLFW/glfw3.h>
-
+#include <Core/Time.hpp>
 namespace ag
 {
 
@@ -25,9 +23,10 @@ namespace ag
 	void Application::init(const WindowProps& props)
 	{
 		m_Window = std::unique_ptr<Window>(Window::create(props));
-		m_audio_device = AG_cscope<Audio_Device>();
+	
 		m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
 
+		m_audio_device = AG_scope<Audio_Device>(Audio_Device::create());
 		m_audio_device->init();
 
 		if (!Engine::is_runtime())
@@ -43,7 +42,7 @@ namespace ag
 		on_create();
 		while (m_running)
 		{
-			float time = static_cast<float>(glfwGetTime());
+			float time = static_cast<float>(Time::get_time());
 			TimeStamp timestamp = time - m_last_frametime;
 			delta_time = timestamp.get_seconds();
 			m_last_frametime = time;
@@ -74,6 +73,7 @@ namespace ag
 		m_layerstack.push_layer(layer);
 		layer->on_attach();
 	}
+	
 	void Application::pop_layer(Layer* layer)
 	{
 		m_layerstack.pop_layer(layer);
@@ -134,6 +134,7 @@ namespace ag
 
 	std::string Application::get_exe_directory()
 	{
+#ifdef PLATFORM_WINDOWS
 		char path[MAX_PATH];
 		DWORD len = GetModuleFileNameA(nullptr, path, MAX_PATH);
 		if (len == 0) return ".";
@@ -142,6 +143,7 @@ namespace ag
 		if (pos != std::string::npos)
 			return full.substr(0, pos);
 		return ".";
+#endif
 	}
 
 }

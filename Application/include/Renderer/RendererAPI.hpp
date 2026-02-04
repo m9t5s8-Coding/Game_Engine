@@ -12,7 +12,9 @@ namespace ag
     enum class API
     {
       None = 0,
-      OpenGL = 1
+      OpenGL = 1,
+      OpenGL_ES = 2,
+      Metal = 3,
     };
   public:
     virtual void set_clear_color(const Color& p_clear_color) = 0;

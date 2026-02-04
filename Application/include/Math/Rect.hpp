@@ -1,5 +1,4 @@
-#ifndef RECT_HPP
-#define RECT_HPP
+#pragma once
 
 #include <Math/vec2.hpp>
 #include <Math/vec4.hpp>
@@ -77,4 +76,3 @@ namespace ag
     using float_rect = rect<float>;
     using uint_rect = rect<uint32_t>;
 }
-#endif

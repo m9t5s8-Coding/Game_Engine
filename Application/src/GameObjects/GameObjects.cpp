@@ -130,7 +130,7 @@ namespace ag::NodeHelper
 		case ag::NodeType::CollisionShape:
 			return Node_Capability::Physics2D;
 		default:
-			break;
+			return Node_Capability::None;
 		}
 	}
 }

@@ -10,11 +10,13 @@
 
 namespace ag
 {
+	static constexpr float GRAVITY = 9.8 * 3.333f;
+
 	Scene::Scene()
 	{
 		if (Engine::is_runtime())
 		{
-			m_world = AG_cscope<b2World>(b2Vec2(0.0f, 9.8 * 3.333));
+			m_world = AG_cscope<b2World>(b2Vec2(0.0f, GRAVITY));
 			m_contact_listener = std::make_unique<GroundContactListener>();
 			m_world->SetContactListener(m_contact_listener.get());
 		}

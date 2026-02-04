@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Audio/AudioManager.hpp>
 
 
@@ -26,3 +28,5 @@ namespace ag
 		}
 	}
 }
+
+#endif

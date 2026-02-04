@@ -4,7 +4,11 @@
 #include <Math/Math.hpp>
 #include <algorithm>
 #include <string>
+
+#ifdef PLATFROM_WINDOWS
 #include <Windows.h>
+#endif
+
 using json = nlohmann::json;
 
 namespace ag::Helper
@@ -102,10 +106,12 @@ namespace ag::Helper
 
   inline void makefile_read_only(const std::string& path, bool read_only = true)
   {
+#ifdef PLATFORM_WINDOWS
     if(read_only)
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_READONLY);
     else
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
+#endif
   }
 
 

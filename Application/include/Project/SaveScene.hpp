@@ -13,6 +13,5 @@ namespace ag
 		static void save_scene(AG_ref<Scene>& scene, const std::string& path);
 		static AG_ref<Scene> load_scene(const std::string& path);
 
-		static AG_ref<Scene> load_scene_from_pak(const std::string& scene_path);
 	};
 }

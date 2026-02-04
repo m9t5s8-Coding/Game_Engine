@@ -812,7 +812,7 @@ namespace ag
 					{
 						comps.path = full_path;
 						comps.audio_buffer = NodeHelper::load_sound(comps.path);
-						comps.source.set_buffer(comps.audio_buffer);
+						comps.source->set_buffer(comps.audio_buffer);
 					}
 				}
 
@@ -823,7 +823,7 @@ namespace ag
 				{
 					comps.audio_buffer = 0;
 					comps.path.clear();
-					comps.source.set_buffer(0);
+					comps.source->set_buffer(0);
 				}
 
 				ImGui::EndGroup();
@@ -837,7 +837,7 @@ namespace ag
 
 					ImGui::BeginGroup();
 
-					bool isPlaying = comps.source.is_playing();
+					bool isPlaying = comps.source->is_playing();
 
 					button.label = isPlaying ? "Pause" : "Play";
 
@@ -847,11 +847,11 @@ namespace ag
 					{
 						if (isPlaying)
 						{
-							comps.source.pause();
+							comps.source->pause();
 						}
 						else
 						{
-							comps.source.play();
+							comps.source->play();
 						}
 					}
 
@@ -860,7 +860,7 @@ namespace ag
 					button.label = "Stop";
 					if (UI::draw_button(button))
 					{
-						comps.source.stop();
+						comps.source->stop();
 					}
 
 					ImGui::SameLine(0, 5.0f);
@@ -868,8 +868,8 @@ namespace ag
 					button.label = "Restart";
 					if (UI::draw_button(button))
 					{
-						comps.source.stop();
-						comps.source.play();
+						comps.source->stop();
+						comps.source->play();
 					}
 
 					ImGui::EndGroup();
@@ -877,23 +877,23 @@ namespace ag
 					ImGui::Spacing();
 
 					ImGui::PushItemWidth(-1);
-					float volume = comps.source.get_volume();
+					float volume = comps.source->get_volume();
 					if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f, "Volume: %.2f"))
 					{
-						comps.source.set_volume(volume);
+						comps.source->set_volume(volume);
 					}
 
-					float pitch = comps.source.get_pitch();
+					float pitch = comps.source->get_pitch();
 					if (ImGui::SliderFloat("##Pitch", &pitch, 0.5f, 2.0f, "Pitch: %.2f"))
 					{
-						comps.source.set_pitch(pitch);
+						comps.source->set_pitch(pitch);
 					}
 
 
-					bool loop = comps.source.is_looping();
+					bool loop = comps.source->is_looping();
 					if (UI::draw_bool("Loop", loop))
 					{
-						comps.source.set_loop(loop);
+						comps.source->set_loop(loop);
 					}
 
 					ImGui::PopItemWidth();
@@ -912,7 +912,7 @@ namespace ag
 						ImGui::Text("Playing");
 						ImGui::PopStyleColor();
 					}
-					else if (comps.source.is_paused())
+					else if (comps.source->is_paused())
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(220, 220, 50, 255));
 						ImGui::Text("Paused");
@@ -934,7 +934,7 @@ namespace ag
 						const char* dropped_path = (const char*)payload->Data;
 						comps.path = dropped_path;
 						comps.audio_buffer = NodeHelper::load_sound(comps.path);
-						comps.source.set_buffer(comps.audio_buffer);
+						comps.source->set_buffer(comps.audio_buffer);
 					}
 					ImGui::EndDragDropTarget();
 				}

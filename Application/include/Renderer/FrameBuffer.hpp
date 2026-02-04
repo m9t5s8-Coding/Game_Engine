@@ -32,7 +32,8 @@ namespace ag
 		FrameBuffer_Attachment_Specification() = default;
 
 		FrameBuffer_Attachment_Specification(std::initializer_list<FrameBuffer_Texture_Specification> attachment)
-			: attachments(attachment) {
+			: attachments(attachment)
+		{
 		}
 
 		std::vector<FrameBuffer_Texture_Specification> attachments;

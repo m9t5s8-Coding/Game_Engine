@@ -32,7 +32,7 @@ namespace ag
 		void set_viewport_size(const vec2f& viewport_size) { m_viewport_size = viewport_size; }
 
 		void on_resize(const vec2f& size);
-
+	
 		static void set_main_controller(const AG_ref<ViewController>& controller) { s_main_controller = controller; }
 		static AG_ref<ViewController> get_main_controller() { return s_main_controller; }
 

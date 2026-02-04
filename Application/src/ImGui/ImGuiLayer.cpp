@@ -2,11 +2,20 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#ifdef PLATFORM_WINDOWS
 #include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#elif defined(PLATFORM_ANDROID)
+#include <backends/imgui_impl_android.h>
+#endif
+
+#include <backends/imgui_impl_opengl3.h>
+
+
+
+
 
 #include <icons.h>
 
@@ -37,26 +46,31 @@ namespace ag
 
 		io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+#ifdef PLATFORM_WINDOWS // support only on desktop
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#endif
+
+
+#ifdef PLATFORM_ANDROID
+
+#else
 		ImFontConfig font_cfg;
 		font_cfg.PixelSnapH = true;
 		font_cfg.OversampleH = 1;
 		font_cfg.OversampleV = 1;
 
-		// Load main font FIRST
 		ImFont* main_font = io.Fonts->AddFontFromFileTTF(
 			"assets/fonts/OpenSans-Regular.ttf",
 			20.0f,
 			&font_cfg
 		);
 
-		// Font Awesome icon ranges - FIXED!
+		
 		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
-		// Merge icons into main font
 		ImFontConfig icon_cfg;
-		icon_cfg.MergeMode = true;  // IMPORTANT: Merge into previous font
+		icon_cfg.MergeMode = true;
 		icon_cfg.PixelSnapH = true;
 		icon_cfg.OversampleH = 1;
 		icon_cfg.OversampleV = 1;
@@ -69,7 +83,6 @@ namespace ag
 			icon_ranges
 		);
 
-		// Load large font
 		ImFont* large_font = io.Fonts->AddFontFromFileTTF(
 			"assets/fonts/OpenSans-Regular.ttf",
 			28.0f,
@@ -77,6 +90,8 @@ namespace ag
 		);
 
 		io.FontDefault = main_font;
+#endif
+
 
 		set_engine_theme();
 
@@ -88,22 +103,31 @@ namespace ag
 		}
 
 		Application& app = Application::get();
+
+#ifdef PLATFORM_WINDOWS
 		GLFWwindow* window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 450");
+#endif
 	}
 
 	void ImGuiLayer::on_detach()
 	{
+#ifdef  PLATFORM_WINDOWS
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
+#endif 
+
 		ImGui::DestroyContext();
 	}
 
 	void ImGuiLayer::begin()
 	{
+#ifdef  PLATFORM_WINDOWS
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
+#endif
+
 		ImGui::NewFrame();
 	}
 
@@ -116,17 +140,24 @@ namespace ag
 			(float)app.get_window().get_height()
 		);
 
-		// Rendering
 		ImGui::Render();
+
+#ifdef  PLATFORM_ANDROID
+		if (io.DisplaySize.x <= 0 || io.DisplaySize.y <= 0)
+			return;
+#endif
+
+
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		// Multi-viewport support
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
+#ifdef  PLATFORM_WINDOWS
 			GLFWwindow* backup_current_context = glfwGetCurrentContext();
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 			glfwMakeContextCurrent(backup_current_context);
+#endif
 		}
 	}
 

@@ -173,41 +173,5 @@ namespace ag
 		AERO_CORE_INFO("Scene Loaded! {0}  {1}", scene->get_name(), scene->get_directory());
 		return scene;
 	}
-
-
-	AG_ref<Scene> SaveScene::load_scene_from_pak(const std::string& scene_path)
-	{
-		std::string content = AssetManager::read_string(scene_path);
-		if (content.empty())
-		{
-			AERO_CORE_ERROR("Failed to load scene from pak: {0}", scene_path);
-			return nullptr;
-		}
-
-		json scene_json = json::parse(content);
-
-		// Create the scene the same way your load_scene does,
-		// but pass a flag so that when it loads textures/scripts
-		// it uses AssetManager instead of disk.
-		//
-		// The key point: anywhere your engine does:
-		//     std::ifstream file(some_path);
-		// in the asset/texture/script loading pipeline,
-		// you replace it with:
-		//     auto data = AssetManager::read_bytes(some_path);
-		//
-		// This is usually in:
-		//   - Texture loading
-		//   - Script (Lua) loading
-		//   - Audio loading
-		//   - Font loading
-
-		auto scene = std::make_shared<Scene>();
-		// ... deserialize scene_json into the scene exactly like load_scene does ...
-		// (copy that logic, but use AssetManager for any sub-asset reads)
-
-		return scene;
-	}
-
 }
 

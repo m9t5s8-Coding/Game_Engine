@@ -1,11 +1,23 @@
 .vs
 .vscode
 .idea
+.gradle
 
 
 /out/
+/app/
+/gradle/
+/build/
 /cmake-build-debug/
 
 
+build.gradle
+gradle.properties
+gradlew
+gradlew.bat
+local.properties
+settings.gradle
+vc140.idb
+vc140.pdb
 
 

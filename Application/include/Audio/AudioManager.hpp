@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Audio/AudioSource.hpp>
@@ -16,3 +18,5 @@ namespace ag
 		inline static std::unordered_map<AG_uint, AG_ref<AudioBuffer>> s_buffers;
 	};
 }
+
+#endif
