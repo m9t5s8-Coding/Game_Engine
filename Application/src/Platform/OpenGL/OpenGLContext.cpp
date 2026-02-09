@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Platform/OpenGL/OpenGLContext.hpp>
 #include <Apch.hpp>
 #include <glad/glad.h>
@@ -27,3 +29,5 @@ namespace ag
   glfwSwapBuffers(m_window_handle);
  }
 }
+
+#endif

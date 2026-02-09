@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Platform/Window/WindowsWindow.hpp>
 #include <iostream>
 
@@ -251,3 +253,6 @@ namespace ag
   }
 
 }
+
+
+#endif

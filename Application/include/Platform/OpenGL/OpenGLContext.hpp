@@ -1,7 +1,7 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 #include <Renderer/GraphicsContext.hpp>
-
-
 
 struct GLFWwindow;
 
@@ -19,3 +19,5 @@ namespace ag
     GLFWwindow *m_window_handle;
   };
 }
+
+#endif

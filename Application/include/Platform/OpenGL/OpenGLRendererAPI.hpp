@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/RendererAPI.hpp>
@@ -29,3 +31,5 @@ namespace ag
   };
 
 }
+
+#endif

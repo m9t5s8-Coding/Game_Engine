@@ -663,11 +663,11 @@ namespace ag
 		}
 		else
 		{
-			/*auto& root_entities = m_scene->get_root_entities();
+			auto& root_entities = m_scene->get_root_entity();
 			root_entities.erase(
-				std::remove(root_entities.begin(), root_entities.end(), dragged),
+				std::remove(root_entities.begin(), root_entities.end(), dragged_id),
 				root_entities.end()
-			);*/
+			);
 		}
 
 		// Set new parent (same as target's parent)

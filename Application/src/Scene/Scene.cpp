@@ -70,13 +70,24 @@ namespace ag
 
 	void Scene::on_update(TimeStamp ts)
 	{
+		if (m_root_available)
+			root_update(ts);
+		else
+			no_root_update(ts);
+	}
+
+
+	void Scene::no_root_update(TimeStamp ts)
+	{
 		if (Engine::is_runtime())
 		{
 			m_world->Step(ts.get_seconds(), 8, 3);
 		}
-
+		AERO_CORE_INFO("Hello");
 		m_registry.sort<Tag_Component>([](const Tag_Component& a, const Tag_Component& b)
 			{ return a.index < b.index; });
+
+		m_root_entity.clear();
 
 		// Update Thread
 		auto view = m_registry.view<Tag_Component>();
@@ -87,6 +98,8 @@ namespace ag
 			if (parent.get_id() != INVALID_ENTITY)
 				continue;
 
+
+			m_root_entity.push_back(e.get_id());
 			update_entity_recursive(e, ts);
 		}
 
@@ -101,7 +114,39 @@ namespace ag
 		}
 		clear_destroyed_entity();
 
+		m_root_available = true;
 	}
+
+
+
+	void Scene::root_update(TimeStamp ts)
+	{
+		if (Engine::is_runtime())
+		{
+			m_world->Step(ts.get_seconds(), 8, 3);
+		}
+		for (auto entityID : m_root_entity)
+		{
+			Entity e(entityID);
+			update_entity_recursive(e, ts);
+		}
+
+		for (auto entityID : m_root_entity)
+		{
+			Entity e(entityID);
+			draw_entity_recursive(e);
+		}
+		clear_destroyed_entity();
+	}
+
+
+
+
+
+
+
+
+
 
 	void Scene::destroy()
 	{
@@ -110,7 +155,7 @@ namespace ag
 		{
 			Entity e(entityID);
 			auto& tag = e.get_component<Tag_Component>();
-			if(tag.parent.get_id() == INVALID_ENTITY || !tag.parent)
+			if (tag.parent.get_id() == INVALID_ENTITY || !tag.parent)
 				destroy_entity(e);
 		}
 		clear_destroyed_entity();

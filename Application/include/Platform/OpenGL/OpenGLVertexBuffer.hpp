@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/VertexBuffer.hpp>
@@ -24,3 +26,6 @@ namespace ag
   };
 
 }
+
+
+#endif

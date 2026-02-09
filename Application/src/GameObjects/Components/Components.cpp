@@ -142,6 +142,34 @@ namespace ag
 
 		return true;
 	}
+	bool Tag_Component::is_parent(Entity child, Entity parent)
+	{
+		if (child.get_id() == INVALID_ENTITY, parent.get_id() == INVALID_ENTITY)
+			return false;
+
+		if (child.get_id() == parent.get_id())
+			return true;
+		std::unordered_set<uint32_t> visited;
+		Entity current = child;
+
+		while (current.get_id() != INVALID_ENTITY)
+		{
+			if (!current.has_component<Tag_Component>())
+				return false;
+
+			auto& tag = current.get_component<Tag_Component>();
+
+			if (tag.parent.get_id() == parent.get_id())
+				return true;
+
+			if (!visited.insert(current.get_id()).second)
+				return false;
+
+			current = tag.parent;
+		}
+
+		return false;
+	}
 
 
 	void Transform_Component::add_component(Entity entity)
@@ -976,12 +1004,9 @@ namespace ag
 		if (!entity.has_component<Animation_Component>())
 			return;
 		float dt = ts.get_seconds();
-
 		auto& props = entity.get_component<Animation_Component>();
-
-		if (!entity.has_component<Texture_Component>())
+		if (!entity.has_component<Texture_Component>() || !entity.get_component<Texture_Component>().texture)
 			return;
-
 		if (props.current_animation.empty())
 		{
 			auto& texture = entity.get_component<Texture_Component>();
@@ -991,9 +1016,6 @@ namespace ag
 			}
 			return;
 		}
-
-
-
 		auto it = props.animations.find(props.current_animation);
 		if (props.animations.find(props.current_animation) == props.animations.end())
 		{
@@ -1004,55 +1026,71 @@ namespace ag
 			}
 			return;
 		}
-
 		Animation& anim = it->second;
-
 		if (!props.playing)
 		{
 			props.rect = anim.frames[props.current_frame].frame_rect;
 			return;
 		}
-
 		if (anim.frames.empty())
 		{
 			auto& texture = entity.get_component<Texture_Component>();
 			props.rect = { 0, 0, texture.texture->get_size() };
 			return;
 		}
-
-		if (props.current_frame < 0 || props.current_frame >= anim.frames.size())
-			props.current_frame = 0;
-
+	
 		Frame& current_frame = anim.frames[props.current_frame];
-
 		props.timer += dt;
-
 		float duration = 1.0f / anim.fps;
 		if (props.timer >= duration)
 		{
 			props.timer -= duration;
-			props.current_frame++;
-			if (props.current_frame >= anim.frames.size())
+			if (anim.ping_pong)
 			{
-				if (anim.loop)
+				props.current_frame += props.reverse_direction ? -1 : 1;
+
+				if (props.current_frame >= anim.frames.size() && props.current_frame >= 0)
 				{
-					props.current_frame = 0;
-					props.current_animation_completed = true;
+					if (anim.loop)
+					{
+						props.current_frame = anim.frames.size() - 2;
+						props.reverse_direction = true;
+					}
+					else
+					{
+						props.current_frame = anim.frames.size() - 1;
+						props.playing = false;
+					}
 				}
-				else
+				else if (props.current_frame < 0)
 				{
-					props.current_frame = anim.frames.size() - 1;
-					props.playing = false;
-					props.current_animation_completed = true;
+					props.current_frame = 1;
+					props.reverse_direction = false;
+				}
+			}
+			else
+			{
+				props.current_frame++;
+				if (props.current_frame >= anim.frames.size())
+				{
+					if (anim.loop)
+					{
+						props.current_frame = 0;
+						props.current_animation_completed = true;
+					}
+					else
+					{
+						props.current_frame = anim.frames.size() - 1;
+						props.playing = false;
+						props.current_animation_completed = true;
+					}
 				}
 			}
 		}
-
 		if (props.current_animation_completed && anim.loop)
 		{
 			props.current_animation_completed = false;
 		}
-
 		props.rect = anim.frames[props.current_frame].frame_rect;
 	}
 	bool Animation_Component::play_animation(Entity entity, const std::string& name, bool restart)
@@ -1304,6 +1342,8 @@ namespace ag
 
 			props.body->CreateFixture(&fixture_def);
 		}
+
+		props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 	}
 
 
@@ -1444,7 +1484,6 @@ namespace ag
 		auto& world = scene->get_world();
 		props.body = world.CreateBody(&body_def);
 
-		// Changed from std::map to std::unordered_map
 		std::unordered_map<vec2i, bool, vec2_hash<int>> solid_grid;
 		vec2i min_pos(INT_MAX, INT_MAX);
 		vec2i max_pos(INT_MIN, INT_MIN);
@@ -1499,7 +1538,8 @@ namespace ag
 							break;
 						}
 					}
-					if (can_expand) {
+					if (can_expand)
+					{
 						height++;
 					}
 				}
@@ -1535,6 +1575,8 @@ namespace ag
 
 			props.body->CreateFixture(&fixture_def);
 		}
+
+		props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 	}
 
 
@@ -1839,7 +1881,7 @@ namespace ag
 
 			if (props.body_type == BodyType::Dynamic)
 			{
-				float sensor_width_percent = 0.8f;
+				float sensor_width_percent = 1.0f;
 				float sensor_height_percent = 0.1f;
 
 				vec2f sensor_size;

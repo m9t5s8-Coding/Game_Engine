@@ -1,4 +1,7 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
+
 
 #include <Renderer/Texture.hpp>
 
@@ -24,3 +27,5 @@ namespace ag
     AG_uint m_ID;
   };
 }
+
+#endif

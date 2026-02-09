@@ -76,6 +76,7 @@ namespace ag
 		static void imgui_render(Entity entity);
 		static bool get_visibility(Entity entity);
 		static bool get_lock(Entity entity);
+		static bool is_parent(Entity child, Entity parent);
 	};
 
 	struct Transform_Component
@@ -352,6 +353,7 @@ namespace ag
 		bool playing = true;
 		float timer = 0.0f;
 		bool current_animation_completed = false;
+		bool reverse_direction = false;
 		uint_rect rect;
 
 		static json save_json(Entity entity);
@@ -620,6 +622,8 @@ namespace ag
 
 			AG_uint entity1 = (AG_uint)fixtureA->GetBody()->GetUserData().pointer;
 			AG_uint entity2 = (AG_uint)fixtureB->GetBody()->GetUserData().pointer;
+
+			AERO_CORE_INFO("Entity 1:{0}, 2:{1}", entity1, entity2);
 
 			if (entity1 != 0 && entity2 != 0)
 			{

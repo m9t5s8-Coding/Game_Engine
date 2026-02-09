@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/IndexBuffer.hpp>
@@ -22,3 +24,5 @@ namespace ag
   };
 
 }
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Apch.hpp>
 #include <Platform/OpenGL/OpenGLTexture.hpp>
 #include <glad/glad.h>
@@ -95,3 +97,5 @@ namespace ag
 		glBindTexture(GL_TEXTURE_2D, m_ID);
 	}
 }
+
+#endif

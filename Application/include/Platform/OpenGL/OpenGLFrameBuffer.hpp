@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/FrameBuffer.hpp>
@@ -40,3 +42,5 @@ namespace ag
   };
 
 }
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Core/Input.hpp>
 #include <Apch.hpp>
 #include <Core/Application.hpp>
@@ -91,3 +93,6 @@ namespace ag
     return world;
   }
 }
+
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Core/Windows.hpp>
@@ -68,3 +70,6 @@ namespace ag
     WindowData m_win_data;
   };
 }
+
+
+#endif

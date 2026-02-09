@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Platform/OpenGL/OpenGLRendererAPI.hpp>
 #include <Apch.hpp>
 #include <Core/Application.hpp>
@@ -55,3 +57,6 @@ namespace ag
     glDisable(GL_BLEND);
   }
 }
+
+
+#endif

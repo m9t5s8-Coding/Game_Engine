@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Platform/OpenGL/OpenGLVertexArray.hpp>
 #include <Apch.hpp>
 #include <glad/glad.h>
@@ -86,3 +88,6 @@ namespace ag
     m_indexbuffer = p_indexbuffer;
   }
 }
+
+
+#endif

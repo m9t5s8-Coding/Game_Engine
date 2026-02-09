@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Platform/OpenGL/OpenGLVertexBuffer.hpp>
 #include <glad/glad.h>
 
@@ -31,3 +33,6 @@ namespace ag
     glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
 }
+
+
+#endif

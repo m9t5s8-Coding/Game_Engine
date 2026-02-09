@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Platform/OpenGL/OpenGLIndexBuffer.hpp>
@@ -31,3 +33,5 @@ namespace ag
   }
 
 }
+
+#endif

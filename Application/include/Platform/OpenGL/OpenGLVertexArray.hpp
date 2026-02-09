@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/VertexArray.hpp>
@@ -30,3 +32,4 @@ namespace ag
 
 }
 
+#endif

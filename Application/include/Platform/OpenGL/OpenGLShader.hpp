@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #pragma once
 
 #include <Renderer/Shader.hpp>
@@ -47,3 +49,5 @@ namespace ag
     std::string m_name;
   };
 }
+
+#endif

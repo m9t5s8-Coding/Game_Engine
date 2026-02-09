@@ -12,7 +12,7 @@ namespace ag
 
 	OpenALAudioDevice::~OpenALAudioDevice()
 	{
-
+		shutdown();
 	}
 
 	bool OpenALAudioDevice::init()

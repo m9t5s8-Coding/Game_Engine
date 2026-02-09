@@ -24,6 +24,18 @@ namespace ag
 
 		j["Scene"]["Entities"] = json::array();
 
+		{
+			json root_json = json::array();
+			auto& roots = scene->get_root_entity();
+			for (auto id : roots)
+			{
+				Entity e(id);
+				auto index = e.get_component<Tag_Component>().index;
+				root_json.push_back(index);
+			}
+			j["Scene"]["Roots"] = root_json;
+		}
+
 
 		auto view = scene->m_registry.view<Tag_Component>();
 		if (!view.empty())
@@ -39,7 +51,6 @@ namespace ag
 					continue;
 
 				const auto& tag = e.get_component<Tag_Component>();
-
 				json entityjson = Tag_Component::save_json(e);
 				if (!entityjson.is_object())
 				{
@@ -104,6 +115,9 @@ namespace ag
 			Helper::makefile_read_only(path);
 		}
 
+		bool root_available = false;
+
+
 		std::string scene_name, scene_path;
 		Helper::load_json(j["Scene"], "Name", scene_name);
 		Helper::load_json(j["Scene"], "Path", scene_path);
@@ -112,6 +126,8 @@ namespace ag
 		Scene::set_active_scene(scene);
 		std::unordered_map<AG_uint, Entity> id_map;
 
+
+		// Load and Create Entity
 		for (auto& entityjson : j["Scene"]["Entities"])
 		{
 			NodeType type;
@@ -130,9 +146,10 @@ namespace ag
 				auto& tag = e.get_component<Tag_Component>();
 				scene->set_next_index(std::max(scene->get_index(), tag.index + 1));
 				id_map[tag.index] = e;
-			}	
+			}
 		}
 
+		// Load Childrens
 		{
 			auto view = scene->m_registry.view<Tag_Component>();
 			for (auto entityID : view)
@@ -142,6 +159,7 @@ namespace ag
 			}
 		}
 
+		// Load Entity Data
 		for (auto& entityjson : j["Scene"]["Entities"])
 		{
 			AG_uint id;
@@ -158,6 +176,23 @@ namespace ag
 			}
 		}
 
+
+		// Make Roots Entities
+		if (j["Scene"].contains("Roots") && j["Scene"]["Roots"].is_array())
+		{
+			const auto& root_ids = j["Children"];
+			root_available = true;
+			for (auto& id_json : root_ids)
+			{
+				AG_uint root_id = id_json.get<AG_uint>();
+				scene->push_back_root(root_id);
+			}
+		}
+		if(root_available)
+
+
+
+		// Load Scripts
 		if (Engine::is_runtime())
 		{
 			auto view = scene->m_registry.view<Script_Component>();
@@ -167,11 +202,19 @@ namespace ag
 				Script_Component::load_scripts(e);
 			}
 		}
+
+
+
+
 		id_map.clear();
 		index_map.clear();
 		scene->set_save_required(false);
 		AERO_CORE_INFO("Scene Loaded! {0}  {1}", scene->get_name(), scene->get_directory());
 		return scene;
 	}
+
+
+
+
 }
 

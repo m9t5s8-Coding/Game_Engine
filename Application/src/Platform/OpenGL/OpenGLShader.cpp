@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Apch.hpp>
 #include <Platform/OpenGL/OpenGLShader.hpp>
 #include <glad/glad.h>
@@ -235,3 +237,5 @@ namespace ag
     glUniform1iv(glGetUniformLocation(m_ID, name.c_str()), count, values);
   }
 }
+
+#endif

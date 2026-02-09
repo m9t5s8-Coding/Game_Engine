@@ -164,7 +164,6 @@ namespace ag
 			});
 	}
 
-
 	void ScriptBinding::register_events()
 	{
 		auto& lua = ScriptManager::get_lua();
@@ -260,8 +259,6 @@ namespace ag
 			});
 	}
 
-	// COLOR REGISTRATION
-
 	void ScriptBinding::register_color()
 	{
 		auto& lua = ScriptManager::get_lua();
@@ -308,11 +305,6 @@ namespace ag
 		color_table["Olive"] = Color::Olive;
 		color_table["Maroon"] = Color::Maroon;
 	}
-
-
-
-
-	// VECTOR TYPES REGISTRATION
 
 	void ScriptBinding::register_vec2()
 	{
@@ -387,9 +379,6 @@ namespace ag
 			}
 		);
 	}
-
-
-	// NODE/ENTITY FUNCTIONS REGISTRATION
 
 	void ScriptBinding::register_node()
 	{
@@ -631,10 +620,6 @@ namespace ag
 
 	}
 
-
-
-
-
 	void ScriptBinding::register_audio_functions()
 	{
 		auto& lua = ScriptManager::get_lua();
@@ -712,7 +697,6 @@ namespace ag
 			return 1.0f;
 			});
 	}
-
 
 	void ScriptBinding::register_physics()
 	{
