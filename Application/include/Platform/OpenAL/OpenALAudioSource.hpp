@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #pragma once
 
@@ -17,7 +17,7 @@ namespace ag
 		virtual void set_buffer(AG_uint buffer_id) const override;
 		virtual void play() const override;
 		virtual void pause() const override;
-		virtual bool is_paused() const override; 
+		virtual bool is_paused() const override;
 		virtual void stop() const override;
 		virtual bool is_playing() const override;
 

@@ -63,8 +63,8 @@ namespace ag
 		static const char* get_file_icon(const std::string& extension);
 		static bool is_image(const std::filesystem::path& path);
 		static void draw_folder_node(const std::filesystem::path& directory, int depth = 0);
-		
-		
+
+
 		static void draw_script_selector(Entity entity);
 		static void draw_loaded_script_panel(Entity entity, Script_Component& props);
 		static void draw_script_drop_zone(Entity entity, Script_Component& props);
@@ -294,7 +294,7 @@ namespace ag
 							}
 							catch (...)
 							{
-								
+
 							}
 						}
 					}
@@ -349,7 +349,7 @@ namespace ag
 
 			return changed;
 		}
-	
+
 		template<typename T>
 		static bool draw_vec3(const char* label, T& vec, const vec3f& reset_value = vec3f(0, 0, 0),
 			const char* tooltip = nullptr)
@@ -601,7 +601,7 @@ namespace ag
 			// First row (X, Y)
 			if (s_property_style.show_reset_buttons)
 			{
-				if (draw_reset_button("X", ImVec4(0.8f, 0.3f, 0.3f, 1.0f)))
+				if (draw_reset_button("X"))
 				{
 					vec.x = static_cast<decltype(vec.x)>(reset_value.x);
 					changed = true;
@@ -1314,7 +1314,7 @@ namespace ag
 
 			return changed;
 		}
-		
+
 	private:
 		static Panels s_show_panels;
 		static PropertyStyle s_property_style;

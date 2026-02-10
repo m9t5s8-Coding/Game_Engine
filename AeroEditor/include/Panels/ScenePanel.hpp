@@ -90,7 +90,7 @@ namespace ag
 		void is_mouse_inside_window(const bool inside_window) { m_mouse_inside_window = inside_window; }
 
 		bool has_selected_entity() const { if (m_selected_entity && m_selected_entity.get_id() != INVALID_ENTITY) { return true; } return false; }
-		bool selected_has_transform() { if (has_selected_entity()) { return m_selected_entity.has_component<Transform_Component>(); } }
+		bool selected_has_transform() { if (has_selected_entity()) { return m_selected_entity.has_component<Transform_Component>(); } return false;  }
 
 		Entity get_selected_entity() const { return m_selected_entity; }
 		void set_selected_entity(Entity entity);

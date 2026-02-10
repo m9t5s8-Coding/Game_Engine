@@ -1,11 +1,11 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Core/Input.hpp>
 #include <Apch.hpp>
 #include <Core/Application.hpp>
 #include <Renderer/View.hpp>
 
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 namespace ag
 {

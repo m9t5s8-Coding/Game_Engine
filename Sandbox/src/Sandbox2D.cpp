@@ -61,11 +61,20 @@ namespace ag
 
 	std::string Sandbox2D::get_appdata_path()
 	{
-		const char* appdata = std::getenv("APPDATA");
-		if (appdata)
-			return std::string(appdata);
-		else
-			return ".";
+#ifdef PLATFORM_WINDOWS
+       const char* appdata = std::getenv("APPDATA");
+       if (appdata)
+          return std::string(appdata);
+       else
+          return ".";
+#elif defined(PLATFORM_LINUX)
+       const char* home = std::getenv("HOME");
+       if (home)
+          return std::string(home) + "/.config";
+       else
+          return ".";
+#endif
+    return ".";
 	}
 
 	void Sandbox2D::entity_selection()
@@ -204,7 +213,7 @@ namespace ag
 			return;
 		}
 
-		
+
 		std::string full_scene_path = project->get_directory() +
 			project->get_scene_directory() +
 			scene_path;

@@ -1,9 +1,13 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Apch.hpp>
 #include <Platform/OpenGL/OpenGLTexture.hpp>
 #include <glad/glad.h>
+
+#define STBI_NO_SIMD
 #include <stb_image.h>
+
+
 #include <Project/Assetmanager.hpp>
 
 namespace ag
@@ -42,7 +46,7 @@ namespace ag
 
     AERO_CORE_ASSERT(pixels, "stb_image failed to load: {0}", p_path);
 
-    m_size = { (uint32_t)width, (uint32_t)height };
+    m_size = vec2u(width, height);
 
 
     glGenTextures(1, &m_ID);

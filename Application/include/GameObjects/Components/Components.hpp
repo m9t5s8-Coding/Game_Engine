@@ -29,7 +29,9 @@ namespace ag
 		}
 		static json save_json(Entity entity)
 		{
+      json j;
 
+      return j;
 		}
 		static void load_json(Entity entity, const json& j)
 		{
@@ -760,7 +762,7 @@ namespace ag
 	{
 		std::string text = "AeroEngine";
 		float font_size = 12.0f;
-		
+
 
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
@@ -801,7 +803,7 @@ namespace ag
 			if (entity.has_component<Text_Editor_State>())
 				entity.remove_component<Text_Editor_State>();
 		}
-	
+
 	};
 
 	enum FontStyle : uint8_t
@@ -814,14 +816,14 @@ namespace ag
 
 	struct FontStyle_Component : Base_Component<FontStyle_Component>
 	{
-		
+
 		Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Left;
 		Text_Allignment_Vertical v_allignment = Text_Allignment_Vertical::Top;
 		uint8_t style = 0;
 		float line_height = 1.0f;
 		vec2u bounds = { 100, 50 };
 		Color color = Color::White;
-		
+
 		static json save_json(Entity entity);
 		static void load_json(Entity entity, const json& j);
 
@@ -878,7 +880,7 @@ namespace ag
 		Disabled
 	};
 
-	
+
 
 	struct ButtonState_Component : Base_Component<ButtonState_Component>
 	{
@@ -953,7 +955,7 @@ namespace ag
 
 			return Button_Visual_State::Normal;
 		}
-	
+
 		static Button_Visual_State get_active_state(uint8_t mask)
 		{
 			if (mask & static_cast<uint8_t>(Button_State::Disabled))
@@ -978,7 +980,7 @@ namespace ag
 		Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Center;
 		Text_Allignment_Vertical v_allignment = Text_Allignment_Vertical::Center;
 		bool uniform = true;
-		
+
 
 		static json save_json(const Button_Layout& layout);
 		static Button_Layout load_json(const json& j);
@@ -1035,7 +1037,7 @@ namespace ag
 	struct Audio_Component : Base_Component<Audio_Component>
 	{
 		AG_uint audio_buffer = 0;
-		AG_scope<AudioSource> source;
+		AG_scope<AudioSource> source = nullptr;
 		std::string path;
 
 		static json save_json(Entity entity);

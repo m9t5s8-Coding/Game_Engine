@@ -7,6 +7,16 @@
 #include <Renderer/Renderer2D.hpp>
 #include <GameObjects/NodeFactory.hpp>
 #include <Core/Time.hpp>
+
+
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
+#elif defined(PLATFORM_LINUX)
+#include <unistd.h>
+#include <limits.h>
+#endif
+
+
 namespace ag
 {
 
@@ -23,7 +33,7 @@ namespace ag
 	void Application::init(const WindowProps& props)
 	{
 		m_Window = std::unique_ptr<Window>(Window::create(props));
-	
+
 		m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
 
 		m_audio_device = AG_scope<Audio_Device>(Audio_Device::create());
@@ -34,7 +44,7 @@ namespace ag
 			m_imgui_layer = new ImGuiLayer();
 			push_overlay(m_imgui_layer);
 		}
-		
+
 	}
 
 	void Application::run()
@@ -73,7 +83,7 @@ namespace ag
 		m_layerstack.push_layer(layer);
 		layer->on_attach();
 	}
-	
+
 	void Application::pop_layer(Layer* layer)
 	{
 		m_layerstack.pop_layer(layer);
@@ -143,6 +153,19 @@ namespace ag
 		if (pos != std::string::npos)
 			return full.substr(0, pos);
 		return ".";
+
+#elif defined(PLATFORM_LINUX)
+char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    if (count == -1) return ".";
+    std::string full(result, count);
+    size_t pos = full.find_last_of('/');
+    if (pos != std::string::npos)
+        return full.substr(0, pos);
+    return ".";
+
+#else
+    return ".";
 #endif
 	}
 

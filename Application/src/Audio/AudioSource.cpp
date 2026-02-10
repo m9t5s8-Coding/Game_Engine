@@ -1,7 +1,7 @@
 #include <Audio/AudioSource.hpp>
 #include <Audio/AudioAPI.hpp>
 
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 #include <Platform/OpenAL/OpenALAudioSource.hpp>
 #elif defined(PLATFORM_ANDROID)
 
@@ -18,7 +18,7 @@ namespace ag
 		case AudioAPI::API::None: return nullptr;
 
 		case AudioAPI::API::OpenAL:
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 			return AG_cscope<OpenALAudioSource>();
 #else
 			return nullptr;

@@ -1,3 +1,5 @@
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+
 #include <Platform/OpenAL/OpenALAudioSource.hpp>
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -18,7 +20,7 @@ namespace ag
 		alSource3f(m_ID, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
 		alSourcei(m_ID, AL_LOOPING, m_looping);
 	}
-	
+
 	OpenALAudioSource::~OpenALAudioSource()
 	{
 		if (m_ID != 0)
@@ -65,7 +67,7 @@ namespace ag
 	{
 		alSourcePlay(m_ID);
 	}
-	
+
 	void OpenALAudioSource::pause() const
 	{
 		alSourcePause(m_ID);
@@ -113,3 +115,5 @@ namespace ag
 		alSource3f(m_ID, AL_POSITION, position.x, position.y, 0.0f);
 	}
 }
+
+#endif

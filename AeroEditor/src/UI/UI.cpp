@@ -2,11 +2,22 @@
 #include <Aero.hpp>
 #include <Application/EditorLayer.hpp>
 #include <Panels/ScenePanel.hpp>
-#include <windows.h> 
+
+
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
 #include <shellapi.h>
+#elif defined(PLATFORM_LINUX)
+
+#endif
+
+
+
 #include <UI/PopUp.hpp>
 #include <UI/StyleScope.hpp>
 #include <icons.h>
+#include <codecvt>
+#include <locale>
 
 namespace ag
 {
@@ -22,7 +33,16 @@ namespace ag
 	static std::string new_name;
 	static std::string path;
 	constexpr float button_height = 32.0f;
-	
+
+#ifdef PLATFORM_WINDOWS
+constexpr const wchar_t* exe_ext = L".exe";
+constexpr const wchar_t path_sep = L'\\';
+#elif defined(PLATFORM_LINUX)
+constexpr const wchar_t* exe_ext = L"";
+constexpr const wchar_t path_sep = L'/';
+#endif
+
+
 
 
 
@@ -315,22 +335,25 @@ namespace ag
 		// Run Menu
 		if (ImGui::BeginMenu("  Run  "))
 		{
-			if (ImGui::MenuItem(ICON_FA_PLAY "  Run Default Scene", "F5", false))
-			{
-				auto folder = FileDialogs::get_exe_folder();
-				std::wstring app = folder + L"\\Sandbox.exe";
 
-				FileDialogs::run_exe(app);
-			}
 
-			if (ImGui::MenuItem(ICON_FA_CIRCLE_PLAY "  Run Current Scene", "Ctrl+F5", false))
-			{
-				run_current_scene();
-				auto folder = FileDialogs::get_exe_folder();
-				std::wstring app = folder + L"\\Sandbox.exe";
+if (ImGui::MenuItem(ICON_FA_PLAY "  Run Default Scene", "F5", false))
+{
+    std::wstring folder = FileDialogs::get_exe_folder();
+    std::wstring app = folder + std::wstring(1, path_sep) + L"Sandbox" + exe_ext;
 
-				FileDialogs::run_exe(app);
-			}
+    FileDialogs::run_exe(app);
+}
+
+if (ImGui::MenuItem(ICON_FA_CIRCLE_PLAY "  Run Current Scene", "Ctrl+F5", false))
+{
+    run_current_scene();
+
+    std::wstring folder = FileDialogs::get_exe_folder();
+    std::wstring app = folder + std::wstring(1, path_sep) + L"Sandbox" + exe_ext;
+
+    FileDialogs::run_exe(app);
+}
 			ImGui::EndMenu();
 		}
 
@@ -708,7 +731,7 @@ namespace ag
 			ext == ".bmp" || ext == ".tga" || ext == ".hdr" ||
 			ext == ".tiff" || ext == ".tif" || ext == ".webp";
 	}
-	
+
 	void UI::draw_folder_node(const std::filesystem::path& directory, int depth)
 	{
 		std::vector<std::filesystem::directory_entry> entries;
@@ -907,7 +930,7 @@ namespace ag
 		// Default file icon
 		return ICON_FA_FILE;
 	}
-	
+
 	void UI::draw_animation(Entity entity)
 	{
 		static std::string current_animation = "";
@@ -1335,7 +1358,7 @@ namespace ag
 				UI::draw_bool("Use Size", use_size);
 
 				ImGui::Dummy(ImVec2(0, 3));
-				
+
 
 				ImGui::Text("Cell Size: %.0f x %.0f", cell_size.x, cell_size.y);
 				ImGui::Dummy(ImVec2(0, 3));
@@ -1377,7 +1400,7 @@ namespace ag
 
 
 
-					
+
 					ImGui::BeginGroup();
 					button.label = "Select All";
 					if (draw_button(button))
@@ -2899,7 +2922,7 @@ namespace ag
 		std::string filename = file_path.filename().string();
 
 		ImVec2 available_size = ImGui::GetContentRegionAvail();
-		
+
 		ImGui::PushStyleColor(ImGuiCol_Text, muted_color);
 
 		// Tooltip for full path
@@ -2956,7 +2979,7 @@ namespace ag
 			ImGui::EndPopup();
 		}
 
-	
+
 		if (ImGui::BeginDragDropTarget())
 		{
 			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM",
@@ -2971,7 +2994,7 @@ namespace ag
 			ImGui::EndDragDropTarget();
 		}
 	}
-	
+
 	void UI::script_drag_drop(std::string& file_path)
 	{
 		file_path.erase(std::find(file_path.begin(), file_path.end(), '\0'), file_path.end());
@@ -3066,7 +3089,7 @@ namespace ag
 
 		ImGui::PopStyleVar(2);
 	}
-	
+
 	void UI::draw_script_actions(Entity entity, Script_Component& props, bool has_script)
 	{
 		ImGui::Dummy(ImVec2(0, 10));
@@ -3093,24 +3116,33 @@ namespace ag
 	{
 		if (path.empty()) return;
 
-		
+
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 
-#ifdef _WIN32
+#ifdef PLATFORM_WINDOWS
 		std::string command = "code \"" + abs_path.string() + "\"";
 		system(command.c_str());
+
+#elif defined(PLATFORM_LINUX)
+    std::string command = "code \"" + abs_path.string() + "\" &";
+    system(command.c_str());
 #endif
 	}
-	
+
 	void UI::show_in_explorer(const std::string& file_path)
 	{
 		if (file_path.empty()) return;
 
 		std::filesystem::path abs_path = std::filesystem::absolute(file_path);
+    std::filesystem::path folder = abs_path.parent_path();
 
-#ifdef _WIN32
+#ifdef  PLATFORM_WINDOWS
 		std::string command = "explorer /select,\"" + abs_path.string() + "\"";
 		system(command.c_str());
+
+#elif defined(PLATFORM_LINUX)
+    std::string command = "xdg-open \"" + folder.string() + "\" &";
+    system(command.c_str());
 #endif
 	}
 
@@ -3488,7 +3520,7 @@ namespace ag
 
 			GUI_Button button;
 
-			
+
 			button.size.x = (available_width - (spacing * 4)) * 0.33f;
 			button.size.y = 35.0f;
 

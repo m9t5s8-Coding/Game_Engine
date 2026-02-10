@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Platform/Window/WindowsWindow.hpp>
 #include <iostream>
@@ -16,7 +16,7 @@ namespace ag
 
   static void glfw_error_callback(int error, const char *description)
   {
-    AERO_CORE_ERROR("GLFW Error ({0}): {1}", error, description);
+    // AERO_CORE_ERROR("GLFW Error ({0}): {1}", error, description);
   }
 
   Window *Window::create(const WindowProps &props)
@@ -36,7 +36,6 @@ namespace ag
 
   void WindowsWindow::init(const WindowProps &props)
   {
-
     m_win_data.title = props.Title;
     m_win_data.size = props.Size;
 
@@ -50,39 +49,63 @@ namespace ag
       glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
       glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
       glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef PLATFORM_LINUX
+      glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+#endif
+
       glfwSetErrorCallback(glfw_error_callback);
       s_glfw_initialized = true;
     }
 
-    m_Window = glfwCreateWindow(static_cast<int>(props.Size.x), static_cast<int>(props.Size.y), props.Title.c_str(), nullptr, nullptr);
+    m_Window = glfwCreateWindow(static_cast<int>(props.Size.x), static_cast<int>(props.Size.y),
+                                props.Title.c_str(), nullptr, nullptr);
+
+    AERO_CORE_ASSERT(m_Window, "Failed to create GLFW window!");
 
     m_context = new OpenGLContext(m_Window);
     m_context->init();
 
     glfwSetWindowUserPointer(m_Window, &m_win_data);
-    glViewport(0, 0, props.Size.x, props.Size.y);
+
+    int fb_width, fb_height;
+    glfwGetFramebufferSize(m_Window, &fb_width, &fb_height);
+
+    if (fb_width > 0 && fb_height > 0)
+    {
+      glViewport(0, 0, fb_width, fb_height);
+    }
+    else
+    {
+      glViewport(0, 0, props.Size.x, props.Size.y);
+    }
+
+#ifdef PLATFORM_LINUX
+    glfwShowWindow(m_Window);
+#endif
 
     set_vsync(true);
 
-    // Window size event
     glfwSetWindowSizeCallback(m_Window, [](GLFWwindow *window, const int width, const int height)
-                              {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
       data.size.x = width;
       data.size.y = height;
 
       WindowResizeEvent event(data.size);
-      data.event_callback(event); });
+      data.event_callback(event);
+    });
 
     glfwSetWindowCloseCallback(m_Window, [](GLFWwindow *window)
-                               {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       WindowCloseEvent event;
-      data.event_callback(event); });
+      data.event_callback(event);
+    });
 
     glfwSetKeyCallback(m_Window, [](GLFWwindow *window, const int key, const int scancode, const int action, const int mode)
-                       {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       switch(action)
@@ -105,12 +128,13 @@ namespace ag
           data.event_callback(event);
           break;
         }
-          default:
-            break;
-      } });
+        default:
+          break;
+      }
+    });
 
     glfwSetMouseButtonCallback(m_Window, [](GLFWwindow *window, int button, int action, int mode)
-                               {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       switch(action)
@@ -127,31 +151,34 @@ namespace ag
           data.event_callback(event);
           break;
         }
-          default:
-            break;
-      } });
+        default:
+          break;
+      }
+    });
 
     glfwSetScrollCallback(m_Window, [](GLFWwindow *window, double offset_X, double offset_Y)
-                          {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       MouseScrolledEvent event(static_cast<float>(offset_X), static_cast<float>(offset_Y));
-      data.event_callback(event); });
+      data.event_callback(event);
+    });
 
     glfwSetCursorPosCallback(m_Window, [](GLFWwindow *window, double pos_x, double pos_y)
-                             {
+    {
       WindowData& data = *static_cast<WindowData *>(glfwGetWindowUserPointer(window));
 
       MouseMovedEvent event(static_cast<float>(pos_x), static_cast<float>(pos_y));
-      data.event_callback(event); });
-  
-    glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int codepoint) {
+      data.event_callback(event);
+    });
+
+    glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int codepoint)
+    {
       WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
       TextInputEvent event(static_cast<char>(codepoint));
-
       data.event_callback(event);
-      });
+    });
   }
 
   void WindowsWindow::set_vsync(bool enabled)
@@ -168,13 +195,15 @@ namespace ag
   {
     GLFWmonitor *primary_monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode *p_mode = glfwGetVideoMode(primary_monitor);
+
     if (!m_win_data.is_fullscreen)
     {
+#ifndef PLATFORM_LINUX
       glfwGetWindowPos(m_Window, &m_win_data.old_pos.x, &m_win_data.old_pos.y);
+#endif
       glfwGetWindowSize(m_Window, &m_win_data.old_size.x, &m_win_data.old_size.y);
 
       glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_FALSE);
-
       glfwSetWindowMonitor(m_Window, nullptr, 0, 0, p_mode->width, p_mode->height, 0);
 
       m_win_data.is_fullscreen = true;
@@ -182,7 +211,13 @@ namespace ag
     else
     {
       glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_TRUE);
-      glfwSetWindowMonitor(m_Window, nullptr, m_win_data.old_pos.x, m_win_data.old_pos.y, m_win_data.old_size.x, m_win_data.old_size.y, 0);
+#ifdef PLATFORM_LINUX
+      glfwSetWindowMonitor(m_Window, nullptr, 0, 0,
+                          m_win_data.old_size.x, m_win_data.old_size.y, 0);
+#else
+      glfwSetWindowMonitor(m_Window, nullptr, m_win_data.old_pos.x, m_win_data.old_pos.y,
+                          m_win_data.old_size.x, m_win_data.old_size.y, 0);
+#endif
       m_win_data.is_fullscreen = false;
     }
   }
@@ -195,19 +230,31 @@ namespace ag
 
   void WindowsWindow::set_position(const vec2i& position)
   {
+#ifdef PLATFORM_LINUX
+    return;
+#else
     glfwSetWindowPos(m_Window, position.x, position.y);
+#endif
   }
 
   vec2u WindowsWindow::get_position() const
   {
-    vec2i window_pos;
-    glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);
+    vec2i window_pos = {0, 0};
 
+#ifdef PLATFORM_LINUX
     return window_pos;
+#else
+    glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);
+    return window_pos;
+#endif
   }
 
   void WindowsWindow::center_window()
   {
+#ifdef PLATFORM_LINUX
+    m_win_data.is_center_window = false;
+    return;
+#else
     GLFWmonitor* primary_monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* p_mode = glfwGetVideoMode(primary_monitor);
 
@@ -216,6 +263,7 @@ namespace ag
 
     set_position(position);
     m_win_data.is_center_window = true;
+#endif
   }
 
   void WindowsWindow::show_decoration(const bool show)
@@ -239,6 +287,7 @@ namespace ag
     if (m_Window)
     {
       glfwDestroyWindow(m_Window);
+      m_Window = nullptr;
     }
   }
 
@@ -249,10 +298,8 @@ namespace ag
     {
       return std::string(clipboard_text);
     }
-    return std::string(" ");
+    return std::string("");
   }
-
 }
-
 
 #endif

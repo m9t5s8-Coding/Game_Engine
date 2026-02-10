@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #pragma once
 
@@ -38,7 +38,7 @@ namespace ag
 
       std::vector<AG_uint> m_colorattachment;
       AG_uint m_depthattachment = 0;
-      
+
   };
 
 }

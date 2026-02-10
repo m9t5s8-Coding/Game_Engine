@@ -1,3 +1,5 @@
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+
 #include<Platform/OpenGL/OpenGLFrameBuffer.hpp>
 #include<Apch.hpp>
 #include <glad/glad.h>
@@ -213,4 +215,8 @@ namespace ag
       utils::texture_format_to_gl(spec.texture_format), GL_INT, &value);
   }
 
+
 }
+
+
+#endif

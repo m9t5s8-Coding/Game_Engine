@@ -2,185 +2,162 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 #include <backends/imgui_impl_glfw.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #elif defined(PLATFORM_ANDROID)
 #include <backends/imgui_impl_android.h>
 #endif
 
 #include <backends/imgui_impl_opengl3.h>
 
-
-
-
-
 #include <icons.h>
-
-
 #include <Core/Application.hpp>
 
 namespace ag
 {
-	ImGuiLayer::ImGuiLayer()
-		: Layer("ImGui Layer")
-	{
-	}
+    ImGuiLayer::ImGuiLayer()
+       : Layer("ImGui Layer")
+    {
+    }
 
-	ImGuiLayer::~ImGuiLayer()
-	{
-	}
+    ImGuiLayer::~ImGuiLayer()
+    {
+    }
 
-	void ImGuiLayer::on_attach()
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		(void)io;
+    void ImGuiLayer::on_attach()
+    {
+       IMGUI_CHECKVERSION();
+       ImGui::CreateContext();
+       ImGuiIO& io = ImGui::GetIO();
+       (void)io;
 
+       io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
+       io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		
-
-
-		io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-#ifdef PLATFORM_WINDOWS // support only on desktop
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+       io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 #endif
 
+#ifndef PLATFORM_ANDROID
+       ImFontConfig font_cfg;
+       font_cfg.PixelSnapH = true;
+       font_cfg.OversampleH = 1;
+       font_cfg.OversampleV = 1;
 
-#ifdef PLATFORM_ANDROID
+       ImFont* main_font = io.Fonts->AddFontFromFileTTF(
+          "assets/fonts/OpenSans-Regular.ttf",
+          20.0f,
+          &font_cfg
+       );
 
-#else
-		ImFontConfig font_cfg;
-		font_cfg.PixelSnapH = true;
-		font_cfg.OversampleH = 1;
-		font_cfg.OversampleV = 1;
+       static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
-		ImFont* main_font = io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/OpenSans-Regular.ttf",
-			20.0f,
-			&font_cfg
-		);
+       ImFontConfig icon_cfg;
+       icon_cfg.MergeMode = true;
+       icon_cfg.PixelSnapH = true;
+       icon_cfg.OversampleH = 1;
+       icon_cfg.OversampleV = 1;
+       icon_cfg.GlyphMinAdvanceX = 14.0f;
 
-		
-		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+       io.Fonts->AddFontFromFileTTF(
+          "assets/fonts/fa-solid-900.ttf",
+          16.0f,
+          &icon_cfg,
+          icon_ranges
+       );
 
-		ImFontConfig icon_cfg;
-		icon_cfg.MergeMode = true;
-		icon_cfg.PixelSnapH = true;
-		icon_cfg.OversampleH = 1;
-		icon_cfg.OversampleV = 1;
-		icon_cfg.GlyphMinAdvanceX = 14.0f;
+       ImFont* large_font = io.Fonts->AddFontFromFileTTF(
+          "assets/fonts/OpenSans-Regular.ttf",
+          28.0f,
+          &font_cfg
+       );
 
-		io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/fa-solid-900.ttf",
-			16.0f,
-			&icon_cfg,
-			icon_ranges
-		);
-
-		ImFont* large_font = io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/OpenSans-Regular.ttf",
-			28.0f,
-			&font_cfg
-		);
-
-		io.FontDefault = main_font;
+       io.FontDefault = main_font;
 #endif
 
+       set_engine_theme();
 
-		set_engine_theme();
+       if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+       {
+          ImGuiStyle& style = ImGui::GetStyle();
+          style.WindowRounding = 0.0f;
+          style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+       }
 
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGuiStyle& style = ImGui::GetStyle();
-			style.WindowRounding = 0.0f;
-			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-		}
+       Application& app = Application::get();
 
-		Application& app = Application::get();
-
-#ifdef PLATFORM_WINDOWS
-		GLFWwindow* window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
-		ImGui_ImplGlfw_InitForOpenGL(window, true);
-		ImGui_ImplOpenGL3_Init("#version 450");
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+       GLFWwindow* window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
+       ImGui_ImplGlfw_InitForOpenGL(window, true);
+       ImGui_ImplOpenGL3_Init("#version 450");
 #endif
-	}
+    }
 
-	void ImGuiLayer::on_detach()
-	{
-#ifdef  PLATFORM_WINDOWS
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-#endif 
-
-		ImGui::DestroyContext();
-	}
-
-	void ImGuiLayer::begin()
-	{
-#ifdef  PLATFORM_WINDOWS
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
+    void ImGuiLayer::on_detach()
+    {
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+       ImGui_ImplOpenGL3_Shutdown();
+       ImGui_ImplGlfw_Shutdown();
 #endif
 
-		ImGui::NewFrame();
-	}
+       ImGui::DestroyContext();
+    }
 
-	void ImGuiLayer::end()
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		Application& app = Application::get();
-		io.DisplaySize = ImVec2(
-			(float)app.get_window().get_width(),
-			(float)app.get_window().get_height()
-		);
-
-		ImGui::Render();
-
-#ifdef  PLATFORM_ANDROID
-		if (io.DisplaySize.x <= 0 || io.DisplaySize.y <= 0)
-			return;
+    void ImGuiLayer::begin()
+    {
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+   ImGui_ImplOpenGL3_NewFrame();
+   ImGui_ImplGlfw_NewFrame();
 #endif
 
+   ImGui::NewFrame();
+    }
 
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    void ImGuiLayer::end()
+    {
+       ImGuiIO& io = ImGui::GetIO();
 
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-#ifdef  PLATFORM_WINDOWS
-			GLFWwindow* backup_current_context = glfwGetCurrentContext();
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-			glfwMakeContextCurrent(backup_current_context);
+       if (io.DisplaySize.x <= 0 || io.DisplaySize.y <= 0)
+       {
+          AERO_CORE_WARN("Invalid display size at render, skipping frame");
+          return;
+       }
+
+       ImGui::Render();
+
+       ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+       if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+       {
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+          GLFWwindow* backup_current_context = glfwGetCurrentContext();
+          ImGui::UpdatePlatformWindows();
+          ImGui::RenderPlatformWindowsDefault();
+          glfwMakeContextCurrent(backup_current_context);
 #endif
-		}
-	}
+       }
+    }
 
-	void ImGuiLayer::set_engine_theme()
-	{
-		set_ocean_blue_theme();
-	}
+    void ImGuiLayer::set_engine_theme()
+    {
+       set_ocean_blue_theme();
+    }
 
-	void ImGuiLayer::on_imgui_render()
-	{
-	}
+    void ImGuiLayer::on_imgui_render()
+    {
+    }
 
-	void ImGuiLayer::on_event(Event& event)
-	{
-		if (m_block_events)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-			event.Handled |= event.is_in_category(Event_Category_Mouse) && io.WantCaptureMouse;
-			event.Handled |= event.is_in_category(Event_Category_Keyboard) && io.WantCaptureKeyboard;
-		}
-	}
-
-
+    void ImGuiLayer::on_event(Event& event)
+    {
+       if (m_block_events)
+       {
+          ImGuiIO& io = ImGui::GetIO();
+          event.Handled |= event.is_in_category(Event_Category_Mouse) && io.WantCaptureMouse;
+          event.Handled |= event.is_in_category(Event_Category_Keyboard) && io.WantCaptureKeyboard;
+       }
+    }
 
 
 

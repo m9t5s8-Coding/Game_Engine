@@ -8,7 +8,7 @@
 
 namespace ag
 {
-	static const uint8_t bit_lookup[3][3] =
+	static const uint16_t bit_lookup[3][3] =
 	{
 			{ TL,  T,  TR },
 			{ L,   0,  R  },
@@ -358,18 +358,9 @@ namespace ag
 		const char* child_name = "HierarchyContent";
 		ImGui::BeginChild(child_name, ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
 		{
-			// Get all root entities (no parent)
-			auto view = m_scene->m_registry.view<Tag_Component>();
-			std::vector<Entity> root_entities;
 
-			for (auto entity_id : view) {
-				Entity entity(entity_id);
-				auto& tag = entity.get_component<Tag_Component>();
-				if (!tag.parent || tag.parent.get_id() == INVALID_ENTITY) {
-					root_entities.push_back(entity);
-				}
-			}
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 0.0f));
+      auto& root_entities = m_scene->get_root_entity();
 			for (auto& entity : root_entities)
 			{
 				draw_entity_node(entity, 0);
@@ -609,11 +600,11 @@ namespace ag
 		}
 		else
 		{
-			/*	auto& root_entities = m_scene->get_root_entities();
+				auto& root_entities = m_scene->get_root_entity();
 				root_entities.erase(
-					std::remove(root_entities.begin(), root_entities.end(), dragged),
+					std::remove(root_entities.begin(), root_entities.end(), dragged_id),
 					root_entities.end()
-				);*/
+				);
 		}
 
 		dragged_tag.parent = target_tag.parent;
@@ -630,12 +621,12 @@ namespace ag
 		}
 		else
 		{
-			/*auto& root_entities = m_scene->get_root_entities();
-			auto it = std::find(root_entities.begin(), root_entities.end(), target);
+			auto& root_entities = m_scene->get_root_entity();
+			auto it = std::find(root_entities.begin(), root_entities.end(), target_id);
 			if (it != root_entities.end())
 			{
-				root_entities.insert(it, dragged);
-			}*/
+				root_entities.insert(it, dragged_id);
+			}
 		}
 	}
 
@@ -670,10 +661,8 @@ namespace ag
 			);
 		}
 
-		// Set new parent (same as target's parent)
 		dragged_tag.parent = target_tag.parent;
 
-		// Insert after target
 		if (target_tag.parent)
 		{
 			auto& parent_tag = target_tag.parent.get_component<Tag_Component>();
@@ -686,12 +675,12 @@ namespace ag
 		}
 		else
 		{
-			/*auto& root_entities = m_scene->get_root_entities();
-			auto it = std::find(root_entities.begin(), root_entities.end(), target);
+			auto& root_entities = m_scene->get_root_entity();
+			auto it = std::find(root_entities.begin(), root_entities.end(), target_id);
 			if (it != root_entities.end())
 			{
-				root_entities.insert(it + 1, dragged);
-			}*/
+				root_entities.insert(it + 1, dragged_id);
+			}
 		}
 	}
 
@@ -1097,6 +1086,14 @@ namespace ag
 				old_parent_tag.children.erase(it);
 			}
 		}
+    else
+		{
+				auto& root_entities = m_scene->get_root_entity();
+				root_entities.erase(
+					std::remove(root_entities.begin(), root_entities.end(), child_id),
+					root_entities.end()
+				);
+		}
 		child_tag.parent = new_parent;
 		parent_tag.children.push_back(child);
 
@@ -1131,8 +1128,11 @@ namespace ag
 			tag.parent = Entity{};
 		}
 
-		auto& transform = m_selected_entity.get_component<Transform_Component>();
+    if(m_selected_entity.has_component<Transform_Component>())
+    {
+    auto& transform = m_selected_entity.get_component<Transform_Component>();
 		transform = child_transform;
+    }
 	}
 
 	void ScenePanel::find_entity_in_project(Entity entity)
@@ -1518,8 +1518,7 @@ namespace ag
 		ImGui::Begin("Texture Selector");
 		{
 			ImVec2 image_size(texture->get_size().x, texture->get_size().y);
-			ImGui::Image((void*)texture->get_texture_id(), image_size);
-
+			ImGui::Image((ImTextureID)(uintptr_t)texture->get_texture_id(), image_size);
 			ImVec2 image_pos = ImGui::GetItemRectMin();
 			ImVec2 mouse_pos = ImGui::GetMousePos();
 			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -1703,6 +1702,8 @@ namespace ag
 			state.blink_timer = 0.0f;
 			return true;
 		}
+
+		return false;
 	}
 
 

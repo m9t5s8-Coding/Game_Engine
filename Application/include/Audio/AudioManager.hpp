@@ -1,5 +1,3 @@
-#ifdef PLATFORM_WINDOWS
-
 #pragma once
 
 #include <Audio/AudioSource.hpp>
@@ -19,4 +17,3 @@ namespace ag
 	};
 }
 
-#endif

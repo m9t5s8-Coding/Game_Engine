@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Platform/OpenGL/OpenGLVertexArray.hpp>
 #include <Apch.hpp>
@@ -54,7 +54,7 @@ namespace ag
       starting_index += buffer->get_layout().get_element_count();
     }
     uint32_t index = starting_index;
-   
+
     for (const auto &element : layout)
     {
       glEnableVertexAttribArray(index);
@@ -77,7 +77,7 @@ namespace ag
         glVertexAttribDivisor(index, 1);
       index++;
     }
-    
+
     m_vertexbuffers.push_back(p_vertexbuffer);
   }
   void OpenGLVertexArray::set_index_buffer(const AG_ref<IndexBuffer> &p_indexbuffer)

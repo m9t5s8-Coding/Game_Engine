@@ -337,7 +337,7 @@ namespace ag
 
 		rect.fill_color = color;
 		vec2f new_size = Math::screen_size_to_world_size(size, s_data->view.get_size(), s_data->viewport_size);
-		rect.size = { new_size.x, size.y };
+		rect.size = vec2f(new_size.x, size.y);
 
 		rect.mode = mode;
 
@@ -375,7 +375,7 @@ namespace ag
 
 
 
-		//starting_pos = 
+		//starting_pos =
 		const float scale_x = trans.scale.x * text_string.font_size / TextLoader::font.em_size;
 		const float scale_y = trans.scale.y * text_string.font_size / TextLoader::font.em_size;
 

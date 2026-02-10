@@ -7,6 +7,9 @@
 
 #ifdef PLATFROM_WINDOWS
 #include <Windows.h>
+
+#elif defined(PLATFORM_LINUX)
+#include <sys/stat.h>
 #endif
 
 using json = nlohmann::json;
@@ -112,6 +115,10 @@ namespace ag::Helper
     else
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
 #endif
+    if (read_only)
+        chmod(path.c_str(), S_IRUSR | S_IRGRP | S_IROTH);
+    else
+        chmod(path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   }
 
 

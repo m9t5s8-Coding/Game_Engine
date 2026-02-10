@@ -1,5 +1,6 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
+#include "Audio/AudioBuffer.hpp"
 #include <Audio/AudioManager.hpp>
 
 

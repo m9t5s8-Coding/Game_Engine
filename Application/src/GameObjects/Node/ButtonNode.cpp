@@ -135,7 +135,7 @@ namespace ag
       text.h_allignment = props.layout.h_allignment;
       text.v_allignment = props.layout.v_allignment;
       text.bounds = rectangle.size * transform.scale;
-      text.padding = { 0, 0 };
+      text.padding = vec2f(0.0f, 0.0f);
 
     }
 

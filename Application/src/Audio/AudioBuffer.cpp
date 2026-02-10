@@ -1,7 +1,7 @@
-#include<Audio/AudioBuffer.hpp>
+#include <Audio/AudioBuffer.hpp>
 #include <Audio/AudioAPI.hpp>
 
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 #include <Platform/OpenAL/OpenALAudioBuffer.hpp>
 #endif
 
@@ -15,14 +15,14 @@ namespace ag
 		case AudioAPI::API::None: return nullptr;
 		case AudioAPI::API::OpenAL:
 		{
-#ifdef  PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 			return AG_cref<OpenALAudioBuffer>(path);
 #else
-			return nullptr
+			return nullptr;
 #endif
 		}
 		default:
-			break;
+			return nullptr;
 		}
 	}
 }

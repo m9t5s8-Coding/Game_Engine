@@ -1,6 +1,4 @@
-#ifdef PLATFORM_WINDOWS
-
-#pragma once
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Platform/OpenGL/OpenGLIndexBuffer.hpp>
 #include <glad/glad.h>

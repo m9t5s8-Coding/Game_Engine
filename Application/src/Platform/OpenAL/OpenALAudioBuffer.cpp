@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Apch.hpp>
 #include <Platform/OpenAL/OpenALAudioBuffer.hpp>

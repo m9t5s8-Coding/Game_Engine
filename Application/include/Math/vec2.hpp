@@ -14,9 +14,21 @@ namespace ag
 
 		vec2(T x_ = T(), T y_ = T()) : x(x_), y(y_) {}
 		vec2(T s_) : x(s_), y(s_) {}
+    vec2(std::initializer_list<T> list) {
+        auto it = list.begin();
+        x = (it != list.end()) ? *it++ : 0;
+        y = (it != list.end()) ? *it : 0;
+    }
+    vec2& operator=(std::initializer_list<T> list) {
+        auto it = list.begin();
+        x = (it != list.end()) ? *it++ : 0;
+        y = (it != list.end()) ? *it : 0;
+        return *this;
+    }
 
-		vec2<T>(const ImVec2& v) : x(v.x), y(v.y) {}
-		vec2<T>(const b2Vec2& v) : x(v.x), y(v.y) {}
+
+		vec2(const ImVec2& v) : x(v.x), y(v.y) {}
+		vec2(const b2Vec2& v) : x(v.x), y(v.y) {}
 
 		T length() const {
 			if constexpr (std::is_floating_point_v<T>) {

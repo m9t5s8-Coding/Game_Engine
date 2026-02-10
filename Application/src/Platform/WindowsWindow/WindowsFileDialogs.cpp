@@ -1,6 +1,8 @@
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
 #include <Project/FileDialogs.hpp>
+
+#ifdef PLATFORM_WINDOWS
 #include <commdlg.h>
 #include <Windows.h>
 #include <shobjidl.h>
@@ -18,7 +20,6 @@ namespace ag
 {
   namespace
   {
-    // UTF-8 to UTF-16
     std::wstring utf8_to_wide(const std::string& utf8)
     {
       if (utf8.empty()) return L"";
@@ -33,7 +34,6 @@ namespace ag
       return wide;
     }
 
-    // UTF-16 to UTF-8
     std::string wide_to_utf8(const std::wstring& wide)
     {
       if (wide.empty()) return "";
@@ -228,5 +228,210 @@ namespace ag
     return std::wstring(path);
   }
 }
+
+#elif defined(PLATFORM_LINUX)
+#include <gtk/gtk.h>
+#include <string>
+#include <cstdlib>
+#include <unistd.h>
+#include <limits.h>
+#include <sys/wait.h>
+#include <libgen.h>
+#include <cstring>
+
+namespace ag
+{
+  namespace
+  {
+    void ensure_gtk_init()
+    {
+      static bool initialized = false;
+      if (!initialized)
+      {
+        gtk_init_check(nullptr, nullptr);
+        initialized = true;
+      }
+    }
+
+    void add_filters_to_dialog(GtkFileChooser* chooser, const char* filter)
+    {
+      if (!filter || filter[0] == '\0')
+      {
+        GtkFileFilter* all_filter = gtk_file_filter_new();
+        gtk_file_filter_set_name(all_filter, "All Files");
+        gtk_file_filter_add_pattern(all_filter, "*");
+        gtk_file_chooser_add_filter(chooser, all_filter);
+        return;
+      }
+
+      std::string filterStr = filter;
+      size_t pos = 0;
+
+      while (pos < filterStr.length())
+      {
+        size_t pipe1 = filterStr.find('|', pos);
+        if (pipe1 == std::string::npos) break;
+
+        std::string name = filterStr.substr(pos, pipe1 - pos);
+
+        size_t pipe2 = filterStr.find('|', pipe1 + 1);
+        std::string pattern;
+        if (pipe2 != std::string::npos)
+        {
+          pattern = filterStr.substr(pipe1 + 1, pipe2 - pipe1 - 1);
+          pos = pipe2 + 1;
+        }
+        else
+        {
+          pattern = filterStr.substr(pipe1 + 1);
+          pos = filterStr.length();
+        }
+
+        GtkFileFilter* file_filter = gtk_file_filter_new();
+        gtk_file_filter_set_name(file_filter, name.c_str());
+        gtk_file_filter_add_pattern(file_filter, pattern.c_str());
+        gtk_file_chooser_add_filter(chooser, file_filter);
+      }
+    }
+  }
+
+  std::string FileDialogs::open_file(const char* filter)
+  {
+    ensure_gtk_init();
+
+    GtkWidget* dialog = gtk_file_chooser_dialog_new(
+      "Open File",
+      nullptr,
+      GTK_FILE_CHOOSER_ACTION_OPEN,
+      "_Cancel", GTK_RESPONSE_CANCEL,
+      "_Open", GTK_RESPONSE_ACCEPT,
+      nullptr
+    );
+
+    add_filters_to_dialog(GTK_FILE_CHOOSER(dialog), filter);
+
+    std::string result;
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+      char* filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+      if (filename)
+      {
+        result = filename;
+        g_free(filename);
+      }
+    }
+
+    gtk_widget_destroy(dialog);
+
+    while (gtk_events_pending())
+      gtk_main_iteration();
+
+    return result;
+  }
+
+  std::string FileDialogs::save_file(const char* filter)
+  {
+    ensure_gtk_init();
+
+    GtkWidget* dialog = gtk_file_chooser_dialog_new(
+      "Save File",
+      nullptr,
+      GTK_FILE_CHOOSER_ACTION_SAVE,
+      "_Cancel", GTK_RESPONSE_CANCEL,
+      "_Save", GTK_RESPONSE_ACCEPT,
+      nullptr
+    );
+
+    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+    add_filters_to_dialog(GTK_FILE_CHOOSER(dialog), filter);
+
+    std::string result;
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+      char* filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+      if (filename)
+      {
+        result = filename;
+        g_free(filename);
+      }
+    }
+
+    gtk_widget_destroy(dialog);
+
+    while (gtk_events_pending())
+      gtk_main_iteration();
+
+    return result;
+  }
+
+  std::string FileDialogs::select_folder(const char* title)
+  {
+    ensure_gtk_init();
+
+    GtkWidget* dialog = gtk_file_chooser_dialog_new(
+      title ? title : "Select Folder",
+      nullptr,
+      GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+      "_Cancel", GTK_RESPONSE_CANCEL,
+      "_Select", GTK_RESPONSE_ACCEPT,
+      nullptr
+    );
+
+    std::string result;
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+      char* folder = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+      if (folder)
+      {
+        result = folder;
+        g_free(folder);
+      }
+    }
+
+    gtk_widget_destroy(dialog);
+
+    // Process pending events to clean up
+    while (gtk_events_pending())
+      gtk_main_iteration();
+
+    return result;
+  }
+
+  void FileDialogs::run_exe(const std::wstring& exe_path)
+  {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    std::string exe_path_str = converter.to_bytes(exe_path);
+
+    pid_t pid = fork();
+
+    if (pid == 0)
+    {
+      execl(exe_path_str.c_str(), exe_path_str.c_str(), nullptr);
+      exit(1);
+    }
+    else if (pid < 0)
+    {
+
+    }
+  }
+
+  std::wstring FileDialogs::get_exe_folder()
+  {
+    char path[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+
+    if (count == -1)
+      return L"";
+
+    path[count] = '\0';
+
+    char* dir = dirname(path);
+
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(dir);
+  }
+}
+
+#endif
 
 #endif

@@ -83,13 +83,11 @@ namespace ag
 		{
 			m_world->Step(ts.get_seconds(), 8, 3);
 		}
-		AERO_CORE_INFO("Hello");
 		m_registry.sort<Tag_Component>([](const Tag_Component& a, const Tag_Component& b)
 			{ return a.index < b.index; });
 
 		m_root_entity.clear();
 
-		// Update Thread
 		auto view = m_registry.view<Tag_Component>();
 		for (auto entityID : view)
 		{
