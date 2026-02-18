@@ -6,6 +6,8 @@
 #include <backends/imgui_impl_glfw.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+
 #elif defined(PLATFORM_ANDROID)
 #include <backends/imgui_impl_android.h>
 #endif
@@ -118,12 +120,6 @@ namespace ag
     void ImGuiLayer::end()
     {
        ImGuiIO& io = ImGui::GetIO();
-
-       if (io.DisplaySize.x <= 0 || io.DisplaySize.y <= 0)
-       {
-          AERO_CORE_WARN("Invalid display size at render, skipping frame");
-          return;
-       }
 
        ImGui::Render();
 

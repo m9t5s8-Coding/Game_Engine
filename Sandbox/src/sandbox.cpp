@@ -1,17 +1,11 @@
 #include <Sandbox2D.hpp>
 
-
-class Sandbox final : public ag::Application
-{
+class Sandbox final : public ag::Application {
 public:
-  Sandbox()
-  {
-    
-  }
+  Sandbox() {}
   ~Sandbox() override {};
 
-  virtual void on_create() override
-  {
+  virtual void on_create() override {
     ag::Engine::start_runtime();
     ag::WindowProps props;
     props.Size = ag::vec2u(1289, 720);
@@ -19,7 +13,6 @@ public:
     init(props);
     get().get_window().center_window();
 
-   
     ag::NodeFactory::init();
     ag::Renderer::init();
     ag::ScriptManager::init();
@@ -27,8 +20,7 @@ public:
     push_layer(new ag::Sandbox2D());
   }
 
-  virtual void on_destroy() override
-  {
+  virtual void on_destroy() override {
     ag::Scene::get_active_scene()->destroy();
     ag::NodeFactory::shut_down();
     ag::Renderer2D::shut_down();
@@ -36,7 +28,4 @@ public:
   }
 };
 
-ag::Application *ag::create_application()
-{
-   return new Sandbox();
-}
+ag::Application *ag::create_application() { return new Sandbox(); }

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <thread>
@@ -8,7 +9,7 @@
 
 namespace ag
 {
- 
+
   class GameExporter
   {
   public:

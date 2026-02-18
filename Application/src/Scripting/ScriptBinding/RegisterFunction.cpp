@@ -1,10 +1,13 @@
 #include <Scripting/ScriptBinding/RegisterFunction.hpp>
 #include <Scripting/ScriptBinding/ScriptBinding.hpp>
+#include <Scripting/ScriptBinding/SignalManager.hpp>
+
+#include "Scripting/ScriptManager.hpp"
 
 namespace ag
 {
-  void RegisterFunction::init()
-  {
+void RegisterFunction::init()
+{
     ScriptBinding::register_vec2();
     ScriptBinding::register_color();
 
@@ -12,10 +15,10 @@ namespace ag
     ScriptBinding::register_mouse_polling();
     ScriptBinding::register_events();
 
-    
-
     ScriptBinding::register_node();
     ScriptBinding::register_audio_functions();
     ScriptBinding::register_physics();
-  }
+
+    Signal_Manager::bind_signals();
 }
+}  // namespace ag

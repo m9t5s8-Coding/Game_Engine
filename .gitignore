@@ -2,6 +2,7 @@
 .vscode
 .idea
 .gradle
+.cache
 
 
 /out/
@@ -9,6 +10,8 @@
 /gradle/
 /build/
 /cmake-build-debug/
+/.cache/
+
 
 
 build.gradle
@@ -19,5 +22,8 @@ local.properties
 settings.gradle
 vc140.idb
 vc140.pdb
+compile_commands.json
+
+
 
 

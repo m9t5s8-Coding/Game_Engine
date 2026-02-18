@@ -21,7 +21,6 @@ namespace ag
 		m_open = true;
 		m_exporter.refresh_project_info();
 
-		// Update project name in exporter
 		auto project = Project::get_active_project();
 		if (project)
 		{
@@ -33,7 +32,6 @@ namespace ag
 	void ExportPanel::close()
 	{
 		m_open = false;
-		// Clear any previous export status
 		m_exporter.clear_status();
 	}
 
@@ -42,7 +40,7 @@ namespace ag
 	{
 		if (!m_open) return;
 
-		
+
 		PopUpModel model;
 		model.id = "##ExportGame";
 		model.name = "Export Game";
@@ -106,7 +104,6 @@ namespace ag
 			ImGui::Dummy(ImVec2(0, 10));
 
 
-			// Exe name
 			ImGui::Text("Exe Name");
 			ImGui::SetNextItemWidth(-1);
 			if (ImGui::InputText("##ExeName", m_exe_name, sizeof(m_exe_name)))

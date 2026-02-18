@@ -45,7 +45,6 @@ constexpr const wchar_t path_sep = L'/';
 
 
 
-
 	void UI::draw_menu_bar()
 	{
 		if (!ImGui::BeginMainMenuBar()) return;

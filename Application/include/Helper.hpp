@@ -114,11 +114,12 @@ namespace ag::Helper
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_READONLY);
     else
       SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
-#endif
+#elif defined(PLATFORM_LINUX)
     if (read_only)
         chmod(path.c_str(), S_IRUSR | S_IRGRP | S_IROTH);
     else
         chmod(path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#endif
   }
 
 
