@@ -81,8 +81,7 @@ void Tag_Component::load_children(Entity entity)
         tag.children.push_back(child);
     }
 }
-void Tag_Component::clone_entity(Entity original, Entity duplicate,
-                                 Entity parent)
+void Tag_Component::clone_entity(Entity original, Entity duplicate, Entity parent)
 {
     const auto& original_tag = original.get_component<Tag_Component>();
     auto& duplicate_tag = duplicate.get_component<Tag_Component>();
@@ -110,8 +109,7 @@ bool Tag_Component::get_visibility(Entity entity)
 
     if (!tag.visible) return false;
 
-    if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
-        return get_visibility(tag.parent);
+    if (tag.parent && tag.parent.get_id() != INVALID_ENTITY) return get_visibility(tag.parent);
 
     return true;
 }
@@ -123,15 +121,13 @@ bool Tag_Component::get_lock(Entity entity)
 
     if (!tag.locked) return false;
 
-    if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
-        return get_lock(tag.parent);
+    if (tag.parent && tag.parent.get_id() != INVALID_ENTITY) return get_lock(tag.parent);
 
     return true;
 }
 bool Tag_Component::is_parent(Entity child, Entity parent)
 {
-    if (child.get_id() == INVALID_ENTITY || parent.get_id() == INVALID_ENTITY)
-        return false;
+    if (child.get_id() == INVALID_ENTITY || parent.get_id() == INVALID_ENTITY) return false;
 
     if (child.get_id() == parent.get_id()) return true;
     std::unordered_set<uint32_t> visited;
@@ -173,8 +169,7 @@ json Transform_Component::save_json(Entity entity)
 }
 void Transform_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Transform_Component>())
-        entity.add_component<Transform_Component>();
+    if (!entity.has_component<Transform_Component>()) entity.add_component<Transform_Component>();
 
     auto& props = entity.get_component<Transform_Component>();
     Helper::load_json(j, "Position", props.position);
@@ -185,8 +180,7 @@ void Transform_Component::clone_entity(Entity original, Entity clone)
 {
     if (original.has_component<Transform_Component>())
     {
-        clone.add_component<Transform_Component>(
-            original.get_component<Transform_Component>());
+        clone.add_component<Transform_Component>(original.get_component<Transform_Component>());
     }
 }
 bool Transform_Component::is_compatible(NodeType type)
@@ -207,16 +201,14 @@ Transform_Component Transform_Component::get_world_transform(Entity entity)
     {
         Transform_Component parent_world = get_world_transform(tag.parent);
 
-        world_transform.position =
-            parent_world.position + world_transform.position;
+        world_transform.position = parent_world.position + world_transform.position;
         world_transform.scale = parent_world.scale * world_transform.scale;
-        world_transform.rotation =
-            parent_world.rotation + world_transform.rotation;
+        world_transform.rotation = parent_world.rotation + world_transform.rotation;
     }
     return world_transform;
 }
-void Transform_Component::get_local_transform(
-    Entity entity, const Transform_Component& world_transform)
+void Transform_Component::get_local_transform(Entity entity,
+                                              const Transform_Component& world_transform)
 {
     auto& transform = entity.get_component<Transform_Component>();
     auto& tag = entity.get_component<Tag_Component>();
@@ -234,10 +226,7 @@ void Transform_Component::get_local_transform(
     }
 }
 
-void Script_Component::add_component(Entity entity)
-{
-    entity.add_component<Script_Component>();
-}
+void Script_Component::add_component(Entity entity) { entity.add_component<Script_Component>(); }
 void Script_Component::remove_component(Entity entity)
 {
     auto& comp = entity.get_component<Script_Component>();
@@ -260,8 +249,7 @@ json Script_Component::save_json(Entity entity)
 }
 void Script_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Script_Component>())
-        entity.add_component<Script_Component>();
+    if (!entity.has_component<Script_Component>()) entity.add_component<Script_Component>();
 
     auto& props = entity.get_component<Script_Component>();
     Helper::load_json(j, "Path", props.path);
@@ -270,8 +258,7 @@ void Script_Component::clone_entity(Entity original, Entity clone)
 {
     if (original.has_component<Script_Component>())
     {
-        const auto& original_path =
-            original.get_component<Script_Component>().path;
+        const auto& original_path = original.get_component<Script_Component>().path;
         Script_Component comps;
         comps.path = original_path;
         clone.add_component<Script_Component>(comps);
@@ -280,8 +267,7 @@ void Script_Component::clone_entity(Entity original, Entity clone)
 }
 void Script_Component::create(Entity entity)
 {
-    if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
-        return;
+    if (!entity.has_component<Script_Component>() || !Engine::is_runtime()) return;
     auto& comp = entity.get_component<Script_Component>();
     if (comp.on_create.is_valid())
     {
@@ -290,8 +276,7 @@ void Script_Component::create(Entity entity)
 }
 void Script_Component::update(Entity entity, TimeStamp ts)
 {
-    if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
-        return;
+    if (!entity.has_component<Script_Component>() || !Engine::is_runtime()) return;
 
     auto& comp = entity.get_component<Script_Component>();
 
@@ -302,8 +287,7 @@ void Script_Component::update(Entity entity, TimeStamp ts)
 }
 void Script_Component::destroy(Entity entity)
 {
-    if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
-        return;
+    if (!entity.has_component<Script_Component>() || !Engine::is_runtime()) return;
 
     auto& comp = entity.get_component<Script_Component>();
 
@@ -320,8 +304,7 @@ void Script_Component::destroy(Entity entity)
 }
 bool Script_Component::event(Entity entity, Event& e)
 {
-    if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
-        return false;
+    if (!entity.has_component<Script_Component>() || !Engine::is_runtime()) return false;
 
     auto& comp = entity.get_component<Script_Component>();
     if (!comp.on_event.is_valid()) return false;
@@ -332,35 +315,14 @@ bool Script_Component::event(Entity entity, Event& e)
 }
 void Script_Component::load_scripts(Entity entity)
 {
-    if (!Engine::is_runtime() || !entity.has_component<Script_Component>())
-        return;
+    if (!Engine::is_runtime() || !entity.has_component<Script_Component>()) return;
 
     auto& comp = entity.get_component<Script_Component>();
 
     auto project = Project::get_active_project();
-    std::string full_path =
-        project->get_directory() + project->get_scripts_directory() + comp.path;
+    std::string full_path = project->get_directory() + project->get_scripts_directory() + comp.path;
 
-    comp.env.get().set_function("get_entity",
-                                [entity]() -> Entity { return entity; });
-
-    comp.env.get().set_function(
-        "get_children",
-        [](ag::Entity& e, const std::string& name) -> Entity
-        {
-            if (!e.has_component<Tag_Component>()) return {};
-
-            auto& tag = e.get_component<Tag_Component>();
-            for (auto& child : tag.children)
-            {
-                auto& child_tag = child.get_component<Tag_Component>();
-                if (child_tag.name == name)
-                {
-                    return child;
-                }
-            }
-            return {};
-        });
+    comp.env.get().set_function("get_entity", [entity]() -> Entity { return entity; });
 
     if (AssetManager::is_packed())
     {
@@ -406,8 +368,7 @@ json Render2D_Component::save_json(Entity entity)
 }
 void Render2D_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Render2D_Component>())
-        entity.add_component<Render2D_Component>();
+    if (!entity.has_component<Render2D_Component>()) entity.add_component<Render2D_Component>();
 
     auto& props = entity.get_component<Render2D_Component>();
     Helper::load_json(j, "Size", props.size);
@@ -431,8 +392,7 @@ json Border_Component::save_json(Entity entity)
 }
 void Border_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Border_Component>())
-        entity.add_component<Border_Component>();
+    if (!entity.has_component<Border_Component>()) entity.add_component<Border_Component>();
 
     auto& props = entity.get_component<Border_Component>();
     Helper::load_json(j, "Thickness", props.thickness);
@@ -457,8 +417,7 @@ json Corner_Component::save_json(Entity entity)
 }
 void Corner_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Corner_Component>())
-        entity.add_component<Corner_Component>();
+    if (!entity.has_component<Corner_Component>()) entity.add_component<Corner_Component>();
 
     auto& props = entity.get_component<Corner_Component>();
     Helper::load_json(j, "Corner", props.corner);
@@ -481,8 +440,7 @@ json UI_Component::save_json(Entity entity)
 }
 void UI_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<UI_Component>())
-        entity.add_component<UI_Component>();
+    if (!entity.has_component<UI_Component>()) entity.add_component<UI_Component>();
 
     auto& props = entity.get_component<UI_Component>();
     Helper::load_json(j, "Mode", props.mode);
@@ -505,16 +463,14 @@ json Texture_Component::save_json(Entity entity)
 }
 void Texture_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Texture_Component>())
-        entity.add_component<Texture_Component>();
+    if (!entity.has_component<Texture_Component>()) entity.add_component<Texture_Component>();
 
     auto& props = entity.get_component<Texture_Component>();
     Helper::load_json(j, "Path", props.path);
     Helper::load_json(j, "Mode", props.filter_mode);
 
     if (!props.path.empty())
-        props.texture =
-            NodeHelper::load_texture(props.path, true, props.filter_mode);
+        props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 }
 bool Texture_Component::is_compatible(NodeType type)
 {
@@ -582,8 +538,7 @@ json Camera_Component::save_json(Entity entity)
 }
 void Camera_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Camera_Component>())
-        entity.add_component<Camera_Component>();
+    if (!entity.has_component<Camera_Component>()) entity.add_component<Camera_Component>();
 
     auto& props = entity.get_component<Camera_Component>();
     Helper::load_json(j, "Size", props.size);
@@ -606,8 +561,7 @@ json Window_Component::save_json(Entity entity)
 }
 void Window_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Window_Component>())
-        entity.add_component<Window_Component>();
+    if (!entity.has_component<Window_Component>()) entity.add_component<Window_Component>();
 
     auto& props = entity.get_component<Window_Component>();
     Helper::load_json(j, "Size", props.size);
@@ -677,9 +631,7 @@ bool CameraBounds_Component::is_compatible(NodeType type)
 void CameraBounds_Component::on_update(Entity entity)
 {
     // Apply bounds even without follow component
-    if (!Engine::is_runtime() ||
-        !entity.has_component<CameraBounds_Component>())
-        return;
+    if (!Engine::is_runtime() || !entity.has_component<CameraBounds_Component>()) return;
 
     auto& bounds = entity.get_component<CameraBounds_Component>();
 
@@ -699,15 +651,13 @@ void CameraBounds_Component::on_update(Entity entity)
     // Clamp X axis
     if (x_bounds_set)
     {
-        clamped_pos.x =
-            std::clamp(clamped_pos.x, bounds.x_axis.x, bounds.x_axis.y);
+        clamped_pos.x = std::clamp(clamped_pos.x, bounds.x_axis.x, bounds.x_axis.y);
     }
 
     // Clamp Y axis
     if (y_bounds_set)
     {
-        clamped_pos.y =
-            std::clamp(clamped_pos.y, bounds.y_axis.x, bounds.y_axis.y);
+        clamped_pos.y = std::clamp(clamped_pos.y, bounds.y_axis.x, bounds.y_axis.y);
     }
 
     // Only update if position changed
@@ -757,21 +707,17 @@ bool CameraFollow_Component::is_compatible(NodeType type)
 }
 void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
 {
-    if (!Engine::is_runtime() ||
-        !entity.has_component<CameraFollow_Component>())
-        return;
+    if (!Engine::is_runtime() || !entity.has_component<CameraFollow_Component>()) return;
 
     auto& props = entity.get_component<CameraFollow_Component>();
-    if (!props.target.has_component<Transform_Component>() ||
-        props.type == FollowType::NONE)
+    if (!props.target.has_component<Transform_Component>() || props.type == FollowType::NONE)
         return;
 
     auto view_controller = ViewController::get_main_controller();
     auto& view = view_controller->get_view();
 
     float dt = ts.get_seconds();
-    vec2f target_pos =
-        Transform_Component::get_world_transform(props.target).position;
+    vec2f target_pos = Transform_Component::get_world_transform(props.target).position;
     vec2f current_pos = view.get_center();
     vec2f new_pos = current_pos;
 
@@ -797,11 +743,8 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
         {
             // Spring-damper system for smooth, natural following
             // Defaults: stiffness = 150.0f, damping = 20.0f
-            float stiffness = (props.spring_stiffness > 0.0f)
-                                  ? props.spring_stiffness
-                                  : 150.0f;
-            float damping =
-                (props.spring_damping > 0.0f) ? props.spring_damping : 20.0f;
+            float stiffness = (props.spring_stiffness > 0.0f) ? props.spring_stiffness : 150.0f;
+            float damping = (props.spring_damping > 0.0f) ? props.spring_damping : 20.0f;
 
             // Calculate spring force
             vec2f displacement = target_pos - current_pos;
@@ -823,10 +766,9 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
         {
             // Only move camera when target leaves the dead zone
             // Default dead zone size
-            vec2f dead_zone =
-                (props.dead_zone.x > 0.0f && props.dead_zone.y > 0.0f)
-                    ? props.dead_zone
-                    : vec2f(100.0f, 100.0f);
+            vec2f dead_zone = (props.dead_zone.x > 0.0f && props.dead_zone.y > 0.0f)
+                                  ? props.dead_zone
+                                  : vec2f(100.0f, 100.0f);
 
             vec2f offset = target_pos - current_pos;
             vec2f half_dead_zone = dead_zone * 0.5f;
@@ -915,8 +857,7 @@ json Animation_Component::save_json(Entity entity)
 }
 void Animation_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Animation_Component>())
-        entity.add_component<Animation_Component>();
+    if (!entity.has_component<Animation_Component>()) entity.add_component<Animation_Component>();
 
     auto& props = entity.get_component<Animation_Component>();
     Helper::load_json(j, "Current", props.current_animation);
@@ -951,8 +892,7 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
         return;
     }
     auto it = props.animations.find(props.current_animation);
-    if (props.animations.find(props.current_animation) ==
-        props.animations.end())
+    if (props.animations.find(props.current_animation) == props.animations.end())
     {
         auto& texture = entity.get_component<Texture_Component>();
         if (texture.texture)
@@ -984,8 +924,7 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
         {
             props.current_frame += props.reverse_direction ? -1 : 1;
 
-            if (props.current_frame >= anim.frames.size() &&
-                props.current_frame >= 0)
+            if (props.current_frame >= anim.frames.size() && props.current_frame >= 0)
             {
                 if (anim.loop)
                 {
@@ -1029,8 +968,7 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
     }
     props.rect = anim.frames[props.current_frame].frame_rect;
 }
-bool Animation_Component::play_animation(Entity entity, const std::string& name,
-                                         bool restart)
+bool Animation_Component::play_animation(Entity entity, const std::string& name, bool restart)
 {
     if (!entity.has_component<Animation_Component>()) return false;
 
@@ -1089,8 +1027,7 @@ json Tile_Component::save_json(Entity entity)
 }
 void Tile_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Tile_Component>())
-        entity.add_component<Tile_Component>();
+    if (!entity.has_component<Tile_Component>()) entity.add_component<Tile_Component>();
 
     auto& tileset = entity.get_component<Tile_Component>();
     Helper::load_json(j, "Size", tileset.size);
@@ -1140,8 +1077,8 @@ void SolidSet_Component::clone_entity(Entity original, Entity clone)
 }
 void SolidSet_Component::update(Entity entity)
 {
-    if (!entity.has_component<SolidSet_Component>() ||
-        !entity.has_component<Tile_Component>() || !Engine::is_runtime())
+    if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>() ||
+        !Engine::is_runtime())
         return;
     create_body(entity);
 }
@@ -1149,8 +1086,7 @@ void SolidSet_Component::draw(Entity entity)
 {
     if (Engine::is_runtime()) return;
 
-    if (!entity.has_component<SolidSet_Component>() ||
-        !entity.has_component<Tile_Component>())
+    if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>())
         return;
 
     auto& solid_set = entity.get_component<SolidSet_Component>();
@@ -1163,8 +1099,7 @@ void SolidSet_Component::draw(Entity entity)
 
     for (const auto& [position, tile] : solid_set.placed_tiles)
     {
-        trans.position =
-            (position * props.size) + props.size / 2 + props.offset;
+        trans.position = (position * props.size) + props.size / 2 + props.offset;
         Renderer2D::draw_rectangle(rect, trans);
     }
 }
@@ -1207,16 +1142,14 @@ void SolidSet_Component::create_body(Entity entity)
         {
             vec2i start_pos(x, y);
 
-            if (props.placed_tiles.find(start_pos) ==
-                    props.placed_tiles.end() ||
+            if (props.placed_tiles.find(start_pos) == props.placed_tiles.end() ||
                 !props.placed_tiles[start_pos])
             {
                 continue;
             }
 
             int width = 1;
-            while (props.placed_tiles.find(vec2i(x + width, y)) !=
-                       props.placed_tiles.end() &&
+            while (props.placed_tiles.find(vec2i(x + width, y)) != props.placed_tiles.end() &&
                    props.placed_tiles[vec2i(x + width, y)])
             {
                 width++;
@@ -1229,8 +1162,7 @@ void SolidSet_Component::create_body(Entity entity)
                 for (int dx = 0; dx < width; ++dx)
                 {
                     vec2i check_pos(x + dx, y + height);
-                    if (props.placed_tiles.find(check_pos) ==
-                            props.placed_tiles.end() ||
+                    if (props.placed_tiles.find(check_pos) == props.placed_tiles.end() ||
                         !props.placed_tiles[check_pos])
                     {
                         can_expand = false;
@@ -1251,16 +1183,14 @@ void SolidSet_Component::create_body(Entity entity)
                 }
             }
 
-            rectangles.push_back(
-                std::make_tuple(start_pos, vec2i(width, height)));
+            rectangles.push_back(std::make_tuple(start_pos, vec2i(width, height)));
         }
     }
 
     for (const auto& [start_pos, size_in_tiles] : rectangles)
     {
         vec2f center =
-            (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size +
-            tile_comps.offset;
+            (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
         Math::pixels_to_meters(center);
 
         vec2f half_size = vec2f(size_in_tiles) * tile_comps.size * 0.5f;
@@ -1306,8 +1236,7 @@ json TileSet_Component::save_json(Entity entity)
 }
 void TileSet_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<TileSet_Component>())
-        entity.add_component<TileSet_Component>();
+    if (!entity.has_component<TileSet_Component>()) entity.add_component<TileSet_Component>();
 
     auto& tileset = entity.get_component<TileSet_Component>();
 
@@ -1344,8 +1273,7 @@ void TileSet_Component::clone_entity(Entity original, Entity clone)
 {
     if (!original.has_component<TileSet_Component>()) return;
 
-    std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>>
-        tile_definitions;
+    std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
     std::unordered_map<vec2i, Tile, vec2_hash<int>> placed_tiles;
     bool is_tile_registered = false;
     bool tile_changed = false;
@@ -1363,16 +1291,15 @@ void TileSet_Component::clone_entity(Entity original, Entity clone)
 }
 void TileSet_Component::update(Entity entity)
 {
-    if (!entity.has_component<TileSet_Component>() ||
-        !entity.has_component<Tile_Component>() || !Engine::is_runtime())
+    if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>() ||
+        !Engine::is_runtime())
         return;
 
     create_body(entity);
 }
 void TileSet_Component::draw(Entity entity)
 {
-    if (!entity.has_component<TileSet_Component>() ||
-        !entity.has_component<Tile_Component>())
+    if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>())
         return;
 
     auto& tile_set = entity.get_component<TileSet_Component>();
@@ -1392,8 +1319,7 @@ void TileSet_Component::draw(Entity entity)
         const Tile_Defination& def = tex_it->second;
         sprite.texture_rect = def.texture_rect;
 
-        trans.position =
-            (position * props.size) + props.size / 2 + props.offset;
+        trans.position = (position * props.size) + props.size / 2 + props.offset;
 
         Renderer2D::draw_sprite(sprite, trans);
     }
@@ -1449,8 +1375,7 @@ void TileSet_Component::create_body(Entity entity)
         {
             vec2i start_pos(x, y);
 
-            if (solid_grid.find(start_pos) == solid_grid.end() ||
-                !solid_grid[start_pos])
+            if (solid_grid.find(start_pos) == solid_grid.end() || !solid_grid[start_pos])
             {
                 continue;
             }
@@ -1469,8 +1394,7 @@ void TileSet_Component::create_body(Entity entity)
                 for (int dx = 0; dx < width; ++dx)
                 {
                     vec2i check_pos(x + dx, y + height);
-                    if (solid_grid.find(check_pos) == solid_grid.end() ||
-                        !solid_grid[check_pos])
+                    if (solid_grid.find(check_pos) == solid_grid.end() || !solid_grid[check_pos])
                     {
                         can_expand = false;
                         break;
@@ -1490,16 +1414,14 @@ void TileSet_Component::create_body(Entity entity)
                 }
             }
 
-            rectangles.push_back(
-                std::make_tuple(start_pos, vec2i(width, height)));
+            rectangles.push_back(std::make_tuple(start_pos, vec2i(width, height)));
         }
     }
 
     for (const auto& [start_pos, size_in_tiles] : rectangles)
     {
         vec2f center =
-            (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size +
-            tile_comps.offset;
+            (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
         Math::pixels_to_meters(center);
 
         vec2f half_size = vec2f(size_in_tiles) * tile_comps.size * 0.5f;
@@ -1571,8 +1493,7 @@ json AutoTiling_Component::save_json(Entity entity)
 }
 void AutoTiling_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<AutoTiling_Component>())
-        entity.add_component<AutoTiling_Component>();
+    if (!entity.has_component<AutoTiling_Component>()) entity.add_component<AutoTiling_Component>();
 
     auto& props = entity.get_component<AutoTiling_Component>();
 
@@ -1772,8 +1693,7 @@ void PhysicsBody_Component::create_body(Entity entity)
             break;
     }
 
-    Transform_Component trans =
-        Transform_Component::get_world_transform(entity);
+    Transform_Component trans = Transform_Component::get_world_transform(entity);
     Math::pixels_to_meters(trans.position);
     body_def.position.Set(trans.position.x, trans.position.y);
     body_def.angle = Math::to_radians(trans.rotation);
@@ -1791,8 +1711,7 @@ void PhysicsBody_Component::create_body(Entity entity)
 
     if (entity.has_component<PhysicsMaterial_Component>())
     {
-        auto& material_comps =
-            entity.get_component<PhysicsMaterial_Component>();
+        auto& material_comps = entity.get_component<PhysicsMaterial_Component>();
         if (material_comps.preset != MaterialPreset::Custom)
             PhysicsMaterial_Component::apply_preset(material_comps);
 
@@ -1833,16 +1752,15 @@ void PhysicsBody_Component::create_body(Entity entity)
             Math::pixels_to_meters(size);
 
             b2PolygonShape box;
-            box.SetAsBox(size.x / 2.0f, size.y / 2.0f,
-                         b2Vec2(offset.x, offset.y), shape_data.rotation);
+            box.SetAsBox(size.x / 2.0f, size.y / 2.0f, b2Vec2(offset.x, offset.y),
+                         shape_data.rotation);
             fixture_def.shape = &box;
 
             shape_data.fixture = props.body->CreateFixture(&fixture_def);
         }
         else if (shape_data.shape_type == ShapeType::Circle)
         {
-            float radius =
-                shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
+            float radius = shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
             Math::pixels_to_meters(radius);
 
             b2CircleShape circle;
@@ -1900,8 +1818,7 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
     }
 
     // Get transform and material properties
-    Transform_Component trans =
-        Transform_Component::get_world_transform(entity);
+    Transform_Component trans = Transform_Component::get_world_transform(entity);
 
     float density = 1.0f;
     float friction = 0.3f;
@@ -1909,8 +1826,7 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
 
     if (entity.has_component<PhysicsMaterial_Component>())
     {
-        auto& material_comps =
-            entity.get_component<PhysicsMaterial_Component>();
+        auto& material_comps = entity.get_component<PhysicsMaterial_Component>();
         if (material_comps.preset != MaterialPreset::Custom)
             PhysicsMaterial_Component::apply_preset(material_comps);
 
@@ -1951,16 +1867,15 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
             Math::pixels_to_meters(size);
 
             b2PolygonShape box;
-            box.SetAsBox(size.x / 2.0f, size.y / 2.0f,
-                         b2Vec2(offset.x, offset.y), shape_data.rotation);
+            box.SetAsBox(size.x / 2.0f, size.y / 2.0f, b2Vec2(offset.x, offset.y),
+                         shape_data.rotation);
             fixture_def.shape = &box;
 
             shape_data.fixture = props.body->CreateFixture(&fixture_def);
         }
         else if (shape_data.shape_type == ShapeType::Circle)
         {
-            float radius =
-                shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
+            float radius = shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
             Math::pixels_to_meters(radius);
 
             b2CircleShape circle;
@@ -2086,8 +2001,7 @@ json Tween_Component::save_json(Entity entity)
 }
 void Tween_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Tween_Component>())
-        entity.add_component<Tween_Component>();
+    if (!entity.has_component<Tween_Component>()) entity.add_component<Tween_Component>();
 
     auto& comps = entity.get_component<Tween_Component>();
 
@@ -2117,8 +2031,7 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
 
     tween.elapsed_time += dt;
 
-    float t =
-        tween.duration > 0.0f ? (tween.elapsed_time / tween.duration) : 1.0f;
+    float t = tween.duration > 0.0f ? (tween.elapsed_time / tween.duration) : 1.0f;
 
     if (t >= 1.0f)
     {
@@ -2148,11 +2061,9 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
 
     vec2f current_position;
     current_position.x =
-        tween.start_position.x +
-        (tween.end_position.x - tween.start_position.x) * eased_t;
+        tween.start_position.x + (tween.end_position.x - tween.start_position.x) * eased_t;
     current_position.y =
-        tween.start_position.y +
-        (tween.end_position.y - tween.start_position.y) * eased_t;
+        tween.start_position.y + (tween.end_position.y - tween.start_position.y) * eased_t;
 
     if (entity.has_component<Transform_Component>())
     {
@@ -2220,8 +2131,7 @@ json Text_Component::save_json(Entity entity)
 }
 void Text_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Text_Component>())
-        entity.add_component<Text_Component>();
+    if (!entity.has_component<Text_Component>()) entity.add_component<Text_Component>();
 
     auto& props = entity.get_component<Text_Component>();
     Helper::load_json(j, "Text", props.text);
@@ -2250,8 +2160,7 @@ json FontStyle_Component::save_json(Entity entity)
 }
 void FontStyle_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<FontStyle_Component>())
-        entity.add_component<FontStyle_Component>();
+    if (!entity.has_component<FontStyle_Component>()) entity.add_component<FontStyle_Component>();
 
     auto& props = entity.get_component<FontStyle_Component>();
 
@@ -2274,9 +2183,8 @@ vec2f Text::calc_longest_size(const Text& text, const vec2f& s)
 {
     const vec2f scale = s * text.font_size / TextLoader::font.em_size;
     vec2f size = {0, 0};
-    const float line_height = TextLoader::font.line_height *
-                              TextLoader::font.em_size * scale.y *
-                              text.line_height;
+    const float line_height =
+        TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
 
     if (text.bounds.x != 0 && text.bounds.y != 0)
     {
@@ -2324,21 +2232,18 @@ vec2f Text::calc_longest_size(const Text& text, const vec2f& s)
     return size;
 }
 
-vec2f Text::calc_line_text_size(const Text& text, const vec2f& s,
-                                const vec2f& longest_size, size_t start_index,
-                                size_t* break_index)
+vec2f Text::calc_line_text_size(const Text& text, const vec2f& s, const vec2f& longest_size,
+                                size_t start_index, size_t* break_index)
 {
     vec2f scale = s * (text.font_size / TextLoader::font.em_size);
 
-    const float line_height = TextLoader::font.line_height *
-                              TextLoader::font.em_size * scale.y *
-                              text.line_height;
+    const float line_height =
+        TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
 
     float width = 0.0f;
     float space_width = 0.0f;
 
-    if (auto it = TextLoader::font.glyphs.find(' ');
-        it != TextLoader::font.glyphs.end())
+    if (auto it = TextLoader::font.glyphs.find(' '); it != TextLoader::font.glyphs.end())
     {
         space_width = it->second.advance * scale.x;
     }
@@ -2409,8 +2314,7 @@ vec2f Text::calc_line_text_size(const Text& text, const vec2f& s,
         }
 
         float total = width + space_width + word_width;
-        if (longest_size.x > 0 && width > 0 &&
-            total - longest_size.x > TEXT_EPSILON)
+        if (longest_size.x > 0 && width > 0 && total - longest_size.x > TEXT_EPSILON)
         {
             *break_index = word_start;
             return {width, line_height};
@@ -2435,35 +2339,32 @@ vec2f Text::center_text(const Text& text, const Transform_Component& transform,
     return transform.position - (longest_size * 0.5f);
 }
 
-vec2f Text::center_single_line_text(const Text& text,
-                                    const Transform_Component& transform,
-                                    const vec2f& longest_size,
-                                    size_t start_index, size_t* break_index)
+vec2f Text::center_single_line_text(const Text& text, const Transform_Component& transform,
+                                    const vec2f& longest_size, size_t start_index,
+                                    size_t* break_index)
 {
     vec2f position;
     switch (text.h_allignment)
     {
         case Text_Allignment_Horizontal::Left:
         {
-            calc_line_text_size(text, transform.scale, longest_size,
-                                start_index, break_index);
+            calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
             position.x = transform.position.x;
             break;
         }
 
         case Text_Allignment_Horizontal::Center:
         {
-            vec2f size = calc_line_text_size(
-                text, transform.scale, longest_size, start_index, break_index);
-            position.x =
-                transform.position.x + (longest_size * 0.5).x - (size * 0.5f).x;
+            vec2f size =
+                calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+            position.x = transform.position.x + (longest_size * 0.5).x - (size * 0.5f).x;
             break;
         }
 
         case Text_Allignment_Horizontal::Right:
         {
-            vec2f size = calc_line_text_size(
-                text, transform.scale, longest_size, start_index, break_index);
+            vec2f size =
+                calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
             position.x = transform.position.x + longest_size.x - size.x;
             break;
         }
@@ -2473,25 +2374,23 @@ vec2f Text::center_single_line_text(const Text& text,
     {
         case Text_Allignment_Vertical::Top:
         {
-            calc_line_text_size(text, transform.scale, longest_size,
-                                start_index, break_index);
+            calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
             position.y = transform.position.y;
             break;
         }
 
         case Text_Allignment_Vertical::Center:
         {
-            vec2f size = calc_line_text_size(
-                text, transform.scale, longest_size, start_index, break_index);
-            position.y =
-                transform.position.y + (longest_size * 0.5).y - (size * 0.5f).y;
+            vec2f size =
+                calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+            position.y = transform.position.y + (longest_size * 0.5).y - (size * 0.5f).y;
             break;
         }
 
         case Text_Allignment_Vertical::Bottom:
         {
-            vec2f size = calc_line_text_size(
-                text, transform.scale, longest_size, start_index, break_index);
+            vec2f size =
+                calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
             position.y = transform.position.y + longest_size.y - size.y;
             break;
         }
@@ -2568,16 +2467,14 @@ json Button_Component::save_json(Entity entity)
 
     for (const auto& [state, visual] : comps.overrides)
     {
-        j["Visual"][Button_Visual::to_string(state)] =
-            Button_Visual::save_json(visual);
+        j["Visual"][Button_Visual::to_string(state)] = Button_Visual::save_json(visual);
     }
 
     return j;
 }
 void Button_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Button_Component>())
-        entity.add_component<Button_Component>();
+    if (!entity.has_component<Button_Component>()) entity.add_component<Button_Component>();
 
     auto& comps = entity.get_component<Button_Component>();
 
@@ -2661,8 +2558,7 @@ json Audio_Component::save_json(Entity entity)
 }
 void Audio_Component::load_json(Entity entity, const json& j)
 {
-    if (!entity.has_component<Audio_Component>())
-        entity.add_component<Audio_Component>();
+    if (!entity.has_component<Audio_Component>()) entity.add_component<Audio_Component>();
 
     auto& props = entity.get_component<Audio_Component>();
     Helper::load_json(j, "Path", props.path);
