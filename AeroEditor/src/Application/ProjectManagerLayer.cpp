@@ -329,7 +329,9 @@ void ProjectManagerLayer::on_imgui_render()
                 std::string command = "explorer /select,\"" + abs_path.string() + "\"";
                 system(command.c_str());
 #elif defined(PLATFORM_LINUX)
-
+                std::string parent  = abs_path.parent_path().string();
+                std::string command = "dolphin \"" + parent + "\" &";
+                system(command.c_str());
 #endif
             }
 
