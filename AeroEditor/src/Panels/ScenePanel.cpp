@@ -982,30 +982,30 @@ bool ScenePanel::draw_toolbar_button(const char* icon, const char* tooltip)
 
 void ScenePanel::push_entity_style(Entity entity, bool is_selected)
 {
-    ImVec4 text_color = m_hierarchy_state.default_text_color;
-    ImVec4 bg_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-    float frame_rounding = 2.0f;
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    ImVec4 text_color = style.Colors[ImGuiCol_Text];
+    ImVec4 bg_color   = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    ImVec4 hov_color  = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
     if (is_selected)
     {
-        bg_color = m_hierarchy_state.selected_color;
+        bg_color  = style.Colors[ImGuiCol_Header];
+        hov_color = style.Colors[ImGuiCol_HeaderHovered];
     }
 
-    if (entity.has_component<Tag_Component>() &&
-        !entity.get_component<Tag_Component>().visible)
+    if (entity.has_component<Tag_Component>())
     {
-        text_color = m_hierarchy_state.disabled_color;
-    }
-    if (entity.has_component<Tag_Component>() &&
-        entity.get_component<Tag_Component>().locked)
-    {
-        text_color = m_hierarchy_state.disabled_color;
+        auto& tag = entity.get_component<Tag_Component>();
+
+        if (!tag.visible || tag.locked)
+            text_color = style.Colors[ImGuiCol_TextDisabled];
     }
 
-    ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-    ImGui::PushStyleColor(ImGuiCol_Header, bg_color);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bg_color);
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, frame_rounding);
+    ImGui::PushStyleColor(ImGuiCol_Text,          text_color);
+    ImGui::PushStyleColor(ImGuiCol_Header,        bg_color);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hov_color);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, style.FrameRounding);
 }
 
 const char* ScenePanel::get_node_icon(Entity entity)

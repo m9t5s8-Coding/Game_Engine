@@ -47,8 +47,6 @@ namespace ag
         project->m_project_loaded = false;
         return project;
       }
-
-     
       Helper::load_json(j["Project"], "Name", project->m_name);
       Helper::load_json(j["Project"], "Assets", project->m_assets_directory);
       Helper::load_json(j["Project"], "Scenes", project->m_scenes_directory);
@@ -115,7 +113,7 @@ namespace ag
 
     return project;
   }
-	
+
 	AG_ref<Project> Project::save_project()
 	{
 		auto project = get_active_project();

@@ -1,10 +1,6 @@
-﻿#ifndef PLATFORM_ANDROID
-
-#include <Core/EntryPoint.hpp>
+﻿#include <Core/EntryPoint.hpp>
 #include <Core/Log.hpp>
-#include <iostream>
 
-//This is an entry point main program where I can create program by inheriting the application class
 int main(int args, char **argv)
 {
   ag::Log::init_with_console();
@@ -15,4 +11,3 @@ int main(int args, char **argv)
   return 0;
 }
 
-#endif

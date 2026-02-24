@@ -28,20 +28,15 @@ void Sandbox2D::on_update(ag::TimeStamp ts)
     m_view_controller->on_update(ts);
 
     m_framebuffer->bind();
-
     RenderCommand::set_clear_color(ag::Color(38, 45, 42));
     RenderCommand::clear();
     m_framebuffer->clear_attachment(1, -1);
-
     Renderer2D::begin_scene(m_view_controller->get_view(),
                             Application::get().get_window().get_size());
     m_scene->on_update(ts);
     Renderer2D::end_scene();
-
     entity_selection();
-
     m_framebuffer->unbind();
-
     Renderer2D::begin_scene(m_view_controller->get_view(),
                             Application::get().get_window().get_size());
     Renderer2D::draw_fullscreen_quad(m_framebuffer->get_colorattachment_id());
