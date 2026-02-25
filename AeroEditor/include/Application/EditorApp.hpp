@@ -5,19 +5,19 @@
 
 namespace ag
 {
-  class EditorApp final : public Application
+class EditorApp final : public Application
+{
+public:
+  EditorApp();
+  virtual ~EditorApp() override
   {
-  public:
-    EditorApp();
-    virtual ~EditorApp() override {}
+  }
 
+  virtual void on_create() override;
+  virtual void on_destroy() override;
 
-    virtual void on_create() override;
-    virtual void on_destroy() override;
-
-  private:
-    void save_json();
-    void load_project_data();
-
-  };
-}
+private:
+  void save_json();
+  void load_project_data();
+};
+}  // namespace ag

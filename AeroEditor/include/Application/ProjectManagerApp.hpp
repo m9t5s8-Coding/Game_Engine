@@ -5,14 +5,15 @@
 
 namespace ag
 {
-  class ProjectManagerApp final : public ag::Application
+class ProjectManagerApp final : public ag::Application
+{
+public:
+  ProjectManagerApp();
+  virtual ~ProjectManagerApp() override
   {
-  public:
-    ProjectManagerApp();
-    virtual ~ProjectManagerApp() override {}
+  }
 
-
-    virtual void on_create() override;
-    virtual void on_destroy() override;
-  };
-}
+  virtual void on_create() override;
+  virtual void on_destroy() override;
+};
+}  // namespace ag
