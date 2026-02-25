@@ -480,11 +480,7 @@ else()
 
     target_link_libraries(AeroEditor PRIVATE Application)
 
-    add_custom_command(TARGET AeroEditor POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/Application/assets"
-            "$<TARGET_FILE_DIR:AeroEditor>/assets"
-    )
+
 
     file(GLOB_RECURSE SANDBOX_SRC "${CMAKE_SOURCE_DIR}/Sandbox/src/*.cpp")
     add_executable(Sandbox ${SANDBOX_SRC})
@@ -494,6 +490,10 @@ else()
     )
 
     target_link_libraries(Sandbox PRIVATE Application)
+
+
+
+
 
     target_precompile_headers(Application PUBLIC
             "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
@@ -507,7 +507,48 @@ else()
             "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
     )
 
-    get_target_property(_openal_type OpenAL TYPE)
+
+    add_executable(AssetPacker ${CMAKE_SOURCE_DIR}/tools/AssetPacker/main.cpp)
+    target_include_directories(AssetPacker PRIVATE ${CMAKE_SOURCE_DIR}/Application/include)
+    target_link_libraries(AssetPacker PRIVATE Application)
+    target_precompile_headers(AssetPacker PRIVATE "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp")
+set_target_properties(AssetPacker PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
+)
+
+file(GLOB_RECURSE ENGINE_ASSET_FILES
+    "${CMAKE_SOURCE_DIR}/Application/assets/*"
+)
+
+set(PAK_OUTPUT "${CMAKE_BINARY_DIR}/assets.pak")
+
+# Re-pack whenever any asset file changes
+add_custom_command(
+    OUTPUT  "${PAK_OUTPUT}"
+    COMMAND AssetPacker
+            "${CMAKE_SOURCE_DIR}/Application/assets"
+            "${PAK_OUTPUT}"
+    DEPENDS AssetPacker ${ENGINE_ASSET_FILES}
+    COMMENT "Packing engine assets -> assets.pak"
+)
+
+add_custom_target(PackEngineAssets ALL
+    DEPENDS "${PAK_OUTPUT}"
+)
+
+# AeroEditor must wait for packing to finish
+add_dependencies(AeroEditor PackEngineAssets)
+
+# Copy the .pak next to AeroEditor.exe after build
+add_custom_command(TARGET AeroEditor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${PAK_OUTPUT}"
+        "$<TARGET_FILE_DIR:AeroEditor>/assets.pak"
+    COMMENT "Copying assets.pak to output dir"
+)
+
+
+get_target_property(_openal_type OpenAL TYPE)
     get_target_property(_openal_includes OpenAL INTERFACE_INCLUDE_DIRECTORIES)
 
     message(STATUS "OpenAL TYPE = ${_openal_type}")
