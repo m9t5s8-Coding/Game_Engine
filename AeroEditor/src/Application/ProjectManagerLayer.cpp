@@ -272,7 +272,6 @@ void ProjectManagerLayer::on_imgui_render()
     ImGui::PopFont();
 
     ImGui::SetCursorPosX(window_center - total_width / 2.0f);
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.7f, 1.0f), "Select a project to open");
     ImGui::Text("Select a project to open");
   }
   ImGui::Spacing();

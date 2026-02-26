@@ -1,6 +1,30 @@
-﻿cmake_minimum_required(VERSION 3.20)
+﻿# Window Build
+# cmake -B build -G "Visual Studio 17 2022" -A x64
+# cmake --build build --config Distributed
+# cmake --build build --config Debug
 
-# Set policies early
+# cd build
+# cpack -C Distributed
+
+
+# Developer Command Prompt for VS 2022
+
+# cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Distributed
+
+# cmake --build build
+# cd build && cpack
+
+
+# Linux Build
+# cmake -B build -DCMAKE_BUILD_TYPE=Distrubuted
+# cmake --build build
+# cd build && cpack
+
+
+
+cmake_minimum_required(VERSION 3.20)
+
+
 if(POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
@@ -8,9 +32,7 @@ endif()
 
 project("Game_Engine" LANGUAGES C CXX)
 
-# ============================================
-# Platform Detection
-# ============================================
+
 if(ANDROID)
     set(PLATFORM_NAME "Android")
     add_definitions(-DPLATFORM_ANDROID)
@@ -34,9 +56,7 @@ if(MSVC)
     add_compile_options(/bigobj)
 endif()
 
-# ============================================
-# Build Configurations (Desktop only)
-# ============================================
+
 if(NOT ANDROID)
     get_property(_is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
@@ -61,9 +81,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ============================================
-# Compiler Flags per Build Type
-# ============================================
+
 if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG           "/MDd /Zi /Ob0 /Od /RTC1")
     set(CMAKE_C_FLAGS_DEBUG             "/MDd /Zi /Ob0 /Od /RTC1")
@@ -118,11 +136,9 @@ elseif(APPLE)
     message(STATUS "Apple Clang: Distributed configuration will use LTO + dead_strip")
 endif()
 
-# ============================================
-# Output Directories
-# ============================================
+
 if(NOT ANDROID)
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(_is_multi_config)
         foreach(config IN ITEMS Debug Release RelWithDebInfo MinSizeRel Distributed)
             string(TOUPPER ${config} config_upper)
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/${config}/bin")
@@ -138,9 +154,7 @@ if(NOT ANDROID)
     endif()
 endif()
 
-# ============================================
-# Helper: Set MSVC Runtime Library
-# ============================================
+
 function(set_msvc_runtime_library target)
     if(MSVC)
         set_target_properties(${target} PROPERTIES
@@ -154,9 +168,7 @@ $<$<CONFIG:Distributed>:MultiThreaded>"
     endif()
 endfunction()
 
-# ============================================
-# Desktop-only External Libraries
-# ============================================
+
 if(NOT ANDROID)
     message(STATUS "Configuring desktop libraries...")
 
@@ -276,9 +288,7 @@ endif()
     message(STATUS "OpenAL INCLUDES = ${_openal_includes}")
 endif() # NOT ANDROID
 
-# ============================================
-# Lua Library (static, all platforms)
-# ============================================
+
 set(LUA_SRC
     "${CMAKE_SOURCE_DIR}/External/lua/lapi.c"
     "${CMAKE_SOURCE_DIR}/External/lua/lauxlib.c"
@@ -331,18 +341,14 @@ endif()
 
 set_msvc_runtime_library(lua)
 
-# ============================================
-# Box2D Library (static, all platforms)
-# ============================================
+
 file(GLOB_RECURSE BOX2D_SRC "${CMAKE_SOURCE_DIR}/External/box2d/src/*.cpp")
 add_library(box2d STATIC ${BOX2D_SRC})
 set_target_properties(box2d PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(box2d PUBLIC "${CMAKE_SOURCE_DIR}/External/box2d/include")
 set_msvc_runtime_library(box2d)
 
-# ============================================
-# ImGui Library (static, platform-aware backends)
-# ============================================
+
 set(IMGUI_CORE_SRC
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui.cpp"
     "${CMAKE_SOURCE_DIR}/External/imgui/imgui_demo.cpp"
@@ -380,9 +386,7 @@ endif()
 
 set_msvc_runtime_library(imgui)
 
-# ============================================
-# External / GLAD Library (platform-aware)
-# ============================================
+
 if(ANDROID)
     # Android: header-only interface target (no GLAD, no GLFW)
     add_library(External INTERFACE)
@@ -446,9 +450,7 @@ else()
     endif()
 endif()
 
-# ============================================
-# Application Library (static)
-# ============================================
+
 file(GLOB_RECURSE APP_CORE_SRC
     "${CMAKE_SOURCE_DIR}/Application/src/Audio/*.cpp"
     "${CMAKE_SOURCE_DIR}/Application/src/Core/*.cpp"
@@ -533,16 +535,12 @@ else()
     endif()
 endif()
 
-# ============================================
-# Precompiled Headers
-# ============================================
+
 target_precompile_headers(Application PUBLIC
     "${CMAKE_SOURCE_DIR}/Application/include/Apch.hpp"
 )
 
-# ============================================
-# Android Shared Library
-# ============================================
+
 if(ANDROID)
     message(STATUS "Creating Android shared library target...")
 
@@ -563,9 +561,7 @@ if(ANDROID)
         Application native_app_glue ${log-lib} ${android-lib}
     )
 
-# ============================================
-# Desktop Executables
-# ============================================
+
 else()
     message(STATUS "Creating desktop executable targets...")
 
@@ -664,20 +660,18 @@ else()
 
 
 
-    if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Distributed")
+    if(WIN32)
         get_target_property(_oal_type OpenAL TYPE)
         if(_oal_type STREQUAL "SHARED_LIBRARY")
             add_custom_command(TARGET AeroEditor POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "$<TARGET_FILE:OpenAL>" "$<TARGET_FILE_DIR:AeroEditor>"
-                COMMENT "Copying OpenAL DLL → AeroEditor"
-                VERBATIM
+                COMMENT "Copying OpenAL DLL → AeroEditor" VERBATIM
             )
             add_custom_command(TARGET Sandbox POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "$<TARGET_FILE:OpenAL>" "$<TARGET_FILE_DIR:Sandbox>"
-                COMMENT "Copying OpenAL DLL → Sandbox"
-                VERBATIM
+                COMMENT "Copying OpenAL DLL → Sandbox" VERBATIM
             )
         endif()
     endif()
@@ -772,10 +766,9 @@ else()
             DeleteRegKey HKLM 'Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\GameEngine'
         ")
 
-    # ======================================================
+
     elseif(UNIX AND NOT APPLE)
-    # ======================================================
-        # AFTER - gracefully skips if files don't exist
+
 set(_desktop_files_ok TRUE)
 foreach(_desktop_in aeroeditor.desktop.in sandbox.desktop.in)
     if(NOT EXISTS "${CMAKE_SOURCE_DIR}/packaging/linux/${_desktop_in}")
@@ -857,9 +850,9 @@ endif()
             "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-Linux-x86_64")
         set(CPACK_STRIP_FILES TRUE) # strip debug symbols from packaged binaries
 
-    # ======================================================
+
     elseif(APPLE)
-    # ======================================================
+
         set(CPACK_GENERATOR "DragNDrop") # produces a .dmg
         set(CPACK_DMG_VOLUME_NAME "Game Engine ${CPACK_PACKAGE_VERSION}")
         set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-macOS")
@@ -876,9 +869,7 @@ endif()
 
 endif() # NOT ANDROID
 
-# ============================================
-# Configuration Summary
-# ============================================
+
 message(STATUS "")
 message(STATUS "========================================")
 message(STATUS " Game Engine Configuration Summary")
