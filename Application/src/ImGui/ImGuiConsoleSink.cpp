@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+
 #include <imgui.h>
 
 #include <algorithm>

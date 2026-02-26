@@ -237,6 +237,19 @@ if(NOT ANDROID)
 
 
 if(MSVC)
+    cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "$<$<CONFIG:Debug>:MultiThreadedDebugDLL>\
+$<$<CONFIG:Release>:MultiThreadedDLL>\
+$<$<CONFIG:RelWithDebInfo>:MultiThreadedDLL>\
+$<$<CONFIG:MinSizeRel>:MultiThreadedDLL>\
+$<$<CONFIG:Distributed>:MultiThreaded>"
+    )
+endif()
+
+
+
+if(MSVC)
     add_subdirectory(${CMAKE_SOURCE_DIR}/External/openal)
 
     get_directory_property(openal_targets
@@ -634,6 +647,7 @@ else()
     set_msvc_runtime_library(AssetPacker)
     set_target_properties(AssetPacker PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
+        EXCLUDE_FROM_ALL TRUE
     )
 
     # --- Asset Packing Step ---
@@ -696,19 +710,25 @@ else()
         RUNTIME DESTINATION bin
         BUNDLE  DESTINATION .
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/Application/assets
-        DESTINATION share/gameengine/assets
-        USE_SOURCE_PERMISSIONS
+    install(FILES "${PAK_OUTPUT}"
+      DESTINATION bin
     )
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/imgui.ini")
+      install(FILES "${CMAKE_SOURCE_DIR}/imgui.ini"
+        DESTINATION bin
+      )
+    endif()
+
     foreach(doc README.md LICENSE.txt CHANGELOG.md)
-        if(EXISTS "${CMAKE_SOURCE_DIR}/${doc}")
-            install(FILES "${CMAKE_SOURCE_DIR}/${doc}" DESTINATION share/doc/gameengine)
-        endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/${doc}")
+        install(FILES "${CMAKE_SOURCE_DIR}/${doc}" DESTINATION bin)
+    endif()
     endforeach()
 
-    # ======================================================
+
     if(WIN32)
-    # ======================================================
+
         # --- Icons ---
         if(EXISTS "${CMAKE_SOURCE_DIR}/icon.ico")
             set(CPACK_PACKAGE_ICON       "${CMAKE_SOURCE_DIR}/icon.ico")
