@@ -17,11 +17,6 @@
 namespace ag
 {
 
-// ─────────────────────────────────────────────
-//  Quad_Instance full definition
-//  (forward-declared as `struct Quad_Instance` in the header)
-// ─────────────────────────────────────────────
-
 enum class Quad_Type
 {
   Rectangle = 0,
@@ -56,18 +51,8 @@ constexpr int TEXTURE_TEXT   = 0;
 constexpr int TEXTURE_SCENE  = 2;
 constexpr int TEXTURE_SPRITE = 1;
 
-// ─────────────────────────────────────────────
-//  Local type aliases for the header's nested types
-//  (all process_* / worker are static members of
-//   Renderer2D so they can access private nested types)
-// ─────────────────────────────────────────────
-
 using AsyncData      = Renderer2D::AsyncData;
 using ProcessedBatch = Renderer2D::ProcessedBatch;
-
-// ─────────────────────────────────────────────
-//  File-scope renderer state
-// ─────────────────────────────────────────────
 
 struct Renderer2D_Data
 {
@@ -93,10 +78,6 @@ struct Renderer2D_Data
 
 static Renderer2D_Data* s_data = nullptr;
 
-// ─────────────────────────────────────────────
-//  Internal helper — throttled worker wake-up
-// ─────────────────────────────────────────────
-
 static void maybe_notify()
 {
   static thread_local int counter = 0;
@@ -106,10 +87,6 @@ static void maybe_notify()
     counter = 0;
   }
 }
-
-// ─────────────────────────────────────────────
-//  init
-// ─────────────────────────────────────────────
 
 void Renderer2D::init()
 {
@@ -123,7 +100,6 @@ void Renderer2D::init()
   AG_ref<IndexBuffer> indexbuffer = ag::IndexBuffer::create(indices, 6);
   float               vertices[]  = {0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 0.f};
 
-  // ── Fullscreen quad ──────────────────────────
   {
     float full_vertices[] =
         {-1.f, -1.f, 0.f, 0.f, -1.f, 1.f, 0.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f, 1.f, 0.f};
@@ -139,7 +115,6 @@ void Renderer2D::init()
     s_data->fullscreen_shader = Shader::create("shaders/Sprite2D.glsl");
   }
 
-  // ── Instanced quad ───────────────────────────
   {
     s_data->quad_vertex_array = ag::VertexArray::create();
 
@@ -182,7 +157,6 @@ void Renderer2D::init()
     TextLoader::loadGlyph("textures/atlas.json");
   }
 
-  // ── Async double-buffer ───────────────────────
   s_data->async_data = std::make_unique<AsyncData>();
 
   auto alloc_batch = [&](ProcessedBatch& b)
@@ -202,10 +176,6 @@ void Renderer2D::init()
 
   s_data->async_data->worker_thread = std::thread(worker_thread_function);
 }
-
-// ─────────────────────────────────────────────
-//  shut_down
-// ─────────────────────────────────────────────
 
 void Renderer2D::shut_down()
 {
@@ -233,10 +203,6 @@ void Renderer2D::shut_down()
   s_data = nullptr;
 }
 
-// ─────────────────────────────────────────────
-//  Scene control
-// ─────────────────────────────────────────────
-
 void Renderer2D::begin_scene(const View& view, const vec2f& viewport_size)
 {
   Renderer::begin_scene(view, viewport_size);
@@ -246,7 +212,7 @@ void Renderer2D::begin_scene(const View& view, const vec2f& viewport_size)
 }
 
 void Renderer2D::begin_scene()
-{ /* accumulate — no flush on begin */
+{
 }
 
 void Renderer2D::end_scene()
@@ -269,10 +235,6 @@ void Renderer2D::set_texture(const AG_ref<Texture>& texture)
   s_data->quad_texture = texture;
 }
 
-// ─────────────────────────────────────────────
-//  Fullscreen quad  (immediate — main thread)
-// ─────────────────────────────────────────────
-
 void Renderer2D::draw_fullscreen_quad(AG_uint id)
 {
   Renderer::disable_blend();
@@ -281,10 +243,6 @@ void Renderer2D::draw_fullscreen_quad(AG_uint id)
   s_data->fullscreen_shader->set_int("u_texture", TEXTURE_SCENE);
   Renderer::submit(s_data->fullscreen_vertex_array);
 }
-
-// ─────────────────────────────────────────────
-//  Draw calls — enqueue to command queue
-// ─────────────────────────────────────────────
 
 void Renderer2D::draw_rectangle(const Rectangle&           rect,
                                 const Transform_Component& transform,
@@ -327,7 +285,6 @@ void Renderer2D::draw_text(const Text&                text_string,
                            const Transform_Component& transform,
                            int                        entity_id)
 {
-  // ECS / blink state resolved on main thread — worker never touches ECS
   TextCommand cmd;
   cmd.text          = text_string;
   cmd.transform     = transform;
@@ -388,10 +345,6 @@ void Renderer2D::flush()
   s_data->async_data->total_commands = 0;
 }
 
-// ─────────────────────────────────────────────
-//  Worker thread
-// ─────────────────────────────────────────────
-
 void Renderer2D::worker_thread_function()
 {
   ProcessedBatch* working = &s_data->async_data->batch_a;
@@ -423,7 +376,6 @@ void Renderer2D::worker_thread_function()
         s_data->async_data->command_queue.pop();
       }
     }
-    // lock released — process without contention
 
     bool should_flush = s_data->async_data->flush_requested.exchange(false);
 
@@ -459,10 +411,6 @@ void Renderer2D::worker_thread_function()
   }
 }
 
-// ─────────────────────────────────────────────
-//  process_rectangle
-// ─────────────────────────────────────────────
-
 void Renderer2D::process_rectangle(const RectangleCommand& cmd, ProcessedBatch& batch)
 {
   Quad_Instance* __restrict inst = &batch.instances[batch.count++];
@@ -483,10 +431,6 @@ void Renderer2D::process_rectangle(const RectangleCommand& cmd, ProcessedBatch& 
   inst->entity_id     = cmd.entity_id;
 }
 
-// ─────────────────────────────────────────────
-//  process_circle
-// ─────────────────────────────────────────────
-
 void Renderer2D::process_circle(const CircleCommand& cmd, ProcessedBatch& batch)
 {
   Quad_Instance* __restrict inst = &batch.instances[batch.count++];
@@ -505,10 +449,6 @@ void Renderer2D::process_circle(const CircleCommand& cmd, ProcessedBatch& batch)
   cmd.circle.border_color.normalize_color(inst->border_color);
   inst->entity_id = cmd.entity_id;
 }
-
-// ─────────────────────────────────────────────
-//  process_sprite
-// ─────────────────────────────────────────────
 
 void Renderer2D::process_sprite(const SpriteCommand& cmd, ProcessedBatch& batch)
 {
@@ -537,10 +477,6 @@ void Renderer2D::process_sprite(const SpriteCommand& cmd, ProcessedBatch& batch)
   inst->flip.y    = cmd.sprite.flip_vertical ? -1.0f : 1.0f;
   inst->entity_id = cmd.entity_id;
 }
-
-// ─────────────────────────────────────────────
-//  process_text  (worker — no ECS access)
-// ─────────────────────────────────────────────
 
 void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
 {
@@ -577,7 +513,6 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
   vec4f norm_color;
   cmd.text.text_color.normalize_color(norm_color);
 
-  // ── Optional bounding rect ────────────────────
   if (cmd.text.draw_rect)
   {
     Rectangle rect;
@@ -602,7 +537,6 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
   {
     const char c = cmd.text.text[index];
 
-    // ── Cursor BEFORE current char ──────────────
     if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == index)
     {
       vec2f csz  = {6.0f * scale_x,
@@ -675,7 +609,6 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     starting_pos.x += g.advance * scale_x;
   }
 
-  // ── Cursor AFTER last char ───────────────────
   if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == text_length)
   {
     vec2f csz = {6.0f * scale_x, TextLoader::font.line_height * TextLoader::font.em_size * scale_y};
@@ -693,10 +626,6 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     process_rectangle(RectangleCommand{cr, ct, cmd.entity_id}, batch);
   }
 }
-
-// ─────────────────────────────────────────────
-//  flush_internal  (GPU upload — main thread)
-// ─────────────────────────────────────────────
 
 void Renderer2D::flush_internal(ProcessedBatch* batch)
 {
