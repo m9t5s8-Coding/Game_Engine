@@ -2084,6 +2084,7 @@ void Tween_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "State", comps.state);
   Helper::load_json(j, "EaseType", comps.ease_type);
   Helper::load_json(j, "LoopType", comps.loop_type);
+  Helper::load_json(j, "TweenTarget", comps.tween_target);
   Helper::load_json(j, "StartPos", comps.start_position);
   Helper::load_json(j, "EndPos", comps.end_position);
   Helper::load_json(j, "StartScale", comps.start_scale);
