@@ -1,89 +1,84 @@
+#include <GameObjects/GameObjects.hpp>
 #include <GameObjects/Node/CircleNode.hpp>
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
-#include <GameObjects/GameObjects.hpp>
 
 namespace ag
 {
 
-	void CircleNode::create_node(Entity entity)
-	{
-		Transform_Component::add_component(entity);
-		Render2D_Component::add_component(entity);
-	}
-
-	void CircleNode::delete_node(Entity entity)
-	{
-		Script_Component::destroy(entity);
-		PhysicsBody_Component::remove_component(entity);
-		entity.delete_entity();
-	}
-
-	void CircleNode::clone_node(Entity original, Entity clone)
-	{
-		Script_Component::clone_entity(original, clone);
-		Transform_Component::clone_entity(original, clone);
-		Render2D_Component::clone_entity(original, clone);
-		Border_Component::clone_entity(original, clone);
-		UI_Component::clone_entity(original, clone);
-		PhysicsBody_Component::clone_entity(original, clone);
-		Tween_Component::clone_entity(original, clone);
-	}
-
-	json CircleNode::save_json(Entity entity)
-	{
-		json j;
-
-		NodeHelper::save_component<Transform_Component>(entity, j);
-		NodeHelper::save_component<Render2D_Component>(entity, j);
-		NodeHelper::save_component<Script_Component>(entity, j);
-		NodeHelper::save_component<Border_Component>(entity, j);
-		NodeHelper::save_component<UI_Component>(entity, j);
-		NodeHelper::save_component<PhysicsBody_Component>(entity, j);
-		NodeHelper::save_component<Tween_Component>(entity, j);
-
-		return j;
-	}
-
-	void CircleNode::load_json(Entity entity, const json& j)
-	{
-
-		NodeHelper::load_component<Transform_Component>(entity, j);
-		NodeHelper::load_component<Render2D_Component>(entity, j);
-		NodeHelper::load_component<Script_Component>(entity, j);
-		NodeHelper::load_component<Border_Component>(entity, j);
-		NodeHelper::load_component<UI_Component>(entity, j);
-		NodeHelper::load_component<PhysicsBody_Component>(entity, j);
-		NodeHelper::load_component<Tween_Component>(entity, j);
-	}
-
-	void CircleNode::update(Entity entity, TimeStamp ts)
-	{
-		PhysicsBody_Component::update_entity(entity);
-		Script_Component::update(entity, ts);
-		Tween_Component::update(entity, ts);
-	}
-
-	void CircleNode::draw(Entity entity)
-	{
-		if (!Tag_Component::get_visibility(entity))
-			return;
-
-
-		int entity_id = (int)(entity.get_id());
-		auto transform = Transform_Component::get_world_transform(entity);
-		Circle circle;
-
-		NodeHelper::set_value(entity, &Render2D_Component::size, circle.size);
-		NodeHelper::set_value(entity, &Render2D_Component::color, circle.fill_color);
-
-		NodeHelper::set_value(entity, &Border_Component::thickness, circle.border_thickness);
-		NodeHelper::set_value(entity, &Border_Component::color, circle.border_color);
-
-		if(Engine::is_runtime())
-			NodeHelper::set_value(entity, &UI_Component::mode, circle.mode);
-
-		Renderer2D::draw_circle(circle, transform, entity_id);
-	}
-
+void CircleNode::create_node(Entity entity)
+{
+  Transform_Component::add_component(entity);
+  Render2D_Component::add_component(entity);
 }
+
+void CircleNode::delete_node(Entity entity)
+{
+  Script_Component::destroy(entity);
+  PhysicsBody_Component::remove_component(entity);
+  entity.delete_entity();
+}
+
+void CircleNode::clone_node(Entity original, Entity clone)
+{
+  Script_Component::clone_entity(original, clone);
+  Transform_Component::clone_entity(original, clone);
+  Render2D_Component::clone_entity(original, clone);
+  Border_Component::clone_entity(original, clone);
+  UI_Component::clone_entity(original, clone);
+  PhysicsBody_Component::clone_entity(original, clone);
+  Tween_Component::clone_entity(original, clone);
+}
+
+json CircleNode::save_json(Entity entity)
+{
+  json j;
+
+  NodeHelper::save_component<Transform_Component>(entity, j);
+  NodeHelper::save_component<Render2D_Component>(entity, j);
+  NodeHelper::save_component<Script_Component>(entity, j);
+  NodeHelper::save_component<Border_Component>(entity, j);
+  NodeHelper::save_component<UI_Component>(entity, j);
+  NodeHelper::save_component<PhysicsBody_Component>(entity, j);
+  NodeHelper::save_component<Tween_Component>(entity, j);
+
+  return j;
+}
+
+void CircleNode::load_json(Entity entity, const json& j)
+{
+  NodeHelper::load_component<Transform_Component>(entity, j);
+  NodeHelper::load_component<Render2D_Component>(entity, j);
+  NodeHelper::load_component<Script_Component>(entity, j);
+  NodeHelper::load_component<Border_Component>(entity, j);
+  NodeHelper::load_component<UI_Component>(entity, j);
+  NodeHelper::load_component<PhysicsBody_Component>(entity, j);
+  NodeHelper::load_component<Tween_Component>(entity, j);
+}
+
+void CircleNode::update(Entity entity, TimeStamp ts)
+{
+  PhysicsBody_Component::update_entity(entity);
+  Script_Component::update(entity, ts);
+  Tween_Component::update(entity, ts);
+}
+
+void CircleNode::draw(Entity entity)
+{
+  int    entity_id = (int)(entity.get_id());
+  auto   transform = Transform_Component::get_world_transform(entity);
+  Circle circle;
+
+  NodeHelper::set_value(entity, &Render2D_Component::size, circle.size);
+  NodeHelper::set_value(entity, &Render2D_Component::color, circle.fill_color);
+
+  NodeHelper::set_value(entity, &Border_Component::thickness, circle.border_thickness);
+  NodeHelper::set_value(entity, &Border_Component::color, circle.border_color);
+
+  if (Engine::is_runtime())
+    NodeHelper::set_value(entity, &UI_Component::mode, circle.mode);
+
+  Renderer2D::draw_circle(circle, transform, entity_id);
+}
+
+}  // namespace ag

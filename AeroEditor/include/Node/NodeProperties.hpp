@@ -1,6 +1,7 @@
 #pragma once
 
 #include <icons.h>
+#include <imgui.h>
 
 #include <functional>
 #include <Scene/Entity.hpp>
@@ -51,9 +52,6 @@ public:
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
                                ImGuiTreeNodeFlags_SpanAvailWidth |
                                ImGuiTreeNodeFlags_AllowItemOverlap;
-
-    float start_x         = ImGui::GetCursorPosX();
-    float available_width = ImGui::GetContentRegionAvail().x;
 
     bool open   = ImGui::TreeNodeEx(name.c_str(), flags);
     bool remove = false;

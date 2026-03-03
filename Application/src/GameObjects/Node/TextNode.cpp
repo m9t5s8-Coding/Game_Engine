@@ -51,9 +51,6 @@ void TextNode::update(Entity entity, TimeStamp ts)
 }
 void TextNode::draw(Entity entity)
 {
-  if (!Tag_Component::get_visibility(entity))
-    return;
-
   int         entity_id = (int)(entity.get_id());
   const auto& transform = Transform_Component::get_world_transform(entity);
   Text        text;
