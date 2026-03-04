@@ -1,11 +1,10 @@
-﻿#include "Renderer/Color.hpp"
-
-#include <icons.h>
+﻿#include <icons.h>
 
 #include <Application/EditorLayer.hpp>
 #include <Node/NodeProperties.hpp>
 #include <Panels/ScenePanel.hpp>
 #include <queue>
+#include <Renderer/Color.hpp>
 #include <UI/PopUp.hpp>
 #include <UI/UI.hpp>
 
@@ -385,7 +384,6 @@ void ScenePanel::draw_entity_node(Entity entity, int level)
   {
     return;
   }
-
   if (!m_hierarchy_state.filter_text.empty())
   {
     std::string entity_name_lower = tag.name;

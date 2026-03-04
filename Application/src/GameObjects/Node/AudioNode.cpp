@@ -22,9 +22,9 @@ void AudioNode::clone_node(Entity original, Entity clone)
 }
 json AudioNode::save_json(Entity entity)
 {
-  json j
+  json j;
 
-      NodeHelper::save_component<Audio_Component>(entity, j);
+  NodeHelper::save_component<Audio_Component>(entity, j);
   NodeHelper::save_component<Script_Component>(entity, j);
   return j;
 }
