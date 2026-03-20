@@ -10,6 +10,10 @@ std::shared_ptr<spdlog::logger>   Log::s_core_logger;
 std::shared_ptr<spdlog::logger>   Log::s_client_logger;
 std::shared_ptr<ImGuiConsoleSink> Log::s_console_sink;
 
+#ifdef AERO_SERVER
+std::shared_ptr<spdlog::logger> Log::s_server_logger;
+#endif
+
 void Log::init()
 {
   spdlog::set_pattern("%^[%T] %n: %v%$");
@@ -18,6 +22,20 @@ void Log::init()
   s_client_logger = spdlog::stdout_color_mt("APP");
   s_client_logger->set_level(spdlog::level::trace);
 }
+
+#ifdef AERO_SERVER
+void Log::init_server()
+{
+  spdlog::set_pattern("%^[%T] %n: %v%$");
+  s_core_logger = spdlog::stdout_color_mt("AERO");
+  s_core_logger->set_level(spdlog::level::trace);
+  s_client_logger = spdlog::stdout_color_mt("APP");
+  s_client_logger->set_level(spdlog::level::trace);
+  s_server_logger = spdlog::stdout_color_mt("SERVER");
+  s_server_logger->set_level(spdlog::level::trace);
+}
+
+#endif
 
 void Log::init_with_console()
 {

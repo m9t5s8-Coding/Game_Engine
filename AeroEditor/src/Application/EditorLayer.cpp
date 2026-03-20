@@ -841,7 +841,7 @@ void EditorLayer::open_scene(std::string& path)
 {
   Helper::normalize_path(path);
   auto scene = SaveScene::load_scene(path);
-
+  Scene::set_active_scene(scene);
   {
     auto it = m_scenes.find(scene->get_name());
     if (it != m_scenes.end())
@@ -891,8 +891,8 @@ void EditorLayer::save_scene_as_default()
       throw std::runtime_error("No active scene");
     }
 
-    Helper::save_json(j["Scene"], "Default", scene->get_name());
-    Helper::save_json(j["Scene"], "Default Path", scene->get_directory());
+    Helper::save_json(j["Scene"], "Default", scene->get_name(), std::string(""));
+    Helper::save_json(j["Scene"], "Default Path", scene->get_directory(), std::string(""));
 
     std::ofstream out_file(file_path);
     if (!out_file.is_open())
@@ -935,7 +935,7 @@ void EditorLayer::save_all_scene()
   }
 }
 
-void EditorLayer::create_new_script(const std::string& path)
+std::string EditorLayer::get_script_path(const std::string& path)
 {
   auto        project   = Project::get_active_project();
   std::string full_path = path;
@@ -955,7 +955,13 @@ void EditorLayer::create_new_script(const std::string& path)
   std::filesystem::path p(full_path);
   std::string           script_path = "/" + relative_path;
 
-  auto entity = m_panel->get_selected_entity();
+  return script_path;
+}
+
+void EditorLayer::create_new_script(const std::string& path)
+{
+  auto script_path = get_script_path(path);
+  auto entity      = m_panel->get_selected_entity();
 
   if (!entity.has_component<Script_Component>())
   {

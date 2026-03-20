@@ -95,6 +95,7 @@ struct Transform_Component
   static void get_local_transform(Entity entity, const Transform_Component& world_transform);
 };
 
+class Packet;
 struct Script_Component
 {
   std::string path = "";
@@ -103,6 +104,9 @@ struct Script_Component
   LuaFunc     on_update;
   LuaFunc     on_destroy;
   LuaFunc     on_event;
+  LuaFunc     on_packet_received;
+  LuaFunc     on_connected;
+  LuaFunc     on_disconnected;
 
   static void        add_component(Entity entity);
   static void        remove_component(Entity entity);
@@ -112,6 +116,9 @@ struct Script_Component
   static void        create(Entity entity);
   static void        update(Entity entity, TimeStamp ts);
   static void        destroy(Entity entity);
+  static void        connected(Entity entity);
+  static void        disconnected(Entity entity);
+  static void        packet_received(Entity entity, const Packet& packet);
   static bool        event(Entity entity, Event& e);
   static void        load_scripts(Entity entity);
   static bool        is_compatible(NodeType type);
@@ -138,8 +145,8 @@ struct Render2D_Component : Base_Component<Render2D_Component>
 
 struct Border_Component : Base_Component<Border_Component>
 {
-  float thickness;
-  Color color;
+  float thickness = 5.0f;
+  Color color     = Color::Black;
 
   static json save_json(Entity entity);
   static void load_json(Entity entity, const json& j);
@@ -155,7 +162,7 @@ struct Border_Component : Base_Component<Border_Component>
 
 struct Corner_Component : Base_Component<Corner_Component>
 {
-  float corner;
+  float corner  = 5.0f;
   bool  uniform = true;
 
   static json save_json(Entity entity);

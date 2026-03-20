@@ -2,7 +2,6 @@
 #include <Core/Core.hpp>
 #include <Core/Time.hpp>
 #include <GameObjects/NodeFactory.hpp>
-#include <iostream>
 #include <Project/Assetmanager.hpp>
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Renderer.hpp>

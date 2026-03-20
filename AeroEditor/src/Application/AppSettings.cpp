@@ -1,6 +1,7 @@
 #include "Core/Log.hpp"
 
 #include <Application/AppSettings.hpp>
+#include <filesystem>
 
 #ifdef PLATFORM_WINDOWS
   #include <windows.h>
@@ -48,60 +49,118 @@ void AppSettings::create_app_folder()
   s_recent_projects_path = app_folder + "/recent_projects.json";
 
   // create app folder
-  if (!std::filesystem::exists(app_folder))
-    std::filesystem::create_directories(app_folder);
+  try
+  {
+    if (!std::filesystem::exists(app_folder))
+      std::filesystem::create_directories(app_folder);
+  }
+  catch (const std::filesystem::filesystem_error& e)
+  {
+    AERO_CORE_ERROR("Failed to create app folder: {0}", e.what());
+    return;
+  }
 
+  // Create or Load Settings.json
+  create_load_settings();
+
+  // create recent projects file
+}
+
+void AppSettings::create_load_settings()
+{
+  Helper::makefile_read_only(s_settings_path, false);
   // create app setting json file
   if (!std::filesystem::exists(s_settings_path))
   {
-    Helper::makefile_read_only(s_settings_path, false);
-    std::ofstream file(s_settings_path);
-    if (!file.is_open())
+    try
     {
-      AERO_CORE_ERROR("Failed to Open File: {0}", s_settings_path);
+      std::ofstream file(s_settings_path);
+      if (!file.is_open())
+      {
+        AERO_CORE_ERROR("Failed to Open File: {0}", s_settings_path);
+        return;
+      }
+      json j;
+      Helper::save_json(j,
+                        "Mode",
+                        static_cast<int>(Mode::ProjectManager),
+                        (int)Mode::ProjectManager);
+      file << j.dump(4);
+      file.close();
+      Helper::makefile_read_only(s_settings_path);
+      AERO_CORE_INFO("Settings File created at: {0}", s_settings_path)
     }
-    json j;
-    Helper::save_json(j, "Mode", static_cast<int>(Mode::ProjectManager));
-    file << j.dump(4);
-    file.close();
-    Helper::makefile_read_only(s_settings_path);
-    AERO_CORE_INFO("Settings File created at: {0}", s_settings_path);
+    catch (const std::exception& e)
+    {
+      AERO_CORE_ERROR("Exception creating settings.json: {0}", e.what());
+    };
   }
   else
   {
-    json j;
-    Helper::makefile_read_only(s_settings_path, false);
-    std::ifstream file(s_settings_path);
-
-    if (!file.is_open())
+    try
     {
-      AERO_CORE_ERROR("Failed to Open File: {0}", s_settings_path);
-      return;
+      std::ifstream file(s_settings_path);
+
+      if (!file.is_open())
+      {
+        AERO_CORE_ERROR("Failed to Open File: {0}", s_settings_path);
+        return;
+      }
+
+      file.seekg(0, std::ios::end);
+      if (file.tellg() == 0)
+      {
+        AERO_CORE_WARN("Settings Path is empty using Defaults");
+        file.close();
+        Helper::makefile_read_only(s_settings_path);
+        return;
+      }
+      file.seekg(0, std::ios::beg);
+
+      json j;
+      j = json::parse(file, nullptr, false);
+      file.close();
+      Helper::makefile_read_only(s_settings_path);
+
+      if (j.is_discarded())
+      {
+        AERO_CORE_ERROR("Settings file has invalid JSON, using defaults");
+        return;
+      }
+
+      int mode;
+      Helper::load_json(j, "Mode", mode, (int)Mode::ProjectManager);
+      s_mode = static_cast<Mode>(mode);
     }
-    file >> j;
-    file.close();
-    Helper::makefile_read_only(s_settings_path);
-
-    int mode = 0;
-    Helper::load_json(j, "Mode", mode);
-    s_mode = static_cast<Mode>(mode);
+    catch (const std::exception& e)
+    {
+      AERO_CORE_ERROR("Exception loading settings: {0}", e.what());
+    }
   }
+}
 
-  // create recent projects file
+void AppSettings::create_load_recent_projects()
+{
+  Helper::makefile_read_only(s_recent_projects_path, false);
   if (!std::filesystem::exists(s_recent_projects_path))
   {
-    Helper::makefile_read_only(s_recent_projects_path, false);
-    std::ofstream file(s_recent_projects_path);
-    if (!file.is_open())
+    try
     {
-      AERO_CORE_ERROR("Failed to create recent projects file");
+      std::ofstream file(s_recent_projects_path);
+      if (!file.is_open())
+      {
+        AERO_CORE_ERROR("Failed to create recent projects file");
+        return;
+      }
+      file << "[]";
+      file.close();
+      Helper::makefile_read_only(s_recent_projects_path);
+      AERO_CORE_INFO("Recent project file created at: {0}", s_recent_projects_path);
     }
-    file.close();
-    Helper::makefile_read_only(s_recent_projects_path);
-  }
-  else
-  {
-    // save recent projects
+    catch (const std::exception& e)
+    {
+      AERO_CORE_ERROR("Exception creating recent projects: {0}", e.what());
+    }
   }
 }
 

@@ -20,17 +20,86 @@ void Sandbox2D::on_attach()
   m_framebuffer    = FrameBuffer::create(spec);
 
   load_project_data();
+
+  auto project = Project::get_active_project();
+  if (!project)
+    return;
+  SceneManager::scene_changes = [this](AG_ref<Scene> scene)
+  {
+    this->m_scene = scene;
+    Scene::set_active_scene(scene);
+  };
+  Project::get_active_project()->get_global_scripts_manager().load_scripts();
+  Project::get_active_project()->get_global_scripts_manager().on_create();
+
+  auto config = project->get_server_config();
+
+  if (!config.enabled)
+    return;
+
+  m_networking_enabled = true;
+
+  m_client.on_connected = []()
+  {
+    auto view = Scene::get_active_scene()->get_view<Script_Component>();
+    for (auto entity : view)
+    {
+      Entity e(entity);
+      auto&  comps = e.get_component<Script_Component>();
+      if (comps.on_connected.is_valid())
+        comps.on_connected.call();
+    }
+  };
+
+  m_client.on_disconnected = []()
+  {
+    auto view = Scene::get_active_scene()->get_view<Script_Component>();
+    for (auto entity : view)
+    {
+      Entity e(entity);
+      auto&  comps = e.get_component<Script_Component>();
+      if (comps.on_disconnected.is_valid())
+        comps.on_disconnected.call();
+    }
+  };
+
+  m_client.on_packet_received = [](const Packet& packet)
+  {
+    auto view = Scene::get_active_scene()->get_view<Script_Component>();
+    for (auto entity : view)
+    {
+      Entity e(entity);
+      auto&  comps = e.get_component<Script_Component>();
+      if (comps.on_packet_received.is_valid())
+        comps.on_packet_received.call(packet);
+    }
+  };
+
+  if (!m_client.connect(config.server_IP, config.port))
+  {
+    AERO_CORE_ERROR("[Client] Failed to Connect to the Server: {0}:{1}",
+                    config.server_IP,
+                    config.port);
+    return;
+  }
+
+  NetworkManager::set_client(&m_client);
 }
 
 void Sandbox2D::on_detach()
 {
+  if (m_networking_enabled)
+    m_client.disconnect();
 }
 
 void Sandbox2D::on_update(ag::TimeStamp ts)
 {
+  if (m_networking_enabled)
+    m_client.update();
+
   ViewController::set_mouse_position();
   m_view_controller->on_update(ts);
-
+  Project::get_active_project()->get_global_scripts_manager().on_update(ts);
   m_framebuffer->bind();
   RenderCommand::set_clear_color(ag::Color(38, 45, 42));
   RenderCommand::clear();
@@ -165,7 +234,7 @@ void Sandbox2D::load_project_data()
   }
 
   std::string project_path;
-  Helper::load_json(j["Project"], "File Path", project_path);
+  Helper::load_json(j["Project"], "File Path", project_path, std::string(""));
   if (!AssetManager::is_packed(AssetManager::Domain::Project))
   {
     AssetManager::set_fallback_path(project_path, AssetManager::Domain::Project);
@@ -193,13 +262,15 @@ void Sandbox2D::load_project_data()
     return;
   }
 
+  Project::get_active_project()->init();
+
   std::string scene_path;
 
   if (AssetManager::is_packed(AssetManager::Domain::Project))
   {
     std::string proj_file_path = project->get_project_file_directory();
     json        proj_json = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
-    Helper::load_json(proj_json["Scene"], "Default Path", scene_path);
+    Helper::load_json(proj_json["Scene"], "Default Path", scene_path, std::string(""));
     AERO_CORE_INFO("Default Path:{0}", scene_path);
   }
   else
@@ -216,7 +287,7 @@ void Sandbox2D::load_project_data()
     file >> proj_json;
     file.close();
     Helper::makefile_read_only(proj_file_path);
-    Helper::load_json(proj_json["Scene"], "Default Path", scene_path);
+    Helper::load_json(proj_json["Scene"], "Default Path", scene_path, std::string(""));
   }
 
   if (scene_path.empty())
@@ -236,6 +307,7 @@ void Sandbox2D::load_project_data()
   }
 
   Scene::set_active_scene(m_scene);
+  SceneManager::add_scene(m_scene);
 
   auto entities = m_scene->get_view<Camera_Component>();
   for (auto entityID : entities)

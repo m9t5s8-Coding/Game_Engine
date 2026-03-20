@@ -2,35 +2,37 @@
 
 #include <Aero.hpp>
 
-
 namespace ag
 {
-  class Sandbox2D : public ag::Layer
-  {
-  public:
-    Sandbox2D();
-    virtual ~Sandbox2D() = default;
+class Sandbox2D : public ag::Layer
+{
+public:
+  Sandbox2D();
+  virtual ~Sandbox2D() = default;
 
-    virtual void on_attach() override;
-    virtual void on_detach() override;
+  virtual void on_attach() override;
+  virtual void on_detach() override;
 
-    virtual void on_update(TimeStamp ts) override;
-    virtual void on_event(Event& event) override;
+  virtual void on_update(TimeStamp ts) override;
+  virtual void on_event(Event& event) override;
 
-  private:
-    AG_ref<FrameBuffer> m_framebuffer;
-    AG_ref<ViewController> m_view_controller;
-    AG_ref<Scene> m_scene;
+private:
+  AG_ref<FrameBuffer>    m_framebuffer;
+  AG_ref<ViewController> m_view_controller;
+  AG_ref<Scene>          m_scene;
 
-    void load_project_data();
+  void load_project_data();
 
-    std::string get_appdata_path();
+  std::string get_appdata_path();
 
-    Entity m_hover_entity;
+  bool      m_networking_enabled = false;
+  TCPClient m_client;
 
-    void entity_selection();
-    bool on_mouse_pressed(MouseButtonPressedEvent& e);
-    bool on_window_resize(WindowResizeEvent& e);
-    bool on_window_close(WindowCloseEvent& e);
-  };
-}
+  Entity m_hover_entity;
+
+  void entity_selection();
+  bool on_mouse_pressed(MouseButtonPressedEvent& e);
+  bool on_window_resize(WindowResizeEvent& e);
+  bool on_window_close(WindowCloseEvent& e);
+};
+}  // namespace ag

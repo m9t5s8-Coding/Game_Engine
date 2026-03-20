@@ -421,9 +421,12 @@ void ScriptBinding::register_vec2()
       sol::overload(sol::resolve<vec2f(const vec2f&) const>(&vec2f::operator-),
                     sol::resolve<vec2f(const float) const>(&vec2f::operator-)),
       sol::meta_function::multiplication,
-      sol::resolve<vec2f(const vec2f&) const>(&vec2f::operator*),
+      sol::overload(sol::resolve<vec2f(const vec2f&) const>(&vec2f::operator*),
+                    sol::resolve<vec2f(const float) const>(&vec2f::operator*)),
       sol::meta_function::division,
-      sol::resolve<vec2f(const vec2f&) const>(&vec2f::operator/),
+      sol::overload(sol::resolve<vec2f(const vec2f&) const>(&vec2f::operator/),
+                    sol::resolve<vec2f(const float) const>(&vec2f::operator/)),
+
       sol::meta_function::equal_to,
       sol::resolve<bool(const vec2f&) const>(&vec2f::operator==),
       sol::meta_function::to_string,
@@ -604,6 +607,7 @@ void ScriptBinding::register_node()
         detail::safe_set_comp_value(entity, &Transform_Component::rotation, rotation);
       });
 
+  // Render2D Component
   // Fill color
   entity_type.set_function(
       "get_fill_color",
@@ -631,6 +635,7 @@ void ScriptBinding::register_node()
       [](Entity& entity, const vec2f& size)
       { detail::safe_set_comp_value(entity, &Render2D_Component::size, vec2u(size)); });
 
+  // Border Component
   entity_type.set_function(
       "get_border_color",
       [](Entity& entity) -> Color
@@ -652,6 +657,33 @@ void ScriptBinding::register_node()
       "set_border_thickness",
       [](Entity& entity, float thickness)
       { detail::safe_set_comp_value(entity, &Border_Component::thickness, thickness); });
+
+  // Corner Component
+  entity_type.set_function(
+      "set_corner_radius",
+      [](Entity& entity, float corner)
+      { detail::safe_set_comp_value(entity, &Corner_Component::corner, corner); });
+
+  entity_type.set_function(
+      "get_corner_radius",
+      [](Entity& entity) -> float
+      { return detail::safe_get_comp_value(entity, &Corner_Component::corner, 0.0f); });
+
+  // UI Component
+  lua.new_enum<RenderMode>("RenderMode",
+                           {
+                               {"Screen", RenderMode::Screen},
+                               { "World",  RenderMode::World}
+  });
+
+  entity_type.set_function(
+      "get_render_mode",
+      [](Entity& entity) -> RenderMode
+      { return detail::safe_get_comp_value(entity, &UI_Component::mode, RenderMode::World); });
+
+  entity_type.set_function("set_render_mode",
+                           [](Entity& entity, RenderMode mode)
+                           { detail::safe_set_comp_value(entity, &UI_Component::mode, mode); });
 
   entity_type.set_function("play_animation",
                            [](Entity& entity, const std::string& name) -> bool
@@ -1689,4 +1721,96 @@ void ScriptBinding::register_physics()
                              }
                            });
 }
+
+void ScriptBinding::register_network()
+{
+  auto& lua         = ScriptManager::get_lua();
+  auto  packet_type = lua.new_usertype<Packet>("Packet", sol::constructors<Packet(uint8_t)>());
+
+  packet_type["write_byte"]   = &Packet::write_byte;
+  packet_type["write_int"]    = &Packet::write_int;
+  packet_type["write_uint"]   = &Packet::write_uint;
+  packet_type["write_float"]  = &Packet::write_float;
+  packet_type["write_bool"]   = &Packet::write_bool;
+  packet_type["write_string"] = &Packet::write_string;
+
+  packet_type["read_byte"]   = &Packet::read_byte;
+  packet_type["read_int"]    = &Packet::read_int;
+  packet_type["read_uint"]   = &Packet::read_uint;
+  packet_type["read_float"]  = &Packet::read_float;
+  packet_type["read_bool"]   = &Packet::read_bool;
+  packet_type["read_string"] = &Packet::read_string;
+
+  packet_type["type"]     = &Packet::m_type;
+  packet_type["has_data"] = &Packet::has_data;
+  packet_type["size"]     = &Packet::size;
+  packet_type["reset"]    = &Packet::reset;
+
+  sol::table net = lua.create_named_table("Network");
+
+#ifndef AERO_SERVER
+  net.set_function("send",
+                   [](Packet& packet)
+                   {
+                     auto& client = NetworkManager::get_client();
+                     client.send(packet);
+                   });
+
+  net.set_function("is_connected",
+                   []() -> bool { return NetworkManager::get_client().is_connected(); });
+
+#else
+  net.set_function("send_to",
+                   [](int client_ID, Packet& packet)
+                   { NetworkManager::get_server().send_to(client_ID, packet); });
+
+  net.set_function("boardcast",
+                   [](Packet& packet) { NetworkManager::get_server().boardcast(packet); });
+
+  net.set_function("disconnect",
+                   [](int client_id)
+                   { NetworkManager::get_server().disconnect_client(client_id); });
+#endif
+}
+
+void ScriptBinding::register_log()
+{
+  auto&      lua = ScriptManager::get_lua();
+  sol::table log = lua.create_named_table("Log");
+
+#ifdef AERO_SERVER
+
+  log.set_function("info", [](const std::string& msg) { AERO_SERVER_INFO("{0}", msg); });
+
+  log.set_function("warn", [](const std::string& msg) { AERO_SERVER_WARN("{0}", msg); });
+
+  log.set_function("error", [](const std::string& msg) { AERO_SERVER_ERROR("{0}", msg); });
+
+  log.set_function("trace", [](const std::string& msg) { AERO_SERVER_TRACE("{0}", msg); });
+
+  log.set_function("fatal", [](const std::string& msg) { AERO_SERVER_FATAL("{0}", msg); });
+
+  log.set_function("assert",
+                   [](bool x, const std::string& msg) { AERO_SERVER_ASSERT(x, "{0}", msg); });
+
+#endif
+}
+
+void ScriptBinding::register_scene()
+{
+  auto&      lua   = ScriptManager::get_lua();
+  sol::table scene = lua.create_named_table("Scene");
+
+  scene.set_function("load_from_path",
+                     [](const std::string path) -> bool
+                     { return SceneManager::load_from_path(path); });
+
+  scene.set_function("get_active_scene_name",
+                     []() -> std::string { return SceneManager::get_active_scene_name(); });
+
+  scene.set_function("load_scene",
+                     [](const std::string& name) -> bool
+                     { return SceneManager::load_scene(name); });
+}
+
 }  // namespace ag

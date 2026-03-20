@@ -18,79 +18,112 @@ using json = nlohmann::json;
 namespace ag::Helper
 {
 template <typename T>
-inline void load_json(const json& j, const std::string& key, T& value)
+inline void load_json(const json& j, const std::string& key, T& value, const T& default_value)
 {
   if (j.contains(key))
+  {
     value = j[key].get<T>();
+    return;
+  }
+  value = default_value;
 }
 
 template <typename T>
-inline void load_json(const json& j, const std::string& key, vec2<T>& value)
+inline void
+load_json(const json& j, const std::string& key, vec2<T>& value, const vec2<T>& default_value)
 {
   if (j.contains(key))
   {
     value.load(j[key]);
+    return;
   }
+  value = default_value;
 }
 
 template <typename T>
-inline void load_json(const json& j, vec2<T>& value)
+inline void load_json(const json& j, vec2<T>& value, const vec2<T>& default_value)
 {
-  value.load(j);
+  if (j)
+  {
+    value.load(j);
+    return;
+  }
+  value = default_value;
 }
 
 template <typename T>
-inline void load_json(const json& j, T& value)
+inline void load_json(const json& j, T& value, const T& default_value)
 {
-  value = j.get<T>();
+  if (j)
+  {
+    value = j.get<T>();
+    return;
+  }
+  value = default_value;
 }
 
 template <typename T>
-inline void load_json(const json& j, rect<T>& value)
+inline void load_json(const json& j, rect<T>& value, const rect<T>& default_value)
 {
-  value.load(j);
+  if (j)
+  {
+    value.load(j);
+    return;
+  }
+  value = default_value;
 }
 
 template <typename T>
-inline void load_json(const json& j, const std::string& key, rect<T>& value)
+inline void
+load_json(const json& j, const std::string& key, rect<T>& value, const rect<T>& default_value)
 {
   if (j.contains(key))
   {
     value.load(j[key]);
+    return;
   }
+  value = default_value;
 }
 
-inline void load_json(const json& j, const std::string& key, Color& color)
+inline void
+load_json(const json& j, const std::string& key, Color& color, const Color& default_value)
 {
   if (j.contains(key))
   {
     color.load(j[key]);
+    return;
   }
+  color = default_value;
 }
 
 template <typename T>
-inline void save_json(json& j, const std::string& key, const T& value)
+inline void save_json(json& j, const std::string& key, const T& value, const T& default_value)
 {
-  j[key] = value;
+  if (value != default_value)
+    j[key] = value;
 }
 
 template <typename T>
-inline void save_json(json& j, const std::string& key, const vec2<T>& value)
+inline void
+save_json(json& j, const std::string& key, const vec2<T>& value, const vec2<T>& default_value)
 {
-  j[key] = value.save();
-  ;
+  if (value != default_value)
+    j[key] = value.save();
 }
 
 template <typename T>
-inline void save_json(json& j, const std::string& key, const rect<T>& value)
+inline void
+save_json(json& j, const std::string& key, const rect<T>& value, const rect<T>& default_value)
 {
-  j[key] = value.save();
-  ;
+  if (value != default_value)
+    j[key] = value.save();
 }
 
-inline void save_json(json& j, const std::string& key, const Color& color)
+inline void
+save_json(json& j, const std::string& key, const Color& color, const Color& default_value)
 {
-  j[key] = color.save();
+  if (color != default_value)
+    j[key] = color.save();
 }
 
 inline void normalize_path(std::string& path)

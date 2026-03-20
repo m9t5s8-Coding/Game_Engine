@@ -1,26 +1,32 @@
 #pragma once
 
-
-#include<Audio/AudioBuffer.hpp>
-#include<Audio/AudioSource.hpp>
-#include<Audio/AudioDevice.hpp>
-
+#include <Audio/AudioBuffer.hpp>
+#include <Audio/AudioDevice.hpp>
+#include <Audio/AudioSource.hpp>
 #include <Core/Application.hpp>
 #include <Core/Core.hpp>
 #include <Core/EntryPoint.hpp>
 #include <Core/Input.hpp>
 #include <Core/Log.hpp>
 #include <Core/TimeStamp.hpp>
-
-#include <Layers/Layer.hpp>
-#include <ImGui/ImGuiLayer.hpp>
-#include <ImGui/ImGuiConsoleSink.hpp>
-
-#include <Math/Math.hpp>
-
 #include <Events/TextInput.hpp>
-
-
+#include <GameObjects/Components/Components.hpp>
+#include <GameObjects/GameObjects.hpp>
+#include <GameObjects/Node.hpp>
+#include <GameObjects/NodeFactory.hpp>
+#include <Helper.hpp>
+#include <ImGui/ImGuiConsoleSink.hpp>
+#include <ImGui/ImGuiLayer.hpp>
+#include <Layers/Layer.hpp>
+#include <Math/Math.hpp>
+#include <Networking/NetworkManager.hpp>
+#include <Networking/Packet.hpp>
+#include <Networking/TCPClient.hpp>
+#include <Networking/TCPServer.hpp>
+#include <Project/FileDialogs.hpp>
+#include <Project/Project.hpp>
+#include <Project/SaveScene.hpp>
+#include <Project/SceneManager.hpp>
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Color.hpp>
 #include <Renderer/FrameBuffer.hpp>
@@ -35,20 +41,7 @@
 #include <Renderer/VertexBuffer.hpp>
 #include <Renderer/View.hpp>
 #include <Renderer/ViewController.hpp>
-
+#include <Scene/Entity.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/SceneComponent.hpp>
-#include <Scene/Entity.hpp>
-
-#include <GameObjects/GameObjects.hpp>
-#include <GameObjects/Node.hpp>
-#include <GameObjects/NodeFactory.hpp>
-#include <GameObjects/Components/Components.hpp>
-
-#include <Project/Project.hpp>
-#include <Project/FileDialogs.hpp>
-#include <Project/SaveScene.hpp>
-
 #include <Scripting/ScriptManager.hpp>
-
-#include <Helper.hpp>

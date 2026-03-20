@@ -17,8 +17,8 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
     return;
 
   json j;
-  Helper::save_json(j["Scene"], "Name", scene->get_name());
-  Helper::save_json(j["Scene"], "Path", scene->get_directory());
+  Helper::save_json(j["Scene"], "Name", scene->get_name(), std::string(""));
+  Helper::save_json(j["Scene"], "Path", scene->get_directory(), std::string(""));
 
   Scene::set_active_scene(scene);
 
@@ -87,7 +87,7 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
   Helper::makefile_read_only(path);
 }
 
-AG_ref<Scene> SaveScene::load_scene(const std::string& path)
+AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
 {
   AG_ref<Scene> scene = Scene::create();
 
@@ -115,10 +115,12 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path)
   bool root_available = false;
 
   std::string scene_name, scene_path;
-  Helper::load_json(j["Scene"], "Name", scene_name);
-  Helper::load_json(j["Scene"], "Path", scene_path);
+  Helper::load_json(j["Scene"], "Name", scene_name, std::string(""));
+  Helper::load_json(j["Scene"], "Path", scene_path, std::string(""));
   scene->set_name(scene_name);
   scene->set_directory(scene_path);
+
+  auto active_scene = Scene::get_active_scene();
   Scene::set_active_scene(scene);
   std::unordered_map<AG_uint, Entity> id_map;
 
@@ -126,15 +128,15 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path)
   for (auto& entityjson : j["Scene"]["Entities"])
   {
     NodeType    type;
-    std::string tag;
+    std::string name;
     {
       int node;
-      Helper::load_json(entityjson, "NodeType", node);
-      Helper::load_json(entityjson, "Tag_Component", tag);
+      Helper::load_json(entityjson, "NodeType", node, (int)NodeType::None);
+      Helper::load_json(entityjson, "Name", name, std::string(""));
 
       type = static_cast<NodeType>(node);
     }
-    Entity e = scene->create_entity(tag, type);
+    Entity e = scene->create_entity(name, type);
 
     Tag_Component::load_json(e, entityjson);
     {
@@ -158,10 +160,16 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path)
   for (auto& entityjson : j["Scene"]["Entities"])
   {
     AG_uint id;
-    Helper::load_json(entityjson, "ID", id);
-    Entity e = id_map[id];
+    Helper::load_json(entityjson, "ID", id, (AG_uint)0);
+    auto it_map = id_map.find(id);
+    if (it_map == id_map.end())
+    {
+      AERO_CORE_ERROR("Entity ID {0} not found in id_map — skipping", id);
+      continue;
+    }
+    Entity e = it_map->second;
     int    node;
-    Helper::load_json(entityjson, "NodeType", node);
+    Helper::load_json(entityjson, "NodeType", node, (int)NodeType::None);
     NodeType type = static_cast<NodeType>(node);
 
     auto it = NodeFactory::load_map.find(type);
@@ -174,32 +182,55 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path)
   // Make Roots Entities
   if (j["Scene"].contains("Roots") && j["Scene"]["Roots"].is_array())
   {
-    const auto& root_ids = j["Children"];
+    const auto& root_ids = j["Scene"]["Roots"];
     root_available       = true;
     for (auto& id_json : root_ids)
     {
       AG_uint root_id = id_json.get<AG_uint>();
-      scene->push_back_root(root_id);
+      auto    it      = id_map.find(root_id);
+      if (it == id_map.end())
+      {
+        continue;
+      }
+
+      scene->push_back_root(it->second.get_id());
     }
   }
-  if (root_available)
 
-    // Load Scripts
-    if (Engine::is_runtime())
-    {
-      auto view = scene->m_registry.view<Script_Component>();
-      for (auto entityID : view)
-      {
-        Entity e(entityID);
-        Script_Component::load_scripts(e);
-      }
-    }
+  scene->set_root_available(root_available);
+
+  // Load Scripts
+  if (load_scripts)
+  {
+    load_scene_scripts(scene);
+  }
 
   id_map.clear();
   index_map.clear();
   scene->set_save_required(false);
   AERO_CORE_INFO("Scene Loaded! {0}  {1}", scene->get_name(), scene->get_directory());
+
+  if (active_scene)
+    Scene::set_active_scene(active_scene);
+
   return scene;
+}
+
+void SaveScene::load_scene_scripts(AG_ref<Scene> scene)
+{
+  if (!scene)
+    return;
+
+  Scene::set_active_scene(scene);
+  if (Engine::is_runtime())
+  {
+    auto view = scene->m_registry.view<Script_Component>();
+    for (auto entityID : view)
+    {
+      Entity e(entityID);
+      Script_Component::load_scripts(e);
+    }
+  }
 }
 
 }  // namespace ag

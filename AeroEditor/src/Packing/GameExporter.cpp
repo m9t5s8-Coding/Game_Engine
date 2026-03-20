@@ -126,14 +126,24 @@ void GameExporter::export_thread_func()
     json settings;
     auto project = Project::get_active_project();
 
-    Helper::save_json(settings["Project"], "Name", m_project_name);
-    Helper::save_json(settings["Project"], "Directory", m_project_name);
+    Helper::save_json(settings["Project"], "Name", m_project_name, std::string(""));
+    Helper::save_json(settings["Project"], "Directory", m_project_name, std::string(""));
     Helper::save_json(settings["Project"],
                       "File Path",
-                      m_project_name + "/" + m_project_name + ".aeroproj");
-    Helper::save_json(settings["Project"], "Assets", project->get_assets_directory());
-    Helper::save_json(settings["Project"], "Scene", project->get_scene_directory());
-    Helper::save_json(settings["Project"], "Scripts", project->get_scripts_directory());
+                      m_project_name + "/" + m_project_name + ".aeroproj",
+                      std::string(""));
+    Helper::save_json(settings["Project"],
+                      "Assets",
+                      project->get_assets_directory(),
+                      std::string(""));
+    Helper::save_json(settings["Project"],
+                      "Scene",
+                      project->get_scene_directory(),
+                      std::string(""));
+    Helper::save_json(settings["Project"],
+                      "Scripts",
+                      project->get_scripts_directory(),
+                      std::string(""));
 
     fs::path proj_file_path = fs::path(project_temp_dir) / (m_project_name + ".aeroproj");
     if (fs::exists(proj_file_path))

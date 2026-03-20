@@ -1,7 +1,7 @@
 ﻿#include <Core/EntryPoint.hpp>
 #include <Core/Log.hpp>
-
-int main(int args, char **argv)
+#ifndef AERO_SERVER
+int main(int args, char** argv)
 {
   ag::Log::init_with_console();
   const auto app = ag::create_application();
@@ -10,4 +10,4 @@ int main(int args, char **argv)
 
   return 0;
 }
-
+#endif

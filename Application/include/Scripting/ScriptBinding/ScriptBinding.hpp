@@ -1,28 +1,32 @@
 #pragma once
 
-
 namespace ag
 {
-  class ScriptBinding
-  {
-  public:
+class ScriptBinding
+{
+public:
+  // Mouse and Keyboard Register
+  static void register_mouse_polling();
+  static void register_keyboard_polling();
 
-    // Mouse and Keyboard Register
-    static void register_mouse_polling();
-    static void register_keyboard_polling();
+  static void register_events();
 
-    static void register_events();
+  // Register Colors
+  static void register_color();
 
-    // Register Colors
-    static void register_color();
+  // Register vec2f
+  static void register_vec2();
 
-    // Register vec2f
-    static void register_vec2();
+  static void register_node();
 
-    static void register_node();
+  static void register_audio_functions();
 
-    static void register_audio_functions();
+  static void register_physics();
 
-    static void register_physics();
-  };
-}
+  static void register_network();
+
+  static void register_log();
+
+  static void register_scene();
+};
+}  // namespace ag

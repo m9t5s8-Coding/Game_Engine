@@ -72,15 +72,16 @@ public:
     m_scenes[scene_name] = scene;
     m_panel->set_scene(scene);
   }
-  void create_new_scene(const std::string& path);
-  void create_new_script(const std::string& path);
-  void open_scene();
-  void open_scene(std::string& path);
-  void save_scene();
-  void run_runtime();
-  void save_scene_as_default();
-  void save_all_scene();
-  void try_exit();
+  void        create_new_scene(const std::string& path);
+  void        create_new_script(const std::string& path);
+  std::string get_script_path(const std::string& path);
+  void        open_scene();
+  void        open_scene(std::string& path);
+  void        save_scene();
+  void        run_runtime();
+  void        save_scene_as_default();
+  void        save_all_scene();
+  void        try_exit();
 
   void load_texture(Entity entity);
 

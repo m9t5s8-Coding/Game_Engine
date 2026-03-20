@@ -11,9 +11,9 @@ constexpr AG_uint INVALID_ENTITY = static_cast<AG_uint>(entt::null);
 class Entity
 {
 public:
-  explicit Entity(const entt::entity handle);
+  Entity(const entt::entity handle);
   Entity(const Entity& other) = default;
-  explicit Entity(AG_uint id);
+  Entity(AG_uint id);
   Entity();
 
   ~Entity();

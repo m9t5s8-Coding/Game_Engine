@@ -40,6 +40,9 @@ private:
   static void        create_app_folder();
   static std::string get_exe_path();
 
+  static void create_load_settings();
+  static void create_load_recent_projects();
+
 private:
   static Mode        s_mode;
   static std::string s_settings_path;

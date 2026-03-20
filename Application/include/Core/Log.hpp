@@ -12,6 +12,7 @@ class Log
 {
 public:
   static void init();
+
   static void init_with_console();
 
   inline static std::shared_ptr<spdlog::logger>& get_core_logger()
@@ -22,6 +23,14 @@ public:
   {
     return s_client_logger;
   }
+
+#ifdef AERO_SERVER
+  static void                                    init_server();
+  inline static std::shared_ptr<spdlog::logger>& get_server_logger()
+  {
+    return s_server_logger;
+  }
+#endif
 
   static void add_to_console(const std::string&        message,
                              spdlog::level::level_enum level,
@@ -35,8 +44,13 @@ public:
   }
 
 private:
-  static std::shared_ptr<spdlog::logger>   s_core_logger;
-  static std::shared_ptr<spdlog::logger>   s_client_logger;
+  static std::shared_ptr<spdlog::logger> s_core_logger;
+  static std::shared_ptr<spdlog::logger> s_app_logger;
+  static std::shared_ptr<spdlog::logger> s_client_logger;
+
+#ifdef AERO_SERVER
+  static std::shared_ptr<spdlog::logger> s_server_logger;
+#endif
   static std::shared_ptr<ImGuiConsoleSink> s_console_sink;
 };
 }  // namespace ag
@@ -115,3 +129,37 @@ private:
     ::ag::Log::get_client_logger()->critical(__VA_ARGS__);                                         \
     ::ag::Log::add_to_console(fmt::format(__VA_ARGS__), spdlog::level::critical, "APP");           \
   }
+
+#ifdef AERO_SERVER
+  #define AERO_SERVER_ERROR(...)                                                                   \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->error(__VA_ARGS__);                                          \
+    }
+
+  #define AERO_SERVER_WARN(...)                                                                    \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->warn(__VA_ARGS__);                                           \
+    }
+
+  #define AERO_SERVER_INFO(...)                                                                    \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->info(__VA_ARGS__);                                           \
+    }
+
+  #define AERO_SERVER_TRACE(...)                                                                   \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->trace(__VA_ARGS__);                                          \
+    }
+
+  #define AERO_SERVER_FATAL(...)                                                                   \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->critical(__VA_ARGS__);                                       \
+    }
+
+  #define AERO_SERVER_ASSERT(x, ...)                                                               \
+    if (!(x))                                                                                      \
+    {                                                                                              \
+      ::ag::Log::get_server_logger()->critical(__VA_ARGS__);                                       \
+    }
+
+#endif

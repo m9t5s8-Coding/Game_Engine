@@ -54,10 +54,10 @@ void ProjectManagerLayer::load_projects()
       for (const auto& proj : j["Projects"])
       {
         ProjectEntry entry;
-        Helper::load_json(proj, "Name", entry.name);
-        Helper::load_json(proj, "File Path", entry.path);
+        Helper::load_json(proj, "Name", entry.name, std::string(""));
+        Helper::load_json(proj, "File Path", entry.path, std::string(""));
         std::string timestamp_str;
-        Helper::load_json(proj, "Last Modified", timestamp_str);
+        Helper::load_json(proj, "Last Modified", timestamp_str, std::string(""));
 
         std::tm            tm = {};
         std::istringstream ss(timestamp_str);
@@ -431,10 +431,16 @@ void ProjectManagerLayer::create_new_project()
 
   in_file.close();
 
-  Helper::save_json(j["Project"], "Name", project->get_name());
-  Helper::save_json(j["Project"], "Directory", project->get_directory());
-  Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
-  Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::Editor));
+  Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
+  Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
+  Helper::save_json(j["Project"],
+                    "File Path",
+                    project->get_project_file_directory(),
+                    std::string(""));
+  Helper::save_json(j,
+                    "Mode",
+                    (int)AppSettings::Mode::Editor,
+                    (int)AppSettings::Mode::ProjectManager);
 
   AERO_CORE_INFO("Project File:{0}", project->get_project_file_directory());
   std::ofstream out_file(AppSettings::get_settings_path());
@@ -459,7 +465,10 @@ void ProjectManagerLayer::open_existing_project()
         in_file >> j;
 
       in_file.close();
-      Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+      Helper::save_json(j,
+                        "Mode",
+                        (int)AppSettings::Mode::ProjectManager,
+                        (int)AppSettings::Mode::ProjectManager);
       std::ofstream out_file(AppSettings::get_settings_path());
       out_file << j.dump(4);
       out_file.close();
@@ -475,10 +484,16 @@ void ProjectManagerLayer::open_existing_project()
 
     in_file.close();
 
-    Helper::save_json(j["Project"], "Name", project->get_name());
-    Helper::save_json(j["Project"], "Directory", project->get_directory());
-    Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
-    Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::Editor));
+    Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
+    Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
+    Helper::save_json(j["Project"],
+                      "File Path",
+                      project->get_project_file_directory(),
+                      std::string(""));
+    Helper::save_json(j,
+                      "Mode",
+                      (int)AppSettings::Mode::Editor,
+                      (int)AppSettings::Mode::ProjectManager);
 
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
@@ -506,7 +521,10 @@ void ProjectManagerLayer::open_project(const std::string path)
       in_file >> j;
 
     in_file.close();
-    Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+    Helper::save_json(j,
+                      "Mode",
+                      (int)AppSettings::Mode::ProjectManager,
+                      (int)AppSettings::Mode::ProjectManager);
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
     out_file.close();
@@ -522,10 +540,16 @@ void ProjectManagerLayer::open_project(const std::string path)
 
   in_file.close();
 
-  Helper::save_json(j["Project"], "Name", project->get_name());
-  Helper::save_json(j["Project"], "Directory", project->get_directory());
-  Helper::save_json(j["Project"], "File Path", project->get_project_file_directory());
-  Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::Editor));
+  Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
+  Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
+  Helper::save_json(j["Project"],
+                    "File Path",
+                    project->get_project_file_directory(),
+                    std::string(""));
+  Helper::save_json(j,
+                    "Mode",
+                    (int)AppSettings::Mode::Editor,
+                    (int)AppSettings::Mode::ProjectManager);
 
   AERO_CORE_INFO("Opening Project:{0}, Project FilePath:{1}",
                  project->get_name(),

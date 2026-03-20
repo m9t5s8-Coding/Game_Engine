@@ -27,17 +27,18 @@ struct PropertyStyle
 };
 struct Panels
 {
-  bool properties_panel     = true;
-  bool texture_selector     = false;
-  bool scene_panel          = true;
-  bool tilemap_selector     = false;
-  bool console_panel        = true;
-  bool animation_selector   = false;
-  bool tilemap_register     = false;
-  bool auto_tiling_register = false;
-  bool save_changes_panel   = false;
-  bool create_new_scene     = false;
-  bool create_new_script    = false;
+  bool properties_panel       = true;
+  bool texture_selector       = false;
+  bool scene_panel            = true;
+  bool tilemap_selector       = false;
+  bool console_panel          = true;
+  bool animation_selector     = false;
+  bool tilemap_register       = false;
+  bool auto_tiling_register   = false;
+  bool save_changes_panel     = false;
+  bool create_new_scene       = false;
+  bool create_new_script      = false;
+  bool project_settings_panel = false;
 };
 
 struct GUI_Button
@@ -80,6 +81,16 @@ public:
   static void create_new_script(Entity entity);
   static void save_changes();
   static void popup_functions();
+  static void project_settings();
+
+  static void draw_project_settings_general();
+  static void draw_project_settings_graphics();
+  static void draw_project_settings_audio();
+  static void draw_project_settings_physics();
+  static void draw_project_settings_scripting();
+  static void draw_project_settings_networking();
+
+  static void draw_settings_title(const char* title);
 
   static bool draw_button(const GUI_Button& btn);
   static void test_popup(Entity entity);

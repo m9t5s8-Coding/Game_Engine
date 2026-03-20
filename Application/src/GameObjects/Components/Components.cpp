@@ -1,6 +1,7 @@
 ﻿#include <GameObjects/Components/Components.hpp>
 #include <GameObjects/GameObjects.hpp>
 #include <Helper.hpp>
+#include <Networking/Packet.hpp>
 #include <Project/Assetmanager.hpp>
 #include <Renderer/Renderer2D.hpp>
 #include <Renderer/ViewController.hpp>
@@ -19,16 +20,16 @@ json Tag_Component::save_json(Entity entity)
   json  j;
   auto& tag = entity.get_component<Tag_Component>();
 
-  Helper::save_json(j, "Name", tag.name);
-  Helper::save_json(j, "NodeType", static_cast<int>(tag.node_type));
-  Helper::save_json(j, "Visible", tag.visible);
-  Helper::load_json(j, "Locked", tag.locked);
-  Helper::save_json(j, "ID", tag.index);
+  Helper::save_json(j, "Name", tag.name, std::string(""));
+  Helper::save_json(j, "NodeType", (int)tag.node_type, (int)NodeType::None);
+  Helper::save_json(j, "Visible", tag.visible, true);
+  Helper::load_json(j, "Locked", tag.locked, false);
+  Helper::save_json(j, "ID", tag.index, (AG_uint)0);
 
   if (tag.parent.get_id() != INVALID_ENTITY)
   {
     auto parent_index = tag.parent.get_component<Tag_Component>().index;
-    Helper::save_json(j, "Parent", parent_index);
+    Helper::save_json(j, "Parent", parent_index, (AG_uint)INVALID_ENTITY);
   }
 
   if (!tag.children.empty())
@@ -46,11 +47,12 @@ json Tag_Component::save_json(Entity entity)
 void Tag_Component::load_json(Entity entity, const json& j)
 {
   auto& tag = entity.get_component<Tag_Component>();
-  Helper::load_json(j, "Name", tag.name);
-  Helper::load_json(j, "NodeType", tag.node_type);
-  Helper::load_json(j, "ID", tag.index);
-  Helper::load_json(j, "Visible", tag.visible);
-  Helper::load_json(j, "Parent", tag.parent_id);
+  Helper::load_json(j, "Name", tag.name, std::string(""));
+  Helper::load_json(j, "NodeType", tag.node_type, NodeType::None);
+  Helper::load_json(j, "ID", tag.index, (AG_uint)0);
+  Helper::load_json(j, "Visible", tag.visible, true);
+  Helper::load_json(j, "Locked", tag.locked, false);
+  Helper::load_json(j, "Parent", tag.parent_id, (AG_uint)INVALID_ENTITY);
 
   if (j.contains("Children") && j["Children"].is_array())
   {
@@ -182,9 +184,9 @@ json Transform_Component::save_json(Entity entity)
 {
   json        j;
   const auto& props = entity.get_component<Transform_Component>();
-  Helper::save_json(j, "Position", props.position);
-  Helper::save_json(j, "Scale", props.scale);
-  Helper::save_json(j, "Rotation", props.rotation);
+  Helper::save_json(j, "Position", props.position, vec2f(0, 0));
+  Helper::save_json(j, "Scale", props.scale, vec2f(1, 1));
+  Helper::save_json(j, "Rotation", props.rotation, 0.0f);
 
   return j;
 }
@@ -194,9 +196,9 @@ void Transform_Component::load_json(Entity entity, const json& j)
     entity.add_component<Transform_Component>();
 
   auto& props = entity.get_component<Transform_Component>();
-  Helper::load_json(j, "Position", props.position);
-  Helper::load_json(j, "Scale", props.scale);
-  Helper::load_json(j, "Rotation", props.rotation);
+  Helper::load_json(j, "Position", props.position, vec2f(0, 0));
+  Helper::load_json(j, "Scale", props.scale, vec2f(1, 1));
+  Helper::load_json(j, "Rotation", props.rotation, 0.0f);
 }
 void Transform_Component::clone_entity(Entity original, Entity clone)
 {
@@ -260,10 +262,13 @@ void Script_Component::remove_component(Entity entity)
 {
   auto& comp = entity.get_component<Script_Component>();
   comp.env.get().clear();
-  comp.on_create  = LuaFunc();
-  comp.on_update  = LuaFunc();
-  comp.on_destroy = LuaFunc();
-  comp.on_event   = LuaFunc();
+  comp.on_create          = LuaFunc();
+  comp.on_update          = LuaFunc();
+  comp.on_destroy         = LuaFunc();
+  comp.on_event           = LuaFunc();
+  comp.on_connected       = LuaFunc();
+  comp.on_disconnected    = LuaFunc();
+  comp.on_packet_received = LuaFunc();
 
   entity.remove_component<Script_Component>();
 }
@@ -272,7 +277,7 @@ json Script_Component::save_json(Entity entity)
   json j;
 
   auto& comp = entity.get_component<Script_Component>();
-  Helper::save_json(j, "Path", comp.path);
+  Helper::save_json(j, "Path", comp.path, std::string(""));
 
   return j;
 }
@@ -282,7 +287,7 @@ void Script_Component::load_json(Entity entity, const json& j)
     entity.add_component<Script_Component>();
 
   auto& props = entity.get_component<Script_Component>();
-  Helper::load_json(j, "Path", props.path);
+  Helper::load_json(j, "Path", props.path, std::string(""));
 }
 void Script_Component::clone_entity(Entity original, Entity clone)
 {
@@ -317,6 +322,40 @@ void Script_Component::update(Entity entity, TimeStamp ts)
     comp.on_update.call(ts.get_seconds());
   }
 }
+
+void Script_Component::connected(Entity entity)
+{
+  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+
+  if (comp.on_connected.is_valid())
+    comp.on_connected.call();
+}
+
+void Script_Component::disconnected(Entity entity)
+{
+  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+
+  if (comp.on_disconnected.is_valid())
+    comp.on_disconnected.call();
+}
+
+void Script_Component::packet_received(Entity entity, const Packet& packet)
+{
+  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+
+  if (comp.on_packet_received.is_valid())
+    comp.on_packet_received.call(packet);
+}
+
 void Script_Component::destroy(Entity entity)
 {
   if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
@@ -330,10 +369,13 @@ void Script_Component::destroy(Entity entity)
   }
 
   comp.env.get().clear();
-  comp.on_create  = LuaFunc();
-  comp.on_update  = LuaFunc();
-  comp.on_destroy = LuaFunc();
-  comp.on_event   = LuaFunc();
+  comp.on_create          = LuaFunc();
+  comp.on_update          = LuaFunc();
+  comp.on_destroy         = LuaFunc();
+  comp.on_event           = LuaFunc();
+  comp.on_connected       = LuaFunc();
+  comp.on_disconnected    = LuaFunc();
+  comp.on_packet_received = LuaFunc();
 }
 bool Script_Component::event(Entity entity, Event& e)
 {
@@ -388,6 +430,9 @@ void Script_Component::load_scripts(Entity entity)
   comp.on_update.set_function(comp.env, "on_update");
   comp.on_destroy.set_function(comp.env, "on_destroy");
   comp.on_event.set_function(comp.env, "on_event");
+  comp.on_connected.set_function(comp.env, "on_connected");
+  comp.on_disconnected.set_function(comp.env, "on_disconnected");
+  comp.on_packet_received.set_function(comp.env, "on_packet_received");
   create(entity);
 }
 bool Script_Component::is_compatible(NodeType type)
@@ -403,8 +448,8 @@ json Render2D_Component::save_json(Entity entity)
 {
   json  j;
   auto& props = entity.get_component<Render2D_Component>();
-  Helper::save_json(j, "Size", props.size);
-  Helper::save_json(j, "Color", props.color);
+  Helper::save_json(j, "Size", props.size, vec2u(100, 100));
+  Helper::save_json(j, "Color", props.color, Color::White);
 
   return j;
 }
@@ -414,8 +459,8 @@ void Render2D_Component::load_json(Entity entity, const json& j)
     entity.add_component<Render2D_Component>();
 
   auto& props = entity.get_component<Render2D_Component>();
-  Helper::load_json(j, "Size", props.size);
-  Helper::load_json(j, "Color", props.color);
+  Helper::load_json(j, "Size", props.size, vec2u(100, 100));
+  Helper::load_json(j, "Color", props.color, Color::White);
 }
 bool Render2D_Component::is_compatible(NodeType type)
 {
@@ -428,8 +473,8 @@ json Border_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Border_Component>();
-  Helper::save_json(j, "Thickness", props.thickness);
-  Helper::save_json(j, "Color", props.color);
+  Helper::save_json(j, "Thickness", props.thickness, 5.0f);
+  Helper::save_json(j, "Color", props.color, Color::Black);
 
   return j;
 }
@@ -439,8 +484,8 @@ void Border_Component::load_json(Entity entity, const json& j)
     entity.add_component<Border_Component>();
 
   auto& props = entity.get_component<Border_Component>();
-  Helper::load_json(j, "Thickness", props.thickness);
-  Helper::load_json(j, "Color", props.color);
+  Helper::load_json(j, "Thickness", props.thickness, 5.0f);
+  Helper::load_json(j, "Color", props.color, Color::Black);
 }
 bool Border_Component::is_compatible(NodeType type)
 {
@@ -454,8 +499,8 @@ json Corner_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Corner_Component>();
-  Helper::save_json(j, "Corner", props.corner);
-  Helper::save_json(j, "Uniform", props.uniform);
+  Helper::save_json(j, "Corner", props.corner, 5.0f);
+  Helper::save_json(j, "Uniform", props.uniform, true);
 
   return j;
 }
@@ -465,8 +510,8 @@ void Corner_Component::load_json(Entity entity, const json& j)
     entity.add_component<Corner_Component>();
 
   auto& props = entity.get_component<Corner_Component>();
-  Helper::load_json(j, "Corner", props.corner);
-  Helper::load_json(j, "Uniform", props.uniform);
+  Helper::load_json(j, "Corner", props.corner, 5.0f);
+  Helper::load_json(j, "Uniform", props.uniform, true);
 }
 bool Corner_Component::is_compatible(NodeType type)
 {
@@ -479,7 +524,7 @@ json UI_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<UI_Component>();
-  Helper::save_json(j, "Mode", static_cast<int>(props.mode));
+  Helper::save_json(j, "Mode", (int)props.mode, (int)RenderMode::World);
 
   return j;
 }
@@ -489,7 +534,7 @@ void UI_Component::load_json(Entity entity, const json& j)
     entity.add_component<UI_Component>();
 
   auto& props = entity.get_component<UI_Component>();
-  Helper::load_json(j, "Mode", props.mode);
+  Helper::load_json(j, "Mode", props.mode, RenderMode::World);
 }
 bool UI_Component::is_compatible(NodeType type)
 {
@@ -502,8 +547,8 @@ json Texture_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Texture_Component>();
-  Helper::save_json(j, "Path", props.path);
-  Helper::save_json(j, "Mode", (int)props.filter_mode);
+  Helper::save_json(j, "Path", props.path, std::string(""));
+  Helper::save_json(j, "Mode", (int)props.filter_mode, (int)Filter_Mode::AG_LINEAR);
 
   return j;
 }
@@ -513,8 +558,8 @@ void Texture_Component::load_json(Entity entity, const json& j)
     entity.add_component<Texture_Component>();
 
   auto& props = entity.get_component<Texture_Component>();
-  Helper::load_json(j, "Path", props.path);
-  Helper::load_json(j, "Mode", props.filter_mode);
+  Helper::load_json(j, "Path", props.path, std::string(""));
+  Helper::load_json(j, "Mode", props.filter_mode, Filter_Mode::AG_LINEAR);
 
   if (!props.path.empty())
     props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
@@ -530,7 +575,7 @@ json TextureRect_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<TextureRect_Component>();
-  Helper::save_json(j, "Rect", props.rect);
+  Helper::save_json(j, "Rect", props.rect, uint_rect(0, 0, 0, 0));
 
   return j;
 }
@@ -540,7 +585,7 @@ void TextureRect_Component::load_json(Entity entity, const json& j)
     entity.add_component<TextureRect_Component>();
 
   auto& props = entity.get_component<TextureRect_Component>();
-  Helper::load_json(j, "Rect", props.rect);
+  Helper::load_json(j, "Rect", props.rect, uint_rect(0, 0, 0, 0));
 }
 bool TextureRect_Component::is_compatible(NodeType type)
 {
@@ -553,8 +598,8 @@ json TextureFlip_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<TextureFlip_Component>();
-  Helper::save_json(j, "Horizontal", props.horizontal);
-  Helper::save_json(j, "Vertical", props.vertical);
+  Helper::save_json(j, "Horizontal", props.horizontal, false);
+  Helper::save_json(j, "Vertical", props.vertical, false);
 
   return j;
 }
@@ -564,8 +609,8 @@ void TextureFlip_Component::load_json(Entity entity, const json& j)
     entity.add_component<TextureFlip_Component>();
 
   auto& props = entity.get_component<TextureFlip_Component>();
-  Helper::load_json(j, "Horizontal", props.horizontal);
-  Helper::load_json(j, "Vertical", props.vertical);
+  Helper::load_json(j, "Horizontal", props.horizontal, false);
+  Helper::load_json(j, "Vertical", props.vertical, false);
 }
 bool TextureFlip_Component::is_compatible(NodeType type)
 {
@@ -578,8 +623,8 @@ json Camera_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Camera_Component>();
-  Helper::save_json(j, "Size", props.size);
-  Helper::save_json(j, "Center", props.center);
+  Helper::save_json(j, "Size", props.size, vec2f(1280, 720));
+  Helper::save_json(j, "Center", props.center, vec2f(640, 360));
 
   return j;
 }
@@ -589,8 +634,8 @@ void Camera_Component::load_json(Entity entity, const json& j)
     entity.add_component<Camera_Component>();
 
   auto& props = entity.get_component<Camera_Component>();
-  Helper::load_json(j, "Size", props.size);
-  Helper::load_json(j, "Center", props.center);
+  Helper::load_json(j, "Size", props.size, vec2f(1280, 720));
+  Helper::load_json(j, "Center", props.center, vec2f(640, 360));
 }
 bool Camera_Component::is_compatible(NodeType type)
 {
@@ -603,7 +648,7 @@ json Window_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Window_Component>();
-  Helper::save_json(j, "Size", props.size);
+  Helper::save_json(j, "Size", props.size, vec2f(1280, 720));
 
   return j;
 }
@@ -613,7 +658,7 @@ void Window_Component::load_json(Entity entity, const json& j)
     entity.add_component<Window_Component>();
 
   auto& props = entity.get_component<Window_Component>();
-  Helper::load_json(j, "Size", props.size);
+  Helper::load_json(j, "Size", props.size, vec2f(1280, 720));
 }
 bool Window_Component::is_compatible(NodeType type)
 {
@@ -662,16 +707,16 @@ json CameraBounds_Component::save_json(Entity entity)
 {
   json  j;
   auto& bounds = entity.get_component<CameraBounds_Component>();
-  Helper::save_json(j, "X_axis", bounds.x_axis);
-  Helper::save_json(j, "Y_axis", bounds.y_axis);
+  Helper::save_json(j, "X_axis", bounds.x_axis, vec2f(0, 0));
+  Helper::save_json(j, "Y_axis", bounds.y_axis, vec2f(0, 0));
   return j;
 }
 void CameraBounds_Component::load_json(Entity entity, const json& j)
 {
   CameraBounds_Component::add_component(entity);
   auto& bounds = entity.get_component<CameraBounds_Component>();
-  Helper::load_json(j, "X_axis", bounds.x_axis);
-  Helper::load_json(j, "Y_axis", bounds.y_axis);
+  Helper::load_json(j, "X_axis", bounds.x_axis, vec2f(0, 0));
+  Helper::load_json(j, "Y_axis", bounds.y_axis, vec2f(0, 0));
 }
 bool CameraBounds_Component::is_compatible(NodeType type)
 {
@@ -726,12 +771,12 @@ json CameraFollow_Component::save_json(Entity entity)
   int   index = -1;
   if (comps.target && comps.target.get_id() != INVALID_ENTITY)
     index = comps.target.get_component<Tag_Component>().index;
-  Helper::save_json(j, "Type", (int)comps.type);
-  Helper::save_json(j, "FollowIndex", index);
-  Helper::save_json(j, "LerpSpeed", comps.lerp_speed);
-  Helper::save_json(j, "SpringStiffness", comps.spring_stiffness);
-  Helper::save_json(j, "SpringDamping", comps.spring_damping);
-  Helper::save_json(j, "DeadZone", comps.dead_zone);
+  Helper::save_json(j, "Type", (int)comps.type, (int)FollowType::NONE);
+  Helper::save_json(j, "FollowIndex", index, -1);
+  Helper::save_json(j, "LerpSpeed", comps.lerp_speed, 0.0f);
+  Helper::save_json(j, "SpringStiffness", comps.spring_stiffness, 0.0f);
+  Helper::save_json(j, "SpringDamping", comps.spring_damping, 0.0f);
+  Helper::save_json(j, "DeadZone", comps.dead_zone, vec2f(0.0f, 0.0f));
   return j;
 }
 void CameraFollow_Component::load_json(Entity entity, const json& j, bool load)
@@ -740,12 +785,12 @@ void CameraFollow_Component::load_json(Entity entity, const json& j, bool load)
     entity.add_component<CameraFollow_Component>();
   auto& comps = entity.get_component<CameraFollow_Component>();
   int   index = -1;
-  Helper::load_json(j, "Type", comps.type);
-  Helper::load_json(j, "FollowIndex", index);
-  Helper::load_json(j, "LerpSpeed", comps.lerp_speed);
-  Helper::load_json(j, "SpringStiffness", comps.spring_stiffness);
-  Helper::load_json(j, "SpringDamping", comps.spring_damping);
-  Helper::load_json(j, "DeadZone", comps.dead_zone);
+  Helper::load_json(j, "Type", comps.type, FollowType::NONE);
+  Helper::load_json(j, "FollowIndex", index, -1);
+  Helper::load_json(j, "LerpSpeed", comps.lerp_speed, 0.0f);
+  Helper::load_json(j, "SpringStiffness", comps.spring_stiffness, 0.0f);
+  Helper::load_json(j, "SpringDamping", comps.spring_damping, 0.0f);
+  Helper::load_json(j, "DeadZone", comps.dead_zone, vec2f(0.0f, 0.0f));
   if (index >= 0)
   {
     auto it = index_map.find(index);
@@ -863,15 +908,15 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
 json Animation::save_json(const Animation& animation)
 {
   json j;
-  Helper::save_json(j, "Name", animation.name);
-  Helper::save_json(j, "FPS", animation.fps);
-  Helper::save_json(j, "PingPong", animation.ping_pong);
-  Helper::save_json(j, "Loop", animation.loop);
+  Helper::save_json(j, "Name", animation.name, std::string(""));
+  Helper::save_json(j, "FPS", animation.fps, 10.0f);
+  Helper::save_json(j, "PingPong", animation.ping_pong, false);
+  Helper::save_json(j, "Loop", animation.loop, false);
   j["Frames"] = json::array();
   for (const auto& frame : animation.frames)
   {
     json frame_json;
-    Helper::save_json(frame_json, "Rect", frame.frame_rect);
+    Helper::save_json(frame_json, "Rect", frame.frame_rect, uint_rect(0, 0, 0, 0));
     j["Frames"].push_back(frame_json);
   }
   return j;
@@ -879,16 +924,16 @@ json Animation::save_json(const Animation& animation)
 Animation Animation::load_json(const json& j)
 {
   Animation animation;
-  Helper::load_json(j, "Name", animation.name);
-  Helper::load_json(j, "FPS", animation.fps);
-  Helper::load_json(j, "PingPong", animation.ping_pong);
-  Helper::load_json(j, "Loop", animation.loop);
+  Helper::load_json(j, "Name", animation.name, std::string(""));
+  Helper::load_json(j, "FPS", animation.fps, 10.0f);
+  Helper::load_json(j, "PingPong", animation.ping_pong, false);
+  Helper::load_json(j, "Loop", animation.loop, false);
   if (j.contains("Frames") && j["Frames"].is_array())
   {
     for (const json& frame_json : j["Frames"])
     {
       Frame frame;
-      Helper::load_json(frame_json, "Rect", frame.frame_rect);
+      Helper::load_json(frame_json, "Rect", frame.frame_rect, uint_rect(0, 0, 0, 0));
       animation.frames.push_back(frame);
     }
   }
@@ -899,8 +944,8 @@ json Animation_Component::save_json(Entity entity)
 {
   json  j;
   auto& props = entity.get_component<Animation_Component>();
-  Helper::save_json(j, "Current", props.current_animation);
-  Helper::save_json(j, "Playing", props.playing);
+  Helper::save_json(j, "Current", props.current_animation, std::string(""));
+  Helper::save_json(j, "Playing", props.playing, false);
 
   j["Animations"] = json::object();
   for (const auto& [name, animation] : props.animations)
@@ -915,8 +960,8 @@ void Animation_Component::load_json(Entity entity, const json& j)
     entity.add_component<Animation_Component>();
 
   auto& props = entity.get_component<Animation_Component>();
-  Helper::load_json(j, "Current", props.current_animation);
-  Helper::load_json(j, "Playing", props.playing);
+  Helper::load_json(j, "Current", props.current_animation, std::string(""));
+  Helper::load_json(j, "Playing", props.playing, false);
 
   if (j.contains("Animations") && j["Animations"].is_object())
   {
@@ -1047,31 +1092,31 @@ bool Animation_Component::play_animation(Entity entity, const std::string& name,
 json Tile_Defination::save_json(const Tile_Defination& def)
 {
   json j;
-  Helper::save_json(j, "Rect", def.texture_rect);
-  Helper::save_json(j, "Solid", def.is_solid);
+  Helper::save_json(j, "Rect", def.texture_rect, uint_rect(0, 0, 0, 0));
+  Helper::save_json(j, "Solid", def.is_solid, true);
 
   return j;
 }
 void Tile_Defination::load_json(Tile_Defination& def, const json& j)
 {
-  Helper::load_json(j, "Rect", def.texture_rect);
-  Helper::load_json(j, "Solid", def.is_solid);
+  Helper::load_json(j, "Rect", def.texture_rect, uint_rect(0, 0, 0, 0));
+  Helper::load_json(j, "Solid", def.is_solid, true);
 }
 
 json Tile::save_json(const Tile& tile)
 {
   json j;
-  Helper::save_json(j, "ID", tile.tile_id);
-  Helper::save_json(j, "SetID", tile.set_id);
-  Helper::save_json(j, "AutoTile", tile.use_autotile);
+  Helper::save_json(j, "ID", tile.tile_id, vec2u(0, 0));
+  Helper::save_json(j, "SetID", tile.set_id, std::numeric_limits<uint16_t>::max());
+  Helper::save_json(j, "AutoTile", tile.use_autotile, false);
   return j;
 }
 Tile Tile::load_json(const json& j)
 {
   Tile tile;
-  Helper::load_json(j, "ID", tile.tile_id);
-  Helper::load_json(j, "SetID", tile.set_id);
-  Helper::load_json(j, "AutoTile", tile.use_autotile);
+  Helper::load_json(j, "ID", tile.tile_id, vec2u(0, 0));
+  Helper::load_json(j, "SetID", tile.set_id, std::numeric_limits<uint16_t>::max());
+  Helper::load_json(j, "AutoTile", tile.use_autotile, false);
 
   return tile;
 }
@@ -1079,8 +1124,8 @@ json Tile_Component::save_json(Entity entity)
 {
   json  j;
   auto& tileset = entity.get_component<Tile_Component>();
-  Helper::save_json(j, "Size", tileset.size);
-  Helper::save_json(j, "Offset", tileset.offset);
+  Helper::save_json(j, "Size", tileset.size, vec2f(32, 32));
+  Helper::save_json(j, "Offset", tileset.offset, vec2f(0, 0));
 
   return j;
 }
@@ -1090,8 +1135,8 @@ void Tile_Component::load_json(Entity entity, const json& j)
     entity.add_component<Tile_Component>();
 
   auto& tileset = entity.get_component<Tile_Component>();
-  Helper::load_json(j, "Size", tileset.size);
-  Helper::load_json(j, "Offset", tileset.offset);
+  Helper::load_json(j, "Size", tileset.size, vec2f(32, 32));
+  Helper::load_json(j, "Offset", tileset.offset, vec2f(0, 0));
 }
 
 json SolidSet_Component::save_json(Entity entity)
@@ -1118,7 +1163,7 @@ void SolidSet_Component::load_json(Entity entity, const json& j)
       vec2u pos;
       sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
       bool value;
-      Helper::load_json(id_json, value);
+      Helper::load_json(id_json, value, true);
       comps.placed_tiles[pos] = value;
     }
   }
@@ -1278,9 +1323,9 @@ json TileSet_Component::save_json(Entity entity)
   json  j;
   auto& tileset = entity.get_component<TileSet_Component>();
   if (!tileset.tile_definitions.empty())
-    Helper::save_json(j, "Registered", tileset.is_tile_registered);
+    Helper::save_json(j, "Registered", tileset.is_tile_registered, false);
 
-  Helper::save_json(j, "Size", tileset.tile_size);
+  Helper::save_json(j, "Size", tileset.tile_size, vec2i(32.0f, 32.0f));
 
   for (const auto& [id, def] : tileset.tile_definitions)
   {
@@ -1303,7 +1348,7 @@ void TileSet_Component::load_json(Entity entity, const json& j)
 
   auto& tileset = entity.get_component<TileSet_Component>();
 
-  Helper::load_json(j, "Size", tileset.tile_size);
+  Helper::load_json(j, "Size", tileset.tile_size, vec2i(32.0f, 32.0f));
 
   if (j.contains("Definations"))
   {
@@ -1329,7 +1374,7 @@ void TileSet_Component::load_json(Entity entity, const json& j)
     }
   }
 
-  Helper::load_json(j, "Registered", tileset.is_tile_registered);
+  Helper::load_json(j, "Registered", tileset.is_tile_registered, false);
   if (!tileset.tile_definitions.empty())
     tileset.tile_changed = true;
 }
@@ -1516,9 +1561,9 @@ json Auto_Tiles::save_json(const Auto_Tiles& tiles)
   for (const auto& [mask, id] : tiles.tile_bitmask)
   {
     std::string key = std::to_string(mask);
-    Helper::save_json(j, key, id);
+    Helper::save_json(j, key, id, vec2u(0, 0));
   }
-  Helper::save_json(j, "SetID", tiles.set_id);
+  Helper::save_json(j, "SetID", tiles.set_id, (uint16_t)0);
   return j;
 }
 Auto_Tiles Auto_Tiles::load_json(const json& j)
@@ -1533,10 +1578,10 @@ Auto_Tiles Auto_Tiles::load_json(const json& j)
     uint16_t mask = static_cast<uint16_t>(std::stoi(key_str));
 
     vec2u tile_id;
-    Helper::load_json(j, key_str, tile_id);
+    Helper::load_json(j, key_str, tile_id, vec2u(0, 0));
     tiles.tile_bitmask[mask] = tile_id;
   }
-  Helper::load_json(j, "SetID", tiles.set_id);
+  Helper::load_json(j, "SetID", tiles.set_id, (uint16_t)0);
   return tiles;
 }
 
@@ -1598,14 +1643,14 @@ json CollisionShape_Component::save_json(Entity entity)
   for (const auto& [id, shape] : shape.shapes)
   {
     json shape_json;
-    Helper::save_json(shape_json, "Shape_Type", (int)shape.shape_type);
-    Helper::save_json(shape_json, "Size", shape.size);
-    Helper::save_json(shape_json, "Radius", shape.radius);
-    Helper::save_json(shape_json, "Offset", shape.offset);
-    Helper::save_json(shape_json, "Rotation", shape.rotation);
-    Helper::save_json(shape_json, "Group", shape.group);
-    Helper::save_json(shape_json, "Is_Sensor", shape.is_sensor);
-    Helper::save_json(shape_json, "Name", shape.name);
+    Helper::save_json(shape_json, "Shape_Type", (int)shape.shape_type, (int)ShapeType::Rectangle);
+    Helper::save_json(shape_json, "Size", shape.size, vec2f(100, 100));
+    Helper::save_json(shape_json, "Radius", shape.radius, 50.0f);
+    Helper::save_json(shape_json, "Offset", shape.offset, vec2f(0, 0));
+    Helper::save_json(shape_json, "Rotation", shape.rotation, 0.0f);
+    Helper::save_json(shape_json, "Group", shape.group, 1);
+    Helper::save_json(shape_json, "Is_Sensor", shape.is_sensor, false);
+    Helper::save_json(shape_json, "Name", shape.name, std::string(""));
 
     shape_json["Collide_With"] = json::array();
     for (int i = 0; i < 5; i++)
@@ -1629,14 +1674,14 @@ void CollisionShape_Component::load_json(Entity entity, const json& j)
     for (auto& [id, shape_json] : j["Shapes"].items())
     {
       CollisionShape_Data shape;
-      Helper::load_json(shape_json, "Shape_Type", shape.shape_type);
-      Helper::load_json(shape_json, "Size", shape.size);
-      Helper::load_json(shape_json, "Radius", shape.radius);
-      Helper::load_json(shape_json, "Offset", shape.offset);
-      Helper::load_json(shape_json, "Rotation", shape.rotation);
-      Helper::load_json(shape_json, "Group", shape.group);
-      Helper::load_json(shape_json, "Is_Sensor", shape.is_sensor);
-      Helper::load_json(shape_json, "Name", shape.name);
+      Helper::load_json(shape_json, "Shape_Type", shape.shape_type, ShapeType::Rectangle);
+      Helper::load_json(shape_json, "Size", shape.size, vec2f(100, 100));
+      Helper::load_json(shape_json, "Radius", shape.radius, 50.0f);
+      Helper::load_json(shape_json, "Offset", shape.offset, vec2f(0, 0));
+      Helper::load_json(shape_json, "Rotation", shape.rotation, 0.0f);
+      Helper::load_json(shape_json, "Group", shape.group, 1);
+      Helper::load_json(shape_json, "Is_Sensor", shape.is_sensor, false);
+      Helper::load_json(shape_json, "Name", shape.name, std::string(""));
 
       for (int i = 0; i < 5; i++)
       {
@@ -1677,8 +1722,8 @@ json PhysicsBody_Component::save_json(Entity entity)
 {
   json  j;
   auto& props = entity.get_component<PhysicsBody_Component>();
-  Helper::save_json(j, "Body", static_cast<int>(props.body_type));
-  Helper::save_json(j, "Rotation", props.rotation);
+  Helper::save_json(j, "Body", (int)props.body_type, (int)BodyType::Dynamic);
+  Helper::save_json(j, "Rotation", props.rotation, false);
 
   NodeHelper::save_component<CollisionShape_Component>(entity, j);
   NodeHelper::save_component<PhysicsMaterial_Component>(entity, j);
@@ -1691,8 +1736,8 @@ void PhysicsBody_Component::load_json(Entity entity, const json& j)
     entity.add_component<PhysicsBody_Component>();
 
   auto& props = entity.get_component<PhysicsBody_Component>();
-  Helper::load_json(j, "Body", props.body_type);
-  Helper::load_json(j, "Rotation", props.rotation);
+  Helper::load_json(j, "Body", props.body_type, BodyType::Dynamic);
+  Helper::load_json(j, "Rotation", props.rotation, false);
 
   NodeHelper::load_component<CollisionShape_Component>(entity, j);
   NodeHelper::load_component<PhysicsMaterial_Component>(entity, j);
@@ -1987,12 +2032,12 @@ json PhysicsMaterial_Component::save_json(Entity entity)
   json        j;
   const auto& comps = entity.get_component<PhysicsMaterial_Component>();
 
-  Helper::save_json(j, "Preset", (int)comps.preset);
+  Helper::save_json(j, "Preset", (int)comps.preset, (int)MaterialPreset::Custom);
   if (comps.preset == MaterialPreset::Custom)
   {
-    Helper::save_json(j, "Density", comps.density);
-    Helper::save_json(j, "Friction", comps.friction);
-    Helper::save_json(j, "Restitution", comps.restitution);
+    Helper::save_json(j, "Density", comps.density, 0.0f);
+    Helper::save_json(j, "Friction", comps.friction, 0.0f);
+    Helper::save_json(j, "Restitution", comps.restitution, 0.0f);
   }
   return j;
 }
@@ -2003,13 +2048,13 @@ void PhysicsMaterial_Component::load_json(Entity entity, const json& j)
 
   auto& comps = entity.get_component<PhysicsMaterial_Component>();
 
-  Helper::load_json(j, "Preset", comps.preset);
+  Helper::load_json(j, "Preset", comps.preset, MaterialPreset::Custom);
   apply_preset(comps);
   if (comps.preset == MaterialPreset::Custom)
   {
-    Helper::load_json(j, "Density", comps.density);
-    Helper::load_json(j, "Friction", comps.friction);
-    Helper::load_json(j, "Restitution", comps.restitution);
+    Helper::load_json(j, "Density", comps.density, 0.0f);
+    Helper::load_json(j, "Friction", comps.friction, 0.0f);
+    Helper::load_json(j, "Restitution", comps.restitution, 0.0f);
   }
 }
 void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps)
@@ -2046,6 +2091,8 @@ void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps)
       comps.friction    = 0.6f;
       comps.restitution = 0.0f;
       break;
+    case ag::MaterialPreset::Custom:
+      break;
   }
 }
 bool PhysicsMaterial_Component::is_compatible(NodeType type)
@@ -2059,18 +2106,16 @@ json Tween_Component::save_json(Entity entity)
   json  j;
   auto& comps = entity.get_component<Tween_Component>();
 
-  Helper::save_json(j, "State", (int)comps.state);
-  Helper::save_json(j, "EaseType", (int)comps.ease_type);
-  Helper::save_json(j, "LoopType", (int)comps.loop_type);
-  Helper::save_json(j, "TweenTarget", (int)comps.tween_target);
-  Helper::save_json(j, "StartPos", comps.start_position);
-  Helper::save_json(j, "EndPos", comps.end_position);
-  Helper::save_json(j, "StartScale", comps.start_scale);
-  Helper::save_json(j, "EndScale", comps.end_scale);
-  Helper::save_json(j, "Rotation", comps.rotation);
-  Helper::save_json(j, "Duration", comps.duration);
-  Helper::save_json(j, "ElapsedTime", comps.elapsed_time);
-  Helper::save_json(j, "Reverse", comps.reverse_direction);
+  Helper::save_json(j, "State", (int)comps.state, (int)State::STOPPED);
+  Helper::save_json(j, "EaseType", (int)comps.ease_type, (int)EaseType::LINEAR);
+  Helper::save_json(j, "LoopType", (int)comps.loop_type, (int)LoopType::ONCE);
+  Helper::save_json(j, "TweenTarget", (int)comps.tween_target, (int)TweenTarget::POSITION);
+  Helper::save_json(j, "StartPos", comps.start_position, vec2f(0, 0));
+  Helper::save_json(j, "EndPos", comps.end_position, vec2f(0, 0));
+  Helper::save_json(j, "StartScale", comps.start_scale, vec2f(1.0, 1.0));
+  Helper::save_json(j, "EndScale", comps.end_scale, vec2f(1.0, 1.0));
+  Helper::save_json(j, "Rotation", comps.rotation, vec2f(0.0f, 0.0f));
+  Helper::save_json(j, "Duration", comps.duration, 0.0f);
 
   return j;
 }
@@ -2081,18 +2126,16 @@ void Tween_Component::load_json(Entity entity, const json& j)
 
   auto& comps = entity.get_component<Tween_Component>();
 
-  Helper::load_json(j, "State", comps.state);
-  Helper::load_json(j, "EaseType", comps.ease_type);
-  Helper::load_json(j, "LoopType", comps.loop_type);
-  Helper::load_json(j, "TweenTarget", comps.tween_target);
-  Helper::load_json(j, "StartPos", comps.start_position);
-  Helper::load_json(j, "EndPos", comps.end_position);
-  Helper::load_json(j, "StartScale", comps.start_scale);
-  Helper::load_json(j, "EndScale", comps.end_scale);
-  Helper::load_json(j, "Rotation", comps.rotation);
-  Helper::load_json(j, "Duration", comps.duration);
-  Helper::load_json(j, "ElapsedTime", comps.elapsed_time);
-  Helper::load_json(j, "Reverse", comps.reverse_direction);
+  Helper::load_json(j, "State", comps.state, State::STOPPED);
+  Helper::load_json(j, "EaseType", comps.ease_type, EaseType::LINEAR);
+  Helper::load_json(j, "LoopType", comps.loop_type, LoopType::ONCE);
+  Helper::load_json(j, "TweenTarget", comps.tween_target, TweenTarget::POSITION);
+  Helper::load_json(j, "StartPos", comps.start_position, vec2f(0, 0));
+  Helper::load_json(j, "EndPos", comps.end_position, vec2f(0, 0));
+  Helper::load_json(j, "StartScale", comps.start_scale, vec2f(1.0f, 1.0f));
+  Helper::load_json(j, "EndScale", comps.end_scale, vec2f(1.0, 1.0));
+  Helper::load_json(j, "Rotation", comps.rotation, vec2f(0, 0));
+  Helper::load_json(j, "Duration", comps.duration, 0.0f);
 }
 bool Tween_Component::is_compatible(NodeType type)
 {
@@ -2237,8 +2280,8 @@ json Text_Component::save_json(Entity entity)
 
   const auto& props = entity.get_component<Text_Component>();
 
-  Helper::save_json(j, "Text", props.text);
-  Helper::save_json(j, "FontSize", props.font_size);
+  Helper::save_json(j, "Text", props.text, std::string(""));
+  Helper::save_json(j, "FontSize", props.font_size, 48.0f);
 
   return j;
 }
@@ -2248,8 +2291,8 @@ void Text_Component::load_json(Entity entity, const json& j)
     entity.add_component<Text_Component>();
 
   auto& props = entity.get_component<Text_Component>();
-  Helper::load_json(j, "Text", props.text);
-  Helper::load_json(j, "FontSize", props.font_size);
+  Helper::load_json(j, "Text", props.text, std::string(""));
+  Helper::load_json(j, "FontSize", props.font_size, 48.0f);
 }
 bool Text_Component::is_compatible(NodeType type)
 {
@@ -2263,12 +2306,15 @@ json FontStyle_Component::save_json(Entity entity)
 
   const auto& props = entity.get_component<FontStyle_Component>();
 
-  Helper::save_json(j, "H_Allignment", (int)props.h_allignment);
-  Helper::save_json(j, "V_Allignment", (int)props.v_allignment);
-  Helper::save_json(j, "Style", props.style);
-  Helper::save_json(j, "Line_Height", props.line_height);
-  Helper::save_json(j, "Bounds", props.bounds);
-  Helper::save_json(j, "Color", props.color);
+  Helper::save_json(j,
+                    "H_Allignment",
+                    (int)props.h_allignment,
+                    (int)Text_Allignment_Horizontal::Left);
+  Helper::save_json(j, "V_Allignment", (int)props.v_allignment, (int)Text_Allignment_Vertical::Top);
+  Helper::save_json(j, "Style", props.style, (uint8_t)0);
+  Helper::save_json(j, "Line_Height", props.line_height, 1.0f);
+  Helper::save_json(j, "Bounds", props.bounds, vec2u(0.0f, 0.0f));
+  Helper::save_json(j, "Color", props.color, Color::Black);
 
   return j;
 }
@@ -2279,12 +2325,12 @@ void FontStyle_Component::load_json(Entity entity, const json& j)
 
   auto& props = entity.get_component<FontStyle_Component>();
 
-  Helper::load_json(j, "H_Allignment", props.h_allignment);
-  Helper::load_json(j, "V_Allignment", props.v_allignment);
-  Helper::load_json(j, "Style", props.style);
-  Helper::load_json(j, "Line_Height", props.line_height);
-  Helper::load_json(j, "Bounds", props.bounds);
-  Helper::load_json(j, "Color", props.color);
+  Helper::load_json(j, "H_Allignment", props.h_allignment, Text_Allignment_Horizontal::Left);
+  Helper::load_json(j, "V_Allignment", props.v_allignment, Text_Allignment_Vertical::Top);
+  Helper::load_json(j, "Style", props.style, (uint8_t)0);
+  Helper::load_json(j, "Line_Height", props.line_height, 1.0f);
+  Helper::load_json(j, "Bounds", props.bounds, vec2u(0.0f, 0.0f));
+  Helper::load_json(j, "Color", props.color, Color::Black);
 }
 bool FontStyle_Component::is_compatible(NodeType type)
 {
@@ -2538,40 +2584,43 @@ bool ButtonState_Component::is_compatible(NodeType type)
 json Button_Visual::save_json(const Button_Visual& visual)
 {
   json j;
-  Helper::save_json(j, "Background", visual.background);
-  Helper::save_json(j, "Border", visual.border);
-  Helper::save_json(j, "Text", visual.text);
-  Helper::save_json(j, "Thickness", visual.border_thickness);
-  Helper::save_json(j, "Corner", visual.corner);
+  Helper::save_json(j, "Background", visual.background, Color::White);
+  Helper::save_json(j, "Border", visual.border, Color::Black);
+  Helper::save_json(j, "Text", visual.text, Color::Black);
+  Helper::save_json(j, "Thickness", visual.border_thickness, 0.0f);
+  Helper::save_json(j, "Corner", visual.corner, 0.0f);
   return j;
 }
 Button_Visual Button_Visual::load_json(const json& j)
 {
   Button_Visual visual;
-  Helper::load_json(j, "Background", visual.background);
-  Helper::load_json(j, "Border", visual.border);
-  Helper::load_json(j, "Text", visual.text);
-  Helper::load_json(j, "Thickness", visual.border_thickness);
-  Helper::load_json(j, "Corner", visual.corner);
+  Helper::load_json(j, "Background", visual.background, Color::White);
+  Helper::load_json(j, "Border", visual.border, Color::Black);
+  Helper::load_json(j, "Text", visual.text, Color::Black);
+  Helper::load_json(j, "Thickness", visual.border_thickness, 0.0f);
+  Helper::load_json(j, "Corner", visual.corner, 0.0f);
   return visual;
 }
 
 json Button_Layout::save_json(const Button_Layout& layout)
 {
   json j;
-  Helper::save_json(j, "Size", layout.size);
-  Helper::save_json(j, "HAllignment", (int)layout.h_allignment);
-  Helper::save_json(j, "VAllignment", (int)layout.v_allignment);
-  Helper::save_json(j, "Uniform", layout.uniform);
+  Helper::save_json(j, "Size", layout.size, vec2u(0.0, 0.0));
+  Helper::save_json(j,
+                    "HAllignment",
+                    (int)layout.h_allignment,
+                    (int)Text_Allignment_Horizontal::Left);
+  Helper::save_json(j, "VAllignment", (int)layout.v_allignment, (int)Text_Allignment_Vertical::Top);
+  Helper::save_json(j, "Uniform", layout.uniform, true);
   return j;
 }
 Button_Layout Button_Layout::load_json(const json& j)
 {
   Button_Layout layout;
-  Helper::load_json(j, "Size", layout.size);
-  Helper::load_json(j, "HAllignment", layout.h_allignment);
-  Helper::load_json(j, "VAllignment", layout.v_allignment);
-  Helper::load_json(j, "Uniform", layout.uniform);
+  Helper::load_json(j, "Size", layout.size, vec2u(0, 0));
+  Helper::load_json(j, "HAllignment", layout.h_allignment, Text_Allignment_Horizontal::Left);
+  Helper::load_json(j, "VAllignment", layout.v_allignment, Text_Allignment_Vertical::Top);
+  Helper::load_json(j, "Uniform", layout.uniform, true);
   return layout;
 }
 
@@ -2640,7 +2689,7 @@ json Textured_Button_Component::save_json(Entity entity)
   comps.overrides[comps.current_state] = comps.base_rect;
   for (const auto& [state, rect] : comps.overrides)
   {
-    Helper::save_json(j["Visual"], Button_Visual::to_string(state), rect);
+    Helper::save_json(j["Visual"], Button_Visual::to_string(state), rect, uint_rect(0, 0, 0, 0));
   }
   return j;
 }
@@ -2660,7 +2709,7 @@ void Textured_Button_Component::load_json(Entity entity, const json& j)
     {
       Button_Visual_State state = Button_Visual::form_string(state_str);
       uint_rect           rect;
-      Helper::load_json(rect_json, rect);
+      Helper::load_json(rect_json, rect, uint_rect(0, 0, 0, 0));
 
       comps.overrides[state] = rect;
     }
@@ -2679,10 +2728,10 @@ json Audio_Component::save_json(Entity entity)
   json j;
 
   auto& props = entity.get_component<Audio_Component>();
-  Helper::save_json(j, "Path", props.path);
-  Helper::save_json(j, "Loop", props.source->is_looping());
-  Helper::save_json(j, "Pitch", props.source->get_pitch());
-  Helper::save_json(j, "Volume", props.source->get_volume());
+  Helper::save_json(j, "Path", props.path, std::string(""));
+  Helper::save_json(j, "Loop", props.source->is_looping(), false);
+  Helper::save_json(j, "Pitch", props.source->get_pitch(), 0.0f);
+  Helper::save_json(j, "Volume", props.source->get_volume(), 0.0f);
   return j;
 }
 void Audio_Component::load_json(Entity entity, const json& j)
@@ -2691,13 +2740,13 @@ void Audio_Component::load_json(Entity entity, const json& j)
     entity.add_component<Audio_Component>();
 
   auto& props = entity.get_component<Audio_Component>();
-  Helper::load_json(j, "Path", props.path);
+  Helper::load_json(j, "Path", props.path, std::string(""));
 
   bool  loop;
   float pitch, volume;
-  Helper::load_json(j, "Loop", loop);
-  Helper::load_json(j, "Pitch", pitch);
-  Helper::load_json(j, "Volume", volume);
+  Helper::load_json(j, "Loop", loop, false);
+  Helper::load_json(j, "Pitch", pitch, 0.0f);
+  Helper::load_json(j, "Volume", volume, 0.0f);
 
   if (!props.path.empty())
   {

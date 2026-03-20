@@ -1,4 +1,6 @@
-﻿#include <Aero.hpp>
+﻿#include "imgui.h"
+
+#include <Aero.hpp>
 #include <Application/EditorLayer.hpp>
 #include <Panels/ScenePanel.hpp>
 #include <UI/UI.hpp>
@@ -95,7 +97,7 @@ void UI::draw_menu_bar()
       }
       if (ImGui::MenuItem(ICON_FA_GEAR "  Project Settings"))
       {
-        // state.show_project_settings = true;
+        s_show_panels.project_settings_panel = true;
       }
       ImGui::EndMenu();
     }
@@ -347,6 +349,21 @@ void UI::draw_menu_bar()
 
       FileDialogs::run_exe(app);
     }
+
+    auto project = Project::get_active_project();
+    if (project->get_server_config().enabled)
+    {
+      if (ImGui::MenuItem(ICON_FA_SERVER " Run Server", "Ctrl+Shift+F5", false))
+      {
+        std::string project_path = project->get_project_file_directory();
+
+        std::wstring folder = FileDialogs::get_exe_folder();
+        std::wstring app    = folder + path_sep + L"ServerSandbox" + exe_ext;
+        std::wstring path   = std::wstring(project_path.begin(), project_path.end());
+        FileDialogs::run_exe(app, path);
+      }
+    }
+
     ImGui::EndMenu();
   }
 
@@ -653,47 +670,12 @@ bool UI::is_right_file(const std::filesystem::path& path)
   if (ext == ".lua")
     return true;
 
-  /*if (ext == ".lua" || ext == ".py" || ext == ".js")
-      return true;*/
-
-  /*if (ext == ".cpp" || ext == ".h" || ext == ".hpp" || ext == ".c" ||
-      ext == ".cs" || ext == ".java")
-      return true;*/
-
-  /*if (ext == ".glsl" || ext == ".hlsl" || ext == ".vert" || ext == ".frag" ||
-      ext == ".shader" || ext == ".compute")
-      return true;*/
-
-  /*if (ext == ".obj" || ext == ".fbx" || ext == ".gltf" || ext == ".glb" ||
-      ext == ".dae" || ext == ".blend" || ext == ".3ds")
-      return true;*/
-
   if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aiff" ||
       ext == ".wma")
     return true;
 
-  /*if (ext == ".mp4" || ext == ".avi" || ext == ".mov" || ext == ".mkv" ||
-      ext == ".webm" || ext == ".flv")
-      return true;*/
-
   if (ext == ".ttf" || ext == ".otf" || ext == ".woff" || ext == ".woff2")
     return true;
-
-  /*if (ext == ".json" || ext == ".xml" || ext == ".yaml" || ext == ".yml" ||
-      ext == ".ini" || ext == ".cfg" || ext == ".toml")
-      return true;*/
-
-  /*if (ext == ".txt" || ext == ".md" || ext == ".log" || ext == ".csv")
-      return true;*/
-
-  /*if (ext == ".mat" || ext == ".material")
-      return true;*/
-
-  /*if (ext == ".anim" || ext == ".animation")
-      return true;*/
-
-  /*if (ext == ".zip" || ext == ".rar" || ext == ".7z")
-      return true;*/
 
   return false;
 }
@@ -3186,6 +3168,7 @@ void UI::popup_functions()
   create_new_scene();
   save_changes();
   EditorLayer::get().render_export_panel();
+  project_settings();
 }
 
 void UI::create_new_scene()
@@ -3575,6 +3558,266 @@ void UI::save_changes()
   Create_Open_Popup::draw_popup(model);
 }
 
+void UI::project_settings()
+{
+  if (!s_show_panels.project_settings_panel)
+    return;
+
+  static int s_active_category = 0;
+
+  PopUpModel model;
+  model.id   = "##ProjectSettingsPanel";
+  model.name = "Project Settings";
+
+  model.draw_content = [&]()
+  {
+    float available_width  = ImGui::GetContentRegionAvail().x;
+    float available_height = ImGui::GetContentRegionAvail().y;
+    float sidebar_width    = 180.0f;
+    float spacing          = 8.0f;
+
+    ImGui::BeginChild("##ProjectSettingsSidebar", ImVec2(sidebar_width, available_height), true);
+    {
+      struct SettingsCategory
+      {
+        const char* icon;
+        const char* name;
+      };
+
+      static const SettingsCategory categories[] = {
+          {  ICON_FA_CIRCLE_INFO,    "General"},
+          {      ICON_FA_DISPLAY,   "Graphics"},
+          {  ICON_FA_VOLUME_HIGH,      "Audio"},
+          {         ICON_FA_CUBE,    "Physics"},
+          {       ICON_FA_SCROLL,  "Scripting"},
+          {ICON_FA_NETWORK_WIRED, "Networking"},
+      };
+
+      for (int i = 0; i < IM_ARRAYSIZE(categories); i++)
+      {
+        bool is_selected = (s_active_category == i);
+
+        if (is_selected)
+        {
+          ImVec4 selected_color = ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive);
+          ImVec4 hovered_color  = ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered);
+
+          ImGui::PushStyleColor(ImGuiCol_Header, selected_color);
+          ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hovered_color);
+        }
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 6.0f));
+
+        float row_height  = 32.0f;
+        float text_height = ImGui::GetTextLineHeight();
+        float padding_y   = (row_height - text_height) * 0.5f;
+        float padding_x   = 8.0f;
+
+        std::string label = std::string(categories[i].icon) + "  " + categories[i].name;
+
+        // Draw the selectable as invisible hit area
+        if (ImGui::Selectable(("##cat" + std::to_string(i)).c_str(),
+                              is_selected,
+                              ImGuiSelectableFlags_None,
+                              ImVec2(0, row_height)))
+        {
+          s_active_category = i;
+        }
+
+        // Draw text manually centered on top of the selectable
+        ImVec2 rect_min = ImGui::GetItemRectMin();
+        ImVec2 text_pos = {rect_min.x + padding_x, rect_min.y + padding_y};
+
+        ImGui::GetWindowDrawList()->AddText(text_pos,
+                                            ImGui::GetColorU32(ImGuiCol_Text),
+                                            label.c_str());
+
+        ImGui::PopStyleVar();
+
+        if (is_selected)
+          ImGui::PopStyleColor(2);
+      }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine(0, spacing);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 16.0f));
+    ImGui::BeginChild("##ProjectSettingsContent",
+                      ImVec2(available_width - sidebar_width - spacing, available_height),
+                      true);
+    {
+      ImGui::PopStyleVar();
+      float width                = ImGui::GetContentRegionAvail().x;
+      s_property_style.min_width = width * 0.70f;
+      switch (s_active_category)
+      {
+        case 0:
+          UI::draw_project_settings_general();
+          break;
+        case 1:
+          UI::draw_project_settings_graphics();
+          break;
+        case 2:
+          UI::draw_project_settings_audio();
+          break;
+        case 3:
+          UI::draw_project_settings_physics();
+          break;
+        case 4:
+          UI::draw_project_settings_scripting();
+          break;
+        case 5:
+          UI::draw_project_settings_networking();
+          break;
+        default:
+          break;
+      }
+      s_property_style.min_width = 100.0f;
+    }
+    ImGui::EndChild();
+  };
+
+  model.on_close = []()
+  {
+    s_show_panels.project_settings_panel = false;
+    ImGui::CloseCurrentPopup();
+  };
+
+  Create_Open_Popup::draw_popup(model);
+}
+
+void UI::draw_project_settings_general()
+{
+  draw_settings_title("General");
+  auto& global_scripts = Project::get_active_project()->get_global_scripts();
+
+  ImGui::Dummy({0, 6});
+  ImGui::Text("Script Settings");
+  ImGui::Separator();
+  ImGui::Dummy({0, 4});
+  if (ImGui::Button("Add Script"))
+  {
+    std::string path = FileDialogs::open_file("Lua Scripts (*.lua)\0*.lua\0All Files\0*.*\0");
+    if (!path.empty())
+      global_scripts.global_scripts.push_back(EditorLayer::get().get_script_path(path));
+  }
+
+  ImGui::Separator();
+
+  // Show scripts in a list
+  for (size_t i = 0; i < global_scripts.global_scripts.size(); i++)
+  {
+    ImGui::PushID(static_cast<int>(i));
+
+    // Script path label
+    ImGui::Text("%s", global_scripts.global_scripts[i].c_str());
+    ImGui::SameLine();
+
+    // Remove button
+    if (ImGui::Button("Remove"))
+    {
+      global_scripts.global_scripts.erase(global_scripts.global_scripts.begin() + i);
+      ImGui::PopID();
+      break;
+    }
+
+    ImGui::PopID();
+  }
+}
+void UI::draw_project_settings_graphics()
+{
+  draw_settings_title("Graphics");
+}
+void UI::draw_project_settings_audio()
+{
+  draw_settings_title("Audio");
+}
+void UI::draw_project_settings_physics()
+{
+  draw_settings_title("Physics");
+}
+void UI::draw_project_settings_scripting()
+{
+  draw_settings_title("Scripting");
+}
+void UI::draw_project_settings_networking()
+{
+  draw_settings_title("Networking");
+
+  auto& server_config = Project::get_active_project()->get_server_config();
+
+  draw_bool("Enable Networking", server_config.enabled);
+
+  if (!server_config.enabled)
+    return;
+
+  ImGui::Dummy({0, 6});
+
+  ImGui::Text("Server Settings");
+  ImGui::Separator();
+  ImGui::Dummy({0, 4});
+  draw_value("Port", server_config.port);
+  draw_value("Max Clients", server_config.max_clients);
+  draw_value("Tick Rate", server_config.tick_rate);
+
+  ImGui::Dummy({0, 4});
+  ImGui::Text("Client Settings");
+  ImGui::Separator();
+  ImGui::Dummy({0, 4});
+  draw_string("IP Address", server_config.server_IP);
+
+  ImGui::Dummy({0, 6});
+
+  ImGui::Text("Connection Settings");
+  ImGui::Separator();
+  ImGui::Dummy({0, 4});
+  draw_value("Connection Timeout", server_config.connection_timeout, 1, 60);
+  draw_bool("Auto Reconnect", server_config.auto_reconnect);
+  draw_value("Max Tries", server_config.max_reconnection_tries, 1, 10);
+
+  ImGui::Dummy({0, 6});
+  ImGui::Text("Script Settings");
+  ImGui::Separator();
+  ImGui::Dummy({0, 4});
+  if (ImGui::Button("Add Script"))
+  {
+    std::string path = FileDialogs::open_file("Lua Scripts (*.lua)\0*.lua\0All Files\0*.*\0");
+    if (!path.empty())
+      server_config.scripts.push_back(EditorLayer::get().get_script_path(path));
+  }
+
+  ImGui::Separator();
+
+  // Show scripts in a list
+  for (size_t i = 0; i < server_config.scripts.size(); i++)
+  {
+    ImGui::PushID(static_cast<int>(i));
+
+    // Script path label
+    ImGui::Text("%s", server_config.scripts[i].c_str());
+    ImGui::SameLine();
+
+    // Remove button
+    if (ImGui::Button("Remove"))
+    {
+      server_config.scripts.erase(server_config.scripts.begin() + i);
+      ImGui::PopID();
+      break;
+    }
+
+    ImGui::PopID();
+  }
+}
+
+void UI::draw_settings_title(const char* title)
+{
+  float title_width = ImGui::CalcTextSize(title).x;
+  ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - title_width) * 0.5f);
+  ImGui::Text("%s", title);
+  ImGui::Separator();
+  ImGui::Dummy({0, 0});
+}
+
 void UI::custom_popup(const std::string&    popup_id,
                       const std::string&    popup_name,
                       std::function<void()> draw_content,
@@ -3671,8 +3914,8 @@ void UI::run_current_scene()
     file.close();
 
     // Update scene info
-    Helper::save_json(j["Scene"], "Default", scene->get_name());
-    Helper::save_json(j["Scene"], "Default Path", scene->get_directory());
+    Helper::save_json(j["Scene"], "Default", scene->get_name(), std::string(""));
+    Helper::save_json(j["Scene"], "Default Path", scene->get_directory(), std::string(""));
 
     // Save back
     std::ofstream out_file(project_file);

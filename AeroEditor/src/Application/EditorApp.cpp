@@ -36,7 +36,10 @@ void EditorApp::save_json()
 
     in_file.close();
 
-    Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+    Helper::save_json(j,
+                      "Mode",
+                      (int)AppSettings::Mode::ProjectManager,
+                      (int)AppSettings::Mode::ProjectManager);
 
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
@@ -58,8 +61,11 @@ void EditorApp::save_json()
 
     auto active_scene = Scene::get_active_scene();
 
-    Helper::save_json(j["Scene"], "Last Loaded", active_scene->get_name());
-    Helper::save_json(j["Scene"], "Last Loaded Path", active_scene->get_directory());
+    Helper::save_json(j["Scene"], "Last Loaded", active_scene->get_name(), std::string(""));
+    Helper::save_json(j["Scene"],
+                      "Last Loaded Path",
+                      active_scene->get_directory(),
+                      std::string(""));
 
     std::ofstream out_file(project_file_path);
     if (!out_file.is_open())
@@ -88,7 +94,7 @@ void EditorApp::load_project_data()
   Helper::makefile_read_only(AppSettings::get_settings_path());
 
   std::string project_path;
-  Helper::load_json(j["Project"], "Directory", project_path);
+  Helper::load_json(j["Project"], "Directory", project_path, std::string(""));
   auto project = Project::load_project(project_path);
   if (!project->m_project_loaded)
   {
@@ -98,7 +104,10 @@ void EditorApp::load_project_data()
       in_file >> j;
 
     in_file.close();
-    Helper::save_json(j, "Mode", static_cast<int>(AppSettings::Mode::ProjectManager));
+    Helper::save_json(j,
+                      "Mode",
+                      (int)AppSettings::Mode::ProjectManager,
+                      (int)AppSettings::Mode::ProjectManager);
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
     out_file.close();
@@ -121,7 +130,7 @@ void EditorApp::load_project_data()
   // Window Data Loaded and Created
   {
     WindowProps props;
-    Helper::load_json(j["Window"], "Title", props.Title);
+    Helper::load_json(j["Window"], "Title", props.Title, std::string("AeroEngine"));
     props.Size = {1280, 720};
     init(props);
 
@@ -159,7 +168,7 @@ void EditorApp::load_project_data()
   {
     std::string last_scene_path;
 
-    Helper::load_json(j["Scene"], "Last Loaded Path", last_scene_path);
+    Helper::load_json(j["Scene"], "Last Loaded Path", last_scene_path, std::string(""));
 
     std::string path = project->get_directory() + project->get_scene_directory() + last_scene_path;
 
