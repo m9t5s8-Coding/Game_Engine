@@ -1,120 +1,173 @@
 #pragma once
 #include <Apch.hpp>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace ag
 {
-  enum class ShaderDataType
-  {
-    None = 0,
-    Float,
-    Float2,
-    Float3,
-    Float4,
-    Mat3,
-    Mat4,
-    Int,
-    Int2,
-    Int3,
-    Int4,
-    Bool
-  };
+enum class ShaderDataType
+{
+  None = 0,
+  Float,
+  Float2,
+  Float3,
+  Float4,
+  Mat3,
+  Mat4,
+  Int,
+  Int2,
+  Int3,
+  Int4,
+  Bool
+};
 
-  static uint32_t shader_dt_size(ShaderDataType type)
+static uint32_t shader_dt_size(ShaderDataType type)
+{
+  switch (type)
+  {
+    case ShaderDataType::None:
+      return 0;
+    case ShaderDataType::Float:
+      return 4;
+    case ShaderDataType::Float2:
+      return 4 * 2;
+    case ShaderDataType::Float3:
+      return 4 * 3;
+    case ShaderDataType::Float4:
+      return 4 * 4;
+    case ShaderDataType::Mat3:
+      return 4 * 3 * 3;
+    case ShaderDataType::Mat4:
+      return 4 * 4 * 4;
+    case ShaderDataType::Int:
+      return 4;
+    case ShaderDataType::Int2:
+      return 4 * 2;
+    case ShaderDataType::Int3:
+      return 4 * 3;
+    case ShaderDataType::Int4:
+      return 4 * 4;
+    case ShaderDataType::Bool:
+      return 1;
+  }
+  AERO_CORE_ASSERT(false, "Unknown Shader Data Type!");
+  return 0;
+}
+
+struct BufferElement
+{
+  std::string    name = "";
+  ShaderDataType type;
+  uint32_t       offset;
+  uint32_t       size;
+  bool           normalized = false;
+
+  BufferElement()
+  {
+  }
+
+  BufferElement(ShaderDataType p_type, const std::string& p_name, bool p_normalized = false)
+    : name(p_name),
+      type(p_type),
+      size(shader_dt_size(type)),
+      offset(0),
+      normalized(p_normalized)
+  {
+  }
+
+  uint32_t get_component_count() const
   {
     switch (type)
     {
-    case ShaderDataType::Float:   return 4;
-    case ShaderDataType::Float2:  return 4 * 2;
-    case ShaderDataType::Float3:  return 4 * 3;
-    case ShaderDataType::Float4:  return 4 * 4;
-    case ShaderDataType::Mat3:    return 4 * 3 * 3;
-    case ShaderDataType::Mat4:    return 4 * 4 * 4;
-    case ShaderDataType::Int:     return 4;
-    case ShaderDataType::Int2:    return 4 * 2;
-    case ShaderDataType::Int3:    return 4 * 3;
-    case ShaderDataType::Int4:    return 4 * 4;
-    case ShaderDataType::Bool:    return 1;
+      case ag::ShaderDataType::None:
+        return 0;
+      case ShaderDataType::Float:
+        return 1;
+      case ShaderDataType::Float2:
+        return 2;
+      case ShaderDataType::Float3:
+        return 3;
+      case ShaderDataType::Float4:
+        return 4;
+      case ShaderDataType::Mat3:
+        return 3 * 3;
+      case ShaderDataType::Mat4:
+        return 4 * 4;
+      case ShaderDataType::Int:
+        return 1;
+      case ShaderDataType::Int2:
+        return 2;
+      case ShaderDataType::Int3:
+        return 3;
+      case ShaderDataType::Int4:
+        return 4;
+      case ShaderDataType::Bool:
+        return 1;
     }
     AERO_CORE_ASSERT(false, "Unknown Shader Data Type!");
     return 0;
   }
+};
 
-  struct BufferElement
+class BufferLayout
+{
+public:
+  BufferLayout()
   {
-    std::string name = "";
-    ShaderDataType type;
-    uint32_t offset;
-    uint32_t size;
-    bool normalized = false;
+  }
 
-    BufferElement() {}
-
-    BufferElement(ShaderDataType p_type, const std::string &p_name, bool p_normalized = false)
-        : name(p_name), type(p_type), size(shader_dt_size(type)), offset(0), normalized(p_normalized)
-    {
-    }
-
-
-
-    uint32_t get_component_count() const
-    {
-      switch (type)
-      {
-      case ShaderDataType::Float:   return 1;
-      case ShaderDataType::Float2:  return 2;
-      case ShaderDataType::Float3:  return 3;
-      case ShaderDataType::Float4:  return 4;
-      case ShaderDataType::Mat3:    return 3 * 3;
-      case ShaderDataType::Mat4:    return 4 * 4;
-      case ShaderDataType::Int:     return 1;
-      case ShaderDataType::Int2:    return 2;
-      case ShaderDataType::Int3:    return 3;
-      case ShaderDataType::Int4:    return 4;
-      case ShaderDataType::Bool:    return 1;
-      }
-      AERO_CORE_ASSERT(false, "Unknown Shader Data Type!");
-      return 0;
-    }
-  };
-
-  class BufferLayout
+  BufferLayout(const std::initializer_list<BufferElement>& element)
+    : m_buffer_elements(element)
   {
-  public:
-    BufferLayout() {}
+    calculate_offset_stride();
+  }
 
-    BufferLayout(const std::initializer_list<BufferElement> &element)
-        : m_buffer_elements(element)
+  inline uint32_t get_stride() const
+  {
+    return m_stride;
+  }
+
+  inline const std::vector<BufferElement>& get_element()
+  {
+    return m_buffer_elements;
+  }
+  inline size_t get_element_count() const
+  {
+    return m_buffer_elements.size();
+  }
+
+  std::vector<BufferElement>::iterator begin()
+  {
+    return m_buffer_elements.begin();
+  }
+  std::vector<BufferElement>::iterator end()
+  {
+    return m_buffer_elements.end();
+  }
+  std::vector<BufferElement>::const_iterator begin() const
+  {
+    return m_buffer_elements.begin();
+  }
+  std::vector<BufferElement>::const_iterator end() const
+  {
+    return m_buffer_elements.end();
+  }
+
+private:
+  void calculate_offset_stride()
+  {
+    AG_uint offset = 0;
+    m_stride       = 0;
+    for (auto& element : m_buffer_elements)
     {
-      calculate_offset_stride();
+      element.offset = offset;
+      offset += element.size;
+      m_stride += element.size;
     }
+  }
 
-    inline uint32_t get_stride() const { return m_stride; }
-
-    inline const std::vector<BufferElement> &get_element() { return m_buffer_elements; }
-    inline size_t get_element_count() const { return m_buffer_elements.size(); }
-
-    std::vector<BufferElement>::iterator begin() { return m_buffer_elements.begin(); }
-    std::vector<BufferElement>::iterator end() { return m_buffer_elements.end(); }
-    std::vector<BufferElement>::const_iterator begin() const { return m_buffer_elements.begin(); }
-    std::vector<BufferElement>::const_iterator end() const { return m_buffer_elements.end(); }
-
-  private:
-    void calculate_offset_stride()
-    {
-      AG_uint offset = 0;
-      m_stride = 0;
-      for (auto &element : m_buffer_elements)
-      {
-        element.offset = offset;
-        offset += element.size;
-        m_stride += element.size;
-      }
-    }
-
-  private:
-    std::vector<BufferElement> m_buffer_elements;
-    AG_uint m_stride = 0;
-  };
-}
+private:
+  std::vector<BufferElement> m_buffer_elements;
+  AG_uint                    m_stride = 0;
+};
+}  // namespace ag

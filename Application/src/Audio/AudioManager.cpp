@@ -1,7 +1,8 @@
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
-  #include "Audio/AudioBuffer.hpp"
 
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+
+  #include <Audio/AudioBuffer.hpp>
   #include <Audio/AudioManager.hpp>
 
 namespace ag

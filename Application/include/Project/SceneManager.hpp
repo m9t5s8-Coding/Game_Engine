@@ -20,6 +20,8 @@ public:
   static AG_ref<Scene> get_active_scene();
   static std::string   get_active_scene_name();
 
+  static void destroy_scene();
+
   static void set_active_scene(AG_ref<Scene> scene);
 
   static std::function<void(AG_ref<Scene>)> scene_changes;

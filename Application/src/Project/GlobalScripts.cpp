@@ -21,6 +21,18 @@ void GlobalScript_Component::update(GlobalScript_Component& comps, TimeStamp ts)
   }
 }
 
+void GlobalScriptsManager::on_destroy()
+{
+  for (auto& comps : m_global_scripts)
+  {
+    comps.on_update = LuaFunc();
+    comps.on_create = LuaFunc();
+    comps.env.get().clear();
+    comps.env.invalidate();
+  }
+  m_global_scripts.clear();
+}
+
 void GlobalScriptsManager::load_scripts()
 {
   if (!Engine::is_runtime())

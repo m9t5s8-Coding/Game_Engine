@@ -1,24 +1,25 @@
-#include <imgui.h>
-#include <imgui_internal.h>
+#ifdef AERO_EDITOR
 
-#include <ImGui/ImGuiLayer.hpp>
+  #include <imgui.h>
+  #include <imgui_internal.h>
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
-  #include <backends/imgui_impl_glfw.h>
-  #include <GLFW/glfw3.h>
+  #include <ImGui/ImGuiLayer.hpp>
 
-#elif defined(PLATFORM_ANDROID)
-  #include <backends/imgui_impl_android.h>
-#endif
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+    #include <backends/imgui_impl_glfw.h>
+    #include <GLFW/glfw3.h>
+  #endif
 
-#include <backends/imgui_impl_opengl3.h>
-#include <icons.h>
+  #include <backends/imgui_impl_opengl3.h>
+  #include <icons.h>
 
-#include <Core/Application.hpp>
-#include <Project/Assetmanager.hpp>
+  #include <Core/Application.hpp>
+  #include <Core/Log.hpp>
+  #include <Project/Assetmanager.hpp>
 
 namespace ag
 {
+
 ImGuiLayer::ImGuiLayer()
   : Layer("ImGui Layer")
 {
@@ -38,11 +39,10 @@ void ImGuiLayer::on_attach()
   io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-#endif
+  #endif
 
-#ifndef PLATFORM_ANDROID
   ImFontConfig font_cfg;
   font_cfg.PixelSnapH  = true;
   font_cfg.OversampleH = 1;
@@ -64,7 +64,6 @@ void ImGuiLayer::on_attach()
   ImFont* large_font = load_font("fonts/OpenSans-Regular.ttf", 28.0f, &font_cfg, nullptr);
 
   io.FontDefault = main_font;
-#endif
 
   set_engine_theme();
 
@@ -75,50 +74,50 @@ void ImGuiLayer::on_attach()
     style.Colors[ImGuiCol_WindowBg].w = 1.0f;
   }
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   Application& app    = Application::get();
   GLFWwindow*  window = static_cast<GLFWwindow*>(app.get_window().get_native_window());
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init("#version 450");
-#endif
+
+  #endif
 }
 
 void ImGuiLayer::on_detach()
 {
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
-#endif
+
+  #endif
 
   ImGui::DestroyContext();
 }
 
 void ImGuiLayer::begin()
 {
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
-#endif
+
+  #endif
 
   ImGui::NewFrame();
 }
-
 void ImGuiLayer::end()
 {
-  ImGuiIO& io = ImGui::GetIO();
-
   ImGui::Render();
 
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+  ImGuiIO& io = ImGui::GetIO();
   if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
   {
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+  #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
     GLFWwindow* backup_current_context = glfwGetCurrentContext();
     ImGui::UpdatePlatformWindows();
     ImGui::RenderPlatformWindowsDefault();
     glfwMakeContextCurrent(backup_current_context);
-#endif
+  #endif
   }
 }
 
@@ -146,7 +145,7 @@ ImFont* ImGuiLayer::load_font(const std::string& path,
   s_font_storage.push_back(bytes);
 
   ImFontConfig cfg         = config ? *config : ImFontConfig{};
-  cfg.FontDataOwnedByAtlas = false;  // CRITICAL
+  cfg.FontDataOwnedByAtlas = false;
 
   return io.Fonts->AddFontFromMemoryTTF(s_font_storage.back().data(),
                                         s_font_storage.back().size(),
@@ -154,7 +153,6 @@ ImFont* ImGuiLayer::load_font(const std::string& path,
                                         &cfg,
                                         ranges);
 }
-
 void ImGuiLayer::set_engine_theme()
 {
   set_ocean_blue_theme();
@@ -1958,3 +1956,5 @@ void ImGuiLayer::set_unity_light_theme()
 }
 
 }  // namespace ag
+
+#endif

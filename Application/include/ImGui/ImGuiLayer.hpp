@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Layers/Layer.hpp>
+#ifdef AERO_EDITOR
+
+  #include <Layers/Layer.hpp>
 
 struct ImGuiStyle;
 struct ImFont;
@@ -56,5 +58,8 @@ public:
 private:
   float m_time         = 0.0f;
   bool  m_block_events = true;
+  bool  m_frame_begun  = false;
 };
 }  // namespace ag
+
+#endif

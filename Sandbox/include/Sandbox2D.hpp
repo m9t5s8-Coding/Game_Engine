@@ -23,9 +23,14 @@ private:
 
   void load_project_data();
 
+#ifdef PLATFORM_ANDROID
+  void load_project_data_android();
+#endif
+
   std::string get_appdata_path();
 
   bool      m_networking_enabled = false;
+  Color     m_clear_color        = Color::White;
   TCPClient m_client;
 
   Entity m_hover_entity;

@@ -13,6 +13,7 @@ void EditorApp::on_create()
   load_project_data();
   Renderer::init();
 
+  ag::Log::init_with_imGui();
   push_layer(new EditorLayer());
 }
 

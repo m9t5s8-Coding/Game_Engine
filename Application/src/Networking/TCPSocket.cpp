@@ -1,15 +1,14 @@
-#include <Networking/TCPSocket.hpp>
+#ifdef AERO_SERVER
 
-#ifdef PLATFORM_LINUX
   #include <arpa/inet.h>
   #include <asm-generic/socket.h>
   #include <fcntl.h>
   #include <netinet/in.h>
   #include <sys/socket.h>
   #include <unistd.h>
-#endif
 
-#include <Core/Core.hpp>
+  #include <Core/Core.hpp>
+  #include <Networking/TCPSocket.hpp>
 
 namespace ag
 {
@@ -143,3 +142,5 @@ void TCPSocket::close()
   }
 }
 }  // namespace ag
+
+#endif

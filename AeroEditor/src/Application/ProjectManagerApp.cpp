@@ -1,4 +1,5 @@
 #include <Application/ProjectManagerApp.hpp>
+#include <Core/Log.hpp>
 
 namespace ag
 {
@@ -10,12 +11,15 @@ ProjectManagerApp::ProjectManagerApp()
 void ProjectManagerApp::on_create()
 {
   Engine::stop_runtime();
+
+#ifndef PLATFORM_ANDROID
   WindowProps props;
   props.Size  = vec2u(650, 720);
   props.Title = "Project Manager";
   init(props);
   get().get_window().center_window();
   // get().get_window().show_decoration(false);
+#endif
 }
 
 void ProjectManagerApp::on_destroy()

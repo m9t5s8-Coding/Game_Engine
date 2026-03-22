@@ -9,7 +9,6 @@ public:
   {
     None   = 0,
     OpenAL = 1,
-    OpenSL = 2,
   };
   inline static API get_api()
   {

@@ -250,4 +250,9 @@ void Project::save()
   out.close();
   Helper::makefile_read_only(p->m_project_file_path);
 }
+
+void Project::destroy()
+{
+  m_global_script_manager->on_destroy();
+}
 }  // namespace ag

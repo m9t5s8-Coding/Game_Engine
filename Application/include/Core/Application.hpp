@@ -8,10 +8,16 @@
 #include <Events/KeyEvent.hpp>
 #include <Events/MouseEvent.hpp>
 #include <Events/WindowEvent.hpp>
-#include <ImGui/ImGuiLayer.hpp>
+#ifdef AERO_EDITOR
+  #include <ImGui/ImGuiLayer.hpp>
+#endif
 #include <Layers/LayerStack.hpp>
 #include <Renderer/View.hpp>
 #include <Scripting/ScriptBinding/SignalManager.hpp>
+
+#ifdef PLATFORM_ANDROID
+  #include <android_native_app_glue.h>
+#endif
 
 namespace ag
 {
@@ -24,6 +30,7 @@ public:
   void init(const WindowProps& props);
   // main loop
   void run();
+  void run_frame();
 
   virtual void on_create()  = 0;
   virtual void on_destroy() = 0;
@@ -52,10 +59,12 @@ public:
   }
   static std::string get_exe_directory();
 
+#ifdef AERO_EDITOR
   ImGuiLayer* get_imgui_layer()
   {
     return m_imgui_layer;
   }
+#endif
 
   bool is_minimized() const
   {
@@ -79,8 +88,10 @@ private:
 
   bool m_minimized = false;
 
+#ifdef AERO_EDITOR
   ImGuiLayer* m_imgui_layer = nullptr;
-  LayerStack  m_layerstack;
+#endif
+  LayerStack m_layerstack;
 
   float m_last_frametime = 0.0f;
 
@@ -92,4 +103,8 @@ private:
 };
 
 Application* create_application();
+
+#ifdef PLATFORM_ANDROID
+Application* create_application(android_app* app);
+#endif
 }  // namespace ag

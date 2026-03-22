@@ -1,55 +1,49 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
+#ifdef AERO_EDITOR
 
-#include <memory>
-#include <mutex>
-#include <string>
-#include <vector>
+  #include <imgui.h>
+  #include <spdlog/sinks/base_sink.h>
+  #include <spdlog/spdlog.h>
 
-struct ImVec4;
+  #include <mutex>
+  #include <string>
+  #include <vector>
+
 namespace ag
 {
 
-class ImGuiConsoleSink
+class ImGuiConsoleSink : public spdlog::sinks::base_sink<std::mutex>
 {
 public:
-  struct Message
+  struct Entry
   {
     std::string               text;
     spdlog::level::level_enum level;
-    std::string               timestamp;
     std::string               logger_name;
-    size_t                    count = 1;
+    int                       count = 1;
   };
 
-  explicit ImGuiConsoleSink(size_t max_messages = 1000);
+  explicit ImGuiConsoleSink(size_t max_messages = 5000);
+  ~ImGuiConsoleSink() override = default;
 
-  void AddLog(const spdlog::details::log_msg& msg);
-  void Draw(const char* title, bool* p_open = nullptr);
+  void Draw(const char* title = "Console", bool* p_open = nullptr);
+  void clear();
 
-  void Clear();
-  void set_formatter(std::unique_ptr<spdlog::formatter> formatter);
-
-  size_t GetMessageCount() const;
+protected:
+  void sink_it_(const spdlog::details::log_msg& msg) override;
+  void flush_() override;
 
 private:
-  std::vector<Message>               m_messages;
-  size_t                             m_max_messages;
-  bool                               m_auto_scroll         = true;
-  bool                               m_show_timestamps     = true;
-  bool                               m_show_logger_name    = true;
-  bool                               m_collapse_duplicates = false;
-  mutable std::mutex                 m_mutex;
-  std::unique_ptr<spdlog::formatter> m_formatter;
-  int                                m_selected_message = -1;
+  std::vector<Entry> m_messages;
+  size_t             m_max_messages;
 
-  // helper functions
-  ImVec4 GetColorForLevel(spdlog::level::level_enum level) const;
-
-  void ClearAbove(int index);
-  void ClearBelow(int index);
-  void ExportToFile();
+  char m_filter[256]      = "";
+  bool m_auto_scroll      = true;
+  bool m_scroll_to_bottom = false;
+  int  m_selected         = -1;
 };
 
 }  // namespace ag
+
+#endif

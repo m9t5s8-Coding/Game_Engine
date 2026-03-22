@@ -11,7 +11,10 @@ public:
     auto& lua = ScriptManager::get_lua();
     m_env     = sol::environment(lua, sol::create, lua.globals());
   }
-
+  void invalidate()
+  {
+    m_env = sol::environment();
+  }
   sol::environment& get()
   {
     return m_env;

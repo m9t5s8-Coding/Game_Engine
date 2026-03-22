@@ -16,7 +16,9 @@
 #include <GameObjects/NodeFactory.hpp>
 #include <Helper.hpp>
 #include <ImGui/ImGuiConsoleSink.hpp>
-#include <ImGui/ImGuiLayer.hpp>
+#ifdef AERO_EDITOR
+  #include <ImGui/ImGuiLayer.hpp>
+#endif
 #include <Layers/Layer.hpp>
 #include <Math/Math.hpp>
 #include <Networking/NetworkManager.hpp>

@@ -8,6 +8,10 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef PLATFORM_ANDROID
+  #include <Platform/Android/AndroidPlatform.hpp>
+#endif
+
 namespace ag
 {
 
@@ -152,21 +156,86 @@ public:
 class PakLoader
 {
 private:
-  std::ifstream                                m_stream;
+  std::vector<uint8_t>                         m_data;    // ← holds entire pak in memory on Android
+  std::ifstream                                m_stream;  // ← used on desktop only
   std::unordered_map<std::string, PackedEntry> m_index;
   uint64_t                                     m_data_offset = 0;
   bool                                         m_loaded      = false;
 
+  // Simple memory reader helper for Android
+  struct MemReader
+  {
+    const uint8_t* data;
+    size_t         pos = 0;
+
+    template <typename T>
+    void read(T* out)
+    {
+      memcpy(out, data + pos, sizeof(T));
+      pos += sizeof(T);
+    }
+
+    void read_bytes(void* out, size_t size)
+    {
+      memcpy(out, data + pos, size);
+      pos += size;
+    }
+  };
+
 public:
   bool load(const std::string& pak_path)
   {
+#ifdef PLATFORM_ANDROID
+
+    if (!g_asset_manager)
+      return false;
+
+    AAsset* asset = AAssetManager_open(g_asset_manager, pak_path.c_str(), AASSET_MODE_BUFFER);
+    if (!asset)
+      return false;
+
+    size_t size = AAsset_getLength(asset);
+    m_data.resize(size);
+    AAsset_read(asset, m_data.data(), size);
+    AAsset_close(asset);
+
+    // Parse header from memory
+    MemReader r{m_data.data()};
+    uint32_t  magic, version, entryCount;
+    r.read(&magic);
+    r.read(&version);
+    r.read(&entryCount);
+    r.read(&m_data_offset);
+
+    if (magic != PAK_MAGIC || version != PAK_VERSION)
+    {
+      m_data.clear();
+      return false;
+    }
+
+    for (uint32_t i = 0; i < entryCount; i++)
+    {
+      uint32_t pathLen;
+      r.read(&pathLen);
+      std::string path(pathLen, '\0');
+      r.read_bytes(&path[0], pathLen);
+
+      PackedEntry entry;
+      r.read(&entry.offset);
+      r.read(&entry.size);
+      m_index[path] = entry;
+    }
+
+    m_loaded = true;
+    return true;
+
+#else
+    // Desktop — existing ifstream code unchanged
     m_stream.open(pak_path, std::ios::binary);
     if (!m_stream.is_open())
       return false;
 
-    uint32_t magic, version;
-    uint32_t entryCount;
-
+    uint32_t magic, version, entryCount;
     m_stream.read((char*)&magic, sizeof(magic));
     m_stream.read((char*)&version, sizeof(version));
     m_stream.read((char*)&entryCount, sizeof(entryCount));
@@ -182,19 +251,18 @@ public:
     {
       uint32_t pathLen;
       m_stream.read((char*)&pathLen, sizeof(pathLen));
-
       std::string path(pathLen, '\0');
       m_stream.read(&path[0], pathLen);
 
       PackedEntry entry;
       m_stream.read((char*)&entry.offset, sizeof(entry.offset));
       m_stream.read((char*)&entry.size, sizeof(entry.size));
-
       m_index[path] = entry;
     }
 
     m_loaded = true;
     return true;
+#endif
   }
 
   std::vector<uint8_t> read(const std::string& path)
@@ -205,27 +273,43 @@ public:
 
     auto&                e = it->second;
     std::vector<uint8_t> buf(e.size);
+
+#ifdef PLATFORM_ANDROID
+    // Read directly from in-memory data
+    memcpy(buf.data(), m_data.data() + m_data_offset + e.offset, e.size);
+#else
     m_stream.seekg(m_data_offset + e.offset);
     m_stream.read((char*)buf.data(), e.size);
+#endif
+
     return buf;
   }
 
+  void close()
+  {
+#ifdef PLATFORM_ANDROID
+    m_data.clear();
+#else
+    m_stream.close();
+#endif
+    m_index.clear();
+    m_loaded = false;
+  }
+
+  // read_string, exists, is_loaded, list_files, ~PakLoader unchanged
   std::string read_string(const std::string& path)
   {
     auto data = read(path);
     return std::string(data.begin(), data.end());
   }
-
   bool exists(const std::string& path) const
   {
     return m_index.find(path) != m_index.end();
   }
-
   bool is_loaded() const
   {
     return m_loaded;
   }
-
   std::vector<std::string> list_files() const
   {
     std::vector<std::string> out;
@@ -234,14 +318,6 @@ public:
       out.push_back(name);
     return out;
   }
-
-  void close()
-  {
-    m_stream.close();
-    m_index.clear();
-    m_loaded = false;
-  }
-
   ~PakLoader()
   {
     close();

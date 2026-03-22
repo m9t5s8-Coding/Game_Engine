@@ -1,53 +1,57 @@
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
-#pragma once
+  #pragma once
 
-#include <Renderer/Shader.hpp>
+  #include <glad/glad.h>
 
-#include <sstream>
-#include <unordered_map>
-#include <Renderer/Color.hpp>
-#include <Core/Core.hpp>
-#include <Math/Math.hpp>
-#include <glm/glm.hpp>
-#include <glad/glad.h>
+  #include <Core/Core.hpp>
+  #include <glm/glm.hpp>
+  #include <Math/Math.hpp>
+  #include <Renderer/Color.hpp>
+  #include <Renderer/Shader.hpp>
+  #include <sstream>
+  #include <unordered_map>
 
 namespace ag
 {
-  class OpenGLShader : public Shader
+class OpenGLShader : public Shader
+{
+public:
+  OpenGLShader(const std::string& p_shader_path);
+  OpenGLShader(const std::string& p_name, const std::string& p_shader_path);
+  OpenGLShader(const std::string& p_name,
+               const std::string& p_vertex_path,
+               const std::string& p_fragment_path);
+  virtual ~OpenGLShader();
+
+  virtual void bind() const override;
+  virtual void unbind() const override;
+
+  virtual const std::string& get_name() const override
   {
-  public:
-    OpenGLShader(const std::string &p_shader_path);
-    OpenGLShader(const std::string &p_name, const std::string& p_shader_path);
-    OpenGLShader(const std::string& p_name, const std::string &p_vertex_path, const std::string &p_fragment_path);
-    virtual ~OpenGLShader();
-
-    virtual void bind() const override;
-    virtual void unbind() const override;
-
-    virtual const std::string& get_name() const override { return m_name; };
-
-    virtual void set_vec2f(const std::string& name, const ag::vec2f& value) const override;
-    virtual void set_bool(const std::string &name, bool value) const override;
-    virtual void set_int(const std::string &name, int value) const override;
-    virtual void set_float(const std::string &name, float value) const override;
-    virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const override;
-
-    virtual void set_int_array(const std::string& name, int* values, AG_uint count) const override;
-
-    void set_color(const std::string &name, const ag::Color &color) const;
-    void set_float_rect(const std::string &name, const float_rect &rect) const;
-
-    void set_mat4(const std::string &name, const glm::mat4 &p_mat) const;
-
-  private:
-    std::string read_file(const std::string &filePath) const;
-    std::unordered_map<GLenum, std::string> process_shader_src(const std::string &p_shader_src);
-    void compile_shaders(const std::unordered_map<GLenum, std::string>& p_shader_src);
-    bool check_compile_errors(GLuint shader, const GLenum type);
-    AG_uint m_ID;
-    std::string m_name;
+    return m_name;
   };
-}
+
+  virtual void set_vec2f(const std::string& name, const ag::vec2f& value) const override;
+  virtual void set_bool(const std::string& name, bool value) const override;
+  virtual void set_int(const std::string& name, int value) const override;
+  virtual void set_float(const std::string& name, float value) const override;
+  virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const override;
+
+  virtual void set_int_array(const std::string& name, int* values, AG_uint count) const override;
+
+  void set_float_rect(const std::string& name, const float_rect& rect) const;
+
+  void set_mat4(const std::string& name, const glm::mat4& p_mat) const;
+
+private:
+  std::string                             read_file(const std::string& filePath) const;
+  std::unordered_map<GLenum, std::string> process_shader_src(const std::string& p_shader_src);
+  void        compile_shaders(const std::unordered_map<GLenum, std::string>& p_shader_src);
+  bool        check_compile_errors(GLuint shader, const GLenum type);
+  AG_uint     m_ID;
+  std::string m_name;
+};
+}  // namespace ag
 
 #endif

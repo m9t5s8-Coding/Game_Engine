@@ -42,7 +42,7 @@ void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings
 
     ImGui::SetWindowFontScale(1.1f);
     ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
-    ImGui::TextColored(ImVec4(1, 1, 1, 1), model.name.c_str());
+    ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", model.name.c_str());
 
     float close_button_size = title_bar_height - 10;
     ImGui::SetCursorPos(ImVec2(window_size.x - close_button_size - 5,
@@ -353,7 +353,7 @@ void Create_Open_Popup::draw_popup(PopUpModel& model)
 
     ImGui::SetWindowFontScale(1.1f);
     ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
-    ImGui::TextColored(ImVec4(1, 1, 1, 1), model.name.c_str());
+    ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", model.name.c_str());
 
     float close_button_size = title_bar_height - 10;
     ImGui::SetCursorPos(ImVec2(window_size.x - close_button_size - 5,

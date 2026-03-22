@@ -14,6 +14,10 @@
 #include <Renderer/VertexBuffer.hpp>
 #include <Scene/SceneComponent.hpp>
 
+#ifdef PLATFORM_ANDROID
+  #include <malloc.h>
+#endif
+
 namespace ag
 {
 
@@ -112,7 +116,10 @@ void Renderer2D::init()
     vb->set_layout(layout);
     s_data->fullscreen_vertex_array->add_vertex_buffer(vb);
     s_data->fullscreen_vertex_array->set_index_buffer(indexbuffer);
-    s_data->fullscreen_shader = Shader::create("shaders/Sprite2D.glsl");
+    if (Renderer::get_API() == RendererAPI::API::OpenGL_ES)
+      s_data->fullscreen_shader = ag::Shader::create("shaders/Sprite2DES.glsl");
+    else
+      s_data->fullscreen_shader = ag::Shader::create("shaders/Sprite2D.glsl");
   }
 
   {
@@ -143,12 +150,14 @@ void Renderer2D::init()
         {   ShaderDataType::Int,        "a_entity_id"},
     };
 
-    s_data->quad_instanced_buffer =
-        VertexBuffer::create(nullptr, sizeof(Quad_Instance) * s_data->max_shape);
+    s_data->quad_instanced_buffer = VertexBuffer::create(sizeof(Quad_Instance) * s_data->max_shape);
     s_data->quad_instanced_buffer->set_layout(instance_layout);
     s_data->quad_vertex_array->add_vertex_buffer(s_data->quad_instanced_buffer, true);
     s_data->quad_vertex_array->set_index_buffer(indexbuffer);
-    s_data->quad_shader = ag::Shader::create("shaders/Quad.glsl");
+    if (Renderer::get_API() == RendererAPI::API::OpenGL_ES)
+      s_data->quad_shader = ag::Shader::create("shaders/QuadES.glsl");
+    else
+      s_data->quad_shader = ag::Shader::create("shaders/Quad.glsl");
 
     s_data->quad_texture =
         ag::Texture2D::create("textures/default.png", true, Filter_Mode::AG_NEAREST, true);
@@ -163,6 +172,8 @@ void Renderer2D::init()
   {
 #ifdef _MSC_VER
     b.instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
+#elif defined(PLATFORM_ANDROID)
+    b.instances = (Quad_Instance*)memalign(64, sizeof(Quad_Instance) * s_data->max_shape);
 #else
     b.instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
 #endif
@@ -646,11 +657,11 @@ void Renderer2D::flush_internal(ProcessedBatch* batch)
     const size_t data_size  = draw_count * sizeof(Quad_Instance);
 
     s_data->quad_instanced_buffer->set_data(&batch->instances[offset], data_size);
+
     Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, draw_count);
 
     offset += draw_count;
     remaining -= draw_count;
   }
 }
-
 }  // namespace ag

@@ -1,9 +1,8 @@
 #include <Audio/AudioAPI.hpp>
 #include <Audio/AudioSource.hpp>
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
   #include <Platform/OpenAL/OpenALAudioSource.hpp>
-#elif defined(PLATFORM_ANDROID)
 
 #endif
 
@@ -17,19 +16,12 @@ AG_scope<AudioSource> AudioSource::create()
       return nullptr;
 
     case AudioAPI::API::OpenAL:
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
       return AG_cscope<OpenALAudioSource>();
 #else
       return nullptr;
 #endif
-    case AudioAPI::API::OpenSL:
-    {
-#ifdef PLATFORM_ANDROID
-      return nullptr;  // For now
-#else
-      return nullptr;
-#endif
-    };
+
     default:
       return nullptr;
   }

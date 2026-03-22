@@ -76,6 +76,8 @@ void ProjectManagerLayer::load_projects()
     AERO_CORE_ERROR("Error Loading the Projects:{0}", e.what());
     m_projects.clear();
   }
+
+  AERO_CORE_INFO("Project Loaded from Recent Projects");
 }
 
 void ProjectManagerLayer::save_projects()

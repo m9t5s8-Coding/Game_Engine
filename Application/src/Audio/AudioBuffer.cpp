@@ -1,7 +1,7 @@
 #include <Audio/AudioAPI.hpp>
 #include <Audio/AudioBuffer.hpp>
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
   #include <Platform/OpenAL/OpenALAudioBuffer.hpp>
 #endif
 
@@ -15,7 +15,7 @@ AG_ref<AudioBuffer> AudioBuffer::create(const std::string& path)
       return nullptr;
     case AudioAPI::API::OpenAL:
     {
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
       return AG_cref<OpenALAudioBuffer>(path);
 #else
       return nullptr;

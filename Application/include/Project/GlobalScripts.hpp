@@ -24,6 +24,7 @@ public:
   void on_update(TimeStamp ts);
   void on_create();
   void load_scripts();
+  void on_destroy();
 
 private:
   std::vector<GlobalScript_Component> m_global_scripts;

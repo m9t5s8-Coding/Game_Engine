@@ -167,11 +167,11 @@ public:
   }
 
   template <typename T>
-  inline bool draw_drag_scalar(const char*   id,
-                               T*            value,
-                               ImGuiDataType data_type,
-                               float         speed  = 1.0f,
-                               const char*   format = "%.3f")
+  inline static bool draw_drag_scalar(const char*   id,
+                                      T*            value,
+                                      ImGuiDataType data_type,
+                                      float         speed  = 1.0f,
+                                      const char*   format = "%.3f")
   {
     if (s_property_style.drag_enabled)
     {

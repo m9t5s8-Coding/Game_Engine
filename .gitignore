@@ -13,6 +13,10 @@
 /.cache/
 
 
+/android/app/.cxx/
+/android/app/build/
+/android/app/src/main/
+/android/gradle/
 
 build.gradle
 gradle.properties

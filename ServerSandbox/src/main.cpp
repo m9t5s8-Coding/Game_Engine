@@ -12,7 +12,7 @@ void on_signal(int)
 
 int main(int argc, char** argv)
 {
-  ag::Log::init_server();
+  ag::Log::init_simple();
 
   if (argc < 2)
   {

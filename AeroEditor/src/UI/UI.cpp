@@ -332,6 +332,7 @@ void UI::draw_menu_bar()
   // Run Menu
   if (ImGui::BeginMenu("  Run  "))
   {
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     if (ImGui::MenuItem(ICON_FA_PLAY "  Run Default Scene", "F5", false))
     {
       std::wstring folder = FileDialogs::get_exe_folder();
@@ -363,7 +364,7 @@ void UI::draw_menu_bar()
         FileDialogs::run_exe(app, path);
       }
     }
-
+#endif
     ImGui::EndMenu();
   }
 
@@ -1790,7 +1791,7 @@ void UI::draw_tilemap_register(Entity entity)
                     ImGui::BeginTooltip();
                     ImGui::Text("Tile (%d, %d)", x, y);
                     ImGui::Text("Position: (%d, %d)", x * (int)tile_size.x, y * (int)tile_size.y);
-                    ImGui::Text("Size: %.0fx%.0f", tile_size.x, tile_size.y);
+                    ImGui::Text("Size: %.0dx%.0d", tile_size.x, tile_size.y);
                     if (!is_for_solid)
                     {
                       if (is_selected)
@@ -3855,7 +3856,7 @@ void UI::custom_popup(const std::string&    popup_id,
                              title_bar_color);
     ImGui::SetWindowFontScale(1.2f);
     ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
-    ImGui::TextColored(ImVec4(1, 1, 1, 1), popup_name.c_str());
+    ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", popup_name.c_str());
 
     float close_button_size = title_bar_height - 10;
     ImGui::SetCursorPos(ImVec2(window_size.x - close_button_size - 5,

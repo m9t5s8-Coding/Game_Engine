@@ -1,4 +1,6 @@
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+
+
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
 
   #include <AL/al.h>
   #include <AL/alc.h>

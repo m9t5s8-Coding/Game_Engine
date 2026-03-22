@@ -12,6 +12,8 @@
 #elif defined(PLATFORM_LINUX)
   #include <limits.h>
   #include <unistd.h>
+#elif defined(PLATFORM_ANDROID)
+  #include <Platform/Android/AndroidWindow.hpp>
 #endif
 
 namespace ag
@@ -23,26 +25,33 @@ Application::Application()
 {
   s_Instance = this;
   Engine::start_runtime();
+  AERO_CORE_INFO("Application Contstuctor Created");
 }
 
 Application::~Application() = default;
 
 void Application::init(const WindowProps& props)
 {
-  ag::AssetManager::init_engine("assets.pak", get_exe_directory() + "assets");
-
+#ifdef PLATFORM_ANDROID
+  AssetManager::init_engine("assets.pak", "");
   m_Window = std::unique_ptr<Window>(Window::create(props));
-
   m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
-
   m_audio_device = AG_scope<Audio_Device>(Audio_Device::create());
   m_audio_device->init();
 
-  if (!Engine::is_runtime())
-  {
-    m_imgui_layer = new ImGuiLayer();
-    push_overlay(m_imgui_layer);
-  }
+#else
+  ag::AssetManager::init_engine("assets.pak", get_exe_directory() + "assets");
+  m_Window = std::unique_ptr<Window>(Window::create(props));
+  m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
+  m_audio_device = AG_scope<Audio_Device>(Audio_Device::create());
+  m_audio_device->init();
+
+  #ifdef AERO_EDITOR
+  m_imgui_layer = new ImGuiLayer();
+  push_overlay(m_imgui_layer);
+  #endif
+
+#endif
 }
 
 void Application::run()
@@ -60,6 +69,7 @@ void Application::run()
       for (Layer* layer : m_layerstack)
         layer->on_update(timestamp);
     }
+#ifdef AERO_EDITOR
     if (m_imgui_layer)
     {
       m_imgui_layer->begin();
@@ -69,10 +79,28 @@ void Application::run()
 
       m_imgui_layer->end();
     }
+#endif
 
     m_Window->on_update();
   }
   on_destroy();
+}
+
+void Application::run_frame()
+{
+#ifdef PLATFORM_ANDROID
+  float     time      = static_cast<float>(Time::get_time());
+  TimeStamp timestamp = time - m_last_frametime;
+  delta_time          = timestamp.get_seconds();
+  m_last_frametime    = time;
+
+  if (!m_minimized)
+  {
+    for (Layer* layer : m_layerstack)
+      layer->on_update(timestamp);
+  }
+  m_Window->on_update();
+#endif
 }
 
 void Application::push_layer(Layer* layer)
@@ -100,8 +128,10 @@ void Application::on_event(Event& e)
   dispatcher.Dispatch<WindowResizeEvent>(AERO_BIND_EVENT_FN(Application::on_window_resize));
   dispatcher.Dispatch<KeyPressedEvent>(AERO_BIND_EVENT_FN(Application::on_key_pressed));
 
+#ifdef AERO_EDITOR
   if (m_imgui_layer)
     m_imgui_layer->on_event(e);
+#endif
 
   for (auto it = m_layerstack.end(); it != m_layerstack.begin();)
   {

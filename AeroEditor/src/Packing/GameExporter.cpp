@@ -145,6 +145,42 @@ void GameExporter::export_thread_func()
                       project->get_scripts_directory(),
                       std::string(""));
 
+    Helper::save_json(settings["Network"], "Enabled", project->get_server_config().enabled, false);
+    if (project->get_server_config().enabled)
+    {
+      Helper::save_json(settings["Network"],
+                        "Port",
+                        project->get_server_config().port,
+                        (uint16_t)7777);
+      Helper::save_json(settings["Network"],
+                        "MaxClients",
+                        project->get_server_config().max_clients,
+                        5);
+      Helper::save_json(settings["Network"],
+                        "TickRate",
+                        project->get_server_config().tick_rate,
+                        20);
+      Helper::save_json(settings["Network"],
+                        "ConnectionTimeout",
+                        project->get_server_config().connection_timeout,
+                        10);
+      Helper::save_json(settings["Network"],
+                        "Reconnect",
+                        project->get_server_config().auto_reconnect,
+                        true);
+      Helper::save_json(settings["Network"],
+                        "ReconnectTries",
+                        project->get_server_config().max_reconnection_tries,
+                        3);
+      Helper::save_json(settings["Network"],
+                        "ServerIP",
+                        project->get_server_config().server_IP,
+                        std::string("127.0.0.1"));
+      settings["Network"]["scripts"] = project->get_server_config().scripts;
+    }
+
+    settings["Global"]["scripts"] = project->get_global_scripts().global_scripts;
+
     fs::path proj_file_path = fs::path(project_temp_dir) / (m_project_name + ".aeroproj");
     if (fs::exists(proj_file_path))
     {

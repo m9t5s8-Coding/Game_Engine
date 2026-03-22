@@ -19,7 +19,11 @@ void Sandbox2D::on_attach()
   spec.size        = size;
   m_framebuffer    = FrameBuffer::create(spec);
 
+#ifndef PLATFORM_ANDROID
   load_project_data();
+#else
+  load_project_data_android();
+#endif
 
   auto project = Project::get_active_project();
   if (!project)
@@ -38,7 +42,7 @@ void Sandbox2D::on_attach()
     return;
 
   m_networking_enabled = true;
-
+  AERO_CORE_INFO("Netorking Enabled");
   m_client.on_connected = []()
   {
     auto view = Scene::get_active_scene()->get_view<Script_Component>();
@@ -99,6 +103,7 @@ void Sandbox2D::on_update(ag::TimeStamp ts)
 
   ViewController::set_mouse_position();
   m_view_controller->on_update(ts);
+
   Project::get_active_project()->get_global_scripts_manager().on_update(ts);
   m_framebuffer->bind();
   RenderCommand::set_clear_color(ag::Color(38, 45, 42));
@@ -106,9 +111,9 @@ void Sandbox2D::on_update(ag::TimeStamp ts)
   m_framebuffer->clear_attachment(1, -1);
   Renderer2D::begin_scene(m_view_controller->get_view(),
                           Application::get().get_window().get_size());
-  m_scene->on_update(ts);
+  // m_scene->on_update(ts);
   Renderer2D::end_scene();
-  entity_selection();
+  // entity_selection();
   m_framebuffer->unbind();
   Renderer2D::begin_scene(m_view_controller->get_view(),
                           Application::get().get_window().get_size());
@@ -327,5 +332,81 @@ void Sandbox2D::load_project_data()
     }
   }
 }
+
+#ifdef PLATFORM_ANDROID
+void Sandbox2D::load_project_data_android()
+{
+  AssetManager::init_project("game.pak", "");
+
+  auto files = AssetManager::list_files(AssetManager::Domain::Project);
+  for (auto& f : files)
+    AERO_CORE_INFO("PAK contains: {}", f);
+  json j;
+  j = AssetManager::read_json("settings.json", AssetManager::Domain::Project);
+  if (j.is_null())
+  {
+    AERO_CORE_ERROR("Failed to load settings.json");
+    return;
+  }
+
+  std::string project_path;
+  Helper::load_json(j["Project"], "File Path", project_path, std::string(""));
+  if (project_path.empty())
+  {
+    AERO_CORE_ERROR("No project path in settings.json");
+    return;
+  }
+
+  Project::load_project(project_path);
+
+  auto project = Project::get_active_project();
+  if (!project)
+  {
+    AERO_CORE_ERROR("Failed to load project");
+    return;
+  }
+
+  Project::get_active_project()->init();
+
+  std::string scene_path;
+
+  {
+    std::string proj_file_path = project->get_project_file_directory();
+    json        proj_json = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
+    Helper::load_json(proj_json["Scene"], "Default Path", scene_path, std::string(""));
+    AERO_CORE_INFO("Default Path:{0}", scene_path);
+  }
+
+  if (scene_path.empty())
+  {
+    AERO_CORE_ERROR("No default scene path in project file");
+    return;
+  }
+
+  std::string full_scene_path =
+      project->get_directory() + project->get_scene_directory() + scene_path;
+  m_scene = SaveScene::load_scene(full_scene_path);
+
+  if (!m_scene)
+  {
+    AERO_CORE_ERROR("Failed to load scene: {0}", scene_path);
+    return;
+  }
+
+  Scene::set_active_scene(m_scene);
+  SceneManager::add_scene(m_scene);
+
+  auto entities = m_scene->get_view<Camera_Component>();
+  for (auto entityID : entities)
+  {
+    Entity entity(entityID);
+    auto&  props = entity.get_component<Camera_Component>();
+
+    vec2f view_size   = props.size;
+    m_view_controller = ViewController::create(view_size, props.center);
+    ViewController::set_main_controller(m_view_controller);
+  }
+}
+#endif
 
 }  // namespace ag

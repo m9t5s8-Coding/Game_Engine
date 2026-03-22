@@ -23,9 +23,8 @@ static GLenum string_to_shadertype(const std::string& p_type)
 
 OpenGLShader::OpenGLShader(const std::string& p_shader_path)
 {
-  std::string src = read_file(p_shader_path);
-
-  auto shader_src = process_shader_src(src);
+  std::string src        = read_file(p_shader_path);
+  auto        shader_src = process_shader_src(src);
 
   compile_shaders(shader_src);
 
@@ -225,12 +224,6 @@ void OpenGLShader::set_vec2f(const std::string& name, const ag::vec2f& value) co
   glUniform2f(glGetUniformLocation(m_ID, name.c_str()), value.x, value.y);
 }
 
-void OpenGLShader::set_color(const std::string& name, const ag::Color& color) const
-{
-  vec4f v_color;
-  color.normalize_color(v_color);
-  glUniform4f(glGetUniformLocation(m_ID, name.c_str()), v_color.x, v_color.y, v_color.z, v_color.w);
-}
 void OpenGLShader::set_float_rect(const std::string& name, const float_rect& rect) const
 {
   glUniform4f(glGetUniformLocation(m_ID, name.c_str()),

@@ -46,6 +46,7 @@ public:
   }
 
   void init();
+  void destroy();
 
   ServerConfig& get_server_config()
   {

@@ -1,31 +1,37 @@
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 
-#pragma once
+  #pragma once
 
-#include <Renderer/VertexBuffer.hpp>
+  #include <Renderer/VertexBuffer.hpp>
 
 namespace ag
 {
-  class OpenGLVertexBuffer : public VertexBuffer
+class OpenGLVertexBuffer : public VertexBuffer
+{
+public:
+  OpenGLVertexBuffer(float* vertices, size_t size);
+  OpenGLVertexBuffer(size_t size);
+  virtual ~OpenGLVertexBuffer();
+
+  virtual void bind() const override;
+  virtual void unbind() const override;
+
+  virtual void set_data(const void* vertices, size_t size) override;
+
+  virtual void set_layout(const BufferLayout& layout) override
   {
-  public:
-    OpenGLVertexBuffer(float *vertices, size_t size);
-    virtual ~OpenGLVertexBuffer();
-
-    virtual void bind() const override;
-    virtual void unbind() const override;
-
-    virtual void set_data(const void *vertices, size_t size) override;
-
-    virtual void set_layout(const BufferLayout &layout) override { m_layout = layout; }
-    virtual const BufferLayout &get_layout() const override { return m_layout; };
-
-  private:
-    AG_uint m_ID;
-    BufferLayout m_layout;
+    m_layout = layout;
+  }
+  virtual const BufferLayout& get_layout() const override
+  {
+    return m_layout;
   };
 
-}
+private:
+  AG_uint      m_ID;
+  BufferLayout m_layout;
+};
 
+}  // namespace ag
 
 #endif

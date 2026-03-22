@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifdef PLATFORM_ANDROID
+  #include <Platform/Android/AndroidPlatform.hpp>
+#endif
+
 namespace ag
 {
 class AssetManager
@@ -26,7 +30,7 @@ private:
   struct PakMount
   {
     std::unique_ptr<PakLoader> pak;
-    std::string                base_path;  // fallback dev path
+    std::string                base_path;
     bool                       using_pak = false;
   };
 
@@ -64,13 +68,15 @@ public:
   {
     init_mount(instance().m_engine, pak_path, fallback_base_path, "Engine");
   }
-  static void set_fallback_path(const std::string& fallback_path, Domain d)
-  {
-    mount(d).base_path = fallback_path;
-  }
+
   static void init_project(const std::string& pak_path, const std::string& fallback_base_path)
   {
     init_mount(instance().m_project, pak_path, fallback_base_path, "Project");
+  }
+
+  static void set_fallback_path(const std::string& fallback_path, Domain d)
+  {
+    mount(d).base_path = fallback_path;
   }
 
   static bool is_packed(Domain d)
@@ -78,23 +84,27 @@ public:
     return mount(d).using_pak;
   }
 
+  // ── The only function that needs Android support ──────────────────────────
   static std::vector<uint8_t> read_bytes(const std::string& path, Domain d)
   {
     auto& m = mount(d);
     if (m.using_pak)
       return m.pak->read(path);
 
-    std::string full = m.base_path + "/" + path;
-    AERO_CORE_INFO("Path: {0}", full);
+    std::string   full = m.base_path + "/" + path;
     std::ifstream f(full, std::ios::binary | std::ios::ate);
     if (!f.is_open())
+    {
+      AERO_CORE_ERROR("[AssetManager] Failed to open: {}", full);
       return {};
+    }
     size_t size = f.tellg();
     f.seekg(0);
     std::vector<uint8_t> buf(size);
     f.read(reinterpret_cast<char*>(buf.data()), size);
     return buf;
   }
+  // ─────────────────────────────────────────────────────────────────────────
 
   static std::string read_string(const std::string& path, Domain d)
   {
@@ -107,7 +117,7 @@ public:
     std::string content = read_string(path, d);
     if (content.empty())
       return {};
-    return json::parse(content);
+    return json::parse(content, nullptr, false);
   }
 
   static bool exists(const std::string& path, Domain d)

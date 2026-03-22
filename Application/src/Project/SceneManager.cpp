@@ -31,6 +31,14 @@ bool SceneManager::load_from_path(const std::string& relative_path)
   return true;
 }
 
+void SceneManager::destroy_scene()
+{
+  for (auto& [name, scene] : s_scenes)
+  {
+    scene->destroy();
+  }
+}
+
 bool SceneManager::load_scene(const std::string& scene_name)
 {
   auto it = s_scenes.find(scene_name);
