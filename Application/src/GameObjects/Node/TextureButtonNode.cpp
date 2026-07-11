@@ -4,24 +4,21 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
-void TextureButtonNode::create_node(Entity entity)
-{
+namespace ag {
+void TextureButtonNode::create_node(Entity entity) {
   ButtonState_Component::add_component(entity);
   Textured_Button_Component::add_component(entity);
   Transform_Component::add_component(entity);
   Texture_Component::add_component(entity);
-  if (!Engine::is_runtime())
-    TextureRect_Component::add_component(entity);
+#ifdef AERO_EDITOR
+  TextureRect_Component::add_component(entity);
+#endif
 }
-void TextureButtonNode::delete_node(Entity entity)
-{
+void TextureButtonNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
   entity.delete_entity();
 }
-void TextureButtonNode::clone_node(Entity original, Entity clone)
-{
+void TextureButtonNode::clone_node(Entity original, Entity clone) {
   Script_Component::clone_entity(original, clone);
   Transform_Component::clone_entity(original, clone);
   UI_Component::clone_entity(original, clone);
@@ -32,8 +29,7 @@ void TextureButtonNode::clone_node(Entity original, Entity clone)
   Tween_Component::clone_entity(original, clone);
 }
 
-json TextureButtonNode::save_json(Entity entity)
-{
+json TextureButtonNode::save_json(Entity entity) {
   json j;
   NodeHelper::save_component<Script_Component>(entity, j);
   NodeHelper::save_component<Transform_Component>(entity, j);
@@ -46,8 +42,7 @@ json TextureButtonNode::save_json(Entity entity)
   return j;
 }
 
-void TextureButtonNode::load_json(Entity entity, const json& j)
-{
+void TextureButtonNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Script_Component>(entity, j);
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<UI_Component>(entity, j);
@@ -57,21 +52,22 @@ void TextureButtonNode::load_json(Entity entity, const json& j)
   NodeHelper::load_component<Tween_Component>(entity, j);
 }
 
-void TextureButtonNode::update(Entity entity, TimeStamp ts)
-{
+void TextureButtonNode::update(Entity entity, TimeStamp ts) {
   Script_Component::update(entity, ts);
   Tween_Component::update(entity, ts);
 
-  if (!Engine::is_runtime() || !entity.has_component<Textured_Button_Component>())
+#ifdef AERO_EDITOR
+  return;
+#endif
+
+  if (!entity.has_component<Textured_Button_Component>())
     return;
 
   auto& comps = entity.get_component<Textured_Button_Component>();
-  if (entity.has_component<ButtonState_Component>())
-  {
+  if (entity.has_component<ButtonState_Component>()) {
     auto& state = entity.get_component<ButtonState_Component>().button_state;
 
-    if (state & Button_State::Disabled)
-    {
+    if (state & Button_State::Disabled) {
       comps.current_state = Button_Visual_State::Disabled;
       return;
     }
@@ -79,38 +75,29 @@ void TextureButtonNode::update(Entity entity, TimeStamp ts)
     bool mouse_pressed       = Mouse::is_mouse_pressed(Button::ButtonLeft);
     bool mouse_just_released = Mouse::is_mouse_released(Button::ButtonLeft);
 
-    if (state & Button_State::Hovered)
-    {
-      if (mouse_pressed)
-      {
+    if (state & Button_State::Hovered) {
+      if (mouse_pressed) {
         state |= Button_State::Pressed;
-      }
-      else if (state & Button_State::Pressed)
-      {
+      } else if (state & Button_State::Pressed) {
         state |= Button_State::Active;
         state &= ~Button_State::Pressed;
       }
-    }
-    else
-    {
+    } else {
       state &= ~Button_State::Pressed;
     }
     comps.current_state = Button_Visual::get_active_state(state);
-  }
-  else
+  } else
     comps.current_state = Button_Visual_State::Normal;
 
   auto it = comps.overrides.find(comps.current_state);
-  if (it != comps.overrides.end())
-  {
+  if (it != comps.overrides.end()) {
     comps.base_rect = it->second;
     return;
   }
   comps.base_rect = comps.overrides.find(Button_Visual_State::Normal)->second;
 }
 
-void TextureButtonNode::draw(Entity entity)
-{
+void TextureButtonNode::draw(Entity entity) {
   if (!entity.has_component<Texture_Component>() ||
       !entity.get_component<Texture_Component>().texture)
     return;
@@ -130,21 +117,18 @@ void TextureButtonNode::draw(Entity entity)
   sprite.size         = props.base_rect.size;
   sprite.texture_rect = props.base_rect;
 
-  if (entity.has_component<TextureFlip_Component>())
-  {
+  if (entity.has_component<TextureFlip_Component>()) {
     auto& flip             = entity.get_component<TextureFlip_Component>();
     sprite.flip_horizontal = flip.horizontal;
     sprite.flip_vertical   = flip.vertical;
   }
-  if (Engine::is_runtime())
-  {
-    NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
-  }
+#ifdef AERO_RUNTIME
+  NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
+#endif
 
   Renderer2D::draw_sprite(sprite, transform, entity_id);
 
-  if (entity.has_component<ButtonState_Component>())
-  {
+  if (entity.has_component<ButtonState_Component>()) {
     auto& state = entity.get_component<ButtonState_Component>().button_state;
     state &= ~(Button_State::Hovered | Button_State::Active);
   }

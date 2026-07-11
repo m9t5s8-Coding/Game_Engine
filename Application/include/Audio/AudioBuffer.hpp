@@ -1,4 +1,5 @@
 #pragma once
+#include <Core/Core.hpp>
 #include <string>
 
 namespace ag

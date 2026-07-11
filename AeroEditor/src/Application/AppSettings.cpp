@@ -12,41 +12,37 @@
   #include <unistd.h>
 #endif
 
-namespace ag
-{
+namespace ag {
 AppSettings::Mode AppSettings::s_mode                 = AppSettings::Mode::ProjectManager;
 std::string       AppSettings::s_settings_path        = "";
 std::string       AppSettings::s_recent_projects_path = "";
 bool              AppSettings::s_loaded               = false;
 
-void AppSettings::load()
-{
+void AppSettings::load() {
   if (s_loaded)
     return;
   create_app_folder();
   s_loaded = true;
 }
 
-void AppSettings::ensure_loaded()
-{
+void AppSettings::ensure_loaded() {
   if (s_loaded)
     return;
 
-  if (!s_loaded)
-  {
+  if (!s_loaded) {
     create_app_folder();
     s_loaded = true;
   }
 }
 
-std::string AppSettings::get_appdata_path()
-{
+std::string AppSettings::get_appdata_path() {
 #ifdef PLATFORM_WINDOWS
   const char* appdata = std::getenv("APPDATA");
   if (appdata)
-    return std::string(appdata);
-  else
-    return ".";
+    std::string str_appdata(appdata);
+
+  return std::string(appdata);
+  else return ".";
 
 #elif defined(PLATFORM_LINUX)
   const char* home = std::getenv("HOME");
@@ -58,56 +54,40 @@ std::string AppSettings::get_appdata_path()
 #elif defined(PLATFORM_ANDROID)
   extern android_app* g_android_app;
 
-  if (g_android_app && g_android_app->activity)
-  {
+  if (g_android_app && g_android_app->activity) {
     std::string internal_path = g_android_app->activity->internalDataPath;
     AERO_CORE_INFO("Android Internal Path: {0}", internal_path.c_str());
     return internal_path;
-  }
-  else
-  {
+  } else {
     return "/data/data/com.yourname.aeroengine/files";
   }
 #endif
 }
 
-void AppSettings::create_app_folder()
-{
+void AppSettings::create_app_folder() {
   std::string app_data_path = get_appdata_path();
-  AERO_CORE_INFO("App Data Path:{0}", app_data_path);
-  if (app_data_path.empty())
-  {
+  Helper::normalize_path(app_data_path);
+  if (app_data_path.empty()) {
     AERO_CORE_ERROR("App Data Path is Empty");
     return;
   }
-  Helper::normalize_path(app_data_path);
 
-  std::string app_folder = app_data_path + "/AEROEngine";
-  s_settings_path        = app_folder + "/settings.json";
-  s_recent_projects_path = app_folder + "/recent_projects.json";
-
-  AERO_CORE_INFO("App folder path: {}", app_folder);
+  const std::string app_folder = app_data_path + "/AEROEngine";
+  s_settings_path              = app_folder + "/settings.json";
+  s_recent_projects_path       = app_folder + "/recent_projects.json";
 
   // create app folder
-  try
-  {
-    if (!std::filesystem::exists(app_folder))
-    {
-      AERO_CORE_INFO("Creating app folder: {}", app_folder);
-      if (!std::filesystem::create_directories(app_folder))
-      {
+  try {
+    if (!std::filesystem::exists(app_folder)) {
+      if (!std::filesystem::create_directories(app_folder)) {
         AERO_CORE_ERROR("Failed to create directories: {}", app_folder);
         return;
       }
       AERO_CORE_INFO("App folder created successfully");
-    }
-    else
-    {
+    } else {
       AERO_CORE_INFO("App folder already exists");
     }
-  }
-  catch (const std::filesystem::filesystem_error& e)
-  {
+  } catch (const std::filesystem::filesystem_error& e) {
     AERO_CORE_ERROR("Failed to create app folder: {}", e.what());
     AERO_CORE_ERROR("Path: {}", app_folder);
     return;
@@ -118,20 +98,16 @@ void AppSettings::create_app_folder()
   create_load_recent_projects();
 }
 
-void AppSettings::create_load_settings()
-{
+void AppSettings::create_load_settings() {
   Helper::makefile_read_only(s_settings_path, false);
 
   AERO_CORE_INFO("Settings path: {}", s_settings_path);
 
-  if (!std::filesystem::exists(s_settings_path))
-  {
-    try
-    {
+  if (!std::filesystem::exists(s_settings_path)) {
+    try {
       AERO_CORE_INFO("Creating new settings file");
       std::ofstream file(s_settings_path);
-      if (!file.is_open())
-      {
+      if (!file.is_open()) {
         AERO_CORE_ERROR("Failed to Open File: {}", s_settings_path);
         return;
       }
@@ -144,28 +120,21 @@ void AppSettings::create_load_settings()
       file.close();
       Helper::makefile_read_only(s_settings_path);
       AERO_CORE_INFO("Settings File created at: {}", s_settings_path);
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
       AERO_CORE_ERROR("Exception creating settings.json: {}", e.what());
     }
-  }
-  else
-  {
-    try
-    {
+  } else {
+    try {
       AERO_CORE_INFO("Loading existing settings file");
       std::ifstream file(s_settings_path);
 
-      if (!file.is_open())
-      {
+      if (!file.is_open()) {
         AERO_CORE_ERROR("Failed to Open File: {}", s_settings_path);
         return;
       }
 
       file.seekg(0, std::ios::end);
-      if (file.tellg() == 0)
-      {
+      if (file.tellg() == 0) {
         AERO_CORE_WARN("Settings Path is empty using Defaults");
         file.close();
         Helper::makefile_read_only(s_settings_path);
@@ -178,8 +147,7 @@ void AppSettings::create_load_settings()
       file.close();
       Helper::makefile_read_only(s_settings_path);
 
-      if (j.is_discarded())
-      {
+      if (j.is_discarded()) {
         AERO_CORE_ERROR("Settings file has invalid JSON, using defaults");
         return;
       }
@@ -188,28 +156,22 @@ void AppSettings::create_load_settings()
       Helper::load_json(j, "Mode", mode, (int)Mode::ProjectManager);
       s_mode = static_cast<Mode>(mode);
       AERO_CORE_INFO("Settings loaded, mode: {}", mode);
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
       AERO_CORE_ERROR("Exception loading settings: {}", e.what());
     }
   }
 }
 
-void AppSettings::create_load_recent_projects()
-{
+void AppSettings::create_load_recent_projects() {
   Helper::makefile_read_only(s_recent_projects_path, false);
 
   AERO_CORE_INFO("Recent projects path: {}", s_recent_projects_path);
 
-  if (!std::filesystem::exists(s_recent_projects_path))
-  {
-    try
-    {
+  if (!std::filesystem::exists(s_recent_projects_path)) {
+    try {
       AERO_CORE_INFO("Creating new recent projects file");
       std::ofstream file(s_recent_projects_path);
-      if (!file.is_open())
-      {
+      if (!file.is_open()) {
         AERO_CORE_ERROR("Failed to create recent projects file");
         return;
       }
@@ -217,24 +179,18 @@ void AppSettings::create_load_recent_projects()
       file.close();
       Helper::makefile_read_only(s_recent_projects_path);
       AERO_CORE_INFO("Recent project file created at: {}", s_recent_projects_path);
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
       AERO_CORE_ERROR("Exception creating recent projects: {}", e.what());
     }
-  }
-  else
-  {
+  } else {
     AERO_CORE_INFO("Recent projects file already exists");
   }
 }
 
-void AppSettings::reload_app()
-{
+void AppSettings::reload_app() {
   std::string exePath = get_exe_path();
 
-  if (exePath.empty())
-  {
+  if (exePath.empty()) {
     AERO_CORE_ERROR("Cannot reload app - executable path is empty");
     return;
   }
@@ -252,23 +208,19 @@ void AppSettings::reload_app()
                      nullptr,
                      nullptr,
                      &si,
-                     &pi))
-  {
+                     &pi)) {
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
   }
 #elif defined(PLATFORM_LINUX) && !defined(PLATFORM_ANDROID)
   pid_t pid = fork();
-  if (pid == 0)
-  {
+  if (pid == 0) {
     // Child process
     execl(exePath.c_str(), exePath.c_str(), nullptr);
     // If execl returns, it failed
     AERO_CORE_ERROR("Failed to restart application");
     exit(1);
-  }
-  else if (pid < 0)
-  {
+  } else if (pid < 0) {
     AERO_CORE_ERROR("Failed to fork process");
   }
 
@@ -277,8 +229,7 @@ void AppSettings::reload_app()
   exit(0);
 }
 
-std::string AppSettings::get_exe_path()
-{
+std::string AppSettings::get_exe_path() {
 #ifdef PLATFORM_WINDOWS
   char buffer[MAX_PATH];
   GetModuleFileNameA(nullptr, buffer, MAX_PATH);
@@ -286,11 +237,9 @@ std::string AppSettings::get_exe_path()
 
 #elif defined(PLATFORM_ANDROID)
   // On Android, we don't have a direct executable path
-  if (g_android_app && g_android_app->activity)
-  {
+  if (g_android_app && g_android_app->activity) {
     std::string path = g_android_app->activity->externalDataPath;
-    if (path.empty())
-    {
+    if (path.empty()) {
       path = "/data/app/com.yourname.aeroengine";
     }
     return path;
@@ -300,13 +249,10 @@ std::string AppSettings::get_exe_path()
 #elif defined(PLATFORM_LINUX)
   char    buffer[PATH_MAX];
   ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-  if (len != -1)
-  {
+  if (len != -1) {
     buffer[len] = '\0';
     return std::string(buffer);
-  }
-  else
-  {
+  } else {
     AERO_CORE_ERROR("Failed to get executable path");
     return "";
   }

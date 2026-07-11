@@ -4,18 +4,12 @@
   #include <android_native_app_glue.h>
 #endif
 
-class Sandbox final : public ag::Application
-{
+class Sandbox final : public ag::Application {
 public:
-  Sandbox()
-  {
-  }
+  Sandbox() {}
   ~Sandbox() override {};
 
-  virtual void on_create() override
-  {
-    ag::Engine::start_runtime();
-
+  virtual void on_create() override {
 #ifndef PLATFORM_ANDROID
     ag::WindowProps props;
     props.Size  = ag::vec2u(1289, 720);
@@ -32,8 +26,7 @@ public:
     push_layer(new ag::Sandbox2D());
   }
 
-  virtual void on_destroy() override
-  {
+  virtual void on_destroy() override {
     ag::SceneManager::destroy_scene();
     ag::Project::get_active_project()->destroy();
     ag::NodeFactory::shut_down();
@@ -44,14 +37,8 @@ public:
 };
 
 #if defined(PLATFORM_WINDOW) || defined(PLATFORM_LINUX)
-ag::Application* ag::create_application()
-{
-  return new Sandbox();
-}
+ag::Application* ag::create_application() { return new Sandbox(); }
 #elif defined(PLATFORM_ANDROID)
 
-ag::Application* ag::create_application(android_app* app)
-{
-  return new Sandbox();
-}
+ag::Application* ag::create_application(android_app* app) { return new Sandbox(); }
 #endif

@@ -1,33 +1,32 @@
-.vs
-.vscode
-.idea
-.gradle
-.cache
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.iml
 
-
-/out/
-/app/
-/gradle/
+# Native build directories (from your engine's CMake builds)
 /build/
+/build-web/
+/build-linux/
 /cmake-build-debug/
-/.cache/
-
-
-/android/app/.cxx/
-/android/app/build/
-/android/app/src/main/
-/android/gradle/
-
-build.gradle
-gradle.properties
-gradlew
-gradlew.bat
-local.properties
-settings.gradle
+compile_commands.json
 vc140.idb
 vc140.pdb
-compile_commands.json
 
+# Gradle — local/generated only
+.gradle/
+.cache/
+/android/local.properties
+/android/app/build/
+/android/app/.cxx/
+/android/build/
+/android/.gradle/
 
+# Never commit signing keys
+*.jks
+*.keystore
+android/app/release/
 
-
+# OS junk
+.DS_Store
+Thumbs.db

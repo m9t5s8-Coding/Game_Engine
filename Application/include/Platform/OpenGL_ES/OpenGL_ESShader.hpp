@@ -35,8 +35,8 @@ public:
   virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const override;
   virtual void set_int_array(const std::string& name, int* values, AG_uint count) const override;
 
-  void set_float_rect(const std::string& name, const float_rect& rect) const;
-  void set_mat4(const std::string& name, const glm::mat4& p_mat) const;
+  virtual void set_float_rect(const std::string& name, const float_rect& rect) const override;
+  void         set_mat4(const std::string& name, const glm::mat4& p_mat) const;
 
 private:
   std::string                             read_file(const std::string& filePath) const;

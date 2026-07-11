@@ -9,49 +9,35 @@
 #include <Scene/SceneComponent.hpp>
 #include <string>
 
-namespace ag
-{
+namespace ag {
 
 #define COMPONENT_NAME(T) #T
 
 template <typename T>
-struct Base_Component
-{
-  static void add_component(Entity entity)
-  {
+struct Base_Component {
+  static void add_component(Entity entity) {
     if (!entity.has_component<T>())
       entity.add_component<T>();
   }
-  static void remove_component(Entity entity)
-  {
+  static void remove_component(Entity entity) {
     if (entity.has_component<T>())
       entity.remove_component<T>();
   }
-  static json save_json(Entity entity)
-  {
+  static json save_json(Entity entity) {
     json j;
 
     return j;
   }
-  static void load_json(Entity entity, const json& j)
-  {
-  }
-  static void clone_entity(Entity original, Entity clone)
-  {
+  static void load_json(Entity entity, const json& j) {}
+  static void clone_entity(Entity original, Entity clone) {
     if (original.has_component<T>())
       clone.add_component<T>(original.get_component<T>());
   }
-  static bool is_compatible(NodeType type)
-  {
-    return true;
-  }
-  static void imgui_render(Entity entity)
-  {
-  }
+  static bool is_compatible(NodeType type) { return true; }
+  static void imgui_render(Entity entity) {}
 };
 
-struct Tag_Component
-{
+struct Tag_Component {
   std::string         name;
   AG_uint             index = 0;
   NodeType            node_type;
@@ -77,8 +63,7 @@ struct Tag_Component
   static bool        is_parent(Entity child, Entity parent);
 };
 
-struct Transform_Component
-{
+struct Transform_Component {
   vec2f position;
   vec2f scale    = {1.0f, 1.0f};
   float rotation = 0.0f;
@@ -96,8 +81,7 @@ struct Transform_Component
 };
 
 class Packet;
-struct Script_Component
-{
+struct Script_Component {
   std::string path = "";
   LuaEnv      env;
   LuaFunc     on_create;
@@ -126,8 +110,7 @@ struct Script_Component
   static void        imgui_render(Entity entity);
 };
 
-struct Render2D_Component : Base_Component<Render2D_Component>
-{
+struct Render2D_Component : Base_Component<Render2D_Component> {
   vec2u size  = {100, 100};
   Color color = Color::White;
 
@@ -137,14 +120,10 @@ struct Render2D_Component : Base_Component<Render2D_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Render2D";
-  }
+  static const char* get_name() { return "Render2D"; }
 };
 
-struct Border_Component : Base_Component<Border_Component>
-{
+struct Border_Component : Base_Component<Border_Component> {
   float thickness = 5.0f;
   Color color     = Color::Black;
 
@@ -154,14 +133,10 @@ struct Border_Component : Base_Component<Border_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Border";
-  }
+  static const char* get_name() { return "Border"; }
 };
 
-struct Corner_Component : Base_Component<Corner_Component>
-{
+struct Corner_Component : Base_Component<Corner_Component> {
   float corner  = 5.0f;
   bool  uniform = true;
 
@@ -171,14 +146,10 @@ struct Corner_Component : Base_Component<Corner_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Corner";
-  }
+  static const char* get_name() { return "Corner"; }
 };
 
-struct UI_Component : Base_Component<UI_Component>
-{
+struct UI_Component : Base_Component<UI_Component> {
   RenderMode mode = RenderMode::World;
 
   static json save_json(Entity entity);
@@ -187,14 +158,10 @@ struct UI_Component : Base_Component<UI_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "UI";
-  }
+  static const char* get_name() { return "UI"; }
 };
 
-struct Texture_Component : Base_Component<Texture_Component>
-{
+struct Texture_Component : Base_Component<Texture_Component> {
   std::string       path;
   AG_ref<Texture2D> texture;
   Filter_Mode       filter_mode = Filter_Mode::AG_LINEAR;
@@ -205,14 +172,10 @@ struct Texture_Component : Base_Component<Texture_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Texture";
-  }
+  static const char* get_name() { return "Texture"; }
 };
 
-struct TextureRect_Component : Base_Component<TextureRect_Component>
-{
+struct TextureRect_Component : Base_Component<TextureRect_Component> {
   uint_rect rect;
 
   static json save_json(Entity entity);
@@ -221,14 +184,10 @@ struct TextureRect_Component : Base_Component<TextureRect_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity, bool can_remove = true);
 
-  static const char* get_name()
-  {
-    return "TextureRect";
-  }
+  static const char* get_name() { return "TextureRect"; }
 };
 
-struct TextureFlip_Component : Base_Component<TextureFlip_Component>
-{
+struct TextureFlip_Component : Base_Component<TextureFlip_Component> {
   bool horizontal = false;
   bool vertical   = false;
 
@@ -238,14 +197,10 @@ struct TextureFlip_Component : Base_Component<TextureFlip_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "TextureFlip";
-  }
+  static const char* get_name() { return "TextureFlip"; }
 };
 
-struct Camera_Component : Base_Component<Camera_Component>
-{
+struct Camera_Component : Base_Component<Camera_Component> {
   vec2f size = {1280.0f, 720.0f};
   vec2f center;
 
@@ -255,14 +210,10 @@ struct Camera_Component : Base_Component<Camera_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Camera";
-  }
+  static const char* get_name() { return "Camera"; }
 };
 
-struct Window_Component : Base_Component<Window_Component>
-{
+struct Window_Component : Base_Component<Window_Component> {
   vec2f size = {1280.0f, 720.0f};
 
   static json save_json(Entity entity);
@@ -271,14 +222,10 @@ struct Window_Component : Base_Component<Window_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Window";
-  }
+  static const char* get_name() { return "Window"; }
 };
 
-struct CameraBounds_Component : Base_Component<CameraBounds_Component>
-{
+struct CameraBounds_Component : Base_Component<CameraBounds_Component> {
   vec2f x_axis;
   vec2f y_axis;
 
@@ -290,16 +237,11 @@ struct CameraBounds_Component : Base_Component<CameraBounds_Component>
   static void on_update(Entity entity);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "CameraBounds";
-  }
+  static const char* get_name() { return "CameraBounds"; }
 };
 
-struct CameraFollow_Component : Base_Component<CameraFollow_Component>
-{
-  enum class FollowType
-  {
+struct CameraFollow_Component : Base_Component<CameraFollow_Component> {
+  enum class FollowType {
     NONE           = 0,
     LOCK_ON_TARGET = 1,
     LERP_SMOOTH    = 2,
@@ -326,19 +268,14 @@ struct CameraFollow_Component : Base_Component<CameraFollow_Component>
 
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "CameraFollow";
-  }
+  static const char* get_name() { return "CameraFollow"; }
 };
 
-struct Frame
-{
+struct Frame {
   uint_rect frame_rect;
 };
 
-struct Animation
-{
+struct Animation {
   std::string        name;
   float              fps       = 0;
   bool               loop      = true;
@@ -349,8 +286,7 @@ struct Animation
   static Animation load_json(const json& j);
 };
 
-struct Animation_Component : Base_Component<Animation_Component>
-{
+struct Animation_Component : Base_Component<Animation_Component> {
   std::unordered_map<std::string, Animation> animations;
   std::string                                current_animation           = "";
   int                                        current_frame               = 0;
@@ -367,36 +303,28 @@ struct Animation_Component : Base_Component<Animation_Component>
   static bool play_animation(Entity entity, const std::string& name, bool restart = false);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Animations";
-  }
+  static const char* get_name() { return "Animations"; }
 };
 
-struct Tween_Component : Base_Component<Tween_Component>
-{
-  enum class State
-  {
+struct Tween_Component : Base_Component<Tween_Component> {
+  enum class State {
     STOPPED,
     PLAYING,
     PAUSED,
     COMPLETED
   };
-  enum class EaseType
-  {
+  enum class EaseType {
     LINEAR,
     EASE_IN,
     EASE_OUT,
     EASE_IN_OUT
   };
-  enum class LoopType
-  {
+  enum class LoopType {
     ONCE,
     LOOP,
     PING_PONG
   };
-  enum class TweenTarget
-  {
+  enum class TweenTarget {
     POSITION,
     SCALE,
     ROTATION
@@ -424,18 +352,14 @@ struct Tween_Component : Base_Component<Tween_Component>
   static void        update(Entity entity, TimeStamp ts);
   static bool        play_tween(Entity entity);
   static bool        is_compatible(NodeType type);
-  static const char* get_name()
-  {
-    return "Tween";
-  }
-  static void imgui_render(Entity entity);
+  static const char* get_name() { return "Tween"; }
+  static void        imgui_render(Entity entity);
 
 private:
   static float apply_ease(float t, EaseType ease_type);
 };
 
-enum AutoTileBit : uint16_t
-{
+enum AutoTileBit : uint16_t {
   TL = 1 << 0,
   T  = 1 << 1,
   TR = 1 << 2,
@@ -447,8 +371,7 @@ enum AutoTileBit : uint16_t
   BR = 1 << 8,
 };
 
-struct Tile_Defination
-{
+struct Tile_Defination {
   uint_rect texture_rect;
   bool      is_solid = false;
 
@@ -456,14 +379,10 @@ struct Tile_Defination
 
   static void load_json(Tile_Defination& def, const json& j);
 
-  static const char* get_name()
-  {
-    return "Tile_Defination";
-  }
+  static const char* get_name() { return "Tile_Defination"; }
 };
 
-struct Tile
-{
+struct Tile {
   vec2u    tile_id;
   uint16_t set_id       = std::numeric_limits<uint16_t>::max();
   bool     use_autotile = false;
@@ -473,24 +392,19 @@ struct Tile
   static Tile load_json(const json& j);
 };
 
-struct Tile_Component : Base_Component<Tile_Component>
-{
+struct Tile_Component : Base_Component<Tile_Component> {
   vec2f size = {32, 32};
   vec2f offset;
 
   static json save_json(Entity entity);
   static void load_json(Entity entity, const json& j);
 
-  static const char* get_name()
-  {
-    return "Tile";
-  }
+  static const char* get_name() { return "Tile"; }
 
   static void imgui_render(Entity entity);
 };
 
-struct SolidSet_Component : Base_Component<SolidSet_Component>
-{
+struct SolidSet_Component : Base_Component<SolidSet_Component> {
   std::unordered_map<vec2i, bool, vec2_hash<int>> placed_tiles;
   b2Body*                                         body = nullptr;
 
@@ -503,14 +417,10 @@ struct SolidSet_Component : Base_Component<SolidSet_Component>
   static void imgui_render(Entity entity);
   static void create_body(Entity entity);
 
-  static const char* get_name()
-  {
-    return "SolidSet";
-  }
+  static const char* get_name() { return "SolidSet"; }
 };
 
-struct TileSet_Component : Base_Component<TileSet_Component>
-{
+struct TileSet_Component : Base_Component<TileSet_Component> {
   std::unordered_map<vec2u, Tile_Defination, vec2_hash<AG_uint>> tile_definitions;
   std::unordered_map<vec2i, Tile, vec2_hash<int>>                placed_tiles;
   bool                                                           is_tile_registered = false;
@@ -531,28 +441,20 @@ struct TileSet_Component : Base_Component<TileSet_Component>
   static void imgui_render(Entity entity);
   static void create_body(Entity entity);
 
-  static const char* get_name()
-  {
-    return "TileSet";
-  }
+  static const char* get_name() { return "TileSet"; }
 };
 
-struct Auto_Tiles : Base_Component<Auto_Tiles>
-{
+struct Auto_Tiles : Base_Component<Auto_Tiles> {
   std::unordered_map<uint16_t, vec2u> tile_bitmask;
   uint16_t                            set_id;
 
   static json       save_json(const Auto_Tiles& tiles);
   static Auto_Tiles load_json(const json& j);
 
-  static const char* get_name()
-  {
-    return "AutoTile";
-  }
+  static const char* get_name() { return "AutoTile"; }
 };
 
-struct AutoTiling_Component : Base_Component<AutoTiling_Component>
-{
+struct AutoTiling_Component : Base_Component<AutoTiling_Component> {
   std::unordered_map<std::string, Auto_Tiles> auto_tiles;
   uint16_t                                    next_id;
 
@@ -564,26 +466,20 @@ struct AutoTiling_Component : Base_Component<AutoTiling_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "AutoTileSet";
-  }
+  static const char* get_name() { return "AutoTileSet"; }
 };
 
-enum class ShapeType
-{
+enum class ShapeType {
   Rectangle = 0,
   Circle    = 1
 };
-enum class BodyType
-{
+enum class BodyType {
   Dynamic   = 0,
   Static    = 1,
   Kinematic = 2
 };
 
-struct CollisionShape_Data
-{
+struct CollisionShape_Data {
   ShapeType  shape_type      = ShapeType::Rectangle;
   vec2f      size            = {100, 100};
   float      radius          = 50.0f;
@@ -597,8 +493,7 @@ struct CollisionShape_Data
   std::string name = "Shape";
 };
 
-struct CollisionShape_Component : Base_Component<CollisionShape_Component>
-{
+struct CollisionShape_Component : Base_Component<CollisionShape_Component> {
   std::unordered_map<std::string, CollisionShape_Data> shapes;
 
   static void add_component(Entity entity);
@@ -608,14 +503,10 @@ struct CollisionShape_Component : Base_Component<CollisionShape_Component>
 
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "CollisionShape";
-  }
+  static const char* get_name() { return "CollisionShape"; }
 };
 
-struct PhysicsBody_Component : Base_Component<PhysicsBody_Component>
-{
+struct PhysicsBody_Component : Base_Component<PhysicsBody_Component> {
   b2Body*  body      = nullptr;
   BodyType body_type = BodyType::Dynamic;
 
@@ -636,22 +527,17 @@ struct PhysicsBody_Component : Base_Component<PhysicsBody_Component>
   static void recreate_fixtures(Entity entity);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "PhysicsBody";
-  }
+  static const char* get_name() { return "PhysicsBody"; }
 };
 
-class GroundContactListener : public b2ContactListener
-{
+class GroundContactListener : public b2ContactListener {
 public:
   std::unordered_map<uint32_t, int>                          ground_contacts;
   std::unordered_map<uint32_t, std::unordered_set<uint32_t>> collisions;
 
   std::unordered_map<std::string, std::unordered_set<AG_uint>> sensor_collisions;
 
-  void BeginContact(b2Contact* contact) override
-  {
+  void BeginContact(b2Contact* contact) override {
     b2Fixture* fixtureA = contact->GetFixtureA();
     b2Fixture* fixtureB = contact->GetFixtureB();
 
@@ -664,38 +550,30 @@ public:
     collisions[entity1].insert(entity2);
     collisions[entity2].insert(entity1);
 
-    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1)
-    {
+    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1) {
       ground_contacts[entity1]++;
-    }
-    else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1)
-    {
+    } else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1) {
       ground_contacts[entity2]++;
     }
 
-    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer != 1)
-    {
+    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer != 1) {
       auto* shapeA = reinterpret_cast<CollisionShape_Data*>(fixtureA->GetUserData().pointer);
-      if (shapeA)
-      {
+      if (shapeA) {
         std::string key = std::to_string(entity1) + ":" + shapeA->name;
         sensor_collisions[key].insert(entity2);
       }
     }
 
-    if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer != 1)
-    {
+    if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer != 1) {
       auto* shapeB = reinterpret_cast<CollisionShape_Data*>(fixtureB->GetUserData().pointer);
-      if (shapeB)
-      {
+      if (shapeB) {
         std::string key = std::to_string(entity2) + ":" + shapeB->name;
         sensor_collisions[key].insert(entity1);
       }
     }
   }
 
-  void EndContact(b2Contact* contact) override
-  {
+  void EndContact(b2Contact* contact) override {
     b2Fixture* fixtureA = contact->GetFixtureA();
     b2Fixture* fixtureB = contact->GetFixtureB();
 
@@ -714,25 +592,20 @@ public:
       collisions.erase(entity2);
 
     // Handle foot sensors
-    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1)
-    {
+    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer == 1) {
       ground_contacts[entity1]--;
       if (ground_contacts[entity1] <= 0)
         ground_contacts.erase(entity1);
-    }
-    else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1)
-    {
+    } else if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer == 1) {
       ground_contacts[entity2]--;
       if (ground_contacts[entity2] <= 0)
         ground_contacts.erase(entity2);
     }
 
     // Handle named sensors (ONLY if not foot sensor)
-    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer != 1)
-    {
+    if (fixtureA->IsSensor() && fixtureA->GetUserData().pointer != 1) {
       auto* shapeA = reinterpret_cast<CollisionShape_Data*>(fixtureA->GetUserData().pointer);
-      if (shapeA)
-      {
+      if (shapeA) {
         std::string key = std::to_string(entity1) + ":" + shapeA->name;
         sensor_collisions[key].erase(entity2);
         if (sensor_collisions[key].empty())
@@ -740,11 +613,9 @@ public:
       }
     }
 
-    if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer != 1)
-    {
+    if (fixtureB->IsSensor() && fixtureB->GetUserData().pointer != 1) {
       auto* shapeB = reinterpret_cast<CollisionShape_Data*>(fixtureB->GetUserData().pointer);
-      if (shapeB)
-      {
+      if (shapeB) {
         std::string key = std::to_string(entity2) + ":" + shapeB->name;
         sensor_collisions[key].erase(entity1);
         if (sensor_collisions[key].empty())
@@ -753,36 +624,31 @@ public:
     }
   }
 
-  bool is_grounded(uint32_t entity_id) const
-  {
+  bool is_grounded(uint32_t entity_id) const {
     auto it = ground_contacts.find(entity_id);
     return it != ground_contacts.end() && it->second > 0;
   }
 
-  bool is_collided(AG_uint entity_id) const
-  {
+  bool is_collided(AG_uint entity_id) const {
     auto it = collisions.find(entity_id);
     return it != collisions.end() && !it->second.empty();
   }
 
-  bool is_collided(AG_uint entity_id_1, AG_uint entity_id_2) const
-  {
+  bool is_collided(AG_uint entity_id_1, AG_uint entity_id_2) const {
     auto it = collisions.find(entity_id_1);
     if (it == collisions.end())
       return false;
     return it->second.find(entity_id_2) != it->second.end();
   }
 
-  bool is_collided(AG_uint entity_id, const std::string& sensor_name) const
-  {
+  bool is_collided(AG_uint entity_id, const std::string& sensor_name) const {
     std::string key = std::to_string(entity_id) + ":" + sensor_name;
     auto        it  = sensor_collisions.find(key);
     return it != sensor_collisions.end() && !it->second.empty();
   }
 };
 
-enum class MaterialPreset
-{
+enum class MaterialPreset {
   Custom = 0,
   Wood   = 1,
   Metal  = 2,
@@ -791,8 +657,7 @@ enum class MaterialPreset
   Bouncy = 5,
   Stone  = 6
 };
-struct PhysicsMaterial_Component : Base_Component<PhysicsMaterial_Component>
-{
+struct PhysicsMaterial_Component : Base_Component<PhysicsMaterial_Component> {
   float density     = 1.0f;
   float friction    = 0.3f;
   float restitution = 0.0f;
@@ -804,27 +669,21 @@ struct PhysicsMaterial_Component : Base_Component<PhysicsMaterial_Component>
   static void        load_json(Entity entity, const json& j);
   static bool        is_compatible(NodeType type);
   static void        imgui_render(Entity entity);
-  static const char* get_name()
-  {
-    return "PhysicsMaterial";
-  }
+  static const char* get_name() { return "PhysicsMaterial"; }
 };
 
-enum class Text_Allignment_Horizontal
-{
+enum class Text_Allignment_Horizontal {
   Left,
   Center,
   Right
 };
-enum class Text_Allignment_Vertical
-{
+enum class Text_Allignment_Vertical {
   Top,
   Center,
   Bottom
 };
 
-struct Text_Component : Base_Component<Text_Component>
-{
+struct Text_Component : Base_Component<Text_Component> {
   std::string text      = "AeroEngine";
   float       font_size = 12.0f;
 
@@ -835,26 +694,19 @@ struct Text_Component : Base_Component<Text_Component>
 
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "Text";
-  }
+  static const char* get_name() { return "Text"; }
 };
 
-struct Text_Editor_State
-{
+struct Text_Editor_State {
   size_t caret_index = 0;
   bool   active      = false;
   float  blink_timer = 0.0f;
 
-  static void add_component(Entity entity)
-  {
-    if (!entity.has_component<Text_Editor_State>())
-    {
+  static void add_component(Entity entity) {
+    if (!entity.has_component<Text_Editor_State>()) {
       Text_Editor_State state;
       state.active = false;
-      if (entity.has_component<Text_Component>())
-      {
+      if (entity.has_component<Text_Component>()) {
         auto& props       = entity.get_component<Text_Component>();
         state.caret_index = props.text.size();
       }
@@ -862,23 +714,20 @@ struct Text_Editor_State
     }
   }
 
-  static void remove_component(Entity entity)
-  {
+  static void remove_component(Entity entity) {
     if (entity.has_component<Text_Editor_State>())
       entity.remove_component<Text_Editor_State>();
   }
 };
 
-enum FontStyle : uint8_t
-{
+enum FontStyle : uint8_t {
   dirty     = 1 << 0,
   bold      = 1 << 1,
   italic    = 1 << 2,
   underline = 1 << 3,
 };
 
-struct FontStyle_Component : Base_Component<FontStyle_Component>
-{
+struct FontStyle_Component : Base_Component<FontStyle_Component> {
   Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Left;
   Text_Allignment_Vertical   v_allignment = Text_Allignment_Vertical::Top;
   uint8_t                    style        = 0;
@@ -892,14 +741,10 @@ struct FontStyle_Component : Base_Component<FontStyle_Component>
   static bool is_compatible(NodeType type);
   static void imgui_render(Entity entity);
 
-  static const char* get_name()
-  {
-    return "FontStyle";
-  }
+  static const char* get_name() { return "FontStyle"; }
 };
 
-struct Text
-{
+struct Text {
   std::string                text;
   float                      font_size    = 48;
   RenderMode                 mode         = RenderMode::World;
@@ -927,8 +772,7 @@ struct Text
                                        size_t*                    break_index);
 };
 
-enum Button_State : uint8_t
-{
+enum Button_State : uint8_t {
   Normal   = 1 << 0,
   Hovered  = 1 << 1,
   Pressed  = 1 << 2,
@@ -937,8 +781,7 @@ enum Button_State : uint8_t
   Disabled = 1 << 5
 };
 
-enum class Button_Visual_State : uint8_t
-{
+enum class Button_Visual_State : uint8_t {
   Normal,
   Hovered,
   Pressed,
@@ -946,21 +789,16 @@ enum class Button_Visual_State : uint8_t
   Disabled
 };
 
-struct ButtonState_Component : Base_Component<ButtonState_Component>
-{
+struct ButtonState_Component : Base_Component<ButtonState_Component> {
   uint8_t button_state = static_cast<uint8_t>(Button_State::Normal);
 
   static json        save_json(Entity entity);
   static void        load_json(Entity entity, const json& j);
   static bool        is_compatible(NodeType type);
-  static const char* get_name()
-  {
-    return "ButtonState";
-  }
+  static const char* get_name() { return "ButtonState"; }
 };
 
-struct Button_Visual
-{
+struct Button_Visual {
   Color background       = Color::White;
   Color border           = Color::Black;
   Color text             = Color::Black;
@@ -970,34 +808,22 @@ struct Button_Visual
   static json          save_json(const Button_Visual& visual);
   static Button_Visual load_json(const json& j);
 
-  static const char* get_name()
-  {
-    return "ButtonVisual";
-  }
+  static const char* get_name() { return "ButtonVisual"; }
 
   static void imgui_render(Entity entity);
 
-  static const char* to_string(Button_Visual_State state)
-  {
-    switch (state)
-    {
-      case ag::Button_Visual_State::Normal:
-        return "Normal";
-      case ag::Button_Visual_State::Hovered:
-        return "Hovered";
-      case ag::Button_Visual_State::Pressed:
-        return "Pressed";
-      case ag::Button_Visual_State::Focused:
-        return "Focused";
-      case ag::Button_Visual_State::Disabled:
-        return "Disabled";
-      default:
-        return "Normal";
+  static const char* to_string(Button_Visual_State state) {
+    switch (state) {
+      case ag::Button_Visual_State::Normal: return "Normal";
+      case ag::Button_Visual_State::Hovered: return "Hovered";
+      case ag::Button_Visual_State::Pressed: return "Pressed";
+      case ag::Button_Visual_State::Focused: return "Focused";
+      case ag::Button_Visual_State::Disabled: return "Disabled";
+      default: return "Normal";
     }
   }
 
-  static std::vector<std::string> all_states()
-  {
+  static std::vector<std::string> all_states() {
     std::vector<std::string> states;
     states.push_back("Normal");
     states.push_back("Hovered");
@@ -1008,8 +834,7 @@ struct Button_Visual
     return states;
   }
 
-  static Button_Visual_State form_string(const std::string& s)
-  {
+  static Button_Visual_State form_string(const std::string& s) {
     if (s == "Normal")
       return Button_Visual_State::Normal;
     if (s == "Hovered")
@@ -1024,8 +849,7 @@ struct Button_Visual
     return Button_Visual_State::Normal;
   }
 
-  static Button_Visual_State get_active_state(uint8_t mask)
-  {
+  static Button_Visual_State get_active_state(uint8_t mask) {
     if (mask & static_cast<uint8_t>(Button_State::Disabled))
       return Button_Visual_State::Disabled;
 
@@ -1043,8 +867,7 @@ struct Button_Visual
   }
 };
 
-struct Button_Layout
-{
+struct Button_Layout {
   vec2u                      size         = {100, 20};
   Text_Allignment_Horizontal h_allignment = Text_Allignment_Horizontal::Center;
   Text_Allignment_Vertical   v_allignment = Text_Allignment_Vertical::Center;
@@ -1053,16 +876,12 @@ struct Button_Layout
   static json          save_json(const Button_Layout& layout);
   static Button_Layout load_json(const json& j);
 
-  static const char* get_name()
-  {
-    return "ButtonLayout";
-  }
+  static const char* get_name() { return "ButtonLayout"; }
 
   static void imgui_render(Entity entity);
 };
 
-struct Button_Component : Base_Component<Button_Component>
-{
+struct Button_Component : Base_Component<Button_Component> {
   Button_Visual                                          base;
   Button_Layout                                          layout;
   std::unordered_map<Button_Visual_State, Button_Visual> overrides;
@@ -1072,16 +891,12 @@ struct Button_Component : Base_Component<Button_Component>
   static json save_json(Entity entity);
   static void load_json(Entity entity, const json& j);
 
-  static const char* get_name()
-  {
-    return "Button";
-  }
+  static const char* get_name() { return "Button"; }
 
   static void imgui_render(Entity entity);
 };
 
-struct Textured_Button_Component : Base_Component<Textured_Button_Component>
-{
+struct Textured_Button_Component : Base_Component<Textured_Button_Component> {
   uint_rect                                          base_rect;
   std::unordered_map<Button_Visual_State, uint_rect> overrides;
   Button_Visual_State                                current_state = Button_Visual_State::Normal;
@@ -1090,16 +905,12 @@ struct Textured_Button_Component : Base_Component<Textured_Button_Component>
   static json save_json(Entity entity);
   static void load_json(Entity entity, const json& j);
 
-  static const char* get_name()
-  {
-    return "TexturedButton";
-  }
+  static const char* get_name() { return "TexturedButton"; }
 
   static void imgui_render(Entity entity);
 };
 
-struct Audio_Component : Base_Component<Audio_Component>
-{
+struct Audio_Component : Base_Component<Audio_Component> {
   AG_uint               audio_buffer = 0;
   AG_scope<AudioSource> source       = nullptr;
   std::string           path;
@@ -1107,12 +918,9 @@ struct Audio_Component : Base_Component<Audio_Component>
   static json        save_json(Entity entity);
   static void        load_json(Entity entity, const json& j);
   static void        clone_entity(Entity original, Entity clone);
-  static const char* get_name()
-  {
-    return "Audio";
-  }
-  static void imgui_render(Entity entity);
-  static void delete_entity(Entity entity);
+  static const char* get_name() { return "Audio"; }
+  static void        imgui_render(Entity entity);
+  static void        delete_entity(Entity entity);
 };
 
 }  // namespace ag

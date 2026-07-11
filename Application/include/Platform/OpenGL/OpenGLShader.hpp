@@ -33,14 +33,13 @@ public:
   };
 
   virtual void set_vec2f(const std::string& name, const ag::vec2f& value) const override;
+  virtual void set_float_rect(const std::string& name, const float_rect& rect) const override;
   virtual void set_bool(const std::string& name, bool value) const override;
   virtual void set_int(const std::string& name, int value) const override;
   virtual void set_float(const std::string& name, float value) const override;
   virtual void set_mat3(const std::string& name, const glm::mat3& p_mat) const override;
 
   virtual void set_int_array(const std::string& name, int* values, AG_uint count) const override;
-
-  void set_float_rect(const std::string& name, const float_rect& rect) const;
 
   void set_mat4(const std::string& name, const glm::mat4& p_mat) const;
 

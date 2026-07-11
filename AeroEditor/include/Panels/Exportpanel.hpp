@@ -1,10 +1,8 @@
 #pragma once
 #include <Packing/GameExporter.hpp>
 
-namespace ag
-{
-class ExportPanel
-{
+namespace ag {
+class ExportPanel {
 public:
   ExportPanel();
 
@@ -12,10 +10,7 @@ public:
   void close();
   void render();
 
-  bool is_open() const
-  {
-    return m_open;
-  }
+  bool is_open() const { return m_open; }
 
 private:
   void draw_content();

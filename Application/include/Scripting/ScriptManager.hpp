@@ -2,7 +2,7 @@
 
 extern "C"
 {
-#include <lua.h>
+#include "lua.h"
 }
 #include <iostream>
 #include <sol/sol.hpp>

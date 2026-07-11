@@ -8,10 +8,8 @@
 
 using json = nlohmann::json;
 
-namespace ag
-{
-class NodeFactory
-{
+namespace ag {
+class NodeFactory {
 public:
   static std::unordered_map<NodeType, std::function<void(Entity)>>            create_map;
   static std::unordered_map<NodeType, std::function<void(Entity)>>            draw_map;

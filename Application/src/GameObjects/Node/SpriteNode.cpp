@@ -3,25 +3,21 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
+namespace ag {
 
-void SpriteNode::create_node(Entity entity)
-{
+void SpriteNode::create_node(Entity entity) {
   Transform_Component::add_component(entity);
   Render2D_Component::add_component(entity);
   Texture_Component::add_component(entity);
 }
 
-void SpriteNode::delete_node(Entity entity)
-{
+void SpriteNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
   PhysicsBody_Component::remove_component(entity);
   entity.delete_entity();
 }
 
-void SpriteNode::clone_node(Entity original, Entity clone)
-{
+void SpriteNode::clone_node(Entity original, Entity clone) {
   Transform_Component::clone_entity(original, clone);
   Render2D_Component::clone_entity(original, clone);
   Texture_Component::clone_entity(original, clone);
@@ -35,8 +31,7 @@ void SpriteNode::clone_node(Entity original, Entity clone)
   Tween_Component::clone_entity(original, clone);
 }
 
-json SpriteNode::save_json(Entity entity)
-{
+json SpriteNode::save_json(Entity entity) {
   json j;
 
   NodeHelper::save_component<Transform_Component>(entity, j);
@@ -55,8 +50,7 @@ json SpriteNode::save_json(Entity entity)
   return j;
 }
 
-void SpriteNode::load_json(Entity entity, const json& j)
-{
+void SpriteNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<Render2D_Component>(entity, j);
   NodeHelper::load_component<Texture_Component>(entity, j);
@@ -71,15 +65,13 @@ void SpriteNode::load_json(Entity entity, const json& j)
   NodeHelper::load_component<Tween_Component>(entity, j);
 }
 
-void SpriteNode::update(Entity entity, TimeStamp ts)
-{
+void SpriteNode::update(Entity entity, TimeStamp ts) {
   PhysicsBody_Component::update_entity(entity);
   Script_Component::update(entity, ts);
   Tween_Component::update(entity, ts);
 }
 
-void SpriteNode::draw(Entity entity)
-{
+void SpriteNode::draw(Entity entity) {
   int         entity_id = (int)(entity.get_id());
   const auto& transform = Transform_Component::get_world_transform(entity);
   Sprite      sprite;
@@ -94,8 +86,9 @@ void SpriteNode::draw(Entity entity)
   NodeHelper::set_value(entity, &TextureFlip_Component::horizontal, sprite.flip_horizontal);
   NodeHelper::set_value(entity, &TextureFlip_Component::vertical, sprite.flip_vertical);
 
-  if (Engine::is_runtime())
-    NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
+#ifdef AERO_RUNTIME
+  NodeHelper::set_value(entity, &UI_Component::mode, sprite.mode);
+#endif
 
   Renderer2D::draw_sprite(sprite, transform, entity_id);
 }

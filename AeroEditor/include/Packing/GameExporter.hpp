@@ -7,14 +7,11 @@
 #include <thread>
 #include <vector>
 
-namespace ag
-{
+namespace ag {
 
-class GameExporter
-{
+class GameExporter {
 public:
-  enum class Status
-  {
+  enum class Status {
     Idle,
     Preparing,
     Packing,
@@ -50,80 +47,33 @@ public:
   ~GameExporter();
 
   void                            refresh_project_info();
-  const std::vector<std::string>& get_log() const
-  {
-    return m_log;
-  }
+  const std::vector<std::string>& get_log() const { return m_log; }
 
-  const std::string& get_project_name() const
-  {
-    return m_project_name;
-  }
-  const std::string& get_project_dir() const
-  {
-    return m_project_dir;
-  }
-  const std::string& get_output_folder() const
-  {
-    return m_output_folder;
-  }
-  const std::string& get_pak_name() const
-  {
-    return m_pak_name;
-  }
-  const std::string& get_exe_name() const
-  {
-    return m_exe_name;
-  }
+  const std::string& get_project_name() const { return m_project_name; }
+  const std::string& get_project_dir() const { return m_project_dir; }
+  const std::string& get_output_folder() const { return m_output_folder; }
+  const std::string& get_pak_name() const { return m_pak_name; }
+  const std::string& get_exe_name() const { return m_exe_name; }
 
-  void set_project_name(const std::string& name)
-  {
-    m_project_name = name;
-  }
-  void set_project_dir(const std::string& dir)
-  {
-    m_project_dir = dir;
-  }
-  void set_output_folder(const std::string& folder)
-  {
-    m_output_folder = folder;
-  }
-  void set_pak_name(const std::string& name)
-  {
-    m_pak_name = name;
-  }
-  void set_exe_name(const std::string& name)
-  {
-    m_exe_name = name;
-  }
+  void set_project_name(const std::string& name) { m_project_name = name; }
+  void set_project_dir(const std::string& dir) { m_project_dir = dir; }
+  void set_output_folder(const std::string& folder) { m_output_folder = folder; }
+  void set_pak_name(const std::string& name) { m_pak_name = name; }
+  void set_exe_name(const std::string& name) { m_exe_name = name; }
 
-  void clear_status()
-  {
+  void clear_status() {
     m_status   = Status::Idle;
     m_progress = 0.0f;
     m_error_message.clear();
     m_status_message.clear();
   }
 
-  const std::string& get_error_message() const
-  {
-    return m_error_message;
-  }
-  Status get_status() const
-  {
-    return m_status;
-  }
-  float get_progress() const
-  {
-    return m_progress;
-  }
-  std::string get_status_message() const
-  {
-    return m_status_message;
-  }
+  const std::string& get_error_message() const { return m_error_message; }
+  Status             get_status() const { return m_status; }
+  float              get_progress() const { return m_progress; }
+  std::string        get_status_message() const { return m_status_message; }
 
-  bool is_busy() const
-  {
+  bool is_busy() const {
     return m_status != Status::Idle && m_status != Status::Done && m_status != Status::Failed;
   }
 

@@ -30,8 +30,6 @@ AndroidWindow::AndroidWindow(const WindowProps& props, android_app* app)
   m_app->userData = this;
 
   init_android_event_callbacks();
-
-  AERO_CORE_INFO("AndroidWindow created: {} {}x{}", m_title.c_str(), m_width, m_height);
 }
 
 AndroidWindow::~AndroidWindow()
@@ -44,7 +42,6 @@ void AndroidWindow::init_android_event_callbacks()
 {
   m_app->onAppCmd     = static_handle_android_cmd;
   m_app->onInputEvent = static_handle_android_input;
-  AERO_CORE_INFO("Android event callbacks initialized");
 }
 
 bool AndroidWindow::init_egl()
@@ -156,15 +153,12 @@ bool AndroidWindow::init_egl()
 
   glViewport(0, 0, m_width, m_height);
 
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   set_vsync(m_vsync);
 
   m_initialized = true;
-  AERO_CORE_INFO("EGL ready: {}x{}, vsync: {}", m_width, m_height, m_vsync ? "on" : "off");
   return true;
 }
 
@@ -214,7 +208,6 @@ void AndroidWindow::set_size(const vec2u& size)
       m_callback(event);
     }
   }
-  AERO_CORE_INFO("Window resized: {}x{}", m_width, m_height);
 }
 
 void AndroidWindow::set_position(const vec2i& position)
@@ -258,7 +251,6 @@ void AndroidWindow::handle_android_cmd(int32_t cmd)
       if (m_app->window != nullptr)
       {
         init_egl();
-        // Trigger window show event
 
         if (m_callback)
         {
@@ -275,7 +267,6 @@ void AndroidWindow::handle_android_cmd(int32_t cmd)
       break;
 
     case APP_CMD_WINDOW_RESIZED:
-      AERO_CORE_INFO("APP_CMD_WINDOW_RESIZED");
       if (is_egl_ready())
       {
         int width  = ANativeWindow_getWidth(m_app->window);
@@ -285,11 +276,9 @@ void AndroidWindow::handle_android_cmd(int32_t cmd)
       break;
 
     case APP_CMD_LOST_FOCUS:
-      AERO_CORE_INFO("APP_CMD_LOST_FOCUS");
       break;
 
     case APP_CMD_GAINED_FOCUS:
-      AERO_CORE_INFO("APP_CMD_GAINED_FOCUS");
       break;
 
     case APP_CMD_PAUSE:
@@ -310,7 +299,16 @@ void AndroidWindow::handle_android_cmd(int32_t cmd)
       break;
   }
 }
-
+float get_pinch_distance(AInputEvent* event)
+{
+  float x0 = AMotionEvent_getX(event, 0);
+  float y0 = AMotionEvent_getY(event, 0);
+  float x1 = AMotionEvent_getX(event, 1);
+  float y1 = AMotionEvent_getY(event, 1);
+  float dx = x1 - x0;
+  float dy = y1 - y0;
+  return sqrtf(dx * dx + dy * dy);
+}
 int32_t AndroidWindow::handle_android_input(AInputEvent* event)
 {
   if (!m_callback)
@@ -329,47 +327,76 @@ int32_t AndroidWindow::handle_android_input(AInputEvent* event)
       float   x          = AMotionEvent_getX(event, pointer_index);
       float   y          = AMotionEvent_getY(event, pointer_index);
 
-      // Convert to normalized coordinates (0-1 range)
-      float norm_x = x / m_width;
-      float norm_y = y / m_height;
-
       switch (action & AMOTION_EVENT_ACTION_MASK)
       {
         case AMOTION_EVENT_ACTION_DOWN:
-        case AMOTION_EVENT_ACTION_POINTER_DOWN:
         {
           m_touch_active = true;
           m_touch_id     = pointer_id;
-          m_mouse_pos    = {norm_x, norm_y};
+          m_mouse_pos    = {x, y};
 
-          MouseButtonPressedEvent btn_event(0);  // Left mouse button
+          AERO_CORE_INFO("Touch Position:{0}, {1}", x, y);
+          MouseButtonPressedEvent btn_event(0);
           m_callback(btn_event);
 
-          MouseMovedEvent move_event(norm_x, norm_y);
+          MouseMovedEvent move_event(x, y);
           m_callback(move_event);
           return 1;
         }
 
+        case AMOTION_EVENT_ACTION_POINTER_DOWN:
+        {
+          if (AMotionEvent_getPointerCount(event) == 2)
+          {
+            m_pinching            = 2;
+            m_touch_active        = false;
+            m_last_pinch_distance = get_pinch_distance(event);
+            AERO_CORE_INFO("Pinch Started, Distance:{0}", m_last_pinch_distance);
+          }
+          return 1;
+        }
+
         case AMOTION_EVENT_ACTION_UP:
+        {
+          m_touch_active = false;
+          m_touch_id     = -1;
+          m_pinching     = false;
+
+          MouseButtonReleasedEvent btn_event(0);
+          m_callback(btn_event);
+          return 1;
+        }
         case AMOTION_EVENT_ACTION_POINTER_UP:
         {
-          if (pointer_id == m_touch_id)
-          {
-            m_touch_active = false;
-            m_touch_id     = -1;
-
-            MouseButtonReleasedEvent btn_event(0);
-            m_callback(btn_event);
-          }
+          m_pinching     = false;
+          m_touch_active = false;
           return 1;
         }
 
         case AMOTION_EVENT_ACTION_MOVE:
         {
+          if (m_pinching && AMotionEvent_getPointerCount(event) >= 2)
+          {
+            float current_distance = get_pinch_distance(event);
+
+            if (m_last_pinch_distance > 0.0f)
+            {
+              float scale  = m_last_pinch_distance / current_distance;
+              float offset = (scale < 1.0f) ? 1.0f : -1.0f;  // zoom in or out
+
+              MouseScrolledEvent scroll_event(0.0f, offset);
+              m_callback(scroll_event);
+
+              AERO_CORE_INFO("Pinch scroll offset: {0}", offset);
+            }
+
+            m_last_pinch_distance = current_distance;
+            return 1;
+          }
           if (m_touch_active && pointer_id == m_touch_id)
           {
-            m_mouse_pos = {norm_x, norm_y};
-            MouseMovedEvent move_event(norm_x, norm_y);
+            m_mouse_pos = {x, y};
+            MouseMovedEvent move_event(x, y);
             m_callback(move_event);
           }
           return 1;
@@ -405,7 +432,7 @@ int32_t AndroidWindow::handle_android_input(AInputEvent* event)
     }
   }
 
-  return 0;  // Event not handled
+  return 0;
 }
 
 // Static callback handlers

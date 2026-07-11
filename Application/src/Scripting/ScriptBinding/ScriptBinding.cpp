@@ -4,32 +4,27 @@
 #include <Aero.hpp>
 #include <Scripting/ScriptBinding/ScriptBinding.hpp>
 
-namespace ag
-{
-namespace detail
-{
+namespace ag {
+namespace detail {
 template <typename Component, typename MemberType>
-MemberType
-safe_get_comp_value(Entity& entity, MemberType Component::* member, const MemberType& default_value)
-{
+MemberType safe_get_comp_value(Entity&    entity,
+                               MemberType Component::* member,
+                               const MemberType&       default_value) {
   return NodeHelper::get_comp_value(entity, member, default_value);
 }
 
 template <typename Component, typename MemberType>
-void safe_set_comp_value(Entity& entity, MemberType Component::* member, const MemberType& value)
-{
+void safe_set_comp_value(Entity& entity, MemberType Component::* member, const MemberType& value) {
   NodeHelper::set_comp_value(entity, member, value);
 }
 
 template <typename Component>
-bool has_component(Entity& entity)
-{
+bool has_component(Entity& entity) {
   return entity.has_component<Component>();
 }
 }  // namespace detail
 
-void ScriptBinding::register_keyboard_polling()
-{
+void ScriptBinding::register_keyboard_polling() {
   auto&      lua      = ScriptManager::get_lua();
   sol::table keyboard = lua.create_named_table("Keyboard");
 
@@ -190,8 +185,7 @@ void ScriptBinding::register_keyboard_polling()
                         [](KeyCode key) -> bool { return Keyboard::is_key_released(key); });
 }
 
-void ScriptBinding::register_mouse_polling()
-{
+void ScriptBinding::register_mouse_polling() {
   auto&      lua   = ScriptManager::get_lua();
   sol::table mouse = lua.create_named_table("Mouse");
 
@@ -214,12 +208,10 @@ void ScriptBinding::register_mouse_polling()
       "get_mouse_position",
       sol::overload([]() -> vec2f { return Mouse::get_mouse_position(); },
 
-                    [](Entity& entity) -> vec2f
-                    {
+                    [](Entity& entity) -> vec2f {
                       auto type = NodeHelper::get_nodetype(entity);
 
-                      if (type == NodeType::Camera)
-                      {
+                      if (type == NodeType::Camera) {
                         const auto& props       = entity.get_component<Camera_Component>();
                         float_rect  window_rect = {props.center - props.size / 2, props.size};
                         vec2f       screen_pos  = Mouse::get_mouse_position();
@@ -233,8 +225,7 @@ void ScriptBinding::register_mouse_polling()
                      [](const vec2f& position) { Mouse::set_mouse_position(position); });
 }
 
-void ScriptBinding::register_events()
-{
+void ScriptBinding::register_events() {
   auto& lua = ScriptManager::get_lua();
 
   // Register event types enum
@@ -253,106 +244,77 @@ void ScriptBinding::register_events()
 
   // KEYBOARD EVENT FUNCTIONS
 
-  lua.set_function(
-      "get_key",
-      [&lua](Event& event) -> sol::object
-      {
-        auto type = event.get_event_type();
+  lua.set_function("get_key", [&lua](Event& event) -> sol::object {
+    auto type = event.get_event_type();
 
-        switch (type)
-        {
-          case Event_Type::Key_Pressed:
-            return sol::make_object(lua, static_cast<KeyPressedEvent&>(event).get_key_code());
-          case Event_Type::Key_Released:
-            return sol::make_object(lua, static_cast<KeyReleasedEvent&>(event).get_key_code());
-          case Event_Type::Key_Typed:
-            return sol::make_object(lua, static_cast<KeyTypedEvent&>(event).get_key_code());
-          default:
-            return sol::nil;
-        }
-      });
+    switch (type) {
+      case Event_Type::Key_Pressed:
+        return sol::make_object(lua, static_cast<KeyPressedEvent&>(event).get_key_code());
+      case Event_Type::Key_Released:
+        return sol::make_object(lua, static_cast<KeyReleasedEvent&>(event).get_key_code());
+      case Event_Type::Key_Typed:
+        return sol::make_object(lua, static_cast<KeyTypedEvent&>(event).get_key_code());
+      default: return sol::nil;
+    }
+  });
 
-  lua.set_function("is_key_event",
-                   [](Event& event) -> bool
-                   {
-                     auto type = event.get_event_type();
-                     return type == Event_Type::Key_Pressed || type == Event_Type::Key_Released ||
-                            type == Event_Type::Key_Typed;
-                   });
+  lua.set_function("is_key_event", [](Event& event) -> bool {
+    auto type = event.get_event_type();
+    return type == Event_Type::Key_Pressed || type == Event_Type::Key_Released ||
+           type == Event_Type::Key_Typed;
+  });
 
   // MOUSE BUTTON EVENT FUNCTIONS
 
-  lua.set_function("get_button",
-                   [&lua](Event& event) -> sol::object
-                   {
-                     auto type = event.get_event_type();
+  lua.set_function("get_button", [&lua](Event& event) -> sol::object {
+    auto type = event.get_event_type();
 
-                     switch (type)
-                     {
-                       case Event_Type::Mouse_Button_Pressed:
-                         return sol::make_object(
-                             lua,
-                             static_cast<MouseButtonPressedEvent&>(event).get_mouse_button());
-                       case Event_Type::Mouse_Button_Released:
-                         return sol::make_object(
-                             lua,
-                             static_cast<MouseButtonReleasedEvent&>(event).get_mouse_button());
-                       default:
-                         return sol::nil;
-                     }
-                   });
+    switch (type) {
+      case Event_Type::Mouse_Button_Pressed:
+        return sol::make_object(lua,
+                                static_cast<MouseButtonPressedEvent&>(event).get_mouse_button());
+      case Event_Type::Mouse_Button_Released:
+        return sol::make_object(lua,
+                                static_cast<MouseButtonReleasedEvent&>(event).get_mouse_button());
+      default: return sol::nil;
+    }
+  });
 
-  lua.set_function("is_button_event",
-                   [](Event& event) -> bool
-                   {
-                     auto type = event.get_event_type();
-                     return type == Event_Type::Mouse_Button_Pressed ||
-                            type == Event_Type::Mouse_Button_Released;
-                   });
+  lua.set_function("is_button_event", [](Event& event) -> bool {
+    auto type = event.get_event_type();
+    return type == Event_Type::Mouse_Button_Pressed || type == Event_Type::Mouse_Button_Released;
+  });
 
   // MOUSE SCROLL EVENT FUNCTIONS
 
-  lua.set_function("get_scroll",
-                   [&lua](Event& event) -> sol::object
-                   {
-                     if (event.get_event_type() == Event_Type::Mouse_Scrolled)
-                     {
-                       auto& e = static_cast<MouseScrolledEvent&>(event);
-                       return sol::make_object(lua,
-                                               std::make_pair(e.get_offsetX(), e.get_offsetY()));
-                     }
-                     return sol::nil;
-                   });
+  lua.set_function("get_scroll", [&lua](Event& event) -> sol::object {
+    if (event.get_event_type() == Event_Type::Mouse_Scrolled) {
+      auto& e = static_cast<MouseScrolledEvent&>(event);
+      return sol::make_object(lua, std::make_pair(e.get_offsetX(), e.get_offsetY()));
+    }
+    return sol::nil;
+  });
 
-  lua.set_function(
-      "get_scroll_x",
-      [&lua](Event& event) -> sol::object
-      {
-        if (event.get_event_type() == Event_Type::Mouse_Scrolled)
-        {
-          return sol::make_object(lua, static_cast<MouseScrolledEvent&>(event).get_offsetX());
-        }
-        return sol::nil;
-      });
+  lua.set_function("get_scroll_x", [&lua](Event& event) -> sol::object {
+    if (event.get_event_type() == Event_Type::Mouse_Scrolled) {
+      return sol::make_object(lua, static_cast<MouseScrolledEvent&>(event).get_offsetX());
+    }
+    return sol::nil;
+  });
 
-  lua.set_function(
-      "get_scroll_y",
-      [&lua](Event& event) -> sol::object
-      {
-        if (event.get_event_type() == Event_Type::Mouse_Scrolled)
-        {
-          return sol::make_object(lua, static_cast<MouseScrolledEvent&>(event).get_offsetY());
-        }
-        return sol::nil;
-      });
+  lua.set_function("get_scroll_y", [&lua](Event& event) -> sol::object {
+    if (event.get_event_type() == Event_Type::Mouse_Scrolled) {
+      return sol::make_object(lua, static_cast<MouseScrolledEvent&>(event).get_offsetY());
+    }
+    return sol::nil;
+  });
 
-  lua.set_function("is_scroll_event",
-                   [](Event& event) -> bool
-                   { return event.get_event_type() == Event_Type::Mouse_Scrolled; });
+  lua.set_function("is_scroll_event", [](Event& event) -> bool {
+    return event.get_event_type() == Event_Type::Mouse_Scrolled;
+  });
 }
 
-void ScriptBinding::register_color()
-{
+void ScriptBinding::register_color() {
   auto& lua = ScriptManager::get_lua();
 
   lua.new_usertype<Color>("Color",
@@ -370,8 +332,7 @@ void ScriptBinding::register_color()
                           sol::meta_function::equal_to,
                           &Color::operator==,
                           sol::meta_function::to_string,
-                          [](const Color& c)
-                          {
+                          [](const Color& c) {
                             return "Color(" + std::to_string(c.r) + ", " + std::to_string(c.g) +
                                    ", " + std::to_string(c.b) + ", " + std::to_string(c.a) + ")";
                           });
@@ -400,8 +361,7 @@ void ScriptBinding::register_color()
   color_table["Maroon"]      = Color::Maroon;
 }
 
-void ScriptBinding::register_vec2()
-{
+void ScriptBinding::register_vec2() {
   auto& lua = ScriptManager::get_lua();
 
   // vec2f (float vector)
@@ -430,14 +390,14 @@ void ScriptBinding::register_vec2()
       sol::meta_function::equal_to,
       sol::resolve<bool(const vec2f&) const>(&vec2f::operator==),
       sol::meta_function::to_string,
-      [](const vec2f& v)
-      { return "vec2f(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")"; },
+      [](const vec2f& v) {
+        return "vec2f(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")";
+      },
 
       "length",
       [](const vec2f& v) { return std::sqrt(v.x * v.x + v.y * v.y); },
       "normalized",
-      [](const vec2f& v)
-      {
+      [](const vec2f& v) {
         float len = std::sqrt(v.x * v.x + v.y * v.y);
         return len > 0 ? vec2f(v.x / len, v.y / len) : vec2f(0, 0);
       },
@@ -445,229 +405,193 @@ void ScriptBinding::register_vec2()
       [](const vec2f& v1, const vec2f& v2) { return v1.x * v2.x + v1.y * v2.y; });
 
   // vec2i (integer vector)
-  lua.new_usertype<vec2i>(
-      "vec2i",
-      sol::call_constructor,
-      sol::factories([](int x, int y) { return vec2i(x, y); }),
-      "x",
-      &vec2i::x,
-      "y",
-      &vec2i::y,
+  lua.new_usertype<vec2i>("vec2i",
+                          sol::call_constructor,
+                          sol::factories([](int x, int y) { return vec2i(x, y); }),
+                          "x",
+                          &vec2i::x,
+                          "y",
+                          &vec2i::y,
 
-      sol::meta_function::addition,
-      sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator+),
-      sol::meta_function::subtraction,
-      sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator-),
-      sol::meta_function::multiplication,
-      sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator*),
-      sol::meta_function::division,
-      sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator/),
-      sol::meta_function::equal_to,
-      sol::resolve<bool(const vec2i&) const>(&vec2i::operator==),
-      sol::meta_function::to_string,
-      [](const vec2i& v)
-      { return "vec2i(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")"; });
+                          sol::meta_function::addition,
+                          sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator+),
+                          sol::meta_function::subtraction,
+                          sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator-),
+                          sol::meta_function::multiplication,
+                          sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator*),
+                          sol::meta_function::division,
+                          sol::resolve<vec2i(const vec2i&) const>(&vec2i::operator/),
+                          sol::meta_function::equal_to,
+                          sol::resolve<bool(const vec2i&) const>(&vec2i::operator==),
+                          sol::meta_function::to_string,
+                          [](const vec2i& v) {
+                            return "vec2i(" + std::to_string(v.x) + ", " + std::to_string(v.y) +
+                                   ")";
+                          });
 
   // vec2u (unsigned integer vector)
-  lua.new_usertype<vec2u>(
-      "vec2u",
-      sol::call_constructor,
-      sol::factories([](AG_uint x, AG_uint y) { return vec2u(x, y); }),
-      "x",
-      &vec2u::x,
-      "y",
-      &vec2u::y,
+  lua.new_usertype<vec2u>("vec2u",
+                          sol::call_constructor,
+                          sol::factories([](AG_uint x, AG_uint y) { return vec2u(x, y); }),
+                          "x",
+                          &vec2u::x,
+                          "y",
+                          &vec2u::y,
 
-      sol::meta_function::addition,
-      sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator+),
-      sol::meta_function::subtraction,
-      sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator-),
-      sol::meta_function::multiplication,
-      sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator*),
-      sol::meta_function::division,
-      sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator/),
-      sol::meta_function::equal_to,
-      sol::resolve<bool(const vec2u&) const>(&vec2u::operator==),
-      sol::meta_function::to_string,
-      [](const vec2u& v)
-      { return "vec2u(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")"; });
+                          sol::meta_function::addition,
+                          sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator+),
+                          sol::meta_function::subtraction,
+                          sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator-),
+                          sol::meta_function::multiplication,
+                          sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator*),
+                          sol::meta_function::division,
+                          sol::resolve<vec2u(const vec2u&) const>(&vec2u::operator/),
+                          sol::meta_function::equal_to,
+                          sol::resolve<bool(const vec2u&) const>(&vec2u::operator==),
+                          sol::meta_function::to_string,
+                          [](const vec2u& v) {
+                            return "vec2u(" + std::to_string(v.x) + ", " + std::to_string(v.y) +
+                                   ")";
+                          });
 }
 
-void ScriptBinding::register_node()
-{
+void ScriptBinding::register_node() {
   auto& lua         = ScriptManager::get_lua();
   auto  entity_type = lua.new_usertype<Entity>("Entity");  // TAG COMPONENT FUNCTIONS
   // auto entity_type = lua["Entity"].get<sol::usertype<Entity>>();
 
   entity_type.set_function("get_children",
-                           [](Entity& entity, const std::string& name) -> ag::Entity
-                           {
+                           [](Entity& entity, const std::string& name) -> ag::Entity {
                              if (!entity.has_component<Tag_Component>())
                                return {};
 
                              auto& tag = entity.get_component<Tag_Component>();
-                             for (auto& child : tag.children)
-                             {
+                             for (auto& child : tag.children) {
                                auto& child_tag = child.get_component<Tag_Component>();
-                               if (child_tag.name == name)
-                               {
+                               if (child_tag.name == name) {
                                  return child;
                                }
                              }
                              return {};
                            });
 
-  entity_type.set_function(
-      "get_parent",
-      [](Entity& entity) -> ag::Entity
-      { return detail::safe_get_comp_value(entity, &Tag_Component::parent, Entity()); });
+  entity_type.set_function("get_parent", [](Entity& entity) -> ag::Entity {
+    return detail::safe_get_comp_value(entity, &Tag_Component::parent, Entity());
+  });
 
   // TAG COMPONENT
 
-  entity_type.set_function(
-      "get_name",
-      [](Entity& entity) -> std::string
-      { return NodeHelper::get_comp_value(entity, &Tag_Component::name, "default"); });
+  entity_type.set_function("get_name", [](Entity& entity) -> std::string {
+    return NodeHelper::get_comp_value(entity, &Tag_Component::name, "default");
+  });
 
-  entity_type.set_function("set_name",
-                           [](Entity& entity, const std::string& name)
-                           { detail::safe_set_comp_value(entity, &Tag_Component::name, name); });
+  entity_type.set_function("set_name", [](Entity& entity, const std::string& name) {
+    detail::safe_set_comp_value(entity, &Tag_Component::name, name);
+  });
 
-  entity_type.set_function(
-      "is_visible",
-      [](Entity& entity) -> bool
-      { return detail::safe_get_comp_value(entity, &Tag_Component::visible, true); });
+  entity_type.set_function("is_visible", [](Entity& entity) -> bool {
+    return detail::safe_get_comp_value(entity, &Tag_Component::visible, true);
+  });
 
-  entity_type.set_function(
-      "set_visible",
-      [](Entity& entity, bool visible)
-      { detail::safe_set_comp_value(entity, &Tag_Component::visible, visible); });
+  entity_type.set_function("set_visible", [](Entity& entity, bool visible) {
+    detail::safe_set_comp_value(entity, &Tag_Component::visible, visible);
+  });
 
-  entity_type.set_function(
-      "is_locked",
-      [](ag::Entity& entity) -> bool
-      { return detail::safe_get_comp_value(entity, &Tag_Component::locked, false); });
+  entity_type.set_function("is_locked", [](ag::Entity& entity) -> bool {
+    return detail::safe_get_comp_value(entity, &Tag_Component::locked, false);
+  });
 
-  entity_type.set_function(
-      "set_lock",
-      [](ag::Entity& entity, bool locked)
-      { detail::safe_set_comp_value(entity, &Tag_Component::locked, locked); });
+  entity_type.set_function("set_lock", [](ag::Entity& entity, bool locked) {
+    detail::safe_set_comp_value(entity, &Tag_Component::locked, locked);
+  });
 
   // TRANSFORM COMPONENT FUNCTIONS
 
   // Position
-  entity_type.set_function(
-      "get_position",
-      [](Entity& entity) -> vec2f
-      { return detail::safe_get_comp_value(entity, &Transform_Component::position, vec2f(0, 0)); });
+  entity_type.set_function("get_position", [](Entity& entity) -> vec2f {
+    return detail::safe_get_comp_value(entity, &Transform_Component::position, vec2f(0, 0));
+  });
 
-  entity_type.set_function(
-      "set_position",
-      [](Entity& entity, const vec2f& position)
-      { detail::safe_set_comp_value(entity, &Transform_Component::position, position); });
+  entity_type.set_function("set_position", [](Entity& entity, const vec2f& position) {
+    detail::safe_set_comp_value(entity, &Transform_Component::position, position);
+  });
 
-  entity_type.set_function(
-      "move",
-      [](Entity& entity, const vec2f& delta)
-      {
-        auto position =
-            detail::safe_get_comp_value(entity, &Transform_Component::position, vec2f(0, 0));
-        position += delta;
-        detail::safe_set_comp_value(entity, &Transform_Component::position, position);
-      });
+  entity_type.set_function("move", [](Entity& entity, const vec2f& delta) {
+    auto position =
+        detail::safe_get_comp_value(entity, &Transform_Component::position, vec2f(0, 0));
+    position += delta;
+    detail::safe_set_comp_value(entity, &Transform_Component::position, position);
+  });
 
   // Scale
-  entity_type.set_function(
-      "get_scale",
-      [](Entity& entity) -> vec2f
-      { return detail::safe_get_comp_value(entity, &Transform_Component::scale, vec2f(1, 1)); });
+  entity_type.set_function("get_scale", [](Entity& entity) -> vec2f {
+    return detail::safe_get_comp_value(entity, &Transform_Component::scale, vec2f(1, 1));
+  });
 
-  entity_type.set_function(
-      "set_scale",
-      [](Entity& entity, const vec2f& scale)
-      { detail::safe_set_comp_value(entity, &Transform_Component::scale, scale); });
+  entity_type.set_function("set_scale", [](Entity& entity, const vec2f& scale) {
+    detail::safe_set_comp_value(entity, &Transform_Component::scale, scale);
+  });
 
   // Rotation
-  entity_type.set_function(
-      "get_rotation",
-      [](Entity& entity) -> float
-      { return detail::safe_get_comp_value(entity, &Transform_Component::rotation, 0.0f); });
+  entity_type.set_function("get_rotation", [](Entity& entity) -> float {
+    return detail::safe_get_comp_value(entity, &Transform_Component::rotation, 0.0f);
+  });
 
-  entity_type.set_function(
-      "set_rotation",
-      [](Entity& entity, float rotation)
-      { detail::safe_set_comp_value(entity, &Transform_Component::rotation, rotation); });
+  entity_type.set_function("set_rotation", [](Entity& entity, float rotation) {
+    detail::safe_set_comp_value(entity, &Transform_Component::rotation, rotation);
+  });
 
-  entity_type.set_function(
-      "rotate",
-      [](Entity& entity, float delta)
-      {
-        auto rotation = detail::safe_get_comp_value(entity, &Transform_Component::rotation, 0.0f);
-        rotation += delta;
-        detail::safe_set_comp_value(entity, &Transform_Component::rotation, rotation);
-      });
+  entity_type.set_function("rotate", [](Entity& entity, float delta) {
+    auto rotation = detail::safe_get_comp_value(entity, &Transform_Component::rotation, 0.0f);
+    rotation += delta;
+    detail::safe_set_comp_value(entity, &Transform_Component::rotation, rotation);
+  });
 
   // Render2D Component
   // Fill color
-  entity_type.set_function(
-      "get_fill_color",
-      [](Entity& entity) -> Color
-      {
-        return detail::safe_get_comp_value(entity, &Render2D_Component::color, Color::Transparent);
-      });
+  entity_type.set_function("get_fill_color", [](Entity& entity) -> Color {
+    return detail::safe_get_comp_value(entity, &Render2D_Component::color, Color::Transparent);
+  });
 
-  entity_type.set_function(
-      "set_fill_color",
-      [](Entity& entity, const Color& color)
-      { detail::safe_set_comp_value(entity, &Render2D_Component::color, color); });
+  entity_type.set_function("set_fill_color", [](Entity& entity, const Color& color) {
+    detail::safe_set_comp_value(entity, &Render2D_Component::color, color);
+  });
 
   // Size
-  entity_type.set_function(
-      "get_size",
-      [](Entity& entity) -> vec2f
-      {
-        auto size = detail::safe_get_comp_value(entity, &Render2D_Component::size, vec2u(0, 0));
-        return vec2f(size);
-      });
+  entity_type.set_function("get_size", [](Entity& entity) -> vec2f {
+    auto size = detail::safe_get_comp_value(entity, &Render2D_Component::size, vec2u(0, 0));
+    return vec2f(size);
+  });
 
-  entity_type.set_function(
-      "set_size",
-      [](Entity& entity, const vec2f& size)
-      { detail::safe_set_comp_value(entity, &Render2D_Component::size, vec2u(size)); });
+  entity_type.set_function("set_size", [](Entity& entity, const vec2f& size) {
+    detail::safe_set_comp_value(entity, &Render2D_Component::size, vec2u(size));
+  });
 
   // Border Component
-  entity_type.set_function(
-      "get_border_color",
-      [](Entity& entity) -> Color
-      {
-        return detail::safe_get_comp_value(entity, &Border_Component::color, Color::Transparent);
-      });
+  entity_type.set_function("get_border_color", [](Entity& entity) -> Color {
+    return detail::safe_get_comp_value(entity, &Border_Component::color, Color::Transparent);
+  });
 
-  entity_type.set_function(
-      "set_border_color",
-      [](Entity& entity, const Color& color)
-      { detail::safe_set_comp_value(entity, &Border_Component::color, color); });
+  entity_type.set_function("set_border_color", [](Entity& entity, const Color& color) {
+    detail::safe_set_comp_value(entity, &Border_Component::color, color);
+  });
 
-  entity_type.set_function(
-      "get_border_thickness",
-      [](Entity& entity) -> float
-      { return detail::safe_get_comp_value(entity, &Border_Component::thickness, 0.0f); });
+  entity_type.set_function("get_border_thickness", [](Entity& entity) -> float {
+    return detail::safe_get_comp_value(entity, &Border_Component::thickness, 0.0f);
+  });
 
-  entity_type.set_function(
-      "set_border_thickness",
-      [](Entity& entity, float thickness)
-      { detail::safe_set_comp_value(entity, &Border_Component::thickness, thickness); });
+  entity_type.set_function("set_border_thickness", [](Entity& entity, float thickness) {
+    detail::safe_set_comp_value(entity, &Border_Component::thickness, thickness);
+  });
 
   // Corner Component
-  entity_type.set_function(
-      "set_corner_radius",
-      [](Entity& entity, float corner)
-      { detail::safe_set_comp_value(entity, &Corner_Component::corner, corner); });
+  entity_type.set_function("set_corner_radius", [](Entity& entity, float corner) {
+    detail::safe_set_comp_value(entity, &Corner_Component::corner, corner);
+  });
 
-  entity_type.set_function(
-      "get_corner_radius",
-      [](Entity& entity) -> float
-      { return detail::safe_get_comp_value(entity, &Corner_Component::corner, 0.0f); });
+  entity_type.set_function("get_corner_radius", [](Entity& entity) -> float {
+    return detail::safe_get_comp_value(entity, &Corner_Component::corner, 0.0f);
+  });
 
   // UI Component
   lua.new_enum<RenderMode>("RenderMode",
@@ -676,104 +600,84 @@ void ScriptBinding::register_node()
                                { "World",  RenderMode::World}
   });
 
-  entity_type.set_function(
-      "get_render_mode",
-      [](Entity& entity) -> RenderMode
-      { return detail::safe_get_comp_value(entity, &UI_Component::mode, RenderMode::World); });
+  entity_type.set_function("get_render_mode", [](Entity& entity) -> RenderMode {
+    return detail::safe_get_comp_value(entity, &UI_Component::mode, RenderMode::World);
+  });
 
-  entity_type.set_function("set_render_mode",
-                           [](Entity& entity, RenderMode mode)
-                           { detail::safe_set_comp_value(entity, &UI_Component::mode, mode); });
+  entity_type.set_function("set_render_mode", [](Entity& entity, RenderMode mode) {
+    detail::safe_set_comp_value(entity, &UI_Component::mode, mode);
+  });
 
-  entity_type.set_function("play_animation",
-                           [](Entity& entity, const std::string& name) -> bool
-                           { return Animation_Component::play_animation(entity, name, false); });
+  entity_type.set_function("play_animation", [](Entity& entity, const std::string& name) -> bool {
+    return Animation_Component::play_animation(entity, name, false);
+  });
 
   entity_type.set_function("play_animation_restart",
-                           [](Entity& entity, const std::string& name) -> bool
-                           { return Animation_Component::play_animation(entity, name, true); });
-
-  entity_type.set_function(
-      "is_animation_complete",
-      [](Entity& entity) -> bool
-      {
-        if (detail::has_component<Animation_Component>(entity))
-        {
-          return entity.get_component<Animation_Component>().current_animation_completed;
-        }
-        return false;
-      });
-
-  entity_type.set_function("get_current_animation",
-                           [](Entity& entity) -> std::string
-                           {
-                             if (detail::has_component<Animation_Component>(entity))
-                             {
-                               return entity.get_component<Animation_Component>().current_animation;
-                             }
-                             return "";
+                           [](Entity& entity, const std::string& name) -> bool {
+                             return Animation_Component::play_animation(entity, name, true);
                            });
 
-  entity_type.set_function(
-      "flip_vertical",
-      [](Entity& entity, bool vertical)
-      { detail::safe_set_comp_value(entity, &TextureFlip_Component::vertical, vertical); });
+  entity_type.set_function("is_animation_complete", [](Entity& entity) -> bool {
+    if (detail::has_component<Animation_Component>(entity)) {
+      return entity.get_component<Animation_Component>().current_animation_completed;
+    }
+    return false;
+  });
 
-  entity_type.set_function(
-      "flip_horizontal",
-      [](Entity& entity, bool horizontal)
-      { detail::safe_set_comp_value(entity, &TextureFlip_Component::horizontal, horizontal); });
+  entity_type.set_function("get_current_animation", [](Entity& entity) -> std::string {
+    if (detail::has_component<Animation_Component>(entity)) {
+      return entity.get_component<Animation_Component>().current_animation;
+    }
+    return "";
+  });
 
-  entity_type.set_function("duplicate_entity",
-                           [](Entity& entity) -> Entity
-                           {
-                             auto& parent = entity.get_component<Tag_Component>().parent;
-                             return Scene::get_active_scene()->duplicate_entity(entity, parent);
-                           });
+  entity_type.set_function("flip_vertical", [](Entity& entity, bool vertical) {
+    detail::safe_set_comp_value(entity, &TextureFlip_Component::vertical, vertical);
+  });
 
-  entity_type.set_function("delete_entity",
-                           [](Entity& entity)
-                           { Scene::get_active_scene()->destroy_entity(entity); });
+  entity_type.set_function("flip_horizontal", [](Entity& entity, bool horizontal) {
+    detail::safe_set_comp_value(entity, &TextureFlip_Component::horizontal, horizontal);
+  });
 
-  entity_type.set_function(
-      "set_view_size",
-      [](Entity& entity, const vec2f& view_size)
-      { detail::safe_set_comp_value(entity, &Camera_Component::size, view_size); });
+  entity_type.set_function("duplicate_entity", [](Entity& entity) -> Entity {
+    auto& parent = entity.get_component<Tag_Component>().parent;
+    return Scene::get_active_scene()->duplicate_entity(entity, parent);
+  });
 
-  entity_type.set_function(
-      "get_view_size",
-      [](Entity& entity) -> vec2f
-      { return detail::safe_get_comp_value(entity, &Camera_Component::size, vec2f(1280, 720)); });
+  entity_type.set_function("delete_entity", [](Entity& entity) {
+    Scene::get_active_scene()->destroy_entity(entity);
+  });
 
-  entity_type.set_function(
-      "get_view_center",
-      [](Entity& entity) -> vec2f
-      { return detail::safe_get_comp_value(entity, &Camera_Component::center, vec2f(640, 360)); });
+  entity_type.set_function("set_view_size", [](Entity& entity, const vec2f& view_size) {
+    detail::safe_set_comp_value(entity, &Camera_Component::size, view_size);
+  });
 
-  entity_type.set_function(
-      "set_view_center",
-      [](Entity& entity, const vec2f& view_center)
-      { detail::safe_set_comp_value(entity, &Camera_Component::center, view_center); });
+  entity_type.set_function("get_view_size", [](Entity& entity) -> vec2f {
+    return detail::safe_get_comp_value(entity, &Camera_Component::size, vec2f(1280, 720));
+  });
 
-  entity_type.set_function(
-      "move_view",
-      [](Entity& entity, const vec2f& offset)
-      {
-        auto view_center =
-            detail::safe_get_comp_value(entity, &Camera_Component::center, vec2f(0, 0));
-        detail::safe_set_comp_value(entity, &Camera_Component::center, view_center + offset);
-      });
+  entity_type.set_function("get_view_center", [](Entity& entity) -> vec2f {
+    return detail::safe_get_comp_value(entity, &Camera_Component::center, vec2f(640, 360));
+  });
+
+  entity_type.set_function("set_view_center", [](Entity& entity, const vec2f& view_center) {
+    detail::safe_set_comp_value(entity, &Camera_Component::center, view_center);
+  });
+
+  entity_type.set_function("move_view", [](Entity& entity, const vec2f& offset) {
+    auto view_center = detail::safe_get_comp_value(entity, &Camera_Component::center, vec2f(0, 0));
+    detail::safe_set_comp_value(entity, &Camera_Component::center, view_center + offset);
+  });
 
   // TEXT COMPONENT FUNCTIONS
 
-  entity_type.set_function("set_text",
-                           [](Entity& entity, const std::string& value)
-                           { detail::safe_set_comp_value(entity, &Text_Component::text, value); });
+  entity_type.set_function("set_text", [](Entity& entity, const std::string& value) {
+    detail::safe_set_comp_value(entity, &Text_Component::text, value);
+  });
 
-  entity_type.set_function(
-      "get_text",
-      [](Entity& entity) -> std::string
-      { return detail::safe_get_comp_value(entity, &Text_Component::text, std::string("")); });
+  entity_type.set_function("get_text", [](Entity& entity) -> std::string {
+    return detail::safe_get_comp_value(entity, &Text_Component::text, std::string(""));
+  });
 
   // TWEEN COMPONENT FUNCTIONS
 
@@ -801,14 +705,13 @@ void ScriptBinding::register_node()
           {"ROTATION", Tween_Component::TweenTarget::ROTATION}
   });
 
-  entity_type.set_function("play_tween",
-                           [](Entity& entity) -> bool
-                           { return Tween_Component::play_tween(entity); });
+  entity_type.set_function("play_tween", [](Entity& entity) -> bool {
+    return Tween_Component::play_tween(entity);
+  });
 
-  entity_type.set_function(
-      "set_tween_start",
-      [](Entity& entity, const vec2f& position)
-      { detail::safe_set_comp_value(entity, &Tween_Component::start_position, position); });
+  entity_type.set_function("set_tween_start", [](Entity& entity, const vec2f& position) {
+    detail::safe_set_comp_value(entity, &Tween_Component::start_position, position);
+  });
 
   entity_type.set_function("set_tween_position",
                            [](Entity&                   entity,
@@ -816,8 +719,7 @@ void ScriptBinding::register_node()
                               const vec2f&              end,
                               float                     duration,
                               Tween_Component::EaseType type,
-                              Tween_Component::LoopType loop)
-                           {
+                              Tween_Component::LoopType loop) {
                              if (!entity.has_component<Tween_Component>())
                                entity.add_component<Tween_Component>();
 
@@ -836,8 +738,7 @@ void ScriptBinding::register_node()
                               const vec2f               end,
                               float                     duration,
                               Tween_Component::EaseType type,
-                              Tween_Component::LoopType loop)
-                           {
+                              Tween_Component::LoopType loop) {
                              if (!entity.has_component<Tween_Component>())
                                entity.add_component<Tween_Component>();
 
@@ -856,8 +757,7 @@ void ScriptBinding::register_node()
                               float                     end,
                               float                     duration,
                               Tween_Component::EaseType type,
-                              Tween_Component::LoopType loop)
-                           {
+                              Tween_Component::LoopType loop) {
                              if (!entity.has_component<Tween_Component>())
                                entity.add_component<Tween_Component>();
 
@@ -870,520 +770,408 @@ void ScriptBinding::register_node()
                              tween.loop_type    = loop;
                            });
 
-  entity_type.set_function(
-      "set_tween_end",
-      [](Entity& entity, const vec2f& position)
-      { detail::safe_set_comp_value(entity, &Tween_Component::end_position, position); });
+  entity_type.set_function("set_tween_end", [](Entity& entity, const vec2f& position) {
+    detail::safe_set_comp_value(entity, &Tween_Component::end_position, position);
+  });
 
-  entity_type.set_function(
-      "set_tween_duration",
-      [](Entity& entity, float duration)
-      { detail::safe_set_comp_value(entity, &Tween_Component::duration, duration); });
+  entity_type.set_function("set_tween_duration", [](Entity& entity, float duration) {
+    detail::safe_set_comp_value(entity, &Tween_Component::duration, duration);
+  });
 
-  entity_type.set_function("is_tween_completed",
-                           [](Entity& entity) -> bool
-                           {
-                             auto state =
-                                 detail::safe_get_comp_value(entity,
-                                                             &Tween_Component::state,
-                                                             Tween_Component::State::STOPPED);
-                             return state == Tween_Component::State::COMPLETED;
-                           });
+  entity_type.set_function("is_tween_completed", [](Entity& entity) -> bool {
+    auto state = detail::safe_get_comp_value(entity,
+                                             &Tween_Component::state,
+                                             Tween_Component::State::STOPPED);
+    return state == Tween_Component::State::COMPLETED;
+  });
 
   // UTILITY FUNCTIONS
 
-  entity_type.set_function(
-      "is_hovered",
-      [](Entity& entity) -> bool
-      {
-        auto state =
-            detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
-        return state & Button_State::Hovered;
-      });
+  entity_type.set_function("is_hovered", [](Entity& entity) -> bool {
+    auto state =
+        detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
+    return state & Button_State::Hovered;
+  });
 
-  entity_type.set_function(
-      "is_pressed",
-      [](Entity& entity) -> bool
-      {
-        auto state =
-            detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
-        return state & Button_State::Pressed;
-      });
+  entity_type.set_function("is_pressed", [](Entity& entity) -> bool {
+    auto state =
+        detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
+    return state & Button_State::Pressed;
+  });
 
-  entity_type.set_function(
-      "is_disabled",
-      [](Entity& entity) -> bool
-      {
-        auto state =
-            detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
-        return state & Button_State::Disabled;
-      });
+  entity_type.set_function("is_disabled", [](Entity& entity) -> bool {
+    auto state =
+        detail::safe_get_comp_value(entity, &ButtonState_Component::button_state, (uint8_t)0);
+    return state & Button_State::Disabled;
+  });
 
-  entity_type.set_function("disable_button",
-                           [](Entity& entity, bool disabled)
-                           {
-                             if (!entity.has_component<ButtonState_Component>())
-                               return;
+  entity_type.set_function("disable_button", [](Entity& entity, bool disabled) {
+    if (!entity.has_component<ButtonState_Component>())
+      return;
 
-                             auto& state =
-                                 entity.get_component<ButtonState_Component>().button_state;
-                             if (disabled)
-                               state |= Button_State::Disabled;
-                             else
-                               state &= ~Button_State::Disabled;
-                           });
+    auto& state = entity.get_component<ButtonState_Component>().button_state;
+    if (disabled)
+      state |= Button_State::Disabled;
+    else
+      state &= ~Button_State::Disabled;
+  });
 
-  lua.set_function("reload_scene",
-                   []()
-                   {
-                     auto        scene_path = Scene::get_active_scene()->get_directory();
-                     auto        project    = Project::get_active_project();
-                     std::string path =
-                         project->get_directory() + project->get_scene_directory() + scene_path;
+  lua.set_function("reload_scene", []() {
+    auto        scene_path = Scene::get_active_scene()->get_directory();
+    auto        project    = Project::get_active_project();
+    std::string path       = project->get_directory() + project->get_scene_directory() + scene_path;
 
-                     auto scene = SaveScene::load_scene(path);
-                     Scene::set_active_scene(scene);
-                   });
+    auto scene = SaveScene::load_scene(path);
+    Scene::set_active_scene(scene);
+  });
 }
 
-void ScriptBinding::register_audio_functions()
-{
+void ScriptBinding::register_audio_functions() {
   auto& lua         = ScriptManager::get_lua();
   auto  entity_type = lua["Entity"].get<sol::usertype<Entity>>();
 
-  entity_type.set_function("play_audio",
-                           [](Entity& entity)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->play();
-                             }
-                           });
+  entity_type.set_function("play_audio", [](Entity& entity) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->play();
+    }
+  });
 
-  entity_type.set_function("pause_audio",
-                           [](Entity& entity)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->pause();
-                             }
-                           });
+  entity_type.set_function("pause_audio", [](Entity& entity) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->pause();
+    }
+  });
 
-  entity_type.set_function("stop_audio",
-                           [](Entity& entity)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->stop();
-                             }
-                           });
+  entity_type.set_function("stop_audio", [](Entity& entity) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->stop();
+    }
+  });
 
-  entity_type.set_function("is_playing_audio",
-                           [](Entity& entity) -> bool
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               return entity.get_component<Audio_Component>().source->is_playing();
-                             }
-                             return false;
-                           });
+  entity_type.set_function("is_playing_audio", [](Entity& entity) -> bool {
+    if (detail::has_component<Audio_Component>(entity)) {
+      return entity.get_component<Audio_Component>().source->is_playing();
+    }
+    return false;
+  });
 
-  entity_type.set_function("is_paused_audio",
-                           [](Entity& entity) -> bool
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               return entity.get_component<Audio_Component>().source->is_paused();
-                             }
-                             return false;
-                           });
+  entity_type.set_function("is_paused_audio", [](Entity& entity) -> bool {
+    if (detail::has_component<Audio_Component>(entity)) {
+      return entity.get_component<Audio_Component>().source->is_paused();
+    }
+    return false;
+  });
 
-  entity_type.set_function("is_loop_audio",
-                           [](Entity& entity) -> bool
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               return entity.get_component<Audio_Component>().source->is_looping();
-                             }
-                             return false;
-                           });
+  entity_type.set_function("is_loop_audio", [](Entity& entity) -> bool {
+    if (detail::has_component<Audio_Component>(entity)) {
+      return entity.get_component<Audio_Component>().source->is_looping();
+    }
+    return false;
+  });
 
-  entity_type.set_function("set_loop_audio",
-                           [](Entity& entity, bool loop)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->set_loop(loop);
-                             }
-                           });
+  entity_type.set_function("set_loop_audio", [](Entity& entity, bool loop) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->set_loop(loop);
+    }
+  });
 
-  entity_type.set_function("set_pitch_audio",
-                           [](Entity& entity, float pitch)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->set_pitch(pitch);
-                             }
-                           });
+  entity_type.set_function("set_pitch_audio", [](Entity& entity, float pitch) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->set_pitch(pitch);
+    }
+  });
 
-  entity_type.set_function("get_pitch_audio",
-                           [](Entity& entity) -> float
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               return entity.get_component<Audio_Component>().source->get_pitch();
-                             }
-                             return 1.0f;
-                           });
+  entity_type.set_function("get_pitch_audio", [](Entity& entity) -> float {
+    if (detail::has_component<Audio_Component>(entity)) {
+      return entity.get_component<Audio_Component>().source->get_pitch();
+    }
+    return 1.0f;
+  });
 
-  entity_type.set_function("set_volume_audio",
-                           [](Entity& entity, float volume)
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               entity.get_component<Audio_Component>().source->set_volume(volume);
-                             }
-                           });
+  entity_type.set_function("set_volume_audio", [](Entity& entity, float volume) {
+    if (detail::has_component<Audio_Component>(entity)) {
+      entity.get_component<Audio_Component>().source->set_volume(volume);
+    }
+  });
 
-  entity_type.set_function("get_volume_audio",
-                           [](Entity& entity) -> float
-                           {
-                             if (detail::has_component<Audio_Component>(entity))
-                             {
-                               return entity.get_component<Audio_Component>().source->get_volume();
-                             }
-                             return 1.0f;
-                           });
+  entity_type.set_function("get_volume_audio", [](Entity& entity) -> float {
+    if (detail::has_component<Audio_Component>(entity)) {
+      return entity.get_component<Audio_Component>().source->get_volume();
+    }
+    return 1.0f;
+  });
 }
 
-void ScriptBinding::register_physics()
-{
+void ScriptBinding::register_physics() {
   auto& lua         = ScriptManager::get_lua();
   auto  entity_type = lua["Entity"].get<sol::usertype<Entity>>();
 
-  entity_type.set_function("set_velocity",
-                           [](Entity& entity, const vec2f& velocity)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("set_velocity", [](Entity& entity, const vec2f& velocity) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             vec2f v = velocity;
-                             Math::pixels_to_meters(v);
-                             body->SetLinearVelocity(b2Vec2(v.x, v.y));
-                           });
+    vec2f v = velocity;
+    Math::pixels_to_meters(v);
+    body->SetLinearVelocity(b2Vec2(v.x, v.y));
+  });
 
-  entity_type.set_function("apply_impulse",
-                           [](Entity& entity, const vec2f& impulse)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("apply_impulse", [](Entity& entity, const vec2f& impulse) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             vec2f i = impulse;
-                             Math::pixels_to_meters(i);
-                             body->ApplyLinearImpulseToCenter(i.to_b2vec2(), true);
-                           });
+    vec2f i = impulse;
+    Math::pixels_to_meters(i);
+    body->ApplyLinearImpulseToCenter(i.to_b2vec2(), true);
+  });
 
-  entity_type.set_function("set_velocity_x",
-                           [](Entity& entity, float velocity)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("set_velocity_x", [](Entity& entity, float velocity) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             float v = Math::pixels_to_meters(velocity);
-                             body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
-                           });
+    float v = Math::pixels_to_meters(velocity);
+    body->SetLinearVelocity(b2Vec2(v, body->GetLinearVelocity().y));
+  });
 
-  entity_type.set_function("set_velocity_y",
-                           [](Entity& entity, float velocity)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("set_velocity_y", [](Entity& entity, float velocity) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             float v = Math::pixels_to_meters(velocity);
-                             body->SetLinearVelocity(b2Vec2(body->GetLinearVelocity().x, v));
-                           });
+    float v = Math::pixels_to_meters(velocity);
+    body->SetLinearVelocity(b2Vec2(body->GetLinearVelocity().x, v));
+  });
 
-  entity_type.set_function("apply_impulse_x",
-                           [](Entity& entity, float impulse)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("apply_impulse_x", [](Entity& entity, float impulse) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             float v = Math::pixels_to_meters(impulse);
-                             body->ApplyLinearImpulseToCenter(b2Vec2(v, 0), true);
-                           });
+    float v = Math::pixels_to_meters(impulse);
+    body->ApplyLinearImpulseToCenter(b2Vec2(v, 0), true);
+  });
 
-  entity_type.set_function("apply_impulse_y",
-                           [](Entity& entity, float impulse)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("apply_impulse_y", [](Entity& entity, float impulse) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             float v = Math::pixels_to_meters(impulse);
-                             body->ApplyLinearImpulseToCenter(b2Vec2(0, v), true);
-                           });
+    float v = Math::pixels_to_meters(impulse);
+    body->ApplyLinearImpulseToCenter(b2Vec2(0, v), true);
+  });
 
-  entity_type.set_function("get_velocity",
-                           [](Entity& entity) -> vec2f
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                             {
-                               return vec2f(0.0f, 0.0f);
-                             }
+  entity_type.set_function("get_velocity", [](Entity& entity) -> vec2f {
+    if (!detail::has_component<PhysicsBody_Component>(entity)) {
+      return vec2f(0.0f, 0.0f);
+    }
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return vec2f(0.0f, 0.0f);
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return vec2f(0.0f, 0.0f);
 
-                             vec2f velocity = body->GetLinearVelocity();
-                             Math::meters_to_pixels(velocity);
-                             return velocity;
-                           });
+    vec2f velocity = body->GetLinearVelocity();
+    Math::meters_to_pixels(velocity);
+    return velocity;
+  });
 
-  lua.set_function("set_world_gravity",
-                   [](const vec2f& gravity)
-                   {
-                     auto& world = Scene::get_active_scene()->get_world();
-                     world.SetGravity(gravity.to_b2vec2());
-                   });
+  lua.set_function("set_world_gravity", [](const vec2f& gravity) {
+    auto& world = Scene::get_active_scene()->get_world();
+    world.SetGravity(gravity.to_b2vec2());
+  });
 
-  lua.set_function("set_world_gravity_scale",
-                   [](float scale)
-                   {
-                     auto& world   = Scene::get_active_scene()->get_world();
-                     vec2f gravity = world.GetGravity();
-                     gravity *= scale;
-                     world.SetGravity(gravity.to_b2vec2());
-                   });
+  lua.set_function("set_world_gravity_scale", [](float scale) {
+    auto& world   = Scene::get_active_scene()->get_world();
+    vec2f gravity = world.GetGravity();
+    gravity *= scale;
+    world.SetGravity(gravity.to_b2vec2());
+  });
 
-  entity_type.set_function("set_gravity_scale",
-                           [](Entity& entity, float scale)
-                           {
-                             if (entity.has_component<PhysicsBody_Component>())
-                             {
-                               auto body = entity.get_component<PhysicsBody_Component>().body;
-                               if (!body)
-                                 return;
+  entity_type.set_function("set_gravity_scale", [](Entity& entity, float scale) {
+    if (entity.has_component<PhysicsBody_Component>()) {
+      auto body = entity.get_component<PhysicsBody_Component>().body;
+      if (!body)
+        return;
 
-                               body->SetGravityScale(scale);
-                             }
-                           });
+      body->SetGravityScale(scale);
+    }
+  });
 
-  entity_type.set_function("set_awake",
-                           [](Entity& entity, bool awake)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
+  entity_type.set_function("set_awake", [](Entity& entity, bool awake) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
 
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (body)
-                             {
-                               body->SetAwake(awake);
-                             }
-                           });
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (body) {
+      body->SetAwake(awake);
+    }
+  });
 
-  entity_type.set_function("is_on_ground",
-                           [](Entity& entity) -> bool
-                           {
-                             auto scene = Scene::get_active_scene();
-                             return scene->get_contact_listener()->is_grounded(entity.get_id());
-                           });
+  entity_type.set_function("is_on_ground", [](Entity& entity) -> bool {
+    auto scene = Scene::get_active_scene();
+    return scene->get_contact_listener()->is_grounded(entity.get_id());
+  });
 
   // Use sol::overload for multiple signatures
   entity_type.set_function(
       "is_collided",
       sol::overload(
-          [](Entity& entity1, Entity& entity2) -> bool
-          {
+          [](Entity& entity1, Entity& entity2) -> bool {
             auto scene = Scene::get_active_scene();
             return scene->get_contact_listener()->is_collided(entity1.get_id(), entity2.get_id());
           },
-          [](Entity& entity1) -> bool
-          {
+          [](Entity& entity1) -> bool {
             auto scene = Scene::get_active_scene();
             return scene->get_contact_listener()->is_collided(entity1.get_id());
           },
-          [](Entity& entity, const std::string& name) -> bool
-          {
+          [](Entity& entity, const std::string& name) -> bool {
             auto scene = Scene::get_active_scene();
             return scene->get_contact_listener()->is_collided(entity.get_id(), name);
           }));
-  entity_type.set_function("get_mass",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetMass();
-                           });
+  entity_type.set_function("get_mass", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetMass();
+  });
 
-  entity_type.set_function("get_inertia",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetInertia();
-                           });
+  entity_type.set_function("get_inertia", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetInertia();
+  });
 
-  entity_type.set_function("get_center_of_mass",
-                           [](Entity& entity) -> vec2f
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return vec2f(0, 0);
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return vec2f(0, 0);
-                             vec2f com = body->GetWorldCenter();
-                             Math::meters_to_pixels(com);
-                             return com;
-                           });
+  entity_type.set_function("get_center_of_mass", [](Entity& entity) -> vec2f {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return vec2f(0, 0);
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return vec2f(0, 0);
+    vec2f com = body->GetWorldCenter();
+    Math::meters_to_pixels(com);
+    return com;
+  });
 
-  entity_type.set_function("get_local_center_of_mass",
-                           [](Entity& entity) -> vec2f
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return vec2f(0, 0);
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return vec2f(0, 0);
-                             vec2f com = body->GetLocalCenter();
-                             Math::meters_to_pixels(com);
-                             return com;
-                           });
+  entity_type.set_function("get_local_center_of_mass", [](Entity& entity) -> vec2f {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return vec2f(0, 0);
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return vec2f(0, 0);
+    vec2f com = body->GetLocalCenter();
+    Math::meters_to_pixels(com);
+    return com;
+  });
 
-  entity_type.set_function("get_linear_damping",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetLinearDamping();
-                           });
+  entity_type.set_function("get_linear_damping", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetLinearDamping();
+  });
 
-  entity_type.set_function("set_linear_damping",
-                           [](Entity& entity, float damping)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetLinearDamping(damping);
-                           });
+  entity_type.set_function("set_linear_damping", [](Entity& entity, float damping) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetLinearDamping(damping);
+  });
 
-  entity_type.set_function("get_angular_damping",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetAngularDamping();
-                           });
+  entity_type.set_function("get_angular_damping", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetAngularDamping();
+  });
 
-  entity_type.set_function("set_angular_damping",
-                           [](Entity& entity, float damping)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetAngularDamping(damping);
-                           });
+  entity_type.set_function("set_angular_damping", [](Entity& entity, float damping) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetAngularDamping(damping);
+  });
 
-  entity_type.set_function("get_angular_velocity",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetAngularVelocity();
-                           });
+  entity_type.set_function("get_angular_velocity", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetAngularVelocity();
+  });
 
-  entity_type.set_function("set_angular_velocity",
-                           [](Entity& entity, float velocity)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetAngularVelocity(velocity);
-                           });
+  entity_type.set_function("set_angular_velocity", [](Entity& entity, float velocity) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetAngularVelocity(velocity);
+  });
 
-  entity_type.set_function("apply_torque",
-                           [](Entity& entity, float torque)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->ApplyTorque(torque, true);
-                           });
+  entity_type.set_function("apply_torque", [](Entity& entity, float torque) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->ApplyTorque(torque, true);
+  });
 
-  entity_type.set_function("apply_angular_impulse",
-                           [](Entity& entity, float impulse)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->ApplyAngularImpulse(impulse, true);
-                           });
+  entity_type.set_function("apply_angular_impulse", [](Entity& entity, float impulse) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->ApplyAngularImpulse(impulse, true);
+  });
 
-  entity_type.set_function("apply_force",
-                           [](Entity& entity, const vec2f& force)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             vec2f f = force;
-                             Math::pixels_to_meters(f);
-                             body->ApplyForceToCenter(f.to_b2vec2(), true);
-                           });
+  entity_type.set_function("apply_force", [](Entity& entity, const vec2f& force) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    vec2f f = force;
+    Math::pixels_to_meters(f);
+    body->ApplyForceToCenter(f.to_b2vec2(), true);
+  });
 
   entity_type.set_function("apply_force_at_point",
-                           [](Entity& entity, const vec2f& force, const vec2f& point)
-                           {
+                           [](Entity& entity, const vec2f& force, const vec2f& point) {
                              if (!detail::has_component<PhysicsBody_Component>(entity))
                                return;
                              auto& body = entity.get_component<PhysicsBody_Component>().body;
@@ -1397,8 +1185,7 @@ void ScriptBinding::register_physics()
                            });
 
   entity_type.set_function("apply_impulse_at_point",
-                           [](Entity& entity, const vec2f& impulse, const vec2f& point)
-                           {
+                           [](Entity& entity, const vec2f& impulse, const vec2f& point) {
                              if (!detail::has_component<PhysicsBody_Component>(entity))
                                return;
                              auto& body = entity.get_component<PhysicsBody_Component>().body;
@@ -1411,71 +1198,59 @@ void ScriptBinding::register_physics()
                              body->ApplyLinearImpulse(i.to_b2vec2(), p.to_b2vec2(), true);
                            });
 
-  entity_type.set_function("is_awake",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->IsAwake();
-                           });
+  entity_type.set_function("is_awake", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->IsAwake();
+  });
 
-  entity_type.set_function("is_active",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->IsEnabled();
-                           });
+  entity_type.set_function("is_active", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->IsEnabled();
+  });
 
-  entity_type.set_function("set_active",
-                           [](Entity& entity, bool active)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetEnabled(active);
-                           });
+  entity_type.set_function("set_active", [](Entity& entity, bool active) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetEnabled(active);
+  });
 
-  entity_type.set_function("is_static",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->GetType() == b2_staticBody;
-                           });
+  entity_type.set_function("is_static", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->GetType() == b2_staticBody;
+  });
 
-  entity_type.set_function("is_dynamic",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->GetType() == b2_dynamicBody;
-                           });
+  entity_type.set_function("is_dynamic", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->GetType() == b2_dynamicBody;
+  });
 
-  entity_type.set_function("is_kinematic",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->GetType() == b2_kinematicBody;
-                           });
+  entity_type.set_function("is_kinematic", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->GetType() == b2_kinematicBody;
+  });
 
   lua.new_enum<b2BodyType>("BodyType",
                            {
@@ -1484,246 +1259,205 @@ void ScriptBinding::register_physics()
                                {  "Dynamic",   b2_dynamicBody}
   });
 
-  entity_type.set_function("set_body_type",
-                           [](Entity& entity, b2BodyType type)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetType(type);
-                           });
+  entity_type.set_function("set_body_type", [](Entity& entity, b2BodyType type) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetType(type);
+  });
 
-  entity_type.set_function("get_body_type",
-                           [&lua](Entity& entity) -> sol::object
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return sol::nil;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return sol::nil;
-                             return sol::make_object(lua, body->GetType());
-                           });
+  entity_type.set_function("get_body_type", [&lua](Entity& entity) -> sol::object {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return sol::nil;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return sol::nil;
+    return sol::make_object(lua, body->GetType());
+  });
 
-  entity_type.set_function("get_fixed_rotation",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->IsFixedRotation();
-                           });
+  entity_type.set_function("get_fixed_rotation", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->IsFixedRotation();
+  });
 
-  entity_type.set_function("set_fixed_rotation",
-                           [](Entity& entity, bool fixed)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetFixedRotation(fixed);
-                           });
+  entity_type.set_function("set_fixed_rotation", [](Entity& entity, bool fixed) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetFixedRotation(fixed);
+  });
 
-  entity_type.set_function("is_bullet",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             return body->IsBullet();
-                           });
+  entity_type.set_function("is_bullet", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    return body->IsBullet();
+  });
 
-  entity_type.set_function("set_bullet",
-                           [](Entity& entity, bool bullet)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             body->SetBullet(bullet);
-                           });
+  entity_type.set_function("set_bullet", [](Entity& entity, bool bullet) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    body->SetBullet(bullet);
+  });
 
-  entity_type.set_function("get_friction",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return 0.0f;
-                             return fixture->GetFriction();
-                           });
+  entity_type.set_function("get_friction", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return 0.0f;
+    return fixture->GetFriction();
+  });
 
-  entity_type.set_function("set_friction",
-                           [](Entity& entity, float friction)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return;
-                             fixture->SetFriction(friction);
-                           });
+  entity_type.set_function("set_friction", [](Entity& entity, float friction) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return;
+    fixture->SetFriction(friction);
+  });
 
-  entity_type.set_function("get_restitution",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return 0.0f;
-                             return fixture->GetRestitution();
-                           });
+  entity_type.set_function("get_restitution", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return 0.0f;
+    return fixture->GetRestitution();
+  });
 
-  entity_type.set_function("set_restitution",
-                           [](Entity& entity, float restitution)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return;
-                             fixture->SetRestitution(restitution);
-                           });
+  entity_type.set_function("set_restitution", [](Entity& entity, float restitution) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return;
+    fixture->SetRestitution(restitution);
+  });
 
-  entity_type.set_function("get_density",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return 0.0f;
-                             return fixture->GetDensity();
-                           });
+  entity_type.set_function("get_density", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return 0.0f;
+    return fixture->GetDensity();
+  });
 
-  entity_type.set_function("set_density",
-                           [](Entity& entity, float density)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return;
-                             fixture->SetDensity(density);
-                             body->ResetMassData();  // must recalc after density change
-                           });
+  entity_type.set_function("set_density", [](Entity& entity, float density) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return;
+    fixture->SetDensity(density);
+    body->ResetMassData();  // must recalc after density change
+  });
 
-  entity_type.set_function("is_sensor",
-                           [](Entity& entity) -> bool
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return false;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return false;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return false;
-                             return fixture->IsSensor();
-                           });
+  entity_type.set_function("is_sensor", [](Entity& entity) -> bool {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return false;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return false;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return false;
+    return fixture->IsSensor();
+  });
 
-  entity_type.set_function("set_sensor",
-                           [](Entity& entity, bool sensor)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
-                             auto* fixture = body->GetFixtureList();
-                             if (!fixture)
-                               return;
-                             fixture->SetSensor(sensor);
-                           });
+  entity_type.set_function("set_sensor", [](Entity& entity, bool sensor) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
+    auto* fixture = body->GetFixtureList();
+    if (!fixture)
+      return;
+    fixture->SetSensor(sensor);
+  });
 
-  entity_type.set_function("get_world_gravity",
-                           [](Entity& entity) -> vec2f
-                           {
-                             auto& world = Scene::get_active_scene()->get_world();
-                             vec2f g     = world.GetGravity();
-                             Math::meters_to_pixels(g);
-                             return g;
-                           });
+  entity_type.set_function("get_world_gravity", [](Entity& entity) -> vec2f {
+    auto& world = Scene::get_active_scene()->get_world();
+    vec2f g     = world.GetGravity();
+    Math::meters_to_pixels(g);
+    return g;
+  });
 
-  entity_type.set_function("get_physics_position",
-                           [](Entity& entity) -> vec2f
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return vec2f(0, 0);
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return vec2f(0, 0);
-                             vec2f pos = body->GetPosition();
-                             Math::meters_to_pixels(pos);
-                             return pos;
-                           });
+  entity_type.set_function("get_physics_position", [](Entity& entity) -> vec2f {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return vec2f(0, 0);
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return vec2f(0, 0);
+    vec2f pos = body->GetPosition();
+    Math::meters_to_pixels(pos);
+    return pos;
+  });
 
-  entity_type.set_function("get_physics_angle",
-                           [](Entity& entity) -> float
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return 0.0f;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return 0.0f;
-                             return body->GetAngle();
-                           });
+  entity_type.set_function("get_physics_angle", [](Entity& entity) -> float {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return 0.0f;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return 0.0f;
+    return body->GetAngle();
+  });
 
-  entity_type.set_function("disable_collider",
-                           [](Entity& entity, bool enabled)
-                           {
-                             if (!detail::has_component<PhysicsBody_Component>(entity))
-                               return;
-                             auto& body = entity.get_component<PhysicsBody_Component>().body;
-                             if (!body)
-                               return;
+  entity_type.set_function("disable_collider", [](Entity& entity, bool enabled) {
+    if (!detail::has_component<PhysicsBody_Component>(entity))
+      return;
+    auto& body = entity.get_component<PhysicsBody_Component>().body;
+    if (!body)
+      return;
 
-                             for (b2Fixture* f = body->GetFixtureList(); f; f = f->GetNext())
-                             {
-                               b2Filter filter;
-                               if (!enabled)
-                               {
-                                 filter.categoryBits = 0x0000;
-                                 filter.maskBits     = 0x0000;
-                                 f->SetFilterData(filter);
-                               }
-                               else
-                               {
-                                 PhysicsBody_Component::recreate_fixtures(entity);
-                               }
-                             }
-                           });
+    for (b2Fixture* f = body->GetFixtureList(); f; f = f->GetNext()) {
+      b2Filter filter;
+      if (!enabled) {
+        filter.categoryBits = 0x0000;
+        filter.maskBits     = 0x0000;
+        f->SetFilterData(filter);
+      } else {
+        PhysicsBody_Component::recreate_fixtures(entity);
+      }
+    }
+  });
 }
 
-void ScriptBinding::register_network()
-{
+void ScriptBinding::register_network() {
   auto& lua         = ScriptManager::get_lua();
   auto  packet_type = lua.new_usertype<Packet>("Packet", sol::constructors<Packet(uint8_t)>());
 
@@ -1749,32 +1483,29 @@ void ScriptBinding::register_network()
   sol::table net = lua.create_named_table("Network");
 
 #ifndef AERO_SERVER
-  net.set_function("send",
-                   [](Packet& packet)
-                   {
-                     auto& client = NetworkManager::get_client();
-                     client.send(packet);
-                   });
+  net.set_function("send", [](Packet& packet) {
+    auto& client = NetworkManager::get_client();
+    client.send(packet);
+  });
 
   net.set_function("is_connected",
                    []() -> bool { return NetworkManager::get_client().is_connected(); });
 
 #else
-  net.set_function("send_to",
-                   [](int client_ID, Packet& packet)
-                   { NetworkManager::get_server().send_to(client_ID, packet); });
+  net.set_function("send_to", [](int client_ID, Packet& packet) {
+    NetworkManager::get_server().send_to(client_ID, packet);
+  });
 
   net.set_function("boardcast",
                    [](Packet& packet) { NetworkManager::get_server().boardcast(packet); });
 
-  net.set_function("disconnect",
-                   [](int client_id)
-                   { NetworkManager::get_server().disconnect_client(client_id); });
+  net.set_function("disconnect", [](int client_id) {
+    NetworkManager::get_server().disconnect_client(client_id);
+  });
 #endif
 }
 
-void ScriptBinding::register_log()
-{
+void ScriptBinding::register_log() {
   auto&      lua = ScriptManager::get_lua();
   sol::table log = lua.create_named_table("Log");
 
@@ -1796,21 +1527,20 @@ void ScriptBinding::register_log()
 #endif
 }
 
-void ScriptBinding::register_scene()
-{
+void ScriptBinding::register_scene() {
   auto&      lua   = ScriptManager::get_lua();
   sol::table scene = lua.create_named_table("Scene");
 
-  scene.set_function("load_from_path",
-                     [](const std::string path) -> bool
-                     { return SceneManager::load_from_path(path); });
+  scene.set_function("load_from_path", [](const std::string path) -> bool {
+    return SceneManager::load_from_path(path);
+  });
 
   scene.set_function("get_active_scene_name",
                      []() -> std::string { return SceneManager::get_active_scene_name(); });
 
-  scene.set_function("load_scene",
-                     [](const std::string& name) -> bool
-                     { return SceneManager::load_scene(name); });
+  scene.set_function("load_scene", [](const std::string& name) -> bool {
+    return SceneManager::load_scene(name);
+  });
 }
 
 }  // namespace ag

@@ -4,7 +4,8 @@
 namespace ag
 {
 Renderer::SceneData* Renderer::s_scenedata = new Renderer::SceneData;
-void                 Renderer::begin_scene(const View& view, const vec2f& viewport_size)
+
+void Renderer::begin_scene(const View& view, const vec2f& viewport_size)
 {
   s_scenedata->view_matrix = view.get_view_matrix();
 

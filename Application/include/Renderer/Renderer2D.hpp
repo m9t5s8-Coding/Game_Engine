@@ -33,7 +33,7 @@ public:
   static void
   draw_sprite(const Sprite& sprite, const Transform_Component& transform, int entity_id = -1);
   static void draw_text(const Text& text, const Transform_Component& transform, int entity_id = -1);
-  static void draw_fullscreen_quad(AG_uint id);
+  static void draw_fullscreen_quad(AG_uint id, const vec2f& viewport, const vec2f& size);
 
   struct ProcessedBatch
   {

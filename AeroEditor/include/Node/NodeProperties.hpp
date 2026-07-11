@@ -6,18 +6,15 @@
 #include <functional>
 #include <Scene/Entity.hpp>
 
-namespace ag
-{
-struct Component_Info
-{
+namespace ag {
+struct Component_Info {
   const char* name;
   bool (*is_compatible)(NodeType);
   std::function<void(Entity)> create;
   std::function<void(Entity)> imgui_render;
 };
 
-class NodeProperties
-{
+class NodeProperties {
 public:
   static void register_components();
 
@@ -40,8 +37,7 @@ public:
   inline static bool draw_component_node(const std::string&      name,
                                          Entity                  entity,
                                          std::function<void(T&)> draw_content,
-                                         bool                    can_remove = false)
-  {
+                                         bool                    can_remove = false) {
     if (!entity.has_component<T>())
       return false;
 
@@ -56,32 +52,26 @@ public:
     bool open   = ImGui::TreeNodeEx(name.c_str(), flags);
     bool remove = false;
 
-    if (ImGui::BeginPopupContextItem("ComponentContextMenu"))
-    {
-      if (can_remove && ImGui::MenuItem("Remove"))
-      {
+    if (ImGui::BeginPopupContextItem("ComponentContextMenu")) {
+      if (can_remove && ImGui::MenuItem("Remove")) {
         remove = true;
       }
 
-      if (ImGui::MenuItem("Reset to Default"))
-      {
+      if (ImGui::MenuItem("Reset to Default")) {
       }
 
-      if (ImGui::MenuItem("Copy Component"))
-      {
+      if (ImGui::MenuItem("Copy Component")) {
       }
 
       ImGui::Separator();
 
-      if (ImGui::MenuItem("Properties..."))
-      {
+      if (ImGui::MenuItem("Properties...")) {
       }
 
       ImGui::EndPopup();
     }
 
-    if (open)
-    {
+    if (open) {
       auto& component = entity.get_component<T>();
       draw_content(component);
       ImGui::TreePop();
@@ -90,8 +80,7 @@ public:
     ImGui::PopID();
     ImGui::PopStyleVar();
 
-    if (remove)
-    {
+    if (remove) {
       T::remove_component(entity);
       Scene::save_required();
     }
@@ -105,10 +94,8 @@ private:
   static void draw_added_components(Entity entity);
 
   template <typename T>
-  static void add(Entity entity)
-  {
-    if (!entity.has_component<T>())
-    {
+  static void add(Entity entity) {
+    if (!entity.has_component<T>()) {
       T::add_component(entity);
 
       Scene::get_active_scene()->set_save_required();

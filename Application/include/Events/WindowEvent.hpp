@@ -5,33 +5,19 @@
 #include <Events/Event.hpp>
 #include <Math/Math.hpp>
 
-namespace ag
-{
+namespace ag {
 
-class WindowResizeEvent final : public Event
-{
+class WindowResizeEvent final : public Event {
 public:
   WindowResizeEvent(const vec2u& p_size)
-    : m_size(p_size)
-  {
-  }
+    : m_size(p_size) {}
 
-  AG_uint get_width() const
-  {
-    return m_size.x;
-  }
-  AG_uint get_height() const
-  {
-    return m_size.y;
-  }
+  AG_uint get_width() const { return m_size.x; }
+  AG_uint get_height() const { return m_size.y; }
 
-  vec2u get_size() const
-  {
-    return m_size;
-  }
+  vec2u get_size() const { return m_size; }
 
-  std::string to_string() const override
-  {
+  std::string to_string() const override {
     std::stringstream ss;
     ss << "WindowResizeEvent: " << m_size.x << ", " << m_size.y;
     return ss.str();
@@ -44,8 +30,7 @@ private:
   vec2u m_size;
 };
 
-class WindowCloseEvent final : public Event
-{
+class WindowCloseEvent final : public Event {
 public:
   WindowCloseEvent() = default;
 
@@ -53,8 +38,7 @@ public:
   EVENT_CLASS_CATEGORY(Event_Category_Application)
 };
 
-class AppTickEvent final : public Event
-{
+class AppTickEvent final : public Event {
 public:
   AppTickEvent() = default;
 
@@ -62,8 +46,7 @@ public:
   EVENT_CLASS_CATEGORY(Event_Category_Application)
 };
 
-class AppUpdateEvent final : public Event
-{
+class AppUpdateEvent final : public Event {
 public:
   AppUpdateEvent() = default;
 
@@ -71,8 +54,7 @@ public:
   EVENT_CLASS_CATEGORY(Event_Category_Application)
 };
 
-class AppRenderEvent final : public Event
-{
+class AppRenderEvent final : public Event {
 public:
   AppRenderEvent() = default;
 
@@ -80,8 +62,7 @@ public:
   EVENT_CLASS_CATEGORY(Event_Category_Application)
 };
 
-class WindowShowEvent final : public Event
-{
+class WindowShowEvent final : public Event {
 public:
   WindowShowEvent() = default;
 

@@ -106,7 +106,7 @@ void Renderer2D::init()
 
   {
     float full_vertices[] =
-        {-1.f, -1.f, 0.f, 0.f, -1.f, 1.f, 0.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, -1.f, 1.f, 0.f};
+        {0.f, 0.f, 0.f, 1.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f, 0.f, 1.f, 1.f};
     BufferLayout layout = {
         {ShaderDataType::Float2, "a_Position"},
         {ShaderDataType::Float2, "a_texcoord"}
@@ -246,11 +246,15 @@ void Renderer2D::set_texture(const AG_ref<Texture>& texture)
   s_data->quad_texture = texture;
 }
 
-void Renderer2D::draw_fullscreen_quad(AG_uint id)
+void Renderer2D::draw_fullscreen_quad(AG_uint id, const vec2f& viewport, const vec2f& size)
 {
+  auto screen_matrix = Math::get_view_matrix(viewport, viewport / 2.0f);
   Renderer::disable_blend();
   Renderer::bind(id, TEXTURE_SCENE);
   s_data->fullscreen_shader->bind();
+  s_data->fullscreen_shader->set_vec2f("u_size", size);
+  s_data->fullscreen_shader->set_vec2f("u_position", viewport / 2.0f);
+  s_data->fullscreen_shader->set_mat3("u_screen_matrix", screen_matrix);
   s_data->fullscreen_shader->set_int("u_texture", TEXTURE_SCENE);
   Renderer::submit(s_data->fullscreen_vertex_array);
 }

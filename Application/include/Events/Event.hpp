@@ -2,10 +2,8 @@
 
 #include <Apch.hpp>
 
-namespace ag
-{
-enum class Event_Type
-{
+namespace ag {
+enum class Event_Type {
   None = 0,
   // Window Event
   Window_Close,
@@ -37,8 +35,7 @@ enum class Event_Type
 
 #define BIT(x) (1 << x)
 
-enum Event_Category
-{
+enum Event_Category {
   None                        = 0,
   Event_Category_Application  = BIT(0),
   Event_Category_Input        = BIT(1),
@@ -47,28 +44,15 @@ enum Event_Category
   Event_Category_Mouse_Button = BIT(4)
 };
 
-#define EVENT_CLASS_TYPE(type)                                                                     \
-  static Event_Type get_static_type()                                                              \
-  {                                                                                                \
-    return Event_Type::type;                                                                       \
-  }                                                                                                \
-  virtual Event_Type get_event_type() const override                                               \
-  {                                                                                                \
-    return get_static_type();                                                                      \
-  }                                                                                                \
-  virtual const char* get_name() const override                                                    \
-  {                                                                                                \
-    return #type;                                                                                  \
-  }
+#define EVENT_CLASS_TYPE(type)                                                      \
+  static Event_Type   get_static_type() { return Event_Type::type; }                \
+  virtual Event_Type  get_event_type() const override { return get_static_type(); } \
+  virtual const char* get_name() const override { return #type; }
 
-#define EVENT_CLASS_CATEGORY(category)                                                             \
-  virtual int get_category_flag() const override                                                   \
-  {                                                                                                \
-    return category;                                                                               \
-  }
+#define EVENT_CLASS_CATEGORY(category) \
+  virtual int get_category_flag() const override { return category; }
 
-class Event
-{
+class Event {
 public:
   virtual ~Event() = default;
 
@@ -77,30 +61,21 @@ public:
   virtual Event_Type  get_event_type() const    = 0;
   virtual const char* get_name() const          = 0;
   virtual int         get_category_flag() const = 0;
-  virtual std::string to_string() const
-  {
-    return get_name();
-  }
+  virtual std::string to_string() const { return get_name(); }
 
-  inline bool is_in_category(Event_Category category) const
-  {
+  inline bool is_in_category(Event_Category category) const {
     return get_category_flag() & category;
   }
 };
 
-class EventDispatcher
-{
+class EventDispatcher {
 public:
   explicit EventDispatcher(Event& event)
-    : m_Event(event)
-  {
-  }
+    : m_Event(event) {}
 
   template <typename T, typename F>
-  bool Dispatch(const F& func)
-  {
-    if (m_Event.get_event_type() == T::get_static_type())
-    {
+  bool Dispatch(const F& func) {
+    if (m_Event.get_event_type() == T::get_static_type()) {
       m_Event.Handled |= func(static_cast<T&>(m_Event));
       return true;
     }
@@ -111,9 +86,6 @@ private:
   Event& m_Event;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Event& e)
-{
-  return os << e.to_string();
-}
+inline std::ostream& operator<<(std::ostream& os, const Event& e) { return os << e.to_string(); }
 
 }  // namespace ag

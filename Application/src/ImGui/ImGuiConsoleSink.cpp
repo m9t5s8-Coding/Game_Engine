@@ -18,15 +18,12 @@ static const ImVec4 LEVEL_COLORS[] = {
 
 static const char* LEVEL_NAMES[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
 
-// ─── Core sink interface ──────────────────────────────────────────────────────
-
 ImGuiConsoleSink::ImGuiConsoleSink(size_t max_messages)
   : m_max_messages(max_messages)
 {
   m_messages.reserve(max_messages);
 }
 
-// Called by spdlog — mutex is already held by base_sink
 void ImGuiConsoleSink::sink_it_(const spdlog::details::log_msg& msg)
 {
   spdlog::memory_buf_t buf;
@@ -37,7 +34,6 @@ void ImGuiConsoleSink::sink_it_(const spdlog::details::log_msg& msg)
   e.level       = msg.level;
   e.logger_name = std::string(msg.logger_name.data(), msg.logger_name.size());
 
-  // Collapse duplicates
   if (!m_messages.empty())
   {
     auto& last = m_messages.back();

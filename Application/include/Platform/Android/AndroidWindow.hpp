@@ -16,7 +16,6 @@ public:
   AndroidWindow(const WindowProps& props, android_app* app);
   ~AndroidWindow() override;
 
-  // Window interface implementation
   void on_update() override;
   void close_window() override;
 
@@ -85,6 +84,15 @@ public:
   void    handle_android_cmd(int32_t cmd);
   int32_t handle_android_input(AInputEvent* event);
 
+  bool is_touch_active()
+  {
+    return m_touch_active;
+  }
+  vec2f get_touch_position()
+  {
+    return m_mouse_pos;
+  }
+
 private:
   void init_android_event_callbacks();
 
@@ -103,6 +111,8 @@ private:
   vec2f m_mouse_pos    = {0.0f, 0.0f};
   bool  m_touch_active = false;
   int   m_touch_id     = -1;
+  bool  m_pinching     = false;
+  float m_last_pinch_distance;
 };
 
 }  // namespace ag

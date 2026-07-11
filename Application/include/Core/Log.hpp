@@ -17,11 +17,9 @@
   #include <ImGui/ImGuiConsoleSink.hpp>
 #endif
 
-namespace ag
-{
+namespace ag {
 // Log level configuration
-struct LogConfig
-{
+struct LogConfig {
   spdlog::level::level_enum level                = spdlog::level::trace;
   bool                      enable_file_logging  = false;
   std::string               log_file_path        = "logs/aero.log";
@@ -29,8 +27,7 @@ struct LogConfig
   bool                      enable_imgui_console = false;
 };
 
-class Log
-{
+class Log {
 public:
   // Initialize with default config
   static void init(const LogConfig& config = LogConfig());
@@ -44,27 +41,15 @@ public:
   static void disable_file_logging();
 
   // Logger accessors
-  inline static std::shared_ptr<spdlog::logger>& get_core_logger()
-  {
-    return s_core_logger;
-  }
-  inline static std::shared_ptr<spdlog::logger>& get_client_logger()
-  {
-    return s_client_logger;
-  }
+  inline static std::shared_ptr<spdlog::logger>& get_core_logger() { return s_core_logger; }
+  inline static std::shared_ptr<spdlog::logger>& get_client_logger() { return s_client_logger; }
 
 #ifdef AERO_SERVER
-  inline static std::shared_ptr<spdlog::logger>& get_server_logger()
-  {
-    return s_server_logger;
-  }
+  inline static std::shared_ptr<spdlog::logger>& get_server_logger() { return s_server_logger; }
 #endif
 
 #ifdef AERO_EDITOR
-  inline static std::shared_ptr<ImGuiConsoleSink> get_console_sink()
-  {
-    return s_console_sink;
-  }
+  inline static std::shared_ptr<ImGuiConsoleSink> get_console_sink() { return s_console_sink; }
   static void draw_console(const char* title = "Console", bool* p_open = nullptr);
 
   static void init_with_file();
@@ -115,47 +100,39 @@ private:
 #define AERO_FATAL(...) ::ag::Log::get_client_logger()->critical(__VA_ARGS__)
 
 // Assertion macros with message
-#define AERO_CORE_ASSERT(condition, ...)                                                           \
-  do                                                                                               \
-  {                                                                                                \
-    if (!(condition))                                                                              \
-    {                                                                                              \
-      ::ag::Log::get_core_logger()->critical("Assertion failed: {} - {}",                          \
-                                             #condition,                                           \
-                                             fmt::format(__VA_ARGS__));                            \
-    }                                                                                              \
+#define AERO_CORE_ASSERT(condition, ...)                                  \
+  do {                                                                    \
+    if (!(condition)) {                                                   \
+      ::ag::Log::get_core_logger()->critical("Assertion failed: {} - {}", \
+                                             #condition,                  \
+                                             fmt::format(__VA_ARGS__));   \
+    }                                                                     \
   } while (0)
 
-#define AERO_ASSERT(condition, ...)                                                                \
-  do                                                                                               \
-  {                                                                                                \
-    if (!(condition))                                                                              \
-    {                                                                                              \
-      ::ag::Log::get_client_logger()->critical("Assertion failed: {} - {}",                        \
-                                               #condition,                                         \
-                                               fmt::format(__VA_ARGS__));                          \
-    }                                                                                              \
+#define AERO_ASSERT(condition, ...)                                         \
+  do {                                                                      \
+    if (!(condition)) {                                                     \
+      ::ag::Log::get_client_logger()->critical("Assertion failed: {} - {}", \
+                                               #condition,                  \
+                                               fmt::format(__VA_ARGS__));   \
+    }                                                                       \
   } while (0)
 
 // Simple assertion without extra message
-#define AERO_CORE_ASSERT_SIMPLE(condition)                                                         \
-  do                                                                                               \
-  {                                                                                                \
-    if (!(condition))                                                                              \
-    {                                                                                              \
-      AERO_CORE_FATAL("Assertion failed: {}", #condition);                                         \
-      assert(condition);                                                                           \
-    }                                                                                              \
+#define AERO_CORE_ASSERT_SIMPLE(condition)                 \
+  do {                                                     \
+    if (!(condition)) {                                    \
+      AERO_CORE_FATAL("Assertion failed: {}", #condition); \
+      assert(condition);                                   \
+    }                                                      \
   } while (0)
 
-#define AERO_ASSERT_SIMPLE(condition)                                                              \
-  do                                                                                               \
-  {                                                                                                \
-    if (!(condition))                                                                              \
-    {                                                                                              \
-      AERO_FATAL("Assertion failed: {}", #condition);                                              \
-      assert(condition);                                                                           \
-    }                                                                                              \
+#define AERO_ASSERT_SIMPLE(condition)                 \
+  do {                                                \
+    if (!(condition)) {                               \
+      AERO_FATAL("Assertion failed: {}", #condition); \
+      assert(condition);                              \
+    }                                                 \
   } while (0)
 
 #ifdef AERO_SERVER
@@ -167,33 +144,27 @@ private:
   #define AERO_SERVER_ERROR(...) ::ag::Log::get_server_logger()->error(__VA_ARGS__)
   #define AERO_SERVER_FATAL(...) ::ag::Log::get_server_logger()->critical(__VA_ARGS__)
 
-  #define AERO_SERVER_ASSERT(condition, ...)                                                       \
-    do                                                                                             \
-    {                                                                                              \
-      if (!(condition))                                                                            \
-      {                                                                                            \
-        ::ag::Log::get_server_logger()->critical("Assertion failed: {} - {}",                      \
-                                                 #condition,                                       \
-                                                 fmt::format(__VA_ARGS__));                        \
-      }                                                                                            \
+  #define AERO_SERVER_ASSERT(condition, ...)                                  \
+    do {                                                                      \
+      if (!(condition)) {                                                     \
+        ::ag::Log::get_server_logger()->critical("Assertion failed: {} - {}", \
+                                                 #condition,                  \
+                                                 fmt::format(__VA_ARGS__));   \
+      }                                                                       \
     } while (0)
 #endif
 
 // Performance timing macro
-#define AERO_PROFILE_SCOPE(name)                                                                   \
-  struct ProfileData_##__LINE__                                                                    \
-  {                                                                                                \
-    ProfileData_##__LINE__()                                                                       \
-      : start(std::chrono::high_resolution_clock::now())                                           \
-    {                                                                                              \
-    }                                                                                              \
-    ~ProfileData_##__LINE__()                                                                      \
-    {                                                                                              \
-      auto end      = std::chrono::high_resolution_clock::now();                                   \
-      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();  \
-      AERO_TRACE("Profile: {} took {} μs", name, duration);                                        \
-    }                                                                                              \
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;                             \
+#define AERO_PROFILE_SCOPE(name)                                                                  \
+  struct ProfileData_##__LINE__ {                                                                 \
+    ProfileData_##__LINE__()                                                                      \
+      : start(std::chrono::high_resolution_clock::now()) {}                                       \
+    ~ProfileData_##__LINE__() {                                                                   \
+      auto end      = std::chrono::high_resolution_clock::now();                                  \
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(); \
+      AERO_TRACE("Profile: {} took {} μs", name, duration);                                       \
+    }                                                                                             \
+    std::chrono::time_point<std::chrono::high_resolution_clock> start;                            \
   } profile_##__LINE__
 
 //-----------------------------------------------------------------------------

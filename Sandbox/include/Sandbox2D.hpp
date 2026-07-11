@@ -2,10 +2,8 @@
 
 #include <Aero.hpp>
 
-namespace ag
-{
-class Sandbox2D : public ag::Layer
-{
+namespace ag {
+class Sandbox2D : public ag::Layer {
 public:
   Sandbox2D();
   virtual ~Sandbox2D() = default;
@@ -17,11 +15,13 @@ public:
   virtual void on_event(Event& event) override;
 
 private:
-  AG_ref<FrameBuffer>    m_framebuffer;
   AG_ref<ViewController> m_view_controller;
   AG_ref<Scene>          m_scene;
 
-  void load_project_data();
+  AG_ref<FrameBuffer> m_framebuffer;
+
+  void  load_project_data();
+  vec2f calculate_viewport(const vec2f& screen, const vec2f& view);
 
 #ifdef PLATFORM_ANDROID
   void load_project_data_android();
@@ -32,6 +32,8 @@ private:
   bool      m_networking_enabled = false;
   Color     m_clear_color        = Color::White;
   TCPClient m_client;
+  vec2f     m_viewport_size;
+  vec2f     m_window_size;
 
   Entity m_hover_entity;
 

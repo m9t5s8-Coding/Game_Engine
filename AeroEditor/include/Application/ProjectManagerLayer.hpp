@@ -4,18 +4,15 @@
 #include <chrono>
 #include <vector>
 
-namespace ag
-{
-struct ProjectEntry
-{
+namespace ag {
+struct ProjectEntry {
   std::string                           name;
   std::string                           path;
   std::string                           last_modified;
   std::chrono::system_clock::time_point timestamp;
 };
 
-class ProjectManagerLayer : public ag::Layer
-{
+class ProjectManagerLayer : public ag::Layer {
 public:
   ProjectManagerLayer();
   virtual ~ProjectManagerLayer() = default;

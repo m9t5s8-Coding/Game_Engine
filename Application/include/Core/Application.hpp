@@ -19,10 +19,8 @@
   #include <android_native_app_glue.h>
 #endif
 
-namespace ag
-{
-class Application
-{
+namespace ag {
+class Application {
 public:
   Application();
   virtual ~Application();
@@ -40,42 +38,26 @@ public:
   void pop_layer(Layer* layer);
   void push_overlay(Layer* overlay);
 
-  inline static Application& get()
-  {
-    return *s_Instance;
-  }
-  inline Window& get_window()
-  {
-    return *m_Window;
-  }
+  inline static Application& get() { return *s_Instance; }
+  inline Window&             get_window() { return *m_Window; }
 
-  inline static void set_mouse_position(const vec2f& mouse_pos)
-  {
-    s_mouse_position = mouse_pos;
-  }
-  inline static vec2f get_mouse_position()
-  {
-    return s_mouse_position;
-  }
-  static std::string get_exe_directory();
+  inline static void  set_mouse_position(const vec2f& mouse_pos) { s_mouse_position = mouse_pos; }
+  inline static vec2f get_mouse_position() { return s_mouse_position; }
+  static std::string  get_exe_directory();
 
 #ifdef AERO_EDITOR
-  ImGuiLayer* get_imgui_layer()
-  {
-    return m_imgui_layer;
-  }
+  ImGuiLayer* get_imgui_layer() { return m_imgui_layer; }
 #endif
 
-  bool is_minimized() const
-  {
-    return m_minimized;
-  }
+  bool is_minimized() const { return m_minimized; }
 
   // bool is_window_close() const { return  }
 
   bool  m_running    = true;
   bool  m_is_closing = false;
   float delta_time   = 0.0f;
+
+  void minimize_application(bool minimized) { m_minimized = true; }
 
 protected:
   AG_scope<Window>       m_Window;

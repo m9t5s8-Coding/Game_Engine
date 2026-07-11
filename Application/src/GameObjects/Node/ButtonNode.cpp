@@ -4,22 +4,18 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
-void ButtonNode::create_node(Entity entity)
-{
+namespace ag {
+void ButtonNode::create_node(Entity entity) {
   ButtonState_Component::add_component(entity);
   Button_Component::add_component(entity);
   Transform_Component::add_component(entity);
   Text_Component::add_component(entity);
 }
-void ButtonNode::delete_node(Entity entity)
-{
+void ButtonNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
   entity.delete_entity();
 }
-void ButtonNode::clone_node(Entity original, Entity clone)
-{
+void ButtonNode::clone_node(Entity original, Entity clone) {
   Script_Component::clone_entity(original, clone);
   Transform_Component::clone_entity(original, clone);
   UI_Component::clone_entity(original, clone);
@@ -28,8 +24,7 @@ void ButtonNode::clone_node(Entity original, Entity clone)
   Button_Component::clone_entity(original, clone);
   Text_Component::clone_entity(original, clone);
 }
-json ButtonNode::save_json(Entity entity)
-{
+json ButtonNode::save_json(Entity entity) {
   json j;
   NodeHelper::save_component<Script_Component>(entity, j);
   NodeHelper::save_component<Transform_Component>(entity, j);
@@ -41,8 +36,7 @@ json ButtonNode::save_json(Entity entity)
 
   return j;
 }
-void ButtonNode::load_json(Entity entity, const json& j)
-{
+void ButtonNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Script_Component>(entity, j);
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<UI_Component>(entity, j);
@@ -51,21 +45,22 @@ void ButtonNode::load_json(Entity entity, const json& j)
   NodeHelper::load_component<Text_Component>(entity, j);
   NodeHelper::load_component<Tween_Component>(entity, j);
 }
-void ButtonNode::update(Entity entity, TimeStamp ts)
-{
+void ButtonNode::update(Entity entity, TimeStamp ts) {
   Script_Component::update(entity, ts);
   Tween_Component::update(entity, ts);
 
-  if (!Engine::is_runtime() || !entity.has_component<Button_Component>())
+#ifdef AERO_EDITOR
+  return;
+#endif
+
+  if (!entity.has_component<Button_Component>())
     return;
 
   auto& comps = entity.get_component<Button_Component>();
-  if (entity.has_component<ButtonState_Component>())
-  {
+  if (entity.has_component<ButtonState_Component>()) {
     auto& state = entity.get_component<ButtonState_Component>().button_state;
 
-    if (state & Button_State::Disabled)
-    {
+    if (state & Button_State::Disabled) {
       comps.current_state = Button_Visual_State::Disabled;
       return;
     }
@@ -73,49 +68,37 @@ void ButtonNode::update(Entity entity, TimeStamp ts)
     bool mouse_pressed       = Mouse::is_mouse_pressed(Button::ButtonLeft);
     bool mouse_just_released = Mouse::is_mouse_released(Button::ButtonLeft);
 
-    if (state & Button_State::Hovered)
-    {
-      if (state & Button_State::Pressed)
-      {
+    if (state & Button_State::Hovered) {
+      if (state & Button_State::Pressed) {
         state |= Button_State::Active;
-      }
-      else if (state & Button_State::Active && mouse_pressed)
-      {
+      } else if (state & Button_State::Active && mouse_pressed) {
         state |= Button_State::Active;
         state &= ~Button_State::Pressed;
-      }
-      else if (state & Button_State::Active && mouse_just_released)
-      {
+      } else if (state & Button_State::Active && mouse_just_released) {
         state &= ~Button_State::Active;
       }
-    }
-    else
-    {
+    } else {
       state &= ~(Button_State::Pressed | Button_State::Active);
     }
     comps.current_state = Button_Visual::get_active_state(state);
-  }
-  else
+  } else
     comps.current_state = Button_Visual_State::Normal;
 
   auto it = comps.overrides.find(comps.current_state);
-  if (it != comps.overrides.end())
-  {
+  if (it != comps.overrides.end()) {
     comps.base = it->second;
     return;
   }
   comps.base = comps.overrides.find(Button_Visual_State::Normal)->second;
 }
-void ButtonNode::draw(Entity entity)
-{
+void ButtonNode::draw(Entity entity) {
   int entity_id = (int)(entity.get_id());
 
   const auto& transform = Transform_Component::get_world_transform(entity);
   Rectangle   rectangle;
   Text        text;
 
-  if (entity.has_component<Button_Component>() && entity.has_component<Text_Component>())
-  {
+  if (entity.has_component<Button_Component>() && entity.has_component<Text_Component>()) {
     auto& props      = entity.get_component<Button_Component>();
     auto& text_comps = entity.get_component<Text_Component>();
 
@@ -134,18 +117,16 @@ void ButtonNode::draw(Entity entity)
     text.padding      = vec2f(0.0f, 0.0f);
   }
 
-  if (Engine::is_runtime())
-  {
-    NodeHelper::set_value(entity, &UI_Component::mode, rectangle.mode);
-    NodeHelper::set_value(entity, &UI_Component::mode, text.mode);
-    text.draw_rect = false;
-  }
+#ifdef AERO_RUNTIME
+  NodeHelper::set_value(entity, &UI_Component::mode, rectangle.mode);
+  NodeHelper::set_value(entity, &UI_Component::mode, text.mode);
+  text.draw_rect = false;
+#endif
 
   Renderer2D::draw_rectangle(rectangle, transform, entity_id);
   Renderer2D::draw_text(text, transform, entity_id);
 
-  if (entity.has_component<ButtonState_Component>())
-  {
+  if (entity.has_component<ButtonState_Component>()) {
     auto& state = entity.get_component<ButtonState_Component>().button_state;
     state &= ~(Button_State::Hovered | Button_State::Pressed);
   }

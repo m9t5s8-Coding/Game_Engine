@@ -5,17 +5,12 @@
 
 static bool s_running = true;
 
-void on_signal(int)
-{
-  s_running = false;
-}
+void on_signal(int) { s_running = false; }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   ag::Log::init_simple();
 
-  if (argc < 2)
-  {
+  if (argc < 2) {
     AERO_SERVER_ERROR("Usuage Server <project_path>");
     return -1;
   }
@@ -24,16 +19,14 @@ int main(int argc, char** argv)
   AERO_SERVER_INFO("Loading Project: {0}", project_path);
 
   auto project = ag::Project::load_project(project_path);
-  if (!project)
-  {
+  if (!project) {
     AERO_SERVER_ERROR("Failed to Load Project!");
     return -1;
   }
 
   auto& config = project->get_server_config();
 
-  if (!config.enabled)
-  {
+  if (!config.enabled) {
     AERO_CORE_ERROR("Networking not enabled in project!");
     return -1;
   }
@@ -43,12 +36,7 @@ int main(int argc, char** argv)
   AERO_SERVER_INFO("Tick Rate: {0}", config.tick_rate);
   AERO_SERVER_INFO("Scripts: {0}", config.scripts.size());
 
-  ag::ScriptManager::init();
-  std::signal(SIGINT, on_signal);
-  std::signal(SIGTERM, on_signal);
-
-  for (auto& script : config.scripts)
-  {
+  for (auto& script : config.scripts) {
     std::string full_path = project->get_directory() + project->get_scripts_directory() + script;
     AERO_SERVER_INFO("Loading script: {0}", full_path);
     ag::ScriptManager::load_script(full_path);
@@ -57,23 +45,19 @@ int main(int argc, char** argv)
   ag::TCPServer server;
   ag::NetworkManager::set_server(&server);
 
-  server.on_client_connected = [](int id)
-  {
+  server.on_client_connected = [](int id) {
     ag::ScriptManager::call("on_client_connected", id);
   };
 
-  server.on_client_disconnected = [](int id)
-  {
+  server.on_client_disconnected = [](int id) {
     ag::ScriptManager::call("on_client_disconnected", id);
   };
 
-  server.on_packet_received = [&](int id, const ag::Packet& packet)
-  {
+  server.on_packet_received = [&](int id, const ag::Packet& packet) {
     ag::ScriptManager::call("on_packet_received", id, packet);
   };
 
-  if (!server.start(config.port))
-  {
+  if (!server.start(config.port)) {
     AERO_SERVER_ERROR("Failed to Start!\n");
     return -1;
   }
@@ -84,8 +68,7 @@ int main(int argc, char** argv)
   const auto tick      = std::chrono::milliseconds(1000 / config.tick_rate);
   auto       last_time = std::chrono::steady_clock::now();
 
-  while (s_running)
-  {
+  while (s_running) {
     auto  now = std::chrono::steady_clock::now();
     float dt  = std::chrono::duration<float>(now - last_time).count();
     last_time = now;

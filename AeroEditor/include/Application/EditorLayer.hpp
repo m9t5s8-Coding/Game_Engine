@@ -3,15 +3,12 @@
 #include <imgui.h>
 
 #include <Aero.hpp>
-#include <iostream>
 #include <Panels/Exportpanel.hpp>
 #include <Panels/ScenePanel.hpp>
 #include <unordered_map>
 
-namespace ag
-{
-class EditorLayer : public Layer
-{
+namespace ag {
+class EditorLayer : public Layer {
 public:
   EditorLayer();
   virtual ~EditorLayer() = default;
@@ -23,52 +20,24 @@ public:
   virtual void on_imgui_render() override;
   virtual void on_event(Event& e) override;
 
-  ag::vec2f get_viewport_mouse_position() const
-  {
-    return m_current_mouse_pos;
-  }
-  vec2f get_last_mouse_position() const
-  {
-    return m_last_mouse_pos;
-  }
+  ag::vec2f get_viewport_mouse_position() const { return m_current_mouse_pos; }
+  vec2f     get_last_mouse_position() const { return m_last_mouse_pos; }
 
-  bool is_viewport_hovered() const
-  {
-    return m_viewport_hovered;
-  }
+  bool is_viewport_hovered() const { return m_viewport_hovered; }
 
-  static EditorLayer& get()
-  {
-    return *s_instance;
-  }
+  static EditorLayer& get() { return *s_instance; }
 
-  float_rect get_float_rect()
-  {
-    return m_view_controller->get_view().get_float_rect();
-  }
-  vec2f get_viewport_size()
-  {
-    return m_viewport_size;
-  }
+  float_rect get_float_rect() { return m_view_controller->get_view().get_float_rect(); }
+  vec2f      get_viewport_size() { return m_viewport_size; }
 
-  View& get_view()
-  {
-    return m_view_controller->get_view();
-  }
+  View& get_view() { return m_view_controller->get_view(); }
 
-  void set_remove_scene(const std::string& remove_scene)
-  {
-    m_scene_to_remove = remove_scene;
-  }
-  std::string get_remove_scene() const
-  {
-    return m_scene_to_remove;
-  }
+  void set_remove_scene(const std::string& remove_scene) { m_scene_to_remove = remove_scene; }
+  std::string get_remove_scene() const { return m_scene_to_remove; }
 
   void print_scene_name(bool all_scene = false);
 
-  void create_scene(const std::string& scene_name, AG_ref<Scene>& scene)
-  {
+  void create_scene(const std::string& scene_name, AG_ref<Scene>& scene) {
     m_scenes[scene_name] = scene;
     m_panel->set_scene(scene);
   }

@@ -3,20 +3,16 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
-void TextNode::create_node(Entity entity)
-{
+namespace ag {
+void TextNode::create_node(Entity entity) {
   Transform_Component::add_component(entity);
   Text_Component::add_component(entity);
 }
-void TextNode::delete_node(Entity entity)
-{
+void TextNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
   entity.delete_entity();
 }
-void TextNode::clone_node(Entity original, Entity clone)
-{
+void TextNode::clone_node(Entity original, Entity clone) {
   Transform_Component::clone_entity(original, clone);
   Text_Component::clone_entity(original, clone);
 
@@ -25,8 +21,7 @@ void TextNode::clone_node(Entity original, Entity clone)
   UI_Component::clone_entity(original, clone);
   Script_Component::clone_entity(original, clone);
 }
-json TextNode::save_json(Entity entity)
-{
+json TextNode::save_json(Entity entity) {
   json j;
 
   NodeHelper::save_component<Transform_Component>(entity, j);
@@ -37,34 +32,27 @@ json TextNode::save_json(Entity entity)
 
   return j;
 }
-void TextNode::load_json(Entity entity, const json& j)
-{
+void TextNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<Text_Component>(entity, j);
   NodeHelper::load_component<FontStyle_Component>(entity, j);
   NodeHelper::load_component<UI_Component>(entity, j);
   NodeHelper::load_component<Script_Component>(entity, j);
 }
-void TextNode::update(Entity entity, TimeStamp ts)
-{
-  Script_Component::update(entity, ts);
-}
-void TextNode::draw(Entity entity)
-{
+void TextNode::update(Entity entity, TimeStamp ts) { Script_Component::update(entity, ts); }
+void TextNode::draw(Entity entity) {
   int         entity_id = (int)(entity.get_id());
   const auto& transform = Transform_Component::get_world_transform(entity);
   Text        text;
 
-  if (entity.has_component<Text_Component>())
-  {
+  if (entity.has_component<Text_Component>()) {
     auto& comps = entity.get_component<Text_Component>();
 
     text.text      = comps.text;
     text.font_size = comps.font_size;
   }
 
-  if (entity.has_component<FontStyle_Component>())
-  {
+  if (entity.has_component<FontStyle_Component>()) {
     const auto& style = entity.get_component<FontStyle_Component>();
 
     text.h_allignment = style.h_allignment;
@@ -74,11 +62,10 @@ void TextNode::draw(Entity entity)
     text.text_color   = style.color;
   }
 
-  if (Engine::is_runtime())
-  {
-    NodeHelper::set_value(entity, &UI_Component::mode, text.mode);
-    text.draw_rect = false;
-  }
+#ifdef AERO_RUNTIME
+  NodeHelper::set_value(entity, &UI_Component::mode, text.mode);
+  text.draw_rect = false;
+#endif
 
   Renderer2D::draw_text(text, transform, entity_id);
 }

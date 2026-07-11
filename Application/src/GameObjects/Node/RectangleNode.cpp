@@ -3,26 +3,22 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
+namespace ag {
 // Rectangle Node Properties
 
 // Rectangle Node
-void RectangleNode::create_node(Entity entity)
-{
+void RectangleNode::create_node(Entity entity) {
   Transform_Component::add_component(entity);
   Render2D_Component::add_component(entity);
 }
 
-void RectangleNode::delete_node(Entity entity)
-{
+void RectangleNode::delete_node(Entity entity) {
   PhysicsBody_Component::remove_component(entity);
   Script_Component::destroy(entity);
   entity.delete_entity();
 }
 
-void RectangleNode::clone_node(Entity original, Entity clone)
-{
+void RectangleNode::clone_node(Entity original, Entity clone) {
   Script_Component::clone_entity(original, clone);
   Transform_Component::clone_entity(original, clone);
   Render2D_Component::clone_entity(original, clone);
@@ -33,8 +29,7 @@ void RectangleNode::clone_node(Entity original, Entity clone)
   Tween_Component::clone_entity(original, clone);
 }
 
-json RectangleNode::save_json(Entity entity)
-{
+json RectangleNode::save_json(Entity entity) {
   json j;
 
   NodeHelper::save_component<Render2D_Component>(entity, j);
@@ -49,8 +44,7 @@ json RectangleNode::save_json(Entity entity)
   return j;
 }
 
-void RectangleNode::load_json(Entity entity, const json& j)
-{
+void RectangleNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<Render2D_Component>(entity, j);
   NodeHelper::load_component<Script_Component>(entity, j);
@@ -61,15 +55,13 @@ void RectangleNode::load_json(Entity entity, const json& j)
   NodeHelper::load_component<Tween_Component>(entity, j);
 }
 
-void RectangleNode::update(Entity entity, TimeStamp ts)
-{
+void RectangleNode::update(Entity entity, TimeStamp ts) {
   PhysicsBody_Component::update_entity(entity);
   Tween_Component::update(entity, ts);
   Script_Component::update(entity, ts);
 }
 
-void RectangleNode::draw(Entity entity)
-{
+void RectangleNode::draw(Entity entity) {
   int         entity_id = (int)(entity.get_id());
   const auto& transform = Transform_Component::get_world_transform(entity);
   Rectangle   rectangle;
@@ -82,8 +74,9 @@ void RectangleNode::draw(Entity entity)
 
   NodeHelper::set_value(entity, &Corner_Component::corner, rectangle.corner_radius);
 
-  if (Engine::is_runtime())
-    NodeHelper::set_value(entity, &UI_Component::mode, rectangle.mode);
+#ifdef AERO_RUNTIME
+  NodeHelper::set_value(entity, &UI_Component::mode, rectangle.mode);
+#endif
 
   Renderer2D::draw_rectangle(rectangle, transform, entity_id);
 }
