@@ -1,14 +1,9 @@
 #include <Application/EditorApp.hpp>
 
-namespace ag
-{
-EditorApp::EditorApp()
-{
-}
+namespace ag {
+EditorApp::EditorApp() {}
 
-void EditorApp::on_create()
-{
-  Engine::stop_runtime();
+void EditorApp::on_create() {
   NodeFactory::init();
   load_project_data();
   Renderer::init();
@@ -17,8 +12,7 @@ void EditorApp::on_create()
   push_layer(new EditorLayer());
 }
 
-void EditorApp::on_destroy()
-{
+void EditorApp::on_destroy() {
   Project::save_project();
   save_json();
 
@@ -26,8 +20,7 @@ void EditorApp::on_destroy()
   NodeFactory::shut_down();
 }
 
-void EditorApp::save_json()
-{
+void EditorApp::save_json() {
   json j;
   {
     Helper::makefile_read_only(AppSettings::get_settings_path(), false);
@@ -37,10 +30,7 @@ void EditorApp::save_json()
 
     in_file.close();
 
-    Helper::save_json(j,
-                      "Mode",
-                      (int)AppSettings::Mode::ProjectManager,
-                      (int)AppSettings::Mode::ProjectManager);
+    Helper::save_json(j, "Mode", (int)AppSettings::Mode::ProjectManager, -1);
 
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
@@ -53,8 +43,7 @@ void EditorApp::save_json()
     auto project_file_path = project->get_project_file_directory();
     Helper::makefile_read_only(project_file_path, false);
     std::ifstream in_file(project_file_path);
-    if (!in_file.is_open())
-    {
+    if (!in_file.is_open()) {
       AERO_CORE_INFO("Cannot Open File: {0}", project_file_path);
     }
     in_file >> j;
@@ -69,8 +58,7 @@ void EditorApp::save_json()
                       std::string(""));
 
     std::ofstream out_file(project_file_path);
-    if (!out_file.is_open())
-    {
+    if (!out_file.is_open()) {
       AERO_CORE_INFO("Cannot Open File: {0}", project_file_path);
     }
     out_file << j.dump(4);
@@ -79,14 +67,12 @@ void EditorApp::save_json()
   }
 }
 
-void EditorApp::load_project_data()
-{
+void EditorApp::load_project_data() {
   json j;
   Helper::makefile_read_only(AppSettings::get_settings_path(), false);
   std::ifstream in_file(AppSettings::get_settings_path());
 
-  if (!in_file.is_open())
-  {
+  if (!in_file.is_open()) {
     AERO_CORE_INFO("Cannot Open File!");
     return;
   }
@@ -97,8 +83,7 @@ void EditorApp::load_project_data()
   std::string project_path;
   Helper::load_json(j["Project"], "Directory", project_path, std::string(""));
   auto project = Project::load_project(project_path);
-  if (!project->m_project_loaded)
-  {
+  if (!project->m_project_loaded) {
     Helper::makefile_read_only(AppSettings::get_settings_path(), false);
     std::ifstream in_file(AppSettings::get_settings_path());
     if (in_file.is_open())
@@ -119,8 +104,7 @@ void EditorApp::load_project_data()
 
   Helper::makefile_read_only(project->get_project_file_directory(), false);
   std::ifstream in_proj_file(project->get_project_file_directory());
-  if (!in_proj_file.is_open())
-  {
+  if (!in_proj_file.is_open()) {
     AERO_CORE_INFO("Cannot Open File");
     return;
   }

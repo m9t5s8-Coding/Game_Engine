@@ -4,6 +4,8 @@
 #include <Core/Core.hpp>
 #include <filesystem>
 #include <Helper.hpp>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #ifdef PLATFORM_WINDOWS
   #include <windows.h>
@@ -14,8 +16,8 @@
 
 namespace ag {
 AppSettings::Mode AppSettings::s_mode                 = AppSettings::Mode::ProjectManager;
-std::string       AppSettings::s_settings_path        = "";
-std::string       AppSettings::s_recent_projects_path = "";
+std::string       AppSettings::s_settings_path        = std::string("");
+std::string       AppSettings::s_recent_projects_path = std::string("");
 bool              AppSettings::s_loaded               = false;
 
 void AppSettings::load() {
@@ -29,10 +31,8 @@ void AppSettings::ensure_loaded() {
   if (s_loaded)
     return;
 
-  if (!s_loaded) {
-    create_app_folder();
-    s_loaded = true;
-  }
+  create_app_folder();
+  s_loaded = true;
 }
 
 std::string AppSettings::get_appdata_path() {

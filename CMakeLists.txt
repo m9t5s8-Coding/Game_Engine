@@ -9,11 +9,7 @@ endif()
 
 project("Game_Engine" LANGUAGES C CXX)
 
-if(EMSCRIPTEN)
-  set(PLATFORM_NAME "Web")
-  add_definitions(-DPLATFORM_WEB)
-  message(STATUS "Building for Web")
-elseif(ANDROID)
+if(ANDROID)
   set(PLATFORM_NAME "Android")
   add_definitions(-DPLATFORM_ANDROID)
   message(STATUS "Building for Android")
@@ -69,7 +65,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# =============================================================================
+# RUNTIME LINKING - PLATFORM SPECIFIC
+# =============================================================================
+
 if(MSVC)
+  # Windows: All configurations use /MD (dynamic runtime)
   set(CMAKE_CXX_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
   set(CMAKE_C_FLAGS_DEBUG "/MDd /Zi /Ob0 /Od /RTC1")
   set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Ob2 /D NDEBUG")
@@ -78,19 +79,18 @@ if(MSVC)
   set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Zi /O2 /Ob1 /D NDEBUG")
   set(CMAKE_CXX_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
   set(CMAKE_C_FLAGS_MINSIZEREL "/MD /O1 /Ob1 /D NDEBUG")
-  # Distributed: static runtime + full optimization + LTO
-  set(CMAKE_CXX_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /GL /Gy")
-  set(CMAKE_C_FLAGS_DISTRIBUTED "/MT /O2 /Ob2 /D NDEBUG /GL /Gy")
+  # Distributed now uses /MD (dynamic) instead of /MT
+  set(CMAKE_CXX_FLAGS_DISTRIBUTED "/MD /O2 /Ob2 /D NDEBUG /GL /Gy")
+  set(CMAKE_C_FLAGS_DISTRIBUTED "/MD /O2 /Ob2 /D NDEBUG /GL /Gy")
   set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTED
       "/INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF")
   set(CMAKE_SHARED_LINKER_FLAGS_DISTRIBUTED
       "/INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF")
   set(CMAKE_STATIC_LINKER_FLAGS_DISTRIBUTED "/LTCG")
   message(
-    STATUS "MSVC: Distributed configuration will use /MT (static runtime)")
+    STATUS "MSVC: All configurations using dynamic runtime (/MD)")
 
-elseif(UNIX AND NOT APPLE)
-  # GCC / Clang on Linux
+elseif(UNIX AND NOT APPLE AND NOT ANDROID)
   set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
   set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
@@ -99,19 +99,17 @@ elseif(UNIX AND NOT APPLE)
   set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
   set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
   set(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG")
-  # Distributed: maximum optimization + LTO + strip symbols
+  # Distributed: maximum optimization + LTO + strip symbols + dynamic runtime
   set(CMAKE_CXX_FLAGS_DISTRIBUTED
-      "-O3 -DNDEBUG -flto -ffunction-sections -fdata-sections -fvisibility=hidden"
-  )
+      "-O3 -DNDEBUG -flto -ffunction-sections -fdata-sections -fvisibility=hidden -shared-libstdc++")
   set(CMAKE_C_FLAGS_DISTRIBUTED
-      "-O3 -DNDEBUG -flto -ffunction-sections -fdata-sections -fvisibility=hidden"
-  )
-  set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTED "-flto -Wl,--gc-sections -Wl,-s")
-  set(CMAKE_SHARED_LINKER_FLAGS_DISTRIBUTED "-flto -Wl,--gc-sections -Wl,-s")
+      "-O3 -DNDEBUG -flto -ffunction-sections -fdata-sections -fvisibility=hidden")
+  set(CMAKE_EXE_LINKER_FLAGS_DISTRIBUTED "-flto -Wl,--gc-sections -Wl,-s -shared-libstdc++ -Wl,--as-needed")
+  set(CMAKE_SHARED_LINKER_FLAGS_DISTRIBUTED "-flto -Wl,--gc-sections -Wl,-s -shared-libstdc++ -Wl,--as-needed")
   set(CMAKE_STATIC_LINKER_FLAGS_DISTRIBUTED "")
   message(
     STATUS
-      "GCC/Clang: Distributed configuration will use LTO + strip + gc-sections")
+      "GCC/Clang: Using shared libstdc++ (dynamic runtime) with LTO + strip + gc-sections")
 
 elseif(APPLE)
   # Clang on macOS
@@ -169,7 +167,7 @@ function(set_msvc_runtime_library target)
 $<$<CONFIG:Release>:MultiThreadedDLL>\
 $<$<CONFIG:RelWithDebInfo>:MultiThreadedDLL>\
 $<$<CONFIG:MinSizeRel>:MultiThreadedDLL>\
-$<$<CONFIG:Distributed>:MultiThreaded>")
+$<$<CONFIG:Distributed>:MultiThreadedDLL>")  # Changed to /MD
   endif()
 endfunction()
 
@@ -362,7 +360,7 @@ if(MSVC)
 $<$<CONFIG:Release>:MultiThreadedDLL>\
 $<$<CONFIG:RelWithDebInfo>:MultiThreadedDLL>\
 $<$<CONFIG:MinSizeRel>:MultiThreadedDLL>\
-$<$<CONFIG:Distributed>:MultiThreaded>")
+$<$<CONFIG:Distributed>:MultiThreadedDLL>")  # Changed to /MD
 endif()
 
 if(MSVC)
@@ -384,7 +382,7 @@ if(MSVC)
 $<$<CONFIG:Release>:MultiThreadedDLL>\
 $<$<CONFIG:RelWithDebInfo>:MultiThreadedDLL>\
 $<$<CONFIG:MinSizeRel>:MultiThreadedDLL>\
-$<$<CONFIG:Distributed>:MultiThreaded>")
+$<$<CONFIG:Distributed>:MultiThreadedDLL>")  # Changed to /MD
       endif()
     endif()
   endforeach()
@@ -401,7 +399,7 @@ $<$<CONFIG:Distributed>:MultiThreaded>")
 $<$<CONFIG:Release>:MultiThreadedDLL>\
 $<$<CONFIG:RelWithDebInfo>:MultiThreadedDLL>\
 $<$<CONFIG:MinSizeRel>:MultiThreadedDLL>\
-$<$<CONFIG:Distributed>:MultiThreaded>")
+$<$<CONFIG:Distributed>:MultiThreadedDLL>")  # Changed to /MD
       endif()
     endif()
   endforeach()
@@ -1108,7 +1106,7 @@ else()
   )
   if(WIN32)
     message(
-      STATUS " Distributed : /MT static runtime, LTO (/GL/LTCG), NSIS installer"
+      STATUS " Distributed : /MD dynamic runtime, LTO (/GL/LTCG), NSIS installer"
     )
   elseif(UNIX AND NOT APPLE)
     message(

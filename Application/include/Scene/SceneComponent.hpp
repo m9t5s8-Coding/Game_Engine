@@ -18,19 +18,16 @@
 #include <Scripting/LuaFunc.hpp>
 #include <string>
 
-namespace ag
-{
+namespace ag {
 static std::string                         default_path = "assets/textures/";
 inline std::unordered_map<AG_uint, Entity> index_map;
 
-enum class RenderMode
-{
+enum class RenderMode {
   Screen = 0,
   World  = 1
 };
 
-enum class NodeType
-{
+enum class NodeType {
   None             = -1,
   Rectangle        = 0,
   Circle           = 1,
@@ -46,8 +43,7 @@ enum class NodeType
   Audio            = 11,
 };
 
-enum class Node_Capability : uint32_t
-{
+enum class Node_Capability : uint32_t {
   None        = 0,
   Render2D    = 1 << 0,
   Physics2D   = 1 << 1,
@@ -62,15 +58,13 @@ enum class Node_Capability : uint32_t
   Text        = 1 << 10,
 };
 
-enum class RenderLayer
-{
+enum class RenderLayer {
   BackGround,
   ForeGround,
   MidGround
 };
 
-struct Rectangle
-{
+struct Rectangle {
   vec2f      size;
   Color      fill_color       = Color::White;
   float      border_thickness = 0.0f;
@@ -79,8 +73,7 @@ struct Rectangle
   RenderMode mode = RenderMode::World;
 };
 
-struct Circle
-{
+struct Circle {
   vec2f      size;
   Color      fill_color       = Color::White;
   float      border_thickness = 0.0f;
@@ -88,8 +81,7 @@ struct Circle
   RenderMode mode = RenderMode::World;
 };
 
-struct Sprite
-{
+struct Sprite {
   vec2f      size;
   uint_rect  texture_rect;
   Color      fill_color      = Color::White;

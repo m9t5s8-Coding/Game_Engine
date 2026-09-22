@@ -1,0 +1,61 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "runtime",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_SANDBOX": "ON",
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SERVER": "OFF",
+        "BUILD_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "editor",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_EDITOR": "ON",
+        "BUILD_SANDBOX": "OFF",
+        "BUILD_SERVER": "OFF",
+        "BUILD_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "editor-runtime",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_EDITOR": "ON",
+        "BUILD_SANDBOX": "ON",
+        "BUILD_SERVER": "OFF",
+        "BUILD_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "server",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SANDBOX": "OFF",
+        "BUILD_SERVER": "ON",
+        "BUILD_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "full",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_EDITOR": "ON",
+        "BUILD_SANDBOX": "ON",
+        "BUILD_SERVER": "ON",
+        "BUILD_TOOLS": "ON"
+      }
+    }
+  ]
+}

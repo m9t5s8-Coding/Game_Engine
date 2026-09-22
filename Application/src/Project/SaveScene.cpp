@@ -9,10 +9,8 @@
 
 namespace fs = std::filesystem;
 
-namespace ag
-{
-void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
-{
+namespace ag {
+void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path) {
   if (!scene->is_save_required())
     return;
 
@@ -27,8 +25,7 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
   {
     json  root_json = json::array();
     auto& roots     = scene->get_root_entity();
-    for (auto id : roots)
-    {
+    for (auto id : roots) {
       Entity e(id);
       auto   index = e.get_component<Tag_Component>().index;
       root_json.push_back(index);
@@ -37,10 +34,8 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
   }
 
   auto view = scene->m_registry.view<Tag_Component>();
-  if (!view.empty())
-  {
-    for (auto entityID : view)
-    {
+  if (!view.empty()) {
+    for (auto entityID : view) {
       if (!scene->m_registry.valid(entityID))
         continue;
 
@@ -51,18 +46,15 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
 
       const auto& tag        = e.get_component<Tag_Component>();
       json        entityjson = Tag_Component::save_json(e);
-      if (!entityjson.is_object())
-      {
+      if (!entityjson.is_object()) {
         entityjson = json::object();
       }
 
       auto it = NodeFactory::save_map.find(tag.node_type);
-      if (it != NodeFactory::save_map.end())
-      {
+      if (it != NodeFactory::save_map.end()) {
         json nodejson = it->second(e);
 
-        if (!nodejson.is_object())
-        {
+        if (!nodejson.is_object()) {
           nodejson = json::object();
         }
 
@@ -74,8 +66,7 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
 
   Helper::makefile_read_only(path, false);
   std::ofstream file(path, std::ios::trunc);
-  if (!file.is_open())
-  {
+  if (!file.is_open()) {
     AERO_CORE_INFO("Failed to Open File for Saving: {}", path);
     return;
   }
@@ -87,22 +78,17 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path)
   Helper::makefile_read_only(path);
 }
 
-AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
-{
+AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts) {
   AG_ref<Scene> scene = Scene::create();
 
   json j;
 
-  if (AssetManager::is_packed(AssetManager::Domain::Project))
-  {
+  if (AssetManager::is_packed(AssetManager::Domain::Project)) {
     j = AssetManager::read_json(path, AssetManager::Domain::Project);
-  }
-  else
-  {
+  } else {
     Helper::makefile_read_only(path, false);
     std::ifstream file(path);
-    if (!file.is_open())
-    {
+    if (!file.is_open()) {
       AERO_CORE_ERROR("Failed to Open File!");
       return Scene::create("default");
     }
@@ -125,8 +111,7 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
   std::unordered_map<AG_uint, Entity> id_map;
 
   // Load and Create Entity
-  for (auto& entityjson : j["Scene"]["Entities"])
-  {
+  for (auto& entityjson : j["Scene"]["Entities"]) {
     NodeType    type;
     std::string name;
     {
@@ -149,21 +134,18 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
   // Load Childrens
   {
     auto view = scene->m_registry.view<Tag_Component>();
-    for (auto entityID : view)
-    {
+    for (auto entityID : view) {
       Entity e(entityID);
       Tag_Component::load_children(e);
     }
   }
 
   // Load Entity Data
-  for (auto& entityjson : j["Scene"]["Entities"])
-  {
+  for (auto& entityjson : j["Scene"]["Entities"]) {
     AG_uint id;
     Helper::load_json(entityjson, "ID", id, (AG_uint)0);
     auto it_map = id_map.find(id);
-    if (it_map == id_map.end())
-    {
+    if (it_map == id_map.end()) {
       AERO_CORE_ERROR("Entity ID {0} not found in id_map — skipping", id);
       continue;
     }
@@ -173,23 +155,19 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
     NodeType type = static_cast<NodeType>(node);
 
     auto it = NodeFactory::load_map.find(type);
-    if (it != NodeFactory::load_map.end())
-    {
+    if (it != NodeFactory::load_map.end()) {
       it->second(e, entityjson);
     }
   }
 
   // Make Roots Entities
-  if (j["Scene"].contains("Roots") && j["Scene"]["Roots"].is_array())
-  {
+  if (j["Scene"].contains("Roots") && j["Scene"]["Roots"].is_array()) {
     const auto& root_ids = j["Scene"]["Roots"];
     root_available       = true;
-    for (auto& id_json : root_ids)
-    {
+    for (auto& id_json : root_ids) {
       AG_uint root_id = id_json.get<AG_uint>();
       auto    it      = id_map.find(root_id);
-      if (it == id_map.end())
-      {
+      if (it == id_map.end()) {
         continue;
       }
 
@@ -200,8 +178,7 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
   scene->set_root_available(root_available);
 
   // Load Scripts
-  if (load_scripts)
-  {
+  if (load_scripts) {
     load_scene_scripts(scene);
   }
 
@@ -216,21 +193,18 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts)
   return scene;
 }
 
-void SaveScene::load_scene_scripts(AG_ref<Scene> scene)
-{
+void SaveScene::load_scene_scripts(AG_ref<Scene> scene) {
   if (!scene)
     return;
 
   Scene::set_active_scene(scene);
-  if (Engine::is_runtime())
-  {
-    auto view = scene->m_registry.view<Script_Component>();
-    for (auto entityID : view)
-    {
-      Entity e(entityID);
-      Script_Component::load_scripts(e);
-    }
+#ifdef AERO_RUNTIME
+  auto view = scene->m_registry.view<Script_Component>();
+  for (auto entityID : view) {
+    Entity e(entityID);
+    Script_Component::load_scripts(e);
   }
+#endif
 }
 
 }  // namespace ag

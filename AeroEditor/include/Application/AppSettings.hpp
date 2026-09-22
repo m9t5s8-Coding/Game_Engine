@@ -2,8 +2,6 @@
 
 #include <string>
 
-using json = nlohmann::json;
-
 namespace ag {
 class AppSettings {
 public:
@@ -16,7 +14,10 @@ public:
 
   static void ensure_loaded();
 
-  static void get_mode() { ensure_loaded(); }
+  static Mode get_mode() {
+    ensure_loaded();
+    return s_mode;
+  }
   static void set_mode(Mode mode) {
     s_mode = mode;
     save_mode();

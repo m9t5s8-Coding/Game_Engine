@@ -1,17 +1,10 @@
 #include <Application/ProjectManagerApp.hpp>
 #include <Core/Log.hpp>
 
-namespace ag
-{
-ProjectManagerApp::ProjectManagerApp()
-{
-  push_layer(new ProjectManagerLayer());
-}
+namespace ag {
+ProjectManagerApp::ProjectManagerApp() { push_layer(new ProjectManagerLayer()); }
 
-void ProjectManagerApp::on_create()
-{
-  Engine::stop_runtime();
-
+void ProjectManagerApp::on_create() {
 #ifndef PLATFORM_ANDROID
   WindowProps props;
   props.Size  = vec2u(650, 720);
@@ -22,7 +15,5 @@ void ProjectManagerApp::on_create()
 #endif
 }
 
-void ProjectManagerApp::on_destroy()
-{
-}
+void ProjectManagerApp::on_destroy() {}
 }  // namespace ag

@@ -1,24 +1,21 @@
 ﻿#pragma once
 
-#include "box2d/box2d.h"
+#include <box2d/box2d.h>
 
 #include <Core/TimeStamp.hpp>
-#include <cstdint>
 #include <entt.hpp>
 #include <Events/Event.hpp>
 #include <Scripting/ScriptBinding/SignalManager.hpp>
 #include <string>
 
-namespace ag
-{
+namespace ag {
 class Entity;
 class ScenePanel;
 class SaveScene;
 class EditorLayer;
 enum class NodeType;
 class GroundContactListener;
-class Scene
-{
+class Scene {
 public:
   Scene();
   ~Scene();
@@ -33,95 +30,43 @@ public:
   Entity create_entity(const std::string& name, NodeType type, bool is_cloning = false);
   Entity duplicate_entity(Entity original, Entity parent);
 
-  void set_name(const std::string& name)
-  {
-    m_name = name;
-  }
-  const std::string& get_name() const
-  {
-    return m_name;
-  }
+  void               set_name(const std::string& name) { m_name = name; }
+  const std::string& get_name() const { return m_name; }
 
-  void set_directory(const std::string& path)
-  {
-    m_directory = path;
-  }
-  const std::string& get_directory() const
-  {
-    return m_directory;
-  }
+  void               set_directory(const std::string& path) { m_directory = path; }
+  const std::string& get_directory() const { return m_directory; }
 
-  bool has_name()
-  {
-    return !m_name.empty();
-  }
-  bool has_directory()
-  {
-    return !m_directory.empty();
-  }
+  bool has_name() { return !m_name.empty(); }
+  bool has_directory() { return !m_directory.empty(); }
 
-  bool is_save_required() const
-  {
-    return m_save_required;
-  }
-  void set_save_required(bool required = true)
-  {
-    if (m_save_required != required)
-    {
+  bool is_save_required() const { return m_save_required; }
+  void set_save_required(bool required = true) {
+    if (m_save_required != required) {
       m_save_required = required;
     }
   }
 
-  AG_uint get_index() const
-  {
-    return m_next_index;
-  }
-  void set_next_index(AG_uint index)
-  {
-    m_next_index = index;
-  }
+  AG_uint get_index() const { return m_next_index; }
+  void    set_next_index(AG_uint index) { m_next_index = index; }
 
-  inline b2World& get_world()
-  {
-    return *m_world;
-  }
-  GroundContactListener* get_contact_listener()
-  {
-    return m_contact_listener.get();
-  }
+  inline b2World&        get_world() { return *m_world; }
+  GroundContactListener* get_contact_listener() { return m_contact_listener.get(); }
 
-  std::vector<AG_uint>& get_root_entity()
-  {
-    return m_root_entity;
-  };
-  void push_back_root(AG_uint entityID)
-  {
-    m_root_entity.push_back(entityID);
-  };
+  std::vector<AG_uint>& get_root_entity() { return m_root_entity; };
+  void                  push_back_root(AG_uint entityID) { m_root_entity.push_back(entityID); };
 
-  void set_root_available(bool available)
-  {
-    m_root_available = available;
-  }
+  void set_root_available(bool available) { m_root_available = available; }
 
   template <typename T>
-  auto get_view()
-  {
+  auto get_view() {
     return m_registry.view<T>();
   }
 
   void destroy_entity(Entity entity);
 
-  static AG_ref<Scene> get_active_scene()
-  {
-    return s_active_scene;
-  }
-  static void set_active_scene(const AG_ref<Scene>& scene)
-  {
-    s_active_scene = scene;
-  }
-  inline static void save_required(bool required = true)
-  {
+  static AG_ref<Scene> get_active_scene() { return s_active_scene; }
+  static void          set_active_scene(const AG_ref<Scene>& scene) { s_active_scene = scene; }
+  inline static void   save_required(bool required = true) {
     auto scene = get_active_scene();
     scene->set_save_required(required);
   }

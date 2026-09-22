@@ -6,41 +6,34 @@
 #include <string>
 #include <vector>
 
-namespace ag
-{
+namespace ag {
 static constexpr uint32_t PAK_MAGIC   = 0x41455241;
 static constexpr uint32_t PAK_VERSION = 1;
 
-struct PackedEntry
-{
+struct PackedEntry {
   uint64_t offset;
   uint64_t size;
 };
 
-class GamePacker
-{
+class GamePacker {
 public:
-  struct PackResult
-  {
+  struct PackResult {
     bool     success   = false;
     uint32_t fileCount = 0;
     uint64_t totalSize = 0;
   };
 
-  static PackResult pack(const std::string& project_root, const std::string& output_pak)
-  {
+  static PackResult pack(const std::string& project_root, const std::string& output_pak) {
     namespace fs = std::filesystem;
     PackResult result;
 
-    if (!fs::exists(project_root))
-    {
+    if (!fs::exists(project_root)) {
       std::cerr << "[Packer] ERROR: Project root does not exist: " << project_root << std::endl;
       return result;
     }
 
     // Collect all files
-    struct FileData
-    {
+    struct FileData {
       std::string          rel_path;
       std::vector<uint8_t> data;
     };
@@ -50,8 +43,7 @@ public:
 
     std::cout << "[Packer] Scanning: " << project_root << std::endl;
 
-    for (auto& entry : fs::recursive_directory_iterator(project_root))
-    {
+    for (auto& entry : fs::recursive_directory_iterator(project_root)) {
       if (entry.is_directory())
         continue;
 
@@ -65,8 +57,7 @@ public:
         continue;
 
       std::ifstream in(entry.path(), std::ios::binary | std::ios::ate);
-      if (!in.is_open())
-      {
+      if (!in.is_open()) {
         std::cerr << "[Packer] WARNING: Cannot read: " << entry.path() << std::endl;
         continue;
       }
@@ -85,8 +76,7 @@ public:
       files.push_back(std::move(fd));
     }
 
-    if (files.empty())
-    {
+    if (files.empty()) {
       std::cerr << "[Packer] ERROR: No files found to pack." << std::endl;
       return result;
     }
@@ -101,8 +91,7 @@ public:
 
     // Write .pak
     std::ofstream out(output_pak, std::ios::binary);
-    if (!out.is_open())
-    {
+    if (!out.is_open()) {
       std::cerr << "[Packer] ERROR: Cannot create output file: " << output_pak << std::endl;
       return result;
     }
@@ -116,8 +105,7 @@ public:
 
     // Entry table
     uint64_t current_offset = 0;
-    for (auto& f : files)
-    {
+    for (auto& f : files) {
       uint32_t pathLen = (uint32_t)f.rel_path.size();
       uint64_t size    = (uint64_t)f.data.size();
 
@@ -130,8 +118,7 @@ public:
     }
 
     // File data
-    for (auto& f : files)
-      out.write((char*)f.data.data(), f.data.size());
+    for (auto& f : files) out.write((char*)f.data.data(), f.data.size());
 
     out.close();
 
@@ -147,10 +134,8 @@ public:
 };
 }  // namespace ag
 
-int main(int argc, char** argv)
-{
-  if (argc < 3)
-  {
+int main(int argc, char** argv) {
+  if (argc < 3) {
     std::cerr << "Usage: AssetPacker <assets_folder> <output.pak>\n";
     return 1;
   }
@@ -160,8 +145,7 @@ int main(int argc, char** argv)
 
   auto result = ag::GamePacker::pack(input, output);
 
-  if (!result.success)
-  {
+  if (!result.success) {
     std::cerr << "[AssetPacker] Failed to pack assets.\n";
     return 1;
   }

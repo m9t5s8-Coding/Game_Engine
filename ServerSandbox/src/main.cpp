@@ -1,6 +1,5 @@
 #include <Aero.hpp>
 #include <chrono>
-#include <csignal>
 #include <thread>
 
 static bool s_running = true;

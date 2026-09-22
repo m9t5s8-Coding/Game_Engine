@@ -6,17 +6,11 @@
 #include <Renderer/Renderer2D.hpp>
 #include <Renderer/ViewController.hpp>
 
-namespace ag
-{
+namespace ag {
 
-void Tag_Component::add_component(Entity entity)
-{
-}
-void Tag_Component::remove_component(Entity entity)
-{
-}
-json Tag_Component::save_json(Entity entity)
-{
+void Tag_Component::add_component(Entity entity) {}
+void Tag_Component::remove_component(Entity entity) {}
+json Tag_Component::save_json(Entity entity) {
   json  j;
   auto& tag = entity.get_component<Tag_Component>();
 
@@ -26,17 +20,14 @@ json Tag_Component::save_json(Entity entity)
   Helper::load_json(j, "Locked", tag.locked, false);
   Helper::save_json(j, "ID", tag.index, (AG_uint)0);
 
-  if (tag.parent.get_id() != INVALID_ENTITY)
-  {
+  if (tag.parent.get_id() != INVALID_ENTITY) {
     auto parent_index = tag.parent.get_component<Tag_Component>().index;
     Helper::save_json(j, "Parent", parent_index, (AG_uint)INVALID_ENTITY);
   }
 
-  if (!tag.children.empty())
-  {
+  if (!tag.children.empty()) {
     json children_json = json::array();
-    for (auto& child : tag.children)
-    {
+    for (auto& child : tag.children) {
       auto child_index = child.get_component<Tag_Component>().index;
       children_json.push_back(child_index);
     }
@@ -44,8 +35,7 @@ json Tag_Component::save_json(Entity entity)
   }
   return j;
 }
-void Tag_Component::load_json(Entity entity, const json& j)
-{
+void Tag_Component::load_json(Entity entity, const json& j) {
   auto& tag = entity.get_component<Tag_Component>();
   Helper::load_json(j, "Name", tag.name, std::string(""));
   Helper::load_json(j, "NodeType", tag.node_type, NodeType::None);
@@ -54,12 +44,10 @@ void Tag_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Locked", tag.locked, false);
   Helper::load_json(j, "Parent", tag.parent_id, (AG_uint)INVALID_ENTITY);
 
-  if (j.contains("Children") && j["Children"].is_array())
-  {
+  if (j.contains("Children") && j["Children"].is_array()) {
     auto& child_array = j["Children"];
     tag.children_id.clear();
-    for (auto& id_json : child_array)
-    {
+    for (auto& id_json : child_array) {
       AG_uint child_id = id_json.get<AG_uint>();
       tag.children_id.push_back(child_id);
     }
@@ -67,19 +55,15 @@ void Tag_Component::load_json(Entity entity, const json& j)
 
   index_map[tag.index] = entity;
 }
-void Tag_Component::load_children(Entity entity)
-{
+void Tag_Component::load_children(Entity entity) {
   auto& tag = entity.get_component<Tag_Component>();
-  if (tag.parent_id != INVALID_ENTITY)
-  {
-    if (index_map.contains(tag.parent_id))
-    {
+  if (tag.parent_id != INVALID_ENTITY) {
+    if (index_map.contains(tag.parent_id)) {
       tag.parent = index_map[tag.parent_id];
     }
   }
 
-  for (auto& child_id : tag.children_id)
-  {
+  for (auto& child_id : tag.children_id) {
     if (!index_map.contains(child_id))
       continue;
 
@@ -87,34 +71,24 @@ void Tag_Component::load_children(Entity entity)
     tag.children.push_back(child);
   }
 }
-void Tag_Component::clone_entity(Entity original, Entity duplicate, Entity parent)
-{
+void Tag_Component::clone_entity(Entity original, Entity duplicate, Entity parent) {
   const auto& original_tag  = original.get_component<Tag_Component>();
   auto&       duplicate_tag = duplicate.get_component<Tag_Component>();
   duplicate_tag.visible     = original_tag.visible;
-  if (parent.get_id() != INVALID_ENTITY)
-  {
+  if (parent.get_id() != INVALID_ENTITY) {
     duplicate_tag.parent = parent;
     auto& parent_tag     = parent.get_component<Tag_Component>();
     parent_tag.children.push_back(duplicate);
   }
   duplicate_tag.children.clear();
   auto scene = Scene::get_active_scene();
-  for (auto& children : original_tag.children)
-  {
+  for (auto& children : original_tag.children) {
     scene->duplicate_entity(children, duplicate);
   }
 }
-bool Tag_Component::is_compatible(NodeType type)
-{
-  return true;
-}
-const char* Tag_Component::get_name()
-{
-  return "Tag";
-}
-bool Tag_Component::get_visibility(Entity entity)
-{
+bool        Tag_Component::is_compatible(NodeType type) { return true; }
+const char* Tag_Component::get_name() { return "Tag"; }
+bool        Tag_Component::get_visibility(Entity entity) {
   if (!entity.has_component<Tag_Component>())
     return true;
 
@@ -128,8 +102,7 @@ bool Tag_Component::get_visibility(Entity entity)
 
   return true;
 }
-bool Tag_Component::get_lock(Entity entity)
-{
+bool Tag_Component::get_lock(Entity entity) {
   if (!entity.has_component<Tag_Component>())
     return true;
 
@@ -143,8 +116,7 @@ bool Tag_Component::get_lock(Entity entity)
 
   return true;
 }
-bool Tag_Component::is_parent(Entity child, Entity parent)
-{
+bool Tag_Component::is_parent(Entity child, Entity parent) {
   if (child.get_id() == INVALID_ENTITY || parent.get_id() == INVALID_ENTITY)
     return false;
 
@@ -153,8 +125,7 @@ bool Tag_Component::is_parent(Entity child, Entity parent)
   std::unordered_set<uint32_t> visited;
   Entity                       current = child;
 
-  while (current.get_id() != INVALID_ENTITY)
-  {
+  while (current.get_id() != INVALID_ENTITY) {
     if (!current.has_component<Tag_Component>())
       return false;
 
@@ -172,16 +143,13 @@ bool Tag_Component::is_parent(Entity child, Entity parent)
   return false;
 }
 
-void Transform_Component::add_component(Entity entity)
-{
+void Transform_Component::add_component(Entity entity) {
   entity.add_component<Transform_Component>();
 }
-void Transform_Component::remove_component(Entity entity)
-{
+void Transform_Component::remove_component(Entity entity) {
   entity.remove_component<Transform_Component>();
 }
-json Transform_Component::save_json(Entity entity)
-{
+json Transform_Component::save_json(Entity entity) {
   json        j;
   const auto& props = entity.get_component<Transform_Component>();
   Helper::save_json(j, "Position", props.position, vec2f(0, 0));
@@ -190,8 +158,7 @@ json Transform_Component::save_json(Entity entity)
 
   return j;
 }
-void Transform_Component::load_json(Entity entity, const json& j)
-{
+void Transform_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Transform_Component>())
     entity.add_component<Transform_Component>();
 
@@ -200,24 +167,17 @@ void Transform_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Scale", props.scale, vec2f(1, 1));
   Helper::load_json(j, "Rotation", props.rotation, 0.0f);
 }
-void Transform_Component::clone_entity(Entity original, Entity clone)
-{
-  if (original.has_component<Transform_Component>())
-  {
+void Transform_Component::clone_entity(Entity original, Entity clone) {
+  if (original.has_component<Transform_Component>()) {
     clone.add_component<Transform_Component>(original.get_component<Transform_Component>());
   }
 }
-bool Transform_Component::is_compatible(NodeType type)
-{
+bool Transform_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Render2D);
 }
-const char* Transform_Component::get_name()
-{
-  return "Transform";
-}
-Transform_Component Transform_Component::get_world_transform(Entity entity)
-{
+const char*         Transform_Component::get_name() { return "Transform"; }
+Transform_Component Transform_Component::get_world_transform(Entity entity) {
   Transform_Component world_transform;
   if (!entity.has_component<Transform_Component>())
     return world_transform;
@@ -225,8 +185,7 @@ Transform_Component Transform_Component::get_world_transform(Entity entity)
   world_transform = entity.get_component<Transform_Component>();
   auto& tag       = entity.get_component<Tag_Component>();
 
-  if (tag.parent.get_id() != INVALID_ENTITY)
-  {
+  if (tag.parent.get_id() != INVALID_ENTITY) {
     Transform_Component parent_world = get_world_transform(tag.parent);
 
     world_transform.position = parent_world.position + world_transform.position;
@@ -236,30 +195,22 @@ Transform_Component Transform_Component::get_world_transform(Entity entity)
   return world_transform;
 }
 void Transform_Component::get_local_transform(Entity                     entity,
-                                              const Transform_Component& world_transform)
-{
+                                              const Transform_Component& world_transform) {
   auto& transform = entity.get_component<Transform_Component>();
   auto& tag       = entity.get_component<Tag_Component>();
 
-  if (tag.parent.get_id() != INVALID_ENTITY)
-  {
+  if (tag.parent.get_id() != INVALID_ENTITY) {
     Transform_Component parent_world = get_world_transform(tag.parent);
     transform.position               = world_transform.position - parent_world.position;
     transform.scale                  = world_transform.scale / parent_world.scale;
     transform.rotation               = world_transform.rotation - parent_world.rotation;
-  }
-  else
-  {
+  } else {
     transform = world_transform;
   }
 }
 
-void Script_Component::add_component(Entity entity)
-{
-  entity.add_component<Script_Component>();
-}
-void Script_Component::remove_component(Entity entity)
-{
+void Script_Component::add_component(Entity entity) { entity.add_component<Script_Component>(); }
+void Script_Component::remove_component(Entity entity) {
   auto& comp = entity.get_component<Script_Component>();
   comp.env.get().clear();
   comp.on_create          = LuaFunc();
@@ -272,8 +223,7 @@ void Script_Component::remove_component(Entity entity)
 
   entity.remove_component<Script_Component>();
 }
-json Script_Component::save_json(Entity entity)
-{
+json Script_Component::save_json(Entity entity) {
   json j;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -281,18 +231,15 @@ json Script_Component::save_json(Entity entity)
 
   return j;
 }
-void Script_Component::load_json(Entity entity, const json& j)
-{
+void Script_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Script_Component>())
     entity.add_component<Script_Component>();
 
   auto& props = entity.get_component<Script_Component>();
   Helper::load_json(j, "Path", props.path, std::string(""));
 }
-void Script_Component::clone_entity(Entity original, Entity clone)
-{
-  if (original.has_component<Script_Component>())
-  {
+void Script_Component::clone_entity(Entity original, Entity clone) {
+  if (original.has_component<Script_Component>()) {
     const auto&      original_path = original.get_component<Script_Component>().path;
     Script_Component comps;
     comps.path = original_path;
@@ -300,32 +247,37 @@ void Script_Component::clone_entity(Entity original, Entity clone)
     load_scripts(clone);
   }
 }
-void Script_Component::create(Entity entity)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::create(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+
+  if (!entity.has_component<Script_Component>())
     return;
   auto& comp = entity.get_component<Script_Component>();
-  if (comp.on_create.is_valid())
-  {
+  if (comp.on_create.is_valid()) {
     comp.on_create.call();
   }
 }
-void Script_Component::update(Entity entity, TimeStamp ts)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::update(Entity entity, TimeStamp ts) {
+#if AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
 
-  if (comp.on_update.is_valid())
-  {
+  if (comp.on_update.is_valid()) {
     comp.on_update.call(ts.get_seconds());
   }
 }
 
-void Script_Component::connected(Entity entity)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::connected(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -334,9 +286,11 @@ void Script_Component::connected(Entity entity)
     comp.on_connected.call();
 }
 
-void Script_Component::disconnected(Entity entity)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::disconnected(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -345,9 +299,12 @@ void Script_Component::disconnected(Entity entity)
     comp.on_disconnected.call();
 }
 
-void Script_Component::packet_received(Entity entity, const Packet& packet)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::packet_received(Entity entity, const Packet& packet) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -356,15 +313,16 @@ void Script_Component::packet_received(Entity entity, const Packet& packet)
     comp.on_packet_received.call(packet);
 }
 
-void Script_Component::destroy(Entity entity)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+void Script_Component::destroy(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
 
-  if (comp.on_destroy.is_valid())
-  {
+  if (comp.on_destroy.is_valid()) {
     comp.on_destroy.call();
   }
 
@@ -377,9 +335,12 @@ void Script_Component::destroy(Entity entity)
   comp.on_disconnected    = LuaFunc();
   comp.on_packet_received = LuaFunc();
 }
-bool Script_Component::event(Entity entity, Event& e)
-{
-  if (!entity.has_component<Script_Component>() || !Engine::is_runtime())
+bool Script_Component::event(Entity entity, Event& e) {
+#ifdef AERO_EDITOR
+  return false;
+#endif
+
+  if (!entity.has_component<Script_Component>())
     return false;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -390,9 +351,11 @@ bool Script_Component::event(Entity entity, Event& e)
 
   return false;
 }
-void Script_Component::load_scripts(Entity entity)
-{
-  if (!Engine::is_runtime() || !entity.has_component<Script_Component>())
+void Script_Component::load_scripts(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
     return;
 
   auto& comp = entity.get_component<Script_Component>();
@@ -402,27 +365,20 @@ void Script_Component::load_scripts(Entity entity)
 
   comp.env.get().set_function("get_entity", [entity]() -> Entity { return entity; });
 
-  if (AssetManager::is_packed(AssetManager::Domain::Project))
-  {
+  if (AssetManager::is_packed(AssetManager::Domain::Project)) {
     std::string code = AssetManager::read_string(full_path, AssetManager::Domain::Project);
-    if (code.empty())
-    {
+    if (code.empty()) {
       AERO_CORE_ERROR("Failed to load script from pak: {0}", full_path);
       return;
     }
 
-    try
-    {
+    try {
       ScriptManager::run_script_in_env(code, comp.env);
-    }
-    catch (const sol::error& e)
-    {
+    } catch (const sol::error& e) {
       AERO_CORE_ERROR("Script error in {0}: {1}", full_path, e.what());
       return;
     }
-  }
-  else
-  {
+  } else {
     ScriptManager::load_script(full_path, comp.env);
   }
 
@@ -435,17 +391,10 @@ void Script_Component::load_scripts(Entity entity)
   comp.on_packet_received.set_function(comp.env, "on_packet_received");
   create(entity);
 }
-bool Script_Component::is_compatible(NodeType type)
-{
-  return true;
-}
-const char* Script_Component::get_name()
-{
-  return "Script";
-}
+bool        Script_Component::is_compatible(NodeType type) { return true; }
+const char* Script_Component::get_name() { return "Script"; }
 
-json Render2D_Component::save_json(Entity entity)
-{
+json Render2D_Component::save_json(Entity entity) {
   json  j;
   auto& props = entity.get_component<Render2D_Component>();
   Helper::save_json(j, "Size", props.size, vec2u(100, 100));
@@ -453,8 +402,7 @@ json Render2D_Component::save_json(Entity entity)
 
   return j;
 }
-void Render2D_Component::load_json(Entity entity, const json& j)
-{
+void Render2D_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Render2D_Component>())
     entity.add_component<Render2D_Component>();
 
@@ -462,14 +410,12 @@ void Render2D_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Size", props.size, vec2u(100, 100));
   Helper::load_json(j, "Color", props.color, Color::White);
 }
-bool Render2D_Component::is_compatible(NodeType type)
-{
+bool Render2D_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Render2D);
 }
 
-json Border_Component::save_json(Entity entity)
-{
+json Border_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Border_Component>();
@@ -478,8 +424,7 @@ json Border_Component::save_json(Entity entity)
 
   return j;
 }
-void Border_Component::load_json(Entity entity, const json& j)
-{
+void Border_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Border_Component>())
     entity.add_component<Border_Component>();
 
@@ -487,15 +432,13 @@ void Border_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Thickness", props.thickness, 5.0f);
   Helper::load_json(j, "Color", props.color, Color::Black);
 }
-bool Border_Component::is_compatible(NodeType type)
-{
+bool Border_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::RectShape) ||
          NodeHelper::has_capability(caps, Node_Capability::CircleShape);
 }
 
-json Corner_Component::save_json(Entity entity)
-{
+json Corner_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Corner_Component>();
@@ -504,8 +447,7 @@ json Corner_Component::save_json(Entity entity)
 
   return j;
 }
-void Corner_Component::load_json(Entity entity, const json& j)
-{
+void Corner_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Corner_Component>())
     entity.add_component<Corner_Component>();
 
@@ -513,14 +455,12 @@ void Corner_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Corner", props.corner, 5.0f);
   Helper::load_json(j, "Uniform", props.uniform, true);
 }
-bool Corner_Component::is_compatible(NodeType type)
-{
+bool Corner_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::RectShape);
 }
 
-json UI_Component::save_json(Entity entity)
-{
+json UI_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<UI_Component>();
@@ -528,22 +468,19 @@ json UI_Component::save_json(Entity entity)
 
   return j;
 }
-void UI_Component::load_json(Entity entity, const json& j)
-{
+void UI_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<UI_Component>())
     entity.add_component<UI_Component>();
 
   auto& props = entity.get_component<UI_Component>();
   Helper::load_json(j, "Mode", props.mode, RenderMode::World);
 }
-bool UI_Component::is_compatible(NodeType type)
-{
+bool UI_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::UI);
 }
 
-json Texture_Component::save_json(Entity entity)
-{
+json Texture_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Texture_Component>();
@@ -552,8 +489,7 @@ json Texture_Component::save_json(Entity entity)
 
   return j;
 }
-void Texture_Component::load_json(Entity entity, const json& j)
-{
+void Texture_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Texture_Component>())
     entity.add_component<Texture_Component>();
 
@@ -564,14 +500,12 @@ void Texture_Component::load_json(Entity entity, const json& j)
   if (!props.path.empty())
     props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
 }
-bool Texture_Component::is_compatible(NodeType type)
-{
+bool Texture_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 }
 
-json TextureRect_Component::save_json(Entity entity)
-{
+json TextureRect_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<TextureRect_Component>();
@@ -579,22 +513,19 @@ json TextureRect_Component::save_json(Entity entity)
 
   return j;
 }
-void TextureRect_Component::load_json(Entity entity, const json& j)
-{
+void TextureRect_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<TextureRect_Component>())
     entity.add_component<TextureRect_Component>();
 
   auto& props = entity.get_component<TextureRect_Component>();
   Helper::load_json(j, "Rect", props.rect, uint_rect(0, 0, 0, 0));
 }
-bool TextureRect_Component::is_compatible(NodeType type)
-{
+bool TextureRect_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 }
 
-json TextureFlip_Component::save_json(Entity entity)
-{
+json TextureFlip_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<TextureFlip_Component>();
@@ -603,8 +534,7 @@ json TextureFlip_Component::save_json(Entity entity)
 
   return j;
 }
-void TextureFlip_Component::load_json(Entity entity, const json& j)
-{
+void TextureFlip_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<TextureFlip_Component>())
     entity.add_component<TextureFlip_Component>();
 
@@ -612,14 +542,12 @@ void TextureFlip_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Horizontal", props.horizontal, false);
   Helper::load_json(j, "Vertical", props.vertical, false);
 }
-bool TextureFlip_Component::is_compatible(NodeType type)
-{
+bool TextureFlip_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Texture2D);
 }
 
-json Camera_Component::save_json(Entity entity)
-{
+json Camera_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Camera_Component>();
@@ -628,8 +556,7 @@ json Camera_Component::save_json(Entity entity)
 
   return j;
 }
-void Camera_Component::load_json(Entity entity, const json& j)
-{
+void Camera_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Camera_Component>())
     entity.add_component<Camera_Component>();
 
@@ -637,14 +564,12 @@ void Camera_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Size", props.size, vec2f(1280, 720));
   Helper::load_json(j, "Center", props.center, vec2f(640, 360));
 }
-bool Camera_Component::is_compatible(NodeType type)
-{
+bool Camera_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Camera);
 }
 
-json Window_Component::save_json(Entity entity)
-{
+json Window_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Window_Component>();
@@ -652,22 +577,19 @@ json Window_Component::save_json(Entity entity)
 
   return j;
 }
-void Window_Component::load_json(Entity entity, const json& j)
-{
+void Window_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Window_Component>())
     entity.add_component<Window_Component>();
 
   auto& props = entity.get_component<Window_Component>();
   Helper::load_json(j, "Size", props.size, vec2f(1280, 720));
 }
-bool Window_Component::is_compatible(NodeType type)
-{
+bool Window_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Camera);
 }
 
-vec2f apply_camera_bounds(const vec2f& position, Entity entity)
-{
+vec2f apply_camera_bounds(const vec2f& position, Entity entity) {
   if (!entity.has_component<CameraBounds_Component>())
     return position;
 
@@ -676,25 +598,21 @@ vec2f apply_camera_bounds(const vec2f& position, Entity entity)
 
   // Clamp X axis
   if (bounds.x_axis.x != std::numeric_limits<float>::min() &&
-      bounds.x_axis.y != std::numeric_limits<float>::max())
-  {
+      bounds.x_axis.y != std::numeric_limits<float>::max()) {
     clamped.x = std::clamp(clamped.x, bounds.x_axis.x, bounds.x_axis.y);
   }
 
   // Clamp Y axis
   if (bounds.y_axis.x != std::numeric_limits<float>::min() &&
-      bounds.y_axis.y != std::numeric_limits<float>::max())
-  {
+      bounds.y_axis.y != std::numeric_limits<float>::max()) {
     clamped.y = std::clamp(clamped.y, bounds.y_axis.x, bounds.y_axis.y);
   }
 
   return clamped;
 }
 
-void CameraBounds_Component::add_component(Entity entity)
-{
-  if (!entity.has_component<CameraBounds_Component>())
-  {
+void CameraBounds_Component::add_component(Entity entity) {
+  if (!entity.has_component<CameraBounds_Component>()) {
     CameraBounds_Component comps;
     comps.x_axis.x = std::numeric_limits<float>::min();
     comps.x_axis.y = std::numeric_limits<float>::max();
@@ -703,30 +621,29 @@ void CameraBounds_Component::add_component(Entity entity)
     entity.add_component<CameraBounds_Component>(comps);
   }
 }
-json CameraBounds_Component::save_json(Entity entity)
-{
+json CameraBounds_Component::save_json(Entity entity) {
   json  j;
   auto& bounds = entity.get_component<CameraBounds_Component>();
   Helper::save_json(j, "X_axis", bounds.x_axis, vec2f(0, 0));
   Helper::save_json(j, "Y_axis", bounds.y_axis, vec2f(0, 0));
   return j;
 }
-void CameraBounds_Component::load_json(Entity entity, const json& j)
-{
+void CameraBounds_Component::load_json(Entity entity, const json& j) {
   CameraBounds_Component::add_component(entity);
   auto& bounds = entity.get_component<CameraBounds_Component>();
   Helper::load_json(j, "X_axis", bounds.x_axis, vec2f(0, 0));
   Helper::load_json(j, "Y_axis", bounds.y_axis, vec2f(0, 0));
 }
-bool CameraBounds_Component::is_compatible(NodeType type)
-{
+bool CameraBounds_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Camera);
 }
-void CameraBounds_Component::on_update(Entity entity)
-{
+void CameraBounds_Component::on_update(Entity entity) {
   // Apply bounds even without follow component
-  if (!Engine::is_runtime() || !entity.has_component<CameraBounds_Component>())
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<CameraBounds_Component>())
     return;
 
   auto& bounds = entity.get_component<CameraBounds_Component>();
@@ -746,26 +663,22 @@ void CameraBounds_Component::on_update(Entity entity)
   vec2f clamped_pos     = current_pos;
 
   // Clamp X axis
-  if (x_bounds_set)
-  {
+  if (x_bounds_set) {
     clamped_pos.x = std::clamp(clamped_pos.x, bounds.x_axis.x, bounds.x_axis.y);
   }
 
   // Clamp Y axis
-  if (y_bounds_set)
-  {
+  if (y_bounds_set) {
     clamped_pos.y = std::clamp(clamped_pos.y, bounds.y_axis.x, bounds.y_axis.y);
   }
 
   // Only update if position changed
-  if (clamped_pos.x != current_pos.x || clamped_pos.y != current_pos.y)
-  {
+  if (clamped_pos.x != current_pos.x || clamped_pos.y != current_pos.y) {
     view.set_center(clamped_pos);
   }
 }
 
-json CameraFollow_Component::save_json(Entity entity)
-{
+json CameraFollow_Component::save_json(Entity entity) {
   json  j;
   auto& comps = entity.get_component<CameraFollow_Component>();
   int   index = -1;
@@ -779,8 +692,7 @@ json CameraFollow_Component::save_json(Entity entity)
   Helper::save_json(j, "DeadZone", comps.dead_zone, vec2f(0.0f, 0.0f));
   return j;
 }
-void CameraFollow_Component::load_json(Entity entity, const json& j, bool load)
-{
+void CameraFollow_Component::load_json(Entity entity, const json& j, bool load) {
   if (!entity.has_component<CameraFollow_Component>())
     entity.add_component<CameraFollow_Component>();
   auto& comps = entity.get_component<CameraFollow_Component>();
@@ -791,21 +703,21 @@ void CameraFollow_Component::load_json(Entity entity, const json& j, bool load)
   Helper::load_json(j, "SpringStiffness", comps.spring_stiffness, 0.0f);
   Helper::load_json(j, "SpringDamping", comps.spring_damping, 0.0f);
   Helper::load_json(j, "DeadZone", comps.dead_zone, vec2f(0.0f, 0.0f));
-  if (index >= 0)
-  {
+  if (index >= 0) {
     auto it = index_map.find(index);
     if (it != index_map.end())
       comps.target = it->second;
   }
 }
-bool CameraFollow_Component::is_compatible(NodeType type)
-{
+bool CameraFollow_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Camera);
 }
-void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
-{
-  if (!Engine::is_runtime() || !entity.has_component<CameraFollow_Component>())
+void CameraFollow_Component::on_update(Entity entity, TimeStamp ts) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<CameraFollow_Component>())
     return;
 
   auto& props = entity.get_component<CameraFollow_Component>();
@@ -820,16 +732,13 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
   vec2f current_pos = view.get_center();
   vec2f new_pos     = current_pos;
 
-  switch (props.type)
-  {
-    case FollowType::LOCK_ON_TARGET:
-    {
+  switch (props.type) {
+    case FollowType::LOCK_ON_TARGET: {
       new_pos = target_pos;
       break;
     }
 
-    case FollowType::LERP_SMOOTH:
-    {
+    case FollowType::LERP_SMOOTH: {
       // Smooth interpolation using lerp
       // Default speed is 5.0f if not set
       float speed = (props.lerp_speed > 0.0f) ? props.lerp_speed : 5.0f;
@@ -838,8 +747,7 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
       break;
     }
 
-    case FollowType::SPRING:
-    {
+    case FollowType::SPRING: {
       // Spring-damper system for smooth, natural following
       // Defaults: stiffness = 150.0f, damping = 20.0f
       float stiffness = (props.spring_stiffness > 0.0f) ? props.spring_stiffness : 150.0f;
@@ -861,8 +769,7 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
       break;
     }
 
-    case FollowType::DEAD_ZONE:
-    {
+    case FollowType::DEAD_ZONE: {
       // Only move camera when target leaves the dead zone
       // Default dead zone size
       vec2f dead_zone = (props.dead_zone.x > 0.0f && props.dead_zone.y > 0.0f)
@@ -875,15 +782,13 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
       new_pos = current_pos;
 
       // Check X axis
-      if (std::abs(offset.x) > half_dead_zone.x)
-      {
+      if (std::abs(offset.x) > half_dead_zone.x) {
         float excess = std::abs(offset.x) - half_dead_zone.x;
         new_pos.x += (offset.x > 0.0f ? excess : -excess);
       }
 
       // Check Y axis
-      if (std::abs(offset.y) > half_dead_zone.y)
-      {
+      if (std::abs(offset.y) > half_dead_zone.y) {
         float excess = std::abs(offset.y) - half_dead_zone.y;
         new_pos.y += (offset.y > 0.0f ? excess : -excess);
       }
@@ -895,8 +800,7 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
       break;
     }
 
-    default:
-      return;
+    default: return;
   }
 
   // Apply camera bounds if they exist
@@ -905,33 +809,28 @@ void CameraFollow_Component::on_update(Entity entity, TimeStamp ts)
   view.set_center(new_pos);
 }
 
-json Animation::save_json(const Animation& animation)
-{
+json Animation::save_json(const Animation& animation) {
   json j;
   Helper::save_json(j, "Name", animation.name, std::string(""));
   Helper::save_json(j, "FPS", animation.fps, 10.0f);
   Helper::save_json(j, "PingPong", animation.ping_pong, false);
   Helper::save_json(j, "Loop", animation.loop, false);
   j["Frames"] = json::array();
-  for (const auto& frame : animation.frames)
-  {
+  for (const auto& frame : animation.frames) {
     json frame_json;
     Helper::save_json(frame_json, "Rect", frame.frame_rect, uint_rect(0, 0, 0, 0));
     j["Frames"].push_back(frame_json);
   }
   return j;
 }
-Animation Animation::load_json(const json& j)
-{
+Animation Animation::load_json(const json& j) {
   Animation animation;
   Helper::load_json(j, "Name", animation.name, std::string(""));
   Helper::load_json(j, "FPS", animation.fps, 10.0f);
   Helper::load_json(j, "PingPong", animation.ping_pong, false);
   Helper::load_json(j, "Loop", animation.loop, false);
-  if (j.contains("Frames") && j["Frames"].is_array())
-  {
-    for (const json& frame_json : j["Frames"])
-    {
+  if (j.contains("Frames") && j["Frames"].is_array()) {
+    for (const json& frame_json : j["Frames"]) {
       Frame frame;
       Helper::load_json(frame_json, "Rect", frame.frame_rect, uint_rect(0, 0, 0, 0));
       animation.frames.push_back(frame);
@@ -940,22 +839,19 @@ Animation Animation::load_json(const json& j)
   return animation;
 }
 
-json Animation_Component::save_json(Entity entity)
-{
+json Animation_Component::save_json(Entity entity) {
   json  j;
   auto& props = entity.get_component<Animation_Component>();
   Helper::save_json(j, "Current", props.current_animation, std::string(""));
   Helper::save_json(j, "Playing", props.playing, false);
 
   j["Animations"] = json::object();
-  for (const auto& [name, animation] : props.animations)
-  {
+  for (const auto& [name, animation] : props.animations) {
     j["Animations"][name] = Animation::save_json(animation);
   }
   return j;
 }
-void Animation_Component::load_json(Entity entity, const json& j)
-{
+void Animation_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Animation_Component>())
     entity.add_component<Animation_Component>();
 
@@ -963,19 +859,16 @@ void Animation_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Current", props.current_animation, std::string(""));
   Helper::load_json(j, "Playing", props.playing, false);
 
-  if (j.contains("Animations") && j["Animations"].is_object())
-  {
+  if (j.contains("Animations") && j["Animations"].is_object()) {
     props.animations.clear();
 
-    for (const auto& [name, animation_json] : j["Animations"].items())
-    {
+    for (const auto& [name, animation_json] : j["Animations"].items()) {
       Animation animation    = Animation::load_json(animation_json);
       props.animations[name] = animation;
     }
   }
 }
-void Animation_Component::update(Entity entity, TimeStamp ts)
-{
+void Animation_Component::update(Entity entity, TimeStamp ts) {
   if (!entity.has_component<Animation_Component>())
     return;
   float dt    = ts.get_seconds();
@@ -983,33 +876,27 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
   if (!entity.has_component<Texture_Component>() ||
       !entity.get_component<Texture_Component>().texture)
     return;
-  if (props.current_animation.empty())
-  {
+  if (props.current_animation.empty()) {
     auto& texture = entity.get_component<Texture_Component>();
-    if (texture.texture)
-    {
+    if (texture.texture) {
       props.rect = {0, 0, texture.texture->get_size()};
     }
     return;
   }
   auto it = props.animations.find(props.current_animation);
-  if (props.animations.find(props.current_animation) == props.animations.end())
-  {
+  if (props.animations.find(props.current_animation) == props.animations.end()) {
     auto& texture = entity.get_component<Texture_Component>();
-    if (texture.texture)
-    {
+    if (texture.texture) {
       props.rect = {0, 0, texture.texture->get_size()};
     }
     return;
   }
   Animation& anim = it->second;
-  if (!props.playing)
-  {
+  if (!props.playing) {
     props.rect = anim.frames[props.current_frame].frame_rect;
     return;
   }
-  if (anim.frames.empty())
-  {
+  if (anim.frames.empty()) {
     auto& texture = entity.get_component<Texture_Component>();
     props.rect    = {0, 0, texture.texture->get_size()};
     return;
@@ -1018,44 +905,30 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
   Frame& current_frame = anim.frames[props.current_frame];
   props.timer += dt;
   float duration = 1.0f / anim.fps;
-  if (props.timer >= duration)
-  {
+  if (props.timer >= duration) {
     props.timer -= duration;
-    if (anim.ping_pong)
-    {
+    if (anim.ping_pong) {
       props.current_frame += props.reverse_direction ? -1 : 1;
 
-      if (props.current_frame >= anim.frames.size() && props.current_frame >= 0)
-      {
-        if (anim.loop)
-        {
+      if (props.current_frame >= anim.frames.size() && props.current_frame >= 0) {
+        if (anim.loop) {
           props.current_frame     = anim.frames.size() - 2;
           props.reverse_direction = true;
-        }
-        else
-        {
+        } else {
           props.current_frame = anim.frames.size() - 1;
           props.playing       = false;
         }
-      }
-      else if (props.current_frame < 0)
-      {
+      } else if (props.current_frame < 0) {
         props.current_frame     = 1;
         props.reverse_direction = false;
       }
-    }
-    else
-    {
+    } else {
       props.current_frame++;
-      if (props.current_frame >= anim.frames.size())
-      {
-        if (anim.loop)
-        {
+      if (props.current_frame >= anim.frames.size()) {
+        if (anim.loop) {
           props.current_frame               = 0;
           props.current_animation_completed = true;
-        }
-        else
-        {
+        } else {
           props.current_frame               = anim.frames.size() - 1;
           props.playing                     = false;
           props.current_animation_completed = true;
@@ -1063,14 +936,12 @@ void Animation_Component::update(Entity entity, TimeStamp ts)
       }
     }
   }
-  if (props.current_animation_completed && anim.loop)
-  {
+  if (props.current_animation_completed && anim.loop) {
     props.current_animation_completed = false;
   }
   props.rect = anim.frames[props.current_frame].frame_rect;
 }
-bool Animation_Component::play_animation(Entity entity, const std::string& name, bool restart)
-{
+bool Animation_Component::play_animation(Entity entity, const std::string& name, bool restart) {
   if (!entity.has_component<Animation_Component>())
     return false;
 
@@ -1089,30 +960,26 @@ bool Animation_Component::play_animation(Entity entity, const std::string& name,
   return true;
 }
 
-json Tile_Defination::save_json(const Tile_Defination& def)
-{
+json Tile_Defination::save_json(const Tile_Defination& def) {
   json j;
   Helper::save_json(j, "Rect", def.texture_rect, uint_rect(0, 0, 0, 0));
   Helper::save_json(j, "Solid", def.is_solid, true);
 
   return j;
 }
-void Tile_Defination::load_json(Tile_Defination& def, const json& j)
-{
+void Tile_Defination::load_json(Tile_Defination& def, const json& j) {
   Helper::load_json(j, "Rect", def.texture_rect, uint_rect(0, 0, 0, 0));
   Helper::load_json(j, "Solid", def.is_solid, true);
 }
 
-json Tile::save_json(const Tile& tile)
-{
+json Tile::save_json(const Tile& tile) {
   json j;
   Helper::save_json(j, "ID", tile.tile_id, vec2u(0, 0));
   Helper::save_json(j, "SetID", tile.set_id, std::numeric_limits<uint16_t>::max());
   Helper::save_json(j, "AutoTile", tile.use_autotile, false);
   return j;
 }
-Tile Tile::load_json(const json& j)
-{
+Tile Tile::load_json(const json& j) {
   Tile tile;
   Helper::load_json(j, "ID", tile.tile_id, vec2u(0, 0));
   Helper::load_json(j, "SetID", tile.set_id, std::numeric_limits<uint16_t>::max());
@@ -1120,8 +987,7 @@ Tile Tile::load_json(const json& j)
 
   return tile;
 }
-json Tile_Component::save_json(Entity entity)
-{
+json Tile_Component::save_json(Entity entity) {
   json  j;
   auto& tileset = entity.get_component<Tile_Component>();
   Helper::save_json(j, "Size", tileset.size, vec2f(32, 32));
@@ -1129,8 +995,7 @@ json Tile_Component::save_json(Entity entity)
 
   return j;
 }
-void Tile_Component::load_json(Entity entity, const json& j)
-{
+void Tile_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Tile_Component>())
     entity.add_component<Tile_Component>();
 
@@ -1139,27 +1004,22 @@ void Tile_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Offset", tileset.offset, vec2f(0, 0));
 }
 
-json SolidSet_Component::save_json(Entity entity)
-{
+json SolidSet_Component::save_json(Entity entity) {
   json        j;
   const auto& comps = entity.get_component<SolidSet_Component>();
 
-  for (const auto& [grid, value] : comps.placed_tiles)
-  {
+  for (const auto& [grid, value] : comps.placed_tiles) {
     std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
     j["Grid"][key]  = value;
   }
 
   return j;
 }
-void SolidSet_Component::load_json(Entity entity, const json& j)
-{
+void SolidSet_Component::load_json(Entity entity, const json& j) {
   SolidSet_Component::add_component(entity);
   auto& comps = entity.get_component<SolidSet_Component>();
-  if (j.contains("Grid"))
-  {
-    for (auto& [key, id_json] : j["Grid"].items())
-    {
+  if (j.contains("Grid")) {
+    for (auto& [key, id_json] : j["Grid"].items()) {
       vec2u pos;
       sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
       bool value;
@@ -1168,10 +1028,8 @@ void SolidSet_Component::load_json(Entity entity, const json& j)
     }
   }
 }
-void SolidSet_Component::clone_entity(Entity original, Entity clone)
-{
-  if (original.has_component<SolidSet_Component>())
-  {
+void SolidSet_Component::clone_entity(Entity original, Entity clone) {
+  if (original.has_component<SolidSet_Component>()) {
     auto&              orig = original.get_component<SolidSet_Component>();
     SolidSet_Component comps;
 
@@ -1180,17 +1038,19 @@ void SolidSet_Component::clone_entity(Entity original, Entity clone)
     clone.add_component<SolidSet_Component>(comps);
   }
 }
-void SolidSet_Component::update(Entity entity)
-{
-  if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>() ||
-      !Engine::is_runtime())
+void SolidSet_Component::update(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>())
     return;
+
   create_body(entity);
 }
-void SolidSet_Component::draw(Entity entity)
-{
-  if (Engine::is_runtime())
-    return;
+void SolidSet_Component::draw(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
 
   if (!entity.has_component<SolidSet_Component>() || !entity.has_component<Tile_Component>())
     return;
@@ -1203,19 +1063,16 @@ void SolidSet_Component::draw(Entity entity)
   rect.size       = props.size;
   rect.fill_color = Color(80, 180, 255, 150);
 
-  for (const auto& [position, tile] : solid_set.placed_tiles)
-  {
+  for (const auto& [position, tile] : solid_set.placed_tiles) {
     trans.position = (position * props.size) + props.size / 2 + props.offset;
     Renderer2D::draw_rectangle(rect, trans);
   }
 }
-bool SolidSet_Component::is_compatible(NodeType type)
-{
+bool SolidSet_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::TileMap);
 }
-void SolidSet_Component::create_body(Entity entity)
-{
+void SolidSet_Component::create_body(Entity entity) {
   auto& props = entity.get_component<SolidSet_Component>();
   if (props.body)
     return;
@@ -1233,8 +1090,7 @@ void SolidSet_Component::create_body(Entity entity)
   vec2i min_pos(INT_MAX, INT_MAX);
   vec2i max_pos(INT_MIN, INT_MIN);
 
-  for (const auto& [pos, tile_detail] : props.placed_tiles)
-  {
+  for (const auto& [pos, tile_detail] : props.placed_tiles) {
     min_pos.x = std::min(min_pos.x, pos.x);
     min_pos.y = std::min(min_pos.y, pos.y);
     max_pos.x = std::max(max_pos.x, pos.x);
@@ -1243,49 +1099,39 @@ void SolidSet_Component::create_body(Entity entity)
 
   std::vector<std::tuple<vec2i, vec2i>> rectangles;
 
-  for (int y = min_pos.y; y <= max_pos.y; ++y)
-  {
-    for (int x = min_pos.x; x <= max_pos.x; ++x)
-    {
+  for (int y = min_pos.y; y <= max_pos.y; ++y) {
+    for (int x = min_pos.x; x <= max_pos.x; ++x) {
       vec2i start_pos(x, y);
 
       if (props.placed_tiles.find(start_pos) == props.placed_tiles.end() ||
-          !props.placed_tiles[start_pos])
-      {
+          !props.placed_tiles[start_pos]) {
         continue;
       }
 
       int width = 1;
       while (props.placed_tiles.find(vec2i(x + width, y)) != props.placed_tiles.end() &&
-             props.placed_tiles[vec2i(x + width, y)])
-      {
+             props.placed_tiles[vec2i(x + width, y)]) {
         width++;
       }
 
       int  height     = 1;
       bool can_expand = true;
-      while (can_expand)
-      {
-        for (int dx = 0; dx < width; ++dx)
-        {
+      while (can_expand) {
+        for (int dx = 0; dx < width; ++dx) {
           vec2i check_pos(x + dx, y + height);
           if (props.placed_tiles.find(check_pos) == props.placed_tiles.end() ||
-              !props.placed_tiles[check_pos])
-          {
+              !props.placed_tiles[check_pos]) {
             can_expand = false;
             break;
           }
         }
-        if (can_expand)
-        {
+        if (can_expand) {
           height++;
         }
       }
 
-      for (int dy = 0; dy < height; ++dy)
-      {
-        for (int dx = 0; dx < width; ++dx)
-        {
+      for (int dy = 0; dy < height; ++dy) {
+        for (int dx = 0; dx < width; ++dx) {
           props.placed_tiles[vec2i(x + dx, y + dy)] = false;
         }
       }
@@ -1294,8 +1140,7 @@ void SolidSet_Component::create_body(Entity entity)
     }
   }
 
-  for (const auto& [start_pos, size_in_tiles] : rectangles)
-  {
+  for (const auto& [start_pos, size_in_tiles] : rectangles) {
     vec2f center =
         (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
     Math::pixels_to_meters(center);
@@ -1318,8 +1163,7 @@ void SolidSet_Component::create_body(Entity entity)
   props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 }
 
-json TileSet_Component::save_json(Entity entity)
-{
+json TileSet_Component::save_json(Entity entity) {
   json  j;
   auto& tileset = entity.get_component<TileSet_Component>();
   if (!tileset.tile_definitions.empty())
@@ -1327,22 +1171,19 @@ json TileSet_Component::save_json(Entity entity)
 
   Helper::save_json(j, "Size", tileset.tile_size, vec2i(32.0f, 32.0f));
 
-  for (const auto& [id, def] : tileset.tile_definitions)
-  {
+  for (const auto& [id, def] : tileset.tile_definitions) {
     std::string key       = std::to_string(id.x) + "," + std::to_string(id.y);
     j["Definations"][key] = Tile_Defination::save_json(def);
   }
 
-  for (const auto& [grid, tile] : tileset.placed_tiles)
-  {
+  for (const auto& [grid, tile] : tileset.placed_tiles) {
     std::string key = std::to_string(grid.x) + "," + std::to_string(grid.y);
     j["Grid"][key]  = Tile::save_json(tile);
   }
 
   return j;
 }
-void TileSet_Component::load_json(Entity entity, const json& j)
-{
+void TileSet_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<TileSet_Component>())
     entity.add_component<TileSet_Component>();
 
@@ -1350,10 +1191,8 @@ void TileSet_Component::load_json(Entity entity, const json& j)
 
   Helper::load_json(j, "Size", tileset.tile_size, vec2i(32.0f, 32.0f));
 
-  if (j.contains("Definations"))
-  {
-    for (auto& [key, def_json] : j["Definations"].items())
-    {
+  if (j.contains("Definations")) {
+    for (auto& [key, def_json] : j["Definations"].items()) {
       Tile_Defination def;
       Tile_Defination::load_json(def, def_json);
 
@@ -1363,10 +1202,8 @@ void TileSet_Component::load_json(Entity entity, const json& j)
     }
   }
 
-  if (j.contains("Grid"))
-  {
-    for (auto& [key, id_json] : j["Grid"].items())
-    {
+  if (j.contains("Grid")) {
+    for (auto& [key, id_json] : j["Grid"].items()) {
       Tile  tile = Tile::load_json(id_json);
       vec2u pos;
       sscanf(key.c_str(), "%u,%u", &pos.x, &pos.y);
@@ -1378,8 +1215,7 @@ void TileSet_Component::load_json(Entity entity, const json& j)
   if (!tileset.tile_definitions.empty())
     tileset.tile_changed = true;
 }
-void TileSet_Component::clone_entity(Entity original, Entity clone)
-{
+void TileSet_Component::clone_entity(Entity original, Entity clone) {
   if (!original.has_component<TileSet_Component>())
     return;
 
@@ -1399,16 +1235,17 @@ void TileSet_Component::clone_entity(Entity original, Entity clone)
 
   clone.add_component<TileSet_Component>(clone_tileset);
 }
-void TileSet_Component::update(Entity entity)
-{
-  if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>() ||
-      !Engine::is_runtime())
+void TileSet_Component::update(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+
+  if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>())
     return;
 
   create_body(entity);
 }
-void TileSet_Component::draw(Entity entity)
-{
+void TileSet_Component::draw(Entity entity) {
   if (!entity.has_component<TileSet_Component>() || !entity.has_component<Tile_Component>())
     return;
 
@@ -1419,11 +1256,9 @@ void TileSet_Component::draw(Entity entity)
   Sprite              sprite;
   sprite.size = props.size;
 
-  for (const auto& [position, tile] : tile_set.placed_tiles)
-  {
+  for (const auto& [position, tile] : tile_set.placed_tiles) {
     auto tex_it = tile_set.tile_definitions.find(tile.tile_id);
-    if (tex_it == tile_set.tile_definitions.end())
-    {
+    if (tex_it == tile_set.tile_definitions.end()) {
       continue;
     }
     const Tile_Defination& def = tex_it->second;
@@ -1434,13 +1269,11 @@ void TileSet_Component::draw(Entity entity)
     Renderer2D::draw_sprite(sprite, trans);
   }
 }
-bool TileSet_Component::is_compatible(NodeType type)
-{
+bool TileSet_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::TileMap);
 }
-void TileSet_Component::create_body(Entity entity)
-{
+void TileSet_Component::create_body(Entity entity) {
   auto& props = entity.get_component<TileSet_Component>();
   if (props.body)
     return;
@@ -1458,16 +1291,13 @@ void TileSet_Component::create_body(Entity entity)
   vec2i                                           min_pos(INT_MAX, INT_MAX);
   vec2i                                           max_pos(INT_MIN, INT_MIN);
 
-  for (const auto& [pos, tile_detail] : props.placed_tiles)
-  {
+  for (const auto& [pos, tile_detail] : props.placed_tiles) {
     auto tex_it = props.tile_definitions.find(tile_detail.tile_id);
-    if (tex_it == props.tile_definitions.end())
-    {
+    if (tex_it == props.tile_definitions.end()) {
       continue;
     }
     const Tile_Defination& def = tex_it->second;
-    if (def.is_solid)
-    {
+    if (def.is_solid) {
       solid_grid[pos] = true;
       min_pos.x       = std::min(min_pos.x, pos.x);
       min_pos.y       = std::min(min_pos.y, pos.y);
@@ -1481,47 +1311,37 @@ void TileSet_Component::create_body(Entity entity)
 
   std::vector<std::tuple<vec2i, vec2i>> rectangles;
 
-  for (int y = min_pos.y; y <= max_pos.y; ++y)
-  {
-    for (int x = min_pos.x; x <= max_pos.x; ++x)
-    {
+  for (int y = min_pos.y; y <= max_pos.y; ++y) {
+    for (int x = min_pos.x; x <= max_pos.x; ++x) {
       vec2i start_pos(x, y);
 
-      if (solid_grid.find(start_pos) == solid_grid.end() || !solid_grid[start_pos])
-      {
+      if (solid_grid.find(start_pos) == solid_grid.end() || !solid_grid[start_pos]) {
         continue;
       }
 
       int width = 1;
       while (solid_grid.find(vec2i(x + width, y)) != solid_grid.end() &&
-             solid_grid[vec2i(x + width, y)])
-      {
+             solid_grid[vec2i(x + width, y)]) {
         width++;
       }
 
       int  height     = 1;
       bool can_expand = true;
-      while (can_expand)
-      {
-        for (int dx = 0; dx < width; ++dx)
-        {
+      while (can_expand) {
+        for (int dx = 0; dx < width; ++dx) {
           vec2i check_pos(x + dx, y + height);
-          if (solid_grid.find(check_pos) == solid_grid.end() || !solid_grid[check_pos])
-          {
+          if (solid_grid.find(check_pos) == solid_grid.end() || !solid_grid[check_pos]) {
             can_expand = false;
             break;
           }
         }
-        if (can_expand)
-        {
+        if (can_expand) {
           height++;
         }
       }
 
-      for (int dy = 0; dy < height; ++dy)
-      {
-        for (int dx = 0; dx < width; ++dx)
-        {
+      for (int dy = 0; dy < height; ++dy) {
+        for (int dx = 0; dx < width; ++dx) {
           solid_grid[vec2i(x + dx, y + dy)] = false;
         }
       }
@@ -1530,8 +1350,7 @@ void TileSet_Component::create_body(Entity entity)
     }
   }
 
-  for (const auto& [start_pos, size_in_tiles] : rectangles)
-  {
+  for (const auto& [start_pos, size_in_tiles] : rectangles) {
     vec2f center =
         (vec2f(start_pos) + vec2f(size_in_tiles) * 0.5f) * tile_comps.size + tile_comps.offset;
     Math::pixels_to_meters(center);
@@ -1554,24 +1373,20 @@ void TileSet_Component::create_body(Entity entity)
   props.body->GetUserData().pointer = (uintptr_t)entity.get_id();
 }
 
-json Auto_Tiles::save_json(const Auto_Tiles& tiles)
-{
+json Auto_Tiles::save_json(const Auto_Tiles& tiles) {
   json j;
 
-  for (const auto& [mask, id] : tiles.tile_bitmask)
-  {
+  for (const auto& [mask, id] : tiles.tile_bitmask) {
     std::string key = std::to_string(mask);
     Helper::save_json(j, key, id, vec2u(0, 0));
   }
   Helper::save_json(j, "SetID", tiles.set_id, (uint16_t)0);
   return j;
 }
-Auto_Tiles Auto_Tiles::load_json(const json& j)
-{
+Auto_Tiles Auto_Tiles::load_json(const json& j) {
   Auto_Tiles tiles;
 
-  for (auto& [key_str, value] : j.items())
-  {
+  for (auto& [key_str, value] : j.items()) {
     if (key_str == "SetID")
       continue;
 
@@ -1585,63 +1400,53 @@ Auto_Tiles Auto_Tiles::load_json(const json& j)
   return tiles;
 }
 
-void AutoTiling_Component::remove_component(Entity entity)
-{
+void AutoTiling_Component::remove_component(Entity entity) {
   auto& props = entity.get_component<AutoTiling_Component>();
   props.auto_tiles.clear();
   entity.remove_component<AutoTiling_Component>();
 }
-json AutoTiling_Component::save_json(Entity entity)
-{
+json AutoTiling_Component::save_json(Entity entity) {
   json        j;
   const auto& props = entity.get_component<AutoTiling_Component>();
 
   j["AutoTiles"] = json::object();
-  for (const auto& [key, auto_tile] : props.auto_tiles)
-  {
+  for (const auto& [key, auto_tile] : props.auto_tiles) {
     j["AutoTiles"][key] = Auto_Tiles::save_json(auto_tile);
   }
 
   return j;
 }
-void AutoTiling_Component::load_json(Entity entity, const json& j)
-{
+void AutoTiling_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<AutoTiling_Component>())
     entity.add_component<AutoTiling_Component>();
 
   auto& props = entity.get_component<AutoTiling_Component>();
 
-  if (j.contains("AutoTiles") && j["AutoTiles"].is_object())
-  {
+  if (j.contains("AutoTiles") && j["AutoTiles"].is_object()) {
     props.auto_tiles.clear();
 
-    for (const auto& [name, autotile_json] : j["AutoTiles"].items())
-    {
+    for (const auto& [name, autotile_json] : j["AutoTiles"].items()) {
       Auto_Tiles auto_tile   = Auto_Tiles::load_json(autotile_json);
       props.auto_tiles[name] = auto_tile;
       props.next_id          = std::max(auto_tile.set_id, props.next_id);
     }
   }
 }
-bool AutoTiling_Component::is_compatible(NodeType type)
-{
+bool AutoTiling_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::TileMap);
 }
 
-void CollisionShape_Component::add_component(Entity entity)
-{
+void CollisionShape_Component::add_component(Entity entity) {
   entity.add_component<CollisionShape_Component>();
 }
-json CollisionShape_Component::save_json(Entity entity)
-{
+json CollisionShape_Component::save_json(Entity entity) {
   json j;
 
   const auto& shape = entity.get_component<CollisionShape_Component>();
 
   j["Shapes"] = json::object();
-  for (const auto& [id, shape] : shape.shapes)
-  {
+  for (const auto& [id, shape] : shape.shapes) {
     json shape_json;
     Helper::save_json(shape_json, "Shape_Type", (int)shape.shape_type, (int)ShapeType::Rectangle);
     Helper::save_json(shape_json, "Size", shape.size, vec2f(100, 100));
@@ -1653,8 +1458,7 @@ json CollisionShape_Component::save_json(Entity entity)
     Helper::save_json(shape_json, "Name", shape.name, std::string(""));
 
     shape_json["Collide_With"] = json::array();
-    for (int i = 0; i < 5; i++)
-    {
+    for (int i = 0; i < 5; i++) {
       shape_json["Collide_With"].push_back(shape.collide_with[i]);
     }
     j["Shapes"][id] = shape_json;
@@ -1662,17 +1466,14 @@ json CollisionShape_Component::save_json(Entity entity)
 
   return j;
 }
-void CollisionShape_Component::load_json(Entity entity, const json& j)
-{
+void CollisionShape_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<CollisionShape_Component>())
     entity.add_component<CollisionShape_Component>();
 
   auto& shapes = entity.get_component<CollisionShape_Component>();
 
-  if (j.contains("Shapes"))
-  {
-    for (auto& [id, shape_json] : j["Shapes"].items())
-    {
+  if (j.contains("Shapes")) {
+    for (auto& [id, shape_json] : j["Shapes"].items()) {
       CollisionShape_Data shape;
       Helper::load_json(shape_json, "Shape_Type", shape.shape_type, ShapeType::Rectangle);
       Helper::load_json(shape_json, "Size", shape.size, vec2f(100, 100));
@@ -1683,8 +1484,7 @@ void CollisionShape_Component::load_json(Entity entity, const json& j)
       Helper::load_json(shape_json, "Is_Sensor", shape.is_sensor, false);
       Helper::load_json(shape_json, "Name", shape.name, std::string(""));
 
-      for (int i = 0; i < 5; i++)
-      {
+      for (int i = 0; i < 5; i++) {
         shape.collide_with[i] = shape_json["Collide_With"][i];
       }
       shapes.shapes[id] = shape;
@@ -1692,8 +1492,7 @@ void CollisionShape_Component::load_json(Entity entity, const json& j)
   }
 }
 
-void PhysicsBody_Component::add_component(Entity entity)
-{
+void PhysicsBody_Component::add_component(Entity entity) {
   if (!entity.has_component<PhysicsBody_Component>())
     entity.add_component<PhysicsBody_Component>();
   {
@@ -1701,13 +1500,10 @@ void PhysicsBody_Component::add_component(Entity entity)
     PhysicsMaterial_Component::add_component(entity);
   }
 }
-void PhysicsBody_Component::remove_component(Entity entity)
-{
-  if (entity.has_component<PhysicsBody_Component>())
-  {
+void PhysicsBody_Component::remove_component(Entity entity) {
+  if (entity.has_component<PhysicsBody_Component>()) {
     auto& props = entity.get_component<PhysicsBody_Component>();
-    if (props.body)
-    {
+    if (props.body) {
       auto  scene = Scene::get_active_scene();
       auto& world = scene->get_world();
       world.DestroyBody(props.body);
@@ -1718,8 +1514,7 @@ void PhysicsBody_Component::remove_component(Entity entity)
   entity.remove_component<CollisionShape_Component>();
   entity.remove_component<PhysicsMaterial_Component>();
 }
-json PhysicsBody_Component::save_json(Entity entity)
-{
+json PhysicsBody_Component::save_json(Entity entity) {
   json  j;
   auto& props = entity.get_component<PhysicsBody_Component>();
   Helper::save_json(j, "Body", (int)props.body_type, (int)BodyType::Dynamic);
@@ -1730,8 +1525,7 @@ json PhysicsBody_Component::save_json(Entity entity)
 
   return j;
 }
-void PhysicsBody_Component::load_json(Entity entity, const json& j)
-{
+void PhysicsBody_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<PhysicsBody_Component>())
     entity.add_component<PhysicsBody_Component>();
 
@@ -1742,8 +1536,7 @@ void PhysicsBody_Component::load_json(Entity entity, const json& j)
   NodeHelper::load_component<CollisionShape_Component>(entity, j);
   NodeHelper::load_component<PhysicsMaterial_Component>(entity, j);
 }
-void PhysicsBody_Component::clone_entity(Entity original, Entity clone)
-{
+void PhysicsBody_Component::clone_entity(Entity original, Entity clone) {
   if (!original.has_component<PhysicsBody_Component>())
     return;
   const auto&           props = original.get_component<PhysicsBody_Component>();
@@ -1756,10 +1549,12 @@ void PhysicsBody_Component::clone_entity(Entity original, Entity clone)
   CollisionShape_Component::clone_entity(original, clone);
   PhysicsMaterial_Component::clone_entity(original, clone);
 }
-void PhysicsBody_Component::update_entity(Entity entity)
-{
+void PhysicsBody_Component::update_entity(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
   if (!entity.has_component<PhysicsBody_Component>() ||
-      !entity.has_component<Transform_Component>() || !Engine::is_runtime())
+      !entity.has_component<Transform_Component>())
     return;
 
   auto& props = entity.get_component<PhysicsBody_Component>();
@@ -1774,13 +1569,11 @@ void PhysicsBody_Component::update_entity(Entity entity)
   transform.rotation = Math::to_degree(angle);
   Transform_Component::get_local_transform(entity, transform);
 }
-bool PhysicsBody_Component::is_compatible(NodeType type)
-{
+bool PhysicsBody_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Physics2D);
 }
-void PhysicsBody_Component::create_body(Entity entity)
-{
+void PhysicsBody_Component::create_body(Entity entity) {
   if (!entity.has_component<PhysicsBody_Component>() ||
       !entity.has_component<Transform_Component>() ||
       !entity.has_component<CollisionShape_Component>())
@@ -1794,20 +1587,11 @@ void PhysicsBody_Component::create_body(Entity entity)
 
   // Create body definition
   b2BodyDef body_def;
-  switch (props.body_type)
-  {
-    case BodyType::Dynamic:
-      body_def.type = b2_dynamicBody;
-      break;
-    case BodyType::Static:
-      body_def.type = b2_staticBody;
-      break;
-    case BodyType::Kinematic:
-      body_def.type = b2_kinematicBody;
-      break;
-    default:
-      body_def.type = b2_dynamicBody;
-      break;
+  switch (props.body_type) {
+    case BodyType::Dynamic: body_def.type = b2_dynamicBody; break;
+    case BodyType::Static: body_def.type = b2_staticBody; break;
+    case BodyType::Kinematic: body_def.type = b2_kinematicBody; break;
+    default: body_def.type = b2_dynamicBody; break;
   }
 
   Transform_Component trans = Transform_Component::get_world_transform(entity);
@@ -1826,14 +1610,12 @@ void PhysicsBody_Component::create_body(Entity entity)
   float friction    = 0.3f;
   float restitution = 0.0f;
 
-  if (entity.has_component<PhysicsMaterial_Component>())
-  {
+  if (entity.has_component<PhysicsMaterial_Component>()) {
     auto& material_comps = entity.get_component<PhysicsMaterial_Component>();
     if (material_comps.preset != MaterialPreset::Custom)
       PhysicsMaterial_Component::apply_preset(material_comps);
 
-    if (props.body_type == BodyType::Dynamic)
-    {
+    if (props.body_type == BodyType::Dynamic) {
       density     = material_comps.density;
       friction    = material_comps.friction;
       restitution = material_comps.restitution;
@@ -1841,20 +1623,16 @@ void PhysicsBody_Component::create_body(Entity entity)
   }
 
   // Create all fixtures from collision shapes
-  for (auto& [id, shape_data] : collision.shapes)
-  {
+  for (auto& [id, shape_data] : collision.shapes) {
     b2FixtureDef fixture_def;
     fixture_def.isSensor = shape_data.is_sensor;
 
     // Set material properties for non-sensor dynamic bodies
-    if (props.body_type == BodyType::Dynamic && !shape_data.is_sensor)
-    {
+    if (props.body_type == BodyType::Dynamic && !shape_data.is_sensor) {
       fixture_def.density     = density;
       fixture_def.friction    = friction;
       fixture_def.restitution = restitution;
-    }
-    else
-    {
+    } else {
       fixture_def.density = 0.0f;
     }
 
@@ -1863,8 +1641,7 @@ void PhysicsBody_Component::create_body(Entity entity)
     Math::pixels_to_meters(offset);
 
     // Create shape based on type
-    if (shape_data.shape_type == ShapeType::Rectangle)
-    {
+    if (shape_data.shape_type == ShapeType::Rectangle) {
       vec2f size = shape_data.size * trans.scale;
       Math::pixels_to_meters(size);
 
@@ -1873,9 +1650,7 @@ void PhysicsBody_Component::create_body(Entity entity)
       fixture_def.shape = &box;
 
       shape_data.fixture = props.body->CreateFixture(&fixture_def);
-    }
-    else if (shape_data.shape_type == ShapeType::Circle)
-    {
+    } else if (shape_data.shape_type == ShapeType::Circle) {
       float radius = shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
       Math::pixels_to_meters(radius);
 
@@ -1888,31 +1663,25 @@ void PhysicsBody_Component::create_body(Entity entity)
     }
 
     // Set collision filtering
-    if (shape_data.fixture)
-    {
+    if (shape_data.fixture) {
       b2Filter filter;
       filter.categoryBits = 1 << (shape_data.group - 1);
       filter.maskBits     = 0;
-      for (int i = 0; i < 5; i++)
-      {
+      for (int i = 0; i < 5; i++) {
         if (shape_data.collide_with[i])
           filter.maskBits |= 1 << i;
       }
       shape_data.fixture->SetFilterData(filter);
 
-      if (shape_data.is_sensor && id == "foot")
-      {
+      if (shape_data.is_sensor && id == "foot") {
         shape_data.fixture->GetUserData().pointer = 1;
-      }
-      else
-      {
+      } else {
         shape_data.fixture->GetUserData().pointer = reinterpret_cast<uintptr_t>(&shape_data);
       }
     }
   }
 }
-void PhysicsBody_Component::recreate_fixtures(Entity entity)
-{
+void PhysicsBody_Component::recreate_fixtures(Entity entity) {
   auto& props     = entity.get_component<PhysicsBody_Component>();
   auto& collision = entity.get_component<CollisionShape_Component>();
 
@@ -1921,16 +1690,14 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
 
   // Destroy all existing fixtures
   b2Fixture* fixture = props.body->GetFixtureList();
-  while (fixture)
-  {
+  while (fixture) {
     b2Fixture* next = fixture->GetNext();
     props.body->DestroyFixture(fixture);
     fixture = next;
   }
 
   // Clear fixture pointers
-  for (auto& [id, shape] : collision.shapes)
-  {
+  for (auto& [id, shape] : collision.shapes) {
     shape.fixture = nullptr;
   }
 
@@ -1941,14 +1708,12 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
   float friction    = 0.3f;
   float restitution = 0.0f;
 
-  if (entity.has_component<PhysicsMaterial_Component>())
-  {
+  if (entity.has_component<PhysicsMaterial_Component>()) {
     auto& material_comps = entity.get_component<PhysicsMaterial_Component>();
     if (material_comps.preset != MaterialPreset::Custom)
       PhysicsMaterial_Component::apply_preset(material_comps);
 
-    if (props.body_type == BodyType::Dynamic)
-    {
+    if (props.body_type == BodyType::Dynamic) {
       density     = material_comps.density;
       friction    = material_comps.friction;
       restitution = material_comps.restitution;
@@ -1956,20 +1721,16 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
   }
 
   // Recreate all fixtures
-  for (auto& [id, shape_data] : collision.shapes)
-  {
+  for (auto& [id, shape_data] : collision.shapes) {
     b2FixtureDef fixture_def;
     fixture_def.isSensor = shape_data.is_sensor;
 
     // Set material properties for non-sensor dynamic bodies
-    if (props.body_type == BodyType::Dynamic && !shape_data.is_sensor)
-    {
+    if (props.body_type == BodyType::Dynamic && !shape_data.is_sensor) {
       fixture_def.density     = density;
       fixture_def.friction    = friction;
       fixture_def.restitution = restitution;
-    }
-    else
-    {
+    } else {
       fixture_def.density = 0.0f;
     }
 
@@ -1978,8 +1739,7 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
     Math::pixels_to_meters(offset);
 
     // Create shape based on type
-    if (shape_data.shape_type == ShapeType::Rectangle)
-    {
+    if (shape_data.shape_type == ShapeType::Rectangle) {
       vec2f size = shape_data.size * trans.scale;
       Math::pixels_to_meters(size);
 
@@ -1988,9 +1748,7 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
       fixture_def.shape = &box;
 
       shape_data.fixture = props.body->CreateFixture(&fixture_def);
-    }
-    else if (shape_data.shape_type == ShapeType::Circle)
-    {
+    } else if (shape_data.shape_type == ShapeType::Circle) {
       float radius = shape_data.radius * ((trans.scale.x + trans.scale.y) / 2.0f);
       Math::pixels_to_meters(radius);
 
@@ -2003,46 +1761,38 @@ void PhysicsBody_Component::recreate_fixtures(Entity entity)
     }
 
     // Set collision filtering
-    if (shape_data.fixture)
-    {
+    if (shape_data.fixture) {
       b2Filter filter;
       filter.categoryBits = 1 << (shape_data.group - 1);
       filter.maskBits     = 0;
-      for (int i = 0; i < 5; i++)
-      {
+      for (int i = 0; i < 5; i++) {
         if (shape_data.collide_with[i])
           filter.maskBits |= 1 << i;
       }
       shape_data.fixture->SetFilterData(filter);
 
-      if (shape_data.is_sensor && id == "FootSensor")
-      {
+      if (shape_data.is_sensor && id == "FootSensor") {
         shape_data.fixture->GetUserData().pointer = 1;
-      }
-      else
-      {
+      } else {
         shape_data.fixture->GetUserData().pointer = reinterpret_cast<uintptr_t>(&shape_data);
       }
     }
   }
 }
 
-json PhysicsMaterial_Component::save_json(Entity entity)
-{
+json PhysicsMaterial_Component::save_json(Entity entity) {
   json        j;
   const auto& comps = entity.get_component<PhysicsMaterial_Component>();
 
   Helper::save_json(j, "Preset", (int)comps.preset, (int)MaterialPreset::Custom);
-  if (comps.preset == MaterialPreset::Custom)
-  {
+  if (comps.preset == MaterialPreset::Custom) {
     Helper::save_json(j, "Density", comps.density, 0.0f);
     Helper::save_json(j, "Friction", comps.friction, 0.0f);
     Helper::save_json(j, "Restitution", comps.restitution, 0.0f);
   }
   return j;
 }
-void PhysicsMaterial_Component::load_json(Entity entity, const json& j)
-{
+void PhysicsMaterial_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<PhysicsMaterial_Component>())
     entity.add_component<PhysicsMaterial_Component>();
 
@@ -2050,17 +1800,14 @@ void PhysicsMaterial_Component::load_json(Entity entity, const json& j)
 
   Helper::load_json(j, "Preset", comps.preset, MaterialPreset::Custom);
   apply_preset(comps);
-  if (comps.preset == MaterialPreset::Custom)
-  {
+  if (comps.preset == MaterialPreset::Custom) {
     Helper::load_json(j, "Density", comps.density, 0.0f);
     Helper::load_json(j, "Friction", comps.friction, 0.0f);
     Helper::load_json(j, "Restitution", comps.restitution, 0.0f);
   }
 }
-void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps)
-{
-  switch (comps.preset)
-  {
+void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps) {
+  switch (comps.preset) {
     case MaterialPreset::Wood:
       comps.density     = 0.6f;
       comps.friction    = 0.4f;
@@ -2091,18 +1838,15 @@ void PhysicsMaterial_Component::apply_preset(PhysicsMaterial_Component& comps)
       comps.friction    = 0.6f;
       comps.restitution = 0.0f;
       break;
-    case ag::MaterialPreset::Custom:
-      break;
+    case ag::MaterialPreset::Custom: break;
   }
 }
-bool PhysicsMaterial_Component::is_compatible(NodeType type)
-{
+bool PhysicsMaterial_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Physics2D);
 }
 
-json Tween_Component::save_json(Entity entity)
-{
+json Tween_Component::save_json(Entity entity) {
   json  j;
   auto& comps = entity.get_component<Tween_Component>();
 
@@ -2119,8 +1863,7 @@ json Tween_Component::save_json(Entity entity)
 
   return j;
 }
-void Tween_Component::load_json(Entity entity, const json& j)
-{
+void Tween_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Tween_Component>())
     entity.add_component<Tween_Component>();
 
@@ -2137,13 +1880,11 @@ void Tween_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Rotation", comps.rotation, vec2f(0, 0));
   Helper::load_json(j, "Duration", comps.duration, 0.0f);
 }
-bool Tween_Component::is_compatible(NodeType type)
-{
+bool Tween_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Transform);
 }
-void Tween_Component::update(Entity entity, TimeStamp ts)
-{
+void Tween_Component::update(Entity entity, TimeStamp ts) {
   if (!entity.has_component<Tween_Component>())
     return;
 
@@ -2158,10 +1899,8 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
 
   float t = tween.duration > 0.0f ? (tween.elapsed_time / tween.duration) : 1.0f;
 
-  if (t >= 1.0f)
-  {
-    switch (tween.loop_type)
-    {
+  if (t >= 1.0f) {
+    switch (tween.loop_type) {
       case LoopType::ONCE:
         t           = 1.0f;
         tween.state = State::COMPLETED;
@@ -2187,10 +1926,8 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
 
   auto transform = Transform_Component::get_world_transform(entity);
 
-  switch (tween.tween_target)
-  {
-    case TweenTarget::POSITION:
-    {
+  switch (tween.tween_target) {
+    case TweenTarget::POSITION: {
       transform.position.x =
           tween.start_position.x + (tween.end_position.x - tween.start_position.x) * eased_t;
       transform.position.y =
@@ -2198,15 +1935,13 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
       break;
     }
 
-    case TweenTarget::SCALE:
-    {
+    case TweenTarget::SCALE: {
       transform.scale.x = tween.start_scale.x + (tween.end_scale.x - tween.start_scale.x) * eased_t;
       transform.scale.y = tween.start_scale.y + (tween.end_scale.y - tween.start_scale.y) * eased_t;
       break;
     }
 
-    case TweenTarget::ROTATION:
-    {
+    case TweenTarget::ROTATION: {
       transform.rotation = tween.rotation.x + (tween.rotation.y - tween.rotation.x) * eased_t;
       break;
     }
@@ -2215,8 +1950,7 @@ void Tween_Component::update(Entity entity, TimeStamp ts)
   Transform_Component::get_local_transform(entity, transform);
 }
 
-bool Tween_Component::play_tween(Entity entity)
-{
+bool Tween_Component::play_tween(Entity entity) {
   if (!entity.has_component<Tween_Component>())
     return false;
 
@@ -2231,51 +1965,35 @@ bool Tween_Component::play_tween(Entity entity)
 
   auto transform = Transform_Component::get_world_transform(entity);
 
-  switch (tween.tween_target)
-  {
-    case TweenTarget::POSITION:
-      transform.position = tween.start_position;
-      break;
+  switch (tween.tween_target) {
+    case TweenTarget::POSITION: transform.position = tween.start_position; break;
 
-    case TweenTarget::SCALE:
-      transform.scale = tween.start_scale;
-      break;
+    case TweenTarget::SCALE: transform.scale = tween.start_scale; break;
 
-    case TweenTarget::ROTATION:
-      transform.rotation = tween.rotation.x;
-      break;
+    case TweenTarget::ROTATION: transform.rotation = tween.rotation.x; break;
   }
 
   Transform_Component::get_local_transform(entity, transform);
   return true;
 }
-float Tween_Component::apply_ease(float t, EaseType ease_type)
-{
+float Tween_Component::apply_ease(float t, EaseType ease_type) {
   t = std::max(0.0f, std::min(1.0f, t));
 
-  switch (ease_type)
-  {
-    case ag::Tween_Component::EaseType::LINEAR:
-      return t;
-    case ag::Tween_Component::EaseType::EASE_IN:
-      return t * t;
-      break;
-    case ag::Tween_Component::EaseType::EASE_OUT:
-      return t * (2.0 - t);
-    case ag::Tween_Component::EaseType::EASE_IN_OUT:
-    {
+  switch (ease_type) {
+    case ag::Tween_Component::EaseType::LINEAR: return t;
+    case ag::Tween_Component::EaseType::EASE_IN: return t * t; break;
+    case ag::Tween_Component::EaseType::EASE_OUT: return t * (2.0 - t);
+    case ag::Tween_Component::EaseType::EASE_IN_OUT: {
       if (t < 0.5f)
         return 2.0f * t * t;
       else
         return -1.0f + (4.0f - 2.0f * t) * t;
     }
-    default:
-      return t;
+    default: return t;
   }
 }
 
-json Text_Component::save_json(Entity entity)
-{
+json Text_Component::save_json(Entity entity) {
   json j;
 
   const auto& props = entity.get_component<Text_Component>();
@@ -2285,8 +2003,7 @@ json Text_Component::save_json(Entity entity)
 
   return j;
 }
-void Text_Component::load_json(Entity entity, const json& j)
-{
+void Text_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Text_Component>())
     entity.add_component<Text_Component>();
 
@@ -2294,14 +2011,12 @@ void Text_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Text", props.text, std::string(""));
   Helper::load_json(j, "FontSize", props.font_size, 48.0f);
 }
-bool Text_Component::is_compatible(NodeType type)
-{
+bool Text_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Text);
 }
 
-json FontStyle_Component::save_json(Entity entity)
-{
+json FontStyle_Component::save_json(Entity entity) {
   json j;
 
   const auto& props = entity.get_component<FontStyle_Component>();
@@ -2318,8 +2033,7 @@ json FontStyle_Component::save_json(Entity entity)
 
   return j;
 }
-void FontStyle_Component::load_json(Entity entity, const json& j)
-{
+void FontStyle_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<FontStyle_Component>())
     entity.add_component<FontStyle_Component>();
 
@@ -2332,23 +2046,20 @@ void FontStyle_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Bounds", props.bounds, vec2u(0.0f, 0.0f));
   Helper::load_json(j, "Color", props.color, Color::Black);
 }
-bool FontStyle_Component::is_compatible(NodeType type)
-{
+bool FontStyle_Component::is_compatible(NodeType type) {
   auto caps = NodeHelper::get_node_capabilities(type);
   return NodeHelper::has_capability(caps, Node_Capability::Text);
 }
 
 constexpr float TEXT_EPSILON = 0.10f;
 // calculate the longest text_size
-vec2f Text::calc_longest_size(const Text& text, const vec2f& s)
-{
+vec2f Text::calc_longest_size(const Text& text, const vec2f& s) {
   const vec2f scale = s * text.font_size / TextLoader::font.em_size;
   vec2f       size  = {0, 0};
   const float line_height =
       TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
 
-  if (text.bounds.x != 0 && text.bounds.y != 0)
-  {
+  if (text.bounds.x != 0 && text.bounds.y != 0) {
     float max_height = std::max((float)text.bounds.y, line_height);
     return vec2f(text.bounds.x, max_height);
   }
@@ -2356,31 +2067,25 @@ vec2f Text::calc_longest_size(const Text& text, const vec2f& s)
   size.y      = line_height;
   float width = 0.0f;
 
-  for (char c : text.text)
-  {
-    if (c == '\n')
-    {
+  for (char c : text.text) {
+    if (c == '\n') {
       size.x = std::max(size.x, width);
       width  = 0.0f;
       size.y += line_height;
       continue;
     }
-    if (c == '\t')
-    {
+    if (c == '\t') {
       auto it = TextLoader::font.glyphs.find(' ');
-      if (it != TextLoader::font.glyphs.end())
-      {
+      if (it != TextLoader::font.glyphs.end()) {
         float length = (it->second.advance * scale.x) * 4.0f;
         width += length;
       }
       continue;
     }
     auto it = TextLoader::font.glyphs.find(c);
-    if (it != TextLoader::font.glyphs.end())
-    {
+    if (it != TextLoader::font.glyphs.end()) {
       width += it->second.advance * scale.x;
-      if (width >= text.bounds.x && text.bounds.x != 0)
-      {
+      if (width >= text.bounds.x && text.bounds.x != 0) {
         width -= it->second.advance * scale.x;
         size.x = std::max(size.x, width);
         width  = 0.0f;
@@ -2397,8 +2102,7 @@ vec2f Text::calc_line_text_size(const Text&  text,
                                 const vec2f& s,
                                 const vec2f& longest_size,
                                 size_t       start_index,
-                                size_t*      break_index)
-{
+                                size_t*      break_index) {
   vec2f scale = s * (text.font_size / TextLoader::font.em_size);
 
   const float line_height =
@@ -2407,25 +2111,21 @@ vec2f Text::calc_line_text_size(const Text&  text,
   float width       = 0.0f;
   float space_width = 0.0f;
 
-  if (auto it = TextLoader::font.glyphs.find(' '); it != TextLoader::font.glyphs.end())
-  {
+  if (auto it = TextLoader::font.glyphs.find(' '); it != TextLoader::font.glyphs.end()) {
     space_width = it->second.advance * scale.x;
   }
 
   size_t i = start_index;
 
-  while (i < text.text.size())
-  {
+  while (i < text.text.size()) {
     // Handle newline
-    if (text.text[i] == '\n')
-    {
+    if (text.text[i] == '\n') {
       *break_index = i;
       return {width, line_height};
     }
 
     // Skip leading spaces
-    if (text.text[i] == ' ')
-    {
+    if (text.text[i] == ' ') {
       i++;
       continue;
     }
@@ -2433,37 +2133,29 @@ vec2f Text::calc_line_text_size(const Text&  text,
     float  word_width = 0.0f;
     size_t word_start = i;
 
-    while (i < text.text.size())
-    {
+    while (i < text.text.size()) {
       char c = text.text[i];
 
-      if (c == ' ' || c == '\n')
-      {
+      if (c == ' ' || c == '\n') {
         // AERO_CORE_INFO("I break it");
         break;
       }
 
-      if (c == '\t')
-      {
+      if (c == '\t') {
         word_width += space_width * 4.0f;
         i++;
         continue;
       }
 
       auto it = TextLoader::font.glyphs.find(c);
-      if (it != TextLoader::font.glyphs.end())
-      {
+      if (it != TextLoader::font.glyphs.end()) {
         float char_width = it->second.advance * scale.x;
 
-        if (word_width + char_width > longest_size.x)
-        {
-          if (word_start != start_index)
-          {
+        if (word_width + char_width > longest_size.x) {
+          if (word_start != start_index) {
             *break_index = word_start;
             // width += word_width;
-          }
-          else
-          {
+          } else {
             *break_index = i;
             width += word_width;
           }
@@ -2478,8 +2170,7 @@ vec2f Text::calc_line_text_size(const Text&  text,
     }
 
     float total = width + space_width + word_width;
-    if (longest_size.x > 0 && width > 0 && total - longest_size.x > TEXT_EPSILON)
-    {
+    if (longest_size.x > 0 && width > 0 && total - longest_size.x > TEXT_EPSILON) {
       *break_index = word_start;
       return {width, line_height};
     }
@@ -2501,8 +2192,7 @@ vec2f Text::calc_line_text_size(const Text&  text,
 // center the text
 vec2f Text::center_text(const Text&                text,
                         const Transform_Component& transform,
-                        const vec2f&               longest_size)
-{
+                        const vec2f&               longest_size) {
   return transform.position - (longest_size * 0.5f);
 }
 
@@ -2510,28 +2200,23 @@ vec2f Text::center_single_line_text(const Text&                text,
                                     const Transform_Component& transform,
                                     const vec2f&               longest_size,
                                     size_t                     start_index,
-                                    size_t*                    break_index)
-{
+                                    size_t*                    break_index) {
   vec2f position;
-  switch (text.h_allignment)
-  {
-    case Text_Allignment_Horizontal::Left:
-    {
+  switch (text.h_allignment) {
+    case Text_Allignment_Horizontal::Left: {
       calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.x = transform.position.x;
       break;
     }
 
-    case Text_Allignment_Horizontal::Center:
-    {
+    case Text_Allignment_Horizontal::Center: {
       vec2f size =
           calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.x = transform.position.x + (longest_size * 0.5).x - (size * 0.5f).x;
       break;
     }
 
-    case Text_Allignment_Horizontal::Right:
-    {
+    case Text_Allignment_Horizontal::Right: {
       vec2f size =
           calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.x = transform.position.x + longest_size.x - size.x;
@@ -2539,25 +2224,21 @@ vec2f Text::center_single_line_text(const Text&                text,
     }
   }
 
-  switch (text.v_allignment)
-  {
-    case Text_Allignment_Vertical::Top:
-    {
+  switch (text.v_allignment) {
+    case Text_Allignment_Vertical::Top: {
       calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.y = transform.position.y;
       break;
     }
 
-    case Text_Allignment_Vertical::Center:
-    {
+    case Text_Allignment_Vertical::Center: {
       vec2f size =
           calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.y = transform.position.y + (longest_size * 0.5).y - (size * 0.5f).y;
       break;
     }
 
-    case Text_Allignment_Vertical::Bottom:
-    {
+    case Text_Allignment_Vertical::Bottom: {
       vec2f size =
           calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
       position.y = transform.position.y + longest_size.y - size.y;
@@ -2567,22 +2248,15 @@ vec2f Text::center_single_line_text(const Text&                text,
   return position;
 }
 
-json ButtonState_Component::save_json(Entity entity)
-{
+json ButtonState_Component::save_json(Entity entity) {
   json j;
 
   return j;
 }
-void ButtonState_Component::load_json(Entity entity, const json& j)
-{
-}
-bool ButtonState_Component::is_compatible(NodeType type)
-{
-  return true;
-}
+void ButtonState_Component::load_json(Entity entity, const json& j) {}
+bool ButtonState_Component::is_compatible(NodeType type) { return true; }
 
-json Button_Visual::save_json(const Button_Visual& visual)
-{
+json Button_Visual::save_json(const Button_Visual& visual) {
   json j;
   Helper::save_json(j, "Background", visual.background, Color::White);
   Helper::save_json(j, "Border", visual.border, Color::Black);
@@ -2591,8 +2265,7 @@ json Button_Visual::save_json(const Button_Visual& visual)
   Helper::save_json(j, "Corner", visual.corner, 0.0f);
   return j;
 }
-Button_Visual Button_Visual::load_json(const json& j)
-{
+Button_Visual Button_Visual::load_json(const json& j) {
   Button_Visual visual;
   Helper::load_json(j, "Background", visual.background, Color::White);
   Helper::load_json(j, "Border", visual.border, Color::Black);
@@ -2602,8 +2275,7 @@ Button_Visual Button_Visual::load_json(const json& j)
   return visual;
 }
 
-json Button_Layout::save_json(const Button_Layout& layout)
-{
+json Button_Layout::save_json(const Button_Layout& layout) {
   json j;
   Helper::save_json(j, "Size", layout.size, vec2u(0.0, 0.0));
   Helper::save_json(j,
@@ -2614,8 +2286,7 @@ json Button_Layout::save_json(const Button_Layout& layout)
   Helper::save_json(j, "Uniform", layout.uniform, true);
   return j;
 }
-Button_Layout Button_Layout::load_json(const json& j)
-{
+Button_Layout Button_Layout::load_json(const json& j) {
   Button_Layout layout;
   Helper::load_json(j, "Size", layout.size, vec2u(0, 0));
   Helper::load_json(j, "HAllignment", layout.h_allignment, Text_Allignment_Horizontal::Left);
@@ -2624,15 +2295,13 @@ Button_Layout Button_Layout::load_json(const json& j)
   return layout;
 }
 
-void Button_Component::add_component(Entity entity)
-{
+void Button_Component::add_component(Entity entity) {
   Button_Component comps;
   comps.overrides[Button_Visual_State::Normal] = comps.base;
 
   entity.add_component<Button_Component>(comps);
 }
-json Button_Component::save_json(Entity entity)
-{
+json Button_Component::save_json(Entity entity) {
   json  j;
   auto& comps = entity.get_component<Button_Component>();
 
@@ -2642,15 +2311,13 @@ json Button_Component::save_json(Entity entity)
 
   comps.overrides[comps.current_state] = comps.base;
 
-  for (const auto& [state, visual] : comps.overrides)
-  {
+  for (const auto& [state, visual] : comps.overrides) {
     j["Visual"][Button_Visual::to_string(state)] = Button_Visual::save_json(visual);
   }
 
   return j;
 }
-void Button_Component::load_json(Entity entity, const json& j)
-{
+void Button_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Button_Component>())
     entity.add_component<Button_Component>();
 
@@ -2658,12 +2325,10 @@ void Button_Component::load_json(Entity entity, const json& j)
 
   comps.layout = Button_Layout::load_json(j["Layout"]);
 
-  if (j.contains("Visual") && j["Visual"].is_object())
-  {
+  if (j.contains("Visual") && j["Visual"].is_object()) {
     comps.overrides.clear();
 
-    for (const auto& [state, visual_json] : j["Visual"].items())
-    {
+    for (const auto& [state, visual_json] : j["Visual"].items()) {
       Button_Visual visual                               = Button_Visual::load_json(visual_json);
       comps.overrides[Button_Visual::form_string(state)] = visual;
     }
@@ -2672,41 +2337,35 @@ void Button_Component::load_json(Entity entity, const json& j)
   comps.base = comps.overrides[Button_Visual_State::Normal];
 }
 
-void Textured_Button_Component::add_component(Entity entity)
-{
+void Textured_Button_Component::add_component(Entity entity) {
   Textured_Button_Component comps;
   comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
 
   entity.add_component<Textured_Button_Component>(comps);
 }
-json Textured_Button_Component::save_json(Entity entity)
-{
+json Textured_Button_Component::save_json(Entity entity) {
   json j;
 
   auto& comps = entity.get_component<Textured_Button_Component>();
   j["Visual"] = json::object();
 
   comps.overrides[comps.current_state] = comps.base_rect;
-  for (const auto& [state, rect] : comps.overrides)
-  {
+  for (const auto& [state, rect] : comps.overrides) {
     Helper::save_json(j["Visual"], Button_Visual::to_string(state), rect, uint_rect(0, 0, 0, 0));
   }
   return j;
 }
 
-void Textured_Button_Component::load_json(Entity entity, const json& j)
-{
+void Textured_Button_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Textured_Button_Component>())
     entity.add_component<Textured_Button_Component>();
 
   auto& comps = entity.get_component<Textured_Button_Component>();
 
-  if (j.contains("Visual") && j["Visual"].is_object())
-  {
+  if (j.contains("Visual") && j["Visual"].is_object()) {
     comps.overrides.clear();
 
-    for (const auto& [state_str, rect_json] : j["Visual"].items())
-    {
+    for (const auto& [state_str, rect_json] : j["Visual"].items()) {
       Button_Visual_State state = Button_Visual::form_string(state_str);
       uint_rect           rect;
       Helper::load_json(rect_json, rect, uint_rect(0, 0, 0, 0));
@@ -2716,15 +2375,13 @@ void Textured_Button_Component::load_json(Entity entity, const json& j)
   }
 
   comps.base_rect = comps.overrides[Button_Visual_State::Normal];
-  if (entity.has_component<TextureRect_Component>())
-  {
+  if (entity.has_component<TextureRect_Component>()) {
     auto& props = entity.get_component<TextureRect_Component>();
     props.rect  = comps.base_rect;
   }
 }
 
-json Audio_Component::save_json(Entity entity)
-{
+json Audio_Component::save_json(Entity entity) {
   json j;
 
   auto& props = entity.get_component<Audio_Component>();
@@ -2734,8 +2391,7 @@ json Audio_Component::save_json(Entity entity)
   Helper::save_json(j, "Volume", props.source->get_volume(), 0.0f);
   return j;
 }
-void Audio_Component::load_json(Entity entity, const json& j)
-{
+void Audio_Component::load_json(Entity entity, const json& j) {
   if (!entity.has_component<Audio_Component>())
     entity.add_component<Audio_Component>();
 
@@ -2748,11 +2404,9 @@ void Audio_Component::load_json(Entity entity, const json& j)
   Helper::load_json(j, "Pitch", pitch, 0.0f);
   Helper::load_json(j, "Volume", volume, 0.0f);
 
-  if (!props.path.empty())
-  {
+  if (!props.path.empty()) {
     props.audio_buffer = NodeHelper::create_sound(props.path);
-    if (props.audio_buffer)
-    {
+    if (props.audio_buffer) {
       props.source = AudioSource::create();
       props.source->set_buffer(props.audio_buffer);
       props.source->set_loop(loop);
@@ -2761,8 +2415,7 @@ void Audio_Component::load_json(Entity entity, const json& j)
     }
   }
 }
-void Audio_Component::clone_entity(Entity original, Entity clone)
-{
+void Audio_Component::clone_entity(Entity original, Entity clone) {
   if (!original.has_component<Audio_Component>())
     return;
 
@@ -2776,8 +2429,6 @@ void Audio_Component::clone_entity(Entity original, Entity clone)
 
   clone.add_component<Audio_Component>(std::move(comps));
 }
-void Audio_Component::delete_entity(Entity entity)
-{
-}
+void Audio_Component::delete_entity(Entity entity) {}
 
 }  // namespace ag

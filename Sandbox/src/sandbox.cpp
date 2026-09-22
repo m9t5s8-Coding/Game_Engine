@@ -16,13 +16,10 @@ public:
     props.Title = "Aero Runtime";
     init(props);
     get().get_window().center_window();
-
 #endif
-
     ag::NodeFactory::init();
     ag::Renderer::init();
     ag::ScriptManager::init();
-
     push_layer(new ag::Sandbox2D());
   }
 
@@ -36,9 +33,8 @@ public:
   }
 };
 
-#if defined(PLATFORM_WINDOW) || defined(PLATFORM_LINUX)
+#ifndef PLATFORM_ANDROID
 ag::Application* ag::create_application() { return new Sandbox(); }
-#elif defined(PLATFORM_ANDROID)
-
+#else
 ag::Application* ag::create_application(android_app* app) { return new Sandbox(); }
 #endif
