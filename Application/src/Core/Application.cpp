@@ -16,6 +16,10 @@
   #include <Platform/Android/AndroidWindow.hpp>
 #endif
 
+#ifdef PLATFORM_WEB
+  #include <emscripten/emscripten.h>
+#endif
+
 namespace ag {
 
 Application* Application::s_Instance = nullptr;
@@ -36,7 +40,7 @@ void Application::init(const WindowProps& props) {
   m_audio_device->init();
 
 #else
-  ag::AssetManager::init_engine("assets.pak", get_exe_directory() + "assets");
+  ag::AssetManager::init_engine("assets.pak", get_exe_directory() + "/assets");
   m_Window = std::unique_ptr<Window>(Window::create(props));
   m_Window->set_event_callback(AERO_BIND_EVENT_FN(Application::on_event));
   m_audio_device = AG_scope<Audio_Device>(Audio_Device::create());
@@ -52,6 +56,16 @@ void Application::init(const WindowProps& props) {
 
 void Application::run() {
   on_create();
+
+#ifdef PLATFORM_WEB
+  // Browsers cannot run a blocking loop; hand control to the browser and let
+  // it call run_frame() once per animation frame.
+  emscripten_set_main_loop_arg(
+      [](void* arg) { static_cast<Application*>(arg)->run_frame(); },
+      this,
+      0,
+      true);
+#else
   while (m_running) {
     float     time      = static_cast<float>(Time::get_time());
     TimeStamp timestamp = time - m_last_frametime;
@@ -74,10 +88,11 @@ void Application::run() {
     m_Window->on_update();
   }
   on_destroy();
+#endif
 }
 
 void Application::run_frame() {
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   float     time      = static_cast<float>(Time::get_time());
   TimeStamp timestamp = time - m_last_frametime;
   delta_time          = timestamp.get_seconds();
@@ -87,6 +102,13 @@ void Application::run_frame() {
     for (Layer* layer : m_layerstack) layer->on_update(timestamp);
   }
   m_Window->on_update();
+
+#ifdef PLATFORM_WEB
+  if (!m_running) {
+    emscripten_cancel_main_loop();
+    on_destroy();
+  }
+#endif
 #endif
 }
 

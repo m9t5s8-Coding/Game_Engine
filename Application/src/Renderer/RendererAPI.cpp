@@ -5,7 +5,7 @@ namespace ag
 #ifdef PLATFORM_WINDOWS
   RendererAPI::API RendererAPI::s_API = RendererAPI::API::OpenGL;
 
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   RendererAPI::API RendererAPI::s_API = RendererAPI::API::OpenGL_ES;
 
 #elif defined(PLATFORM_MACOS)

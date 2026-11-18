@@ -1,4 +1,4 @@
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <Audio/AudioManager.hpp>
   #include <Platform/OpenAL/OpenALAudioDevice.hpp>

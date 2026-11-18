@@ -221,9 +221,10 @@ void GameExporter::export_thread_func()
 
     if (!result.success)
     {
-      m_error_message = "Packing failed!";
-      m_status        = Status::Failed;
-      log_msg("ERROR: Packing failed!");
+      m_error_message =
+          result.error.empty() ? "Packing failed!" : "Packing failed: " + result.error;
+      m_status = Status::Failed;
+      log_msg("ERROR: " + m_error_message);
       return;
     }
 

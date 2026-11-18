@@ -14,7 +14,7 @@
 #include <Renderer/VertexBuffer.hpp>
 #include <Scene/SceneComponent.hpp>
 
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <malloc.h>
 #endif
 
@@ -172,7 +172,7 @@ void Renderer2D::init()
   {
 #ifdef _MSC_VER
     b.instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
     b.instances = (Quad_Instance*)memalign(64, sizeof(Quad_Instance) * s_data->max_shape);
 #else
     b.instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
@@ -185,7 +185,9 @@ void Renderer2D::init()
   alloc_batch(s_data->async_data->batch_b);
   s_data->async_data->current_batch = &s_data->async_data->batch_a;
 
+#ifndef PLATFORM_WEB
   s_data->async_data->worker_thread = std::thread(worker_thread_function);
+#endif
 }
 
 void Renderer2D::shut_down()
@@ -198,8 +200,10 @@ void Renderer2D::shut_down()
     s_data->async_data->running = false;
     s_data->async_data->command_cv.notify_one();
 
+#ifndef PLATFORM_WEB
     if (s_data->async_data->worker_thread.joinable())
       s_data->async_data->worker_thread.join();
+#endif
 
 #ifdef _MSC_VER
     _aligned_free(s_data->async_data->batch_a.instances);
@@ -257,6 +261,12 @@ void Renderer2D::draw_fullscreen_quad(AG_uint id, const vec2f& viewport, const v
   s_data->fullscreen_shader->set_mat3("u_screen_matrix", screen_matrix);
   s_data->fullscreen_shader->set_int("u_texture", TEXTURE_SCENE);
   Renderer::submit(s_data->fullscreen_vertex_array);
+
+  // Unbind the scene texture once it has been sampled. Otherwise the next frame
+  // binds the framebuffer that owns it while the texture is still attached to
+  // the active unit, which GLES3/WebGL2 report as a framebuffer/texture feedback
+  // loop.
+  Renderer::bind(0, TEXTURE_SCENE);
 }
 
 void Renderer2D::draw_rectangle(const Rectangle&           rect,
@@ -337,6 +347,43 @@ void Renderer2D::flush()
   if (s_data->async_data->total_commands == 0)
     return;
 
+#ifdef PLATFORM_WEB
+  // Web builds run on a single thread (no pthread worker). Process the queued
+  // commands directly and upload the result synchronously.
+  ProcessedBatch* batch = &s_data->async_data->batch_a;
+  batch->clear();
+
+  std::queue<DrawCommand> local;
+  {
+    std::lock_guard<std::mutex> lk(s_data->async_data->command_mutex);
+    local.swap(s_data->async_data->command_queue);
+  }
+
+  while (!local.empty())
+  {
+    DrawCommand cmd = std::move(local.front());
+    local.pop();
+
+    std::visit(
+        [batch](auto&& arg)
+        {
+          using T = std::decay_t<decltype(arg)>;
+          if constexpr (std::is_same_v<T, RectangleCommand>)
+            process_rectangle(arg, *batch);
+          else if constexpr (std::is_same_v<T, CircleCommand>)
+            process_circle(arg, *batch);
+          else if constexpr (std::is_same_v<T, SpriteCommand>)
+            process_sprite(arg, *batch);
+          else if constexpr (std::is_same_v<T, TextCommand>)
+            process_text(arg, *batch);
+        },
+        cmd);
+  }
+
+  flush_internal(batch);
+  s_data->async_data->total_commands = 0;
+  return;
+#else
   {
     std::lock_guard<std::mutex> lk(s_data->async_data->command_mutex);
     s_data->async_data->flush_requested = true;
@@ -358,6 +405,7 @@ void Renderer2D::flush()
 
   flush_internal(batch);
   s_data->async_data->total_commands = 0;
+#endif
 }
 
 void Renderer2D::worker_thread_function()

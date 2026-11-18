@@ -1,7 +1,9 @@
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
-  #include <android/log.h>
-  #include <EGL/egl.h>
+  #ifdef PLATFORM_ANDROID
+    #include <android/log.h>
+    #include <EGL/egl.h>
+  #endif
   #include <GLES3/gl3.h>
 
   #include <Core/Log.hpp>
@@ -66,6 +68,7 @@ OpenGL_ESTexture2D::OpenGL_ESTexture2D(const std::string& p_path,
 
   m_size = vec2u((uint32_t)width, (uint32_t)height);
 
+  #ifdef PLATFORM_ANDROID
   // Check EGL context is current
   EGLContext ctx = eglGetCurrentContext();
   AERO_CORE_INFO("EGL context when loading {}: {}", p_path, (void*)ctx);
@@ -75,6 +78,7 @@ OpenGL_ESTexture2D::OpenGL_ESTexture2D(const std::string& p_path,
     stbi_image_free(pixels);
     return;
   }
+  #endif
 
   // Clear any pre-existing errors
   while (glGetError() != GL_NO_ERROR)
@@ -168,4 +172,4 @@ void OpenGL_ESTexture2D::bind(uint32_t p_slot) const
 
 }  // namespace ag
 
-#endif  // PLATFORM_ANDROID
+#endif  // PLATFORM_ANDROID || PLATFORM_WEB

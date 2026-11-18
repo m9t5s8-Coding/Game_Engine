@@ -1,6 +1,6 @@
 
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <Audio/AudioBuffer.hpp>
   #include <Audio/AudioManager.hpp>

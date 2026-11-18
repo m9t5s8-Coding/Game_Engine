@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_WINDOWS)
   #include <Platform/OpenGL/OpenGLVertexArray.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESVertexArray.hpp>
 #endif
 
@@ -24,7 +24,7 @@ AG_ref<VertexArray> VertexArray::create()
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cref<OpenGL_ESVertexArray>();
 #else
       return nullptr;

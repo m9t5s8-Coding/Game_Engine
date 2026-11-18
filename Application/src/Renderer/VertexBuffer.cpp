@@ -5,7 +5,7 @@
 
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_WINDOWS)
   #include <Platform/OpenGL/OpenGLVertexBuffer.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESVertexBuffer.hpp>
 #endif
 namespace ag
@@ -24,7 +24,7 @@ AG_ref<VertexBuffer> VertexBuffer::create(float* vertices, size_t size)
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return std::make_shared<OpenGL_ESVertexBuffer>(vertices, size);
 #else
       return nullptr;
@@ -50,7 +50,7 @@ AG_ref<VertexBuffer> VertexBuffer::create(size_t size)  // dynamic, no initial d
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return std::make_shared<OpenGL_ESVertexBuffer>(size);  // routes to GL_DYNAMIC_DRAW ctor
 #else
       return nullptr;

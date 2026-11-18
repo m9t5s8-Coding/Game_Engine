@@ -2,7 +2,7 @@
 
 namespace ag
 {
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 AudioAPI::API AudioAPI::s_API = AudioAPI::API::OpenAL;
 #else
 AudioAPI::API AudioAPI::s_API = AudioAPI::API::None;

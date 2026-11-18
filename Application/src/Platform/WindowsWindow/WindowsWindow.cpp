@@ -1,4 +1,4 @@
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
 
   #include <Events/KeyEvent.hpp>
   #include <Events/MouseEvent.hpp>
@@ -44,9 +44,15 @@ void WindowsWindow::init(const WindowProps& props)
     int success = glfwInit();
     AERO_CORE_ASSERT(success, "Could not initialize GLFW!");
 
+  #ifdef PLATFORM_WEB
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  #else
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  #endif
 
   #ifdef PLATFORM_LINUX
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -208,6 +214,11 @@ void WindowsWindow::set_vsync(bool enabled)
 
 void WindowsWindow::set_full_screen()
 {
+  #ifdef PLATFORM_WEB
+  // Browsers own fullscreen state; monitor switching is not available.
+  return;
+  #endif
+
   GLFWmonitor*       primary_monitor = glfwGetPrimaryMonitor();
   const GLFWvidmode* p_mode          = glfwGetVideoMode(primary_monitor);
 
@@ -249,7 +260,7 @@ void WindowsWindow::set_size(const vec2u& size)
 
 void WindowsWindow::set_position(const vec2i& position)
 {
-  #ifdef PLATFORM_LINUX
+  #if defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
   return;
   #else
   glfwSetWindowPos(m_Window, position.x, position.y);
@@ -260,7 +271,7 @@ vec2u WindowsWindow::get_position() const
 {
   vec2i window_pos = {0, 0};
 
-  #ifdef PLATFORM_LINUX
+  #if defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
   return window_pos;
   #else
   glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);
@@ -270,7 +281,7 @@ vec2u WindowsWindow::get_position() const
 
 void WindowsWindow::center_window()
 {
-  #ifdef PLATFORM_LINUX
+  #if defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
   m_win_data.is_center_window = false;
   return;
   #else

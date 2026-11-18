@@ -1,6 +1,4 @@
-#ifdef PLATFORM_ANDROID
-
-  #include <android/log.h>
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <array>
   #include <Core/Log.hpp>
@@ -260,4 +258,4 @@ void OpenGL_ESShader::set_int_array(const std::string& name, int* values, AG_uin
 
 }  // namespace ag
 
-#endif  // PLATFORM_ANDROID
+#endif  // PLATFORM_ANDROID || PLATFORM_WEB

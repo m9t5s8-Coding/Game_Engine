@@ -1,156 +1,88 @@
-#include <algorithm>
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
+#include <Project/GamePacker.hpp>
+
 #include <iostream>
 #include <string>
 #include <vector>
 
-namespace ag {
-static constexpr uint32_t PAK_MAGIC   = 0x41455241;
-static constexpr uint32_t PAK_VERSION = 1;
+namespace
+{
+void print_usage(const char* executable)
+{
+  std::cout
+      << "Usage: " << executable << " [options] <input_folder> <output.pak>\n"
+      << "\n"
+      << "Packs every file under <input_folder> into a .pak archive.\n"
+      << "Paths inside the pak are relative to <input_folder> and always use '/'.\n"
+      << "\n"
+      << "Options:\n"
+      << "  -h, --help           Show this help and exit\n"
+      << "  -q, --quiet          Only print warnings, errors and the final summary\n"
+      << "  -v, --verbose        List every packed file (default)\n"
+      << "      --include-hidden Include files and folders starting with '.'\n";
+}
+}  // namespace
 
-struct PackedEntry {
-  uint64_t offset;
-  uint64_t size;
-};
+int main(int argc, char** argv)
+{
+  bool                     verbose        = true;
+  bool                     include_hidden = false;
+  std::vector<std::string> positional;
 
-class GamePacker {
-public:
-  struct PackResult {
-    bool     success   = false;
-    uint32_t fileCount = 0;
-    uint64_t totalSize = 0;
-  };
+  for (int i = 1; i < argc; ++i)
+  {
+    const std::string argument = argv[i];
 
-  static PackResult pack(const std::string& project_root, const std::string& output_pak) {
-    namespace fs = std::filesystem;
-    PackResult result;
-
-    if (!fs::exists(project_root)) {
-      std::cerr << "[Packer] ERROR: Project root does not exist: " << project_root << std::endl;
-      return result;
+    if (argument == "-h" || argument == "--help")
+    {
+      print_usage(argv[0]);
+      return 0;
+    }
+    if (argument == "-q" || argument == "--quiet")
+    {
+      verbose = false;
+      continue;
+    }
+    if (argument == "-v" || argument == "--verbose")
+    {
+      verbose = true;
+      continue;
+    }
+    if (argument == "--include-hidden")
+    {
+      include_hidden = true;
+      continue;
+    }
+    if (!argument.empty() && argument.front() == '-')
+    {
+      std::cerr << "[AssetPacker] ERROR: Unknown option '" << argument << "'\n";
+      print_usage(argv[0]);
+      return 2;
     }
 
-    // Collect all files
-    struct FileData {
-      std::string          rel_path;
-      std::vector<uint8_t> data;
-    };
-
-    std::vector<FileData> files;
-    uint64_t              total_data_size = 0;
-
-    std::cout << "[Packer] Scanning: " << project_root << std::endl;
-
-    for (auto& entry : fs::recursive_directory_iterator(project_root)) {
-      if (entry.is_directory())
-        continue;
-
-      std::string rel = fs::relative(entry.path(), project_root).string();
-      std::replace(rel.begin(), rel.end(), '\\', '/');
-
-      // Skip hidden files and temp files
-      if (rel.find("/.") != std::string::npos)
-        continue;
-      if (rel.find("\\.") != std::string::npos)
-        continue;
-
-      std::ifstream in(entry.path(), std::ios::binary | std::ios::ate);
-      if (!in.is_open()) {
-        std::cerr << "[Packer] WARNING: Cannot read: " << entry.path() << std::endl;
-        continue;
-      }
-
-      uint64_t size = in.tellg();
-      in.seekg(0);
-
-      FileData fd;
-      fd.rel_path = rel;
-      fd.data.resize(size);
-      in.read((char*)fd.data.data(), size);
-      in.close();
-
-      total_data_size += size;
-      std::cout << "[Packer]   + " << rel << " (" << size << " bytes)" << std::endl;
-      files.push_back(std::move(fd));
-    }
-
-    if (files.empty()) {
-      std::cerr << "[Packer] ERROR: No files found to pack." << std::endl;
-      return result;
-    }
-
-    // Calculate header size to know dataOffset
-    uint64_t header_size =
-        sizeof(PAK_MAGIC) + sizeof(PAK_VERSION) + sizeof(uint32_t) + sizeof(uint64_t);
-    for (auto& f : files)
-      header_size += sizeof(uint32_t) + f.rel_path.size() + sizeof(uint64_t) + sizeof(uint64_t);
-
-    uint64_t data_offset = header_size;
-
-    // Write .pak
-    std::ofstream out(output_pak, std::ios::binary);
-    if (!out.is_open()) {
-      std::cerr << "[Packer] ERROR: Cannot create output file: " << output_pak << std::endl;
-      return result;
-    }
-
-    // Header
-    uint32_t entryCount = (uint32_t)files.size();
-    out.write((char*)&PAK_MAGIC, sizeof(PAK_MAGIC));
-    out.write((char*)&PAK_VERSION, sizeof(PAK_VERSION));
-    out.write((char*)&entryCount, sizeof(entryCount));
-    out.write((char*)&data_offset, sizeof(data_offset));
-
-    // Entry table
-    uint64_t current_offset = 0;
-    for (auto& f : files) {
-      uint32_t pathLen = (uint32_t)f.rel_path.size();
-      uint64_t size    = (uint64_t)f.data.size();
-
-      out.write((char*)&pathLen, sizeof(pathLen));
-      out.write(f.rel_path.data(), pathLen);
-      out.write((char*)&current_offset, sizeof(current_offset));
-      out.write((char*)&size, sizeof(size));
-
-      current_offset += size;
-    }
-
-    // File data
-    for (auto& f : files) out.write((char*)f.data.data(), f.data.size());
-
-    out.close();
-
-    result.success   = true;
-    result.fileCount = entryCount;
-    result.totalSize = total_data_size;
-
-    std::cout << "[Packer] Done! Packed " << entryCount << " files (" << total_data_size
-              << " bytes) -> " << output_pak << std::endl;
-
-    return result;
-  }
-};
-}  // namespace ag
-
-int main(int argc, char** argv) {
-  if (argc < 3) {
-    std::cerr << "Usage: AssetPacker <assets_folder> <output.pak>\n";
-    return 1;
+    positional.push_back(argument);
   }
 
-  std::string input  = argv[1];
-  std::string output = argv[2];
+  if (positional.size() != 2)
+  {
+    std::cerr << "[AssetPacker] ERROR: Expected an input folder and an output pak\n\n";
+    print_usage(argv[0]);
+    return 2;
+  }
 
-  auto result = ag::GamePacker::pack(input, output);
+  ag::GamePacker::PackOptions options;
+  options.verbose        = verbose;
+  options.include_hidden = include_hidden;
 
-  if (!result.success) {
+  const ag::GamePacker::PackResult result =
+      ag::GamePacker::pack(positional[0], positional[1], options);
+
+  if (!result.success)
+  {
     std::cerr << "[AssetPacker] Failed to pack assets.\n";
     return 1;
   }
 
   std::cout << "[AssetPacker] Packed " << result.fileCount << " files (" << result.totalSize
-            << " bytes) -> " << output << "\n";
+            << " bytes) -> " << positional[1] << "\n";
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <Audio/AudioAPI.hpp>
 #include <Audio/AudioSource.hpp>
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenAL/OpenALAudioSource.hpp>
 
 #endif
@@ -16,7 +16,7 @@ AG_scope<AudioSource> AudioSource::create()
       return nullptr;
 
     case AudioAPI::API::OpenAL:
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cscope<OpenALAudioSource>();
 #else
       return nullptr;

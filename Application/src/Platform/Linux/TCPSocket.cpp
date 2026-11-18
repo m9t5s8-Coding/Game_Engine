@@ -1,7 +1,9 @@
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
   #include <arpa/inet.h>
+#ifndef PLATFORM_WEB
   #include <asm-generic/socket.h>
+#endif
   #include <fcntl.h>
   #include <netinet/in.h>
   #include <sys/socket.h>
@@ -99,7 +101,11 @@ int TCPSocket::accept()
 
 bool TCPSocket::send(const void* data, int size)
 {
+#ifdef MSG_NOSIGNAL
   int sent = ::send(m_FD, data, size, MSG_NOSIGNAL);
+#else
+  int sent = ::send(m_FD, data, size, 0);
+#endif
   if (sent < 0)
   {
     std::cerr << "[TCPSocket] Send failed\n";

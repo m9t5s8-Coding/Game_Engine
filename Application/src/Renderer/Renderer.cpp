@@ -45,7 +45,7 @@ void Renderer::submit_instanced(const AG_ref<Shader>&      p_shader,
                                 const AG_uint              instanced_count) {
   p_shader->bind();
 
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   // ES shader uses individual sampler uniforms
   p_shader->set_int("u_texture0", 0);
   p_shader->set_int("u_texture1", 1);

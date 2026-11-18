@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   #include <Platform/OpenGL/OpenGLShader.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESShader.hpp>
 #endif
 
@@ -25,7 +25,7 @@ std::shared_ptr<Shader> Shader::create(const std::string& p_shader_path)
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cref<OpenGL_ESShader>(p_shader_path);
 #else
       return nullptr;
@@ -52,7 +52,7 @@ std::shared_ptr<Shader> Shader::create(const std::string& p_name, const std::str
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cref<OpenGL_ESShader>(p_name, p_shader_path);
 #else
       return nullptr;
@@ -81,7 +81,7 @@ std::shared_ptr<Shader> Shader::create(const std::string& p_name,
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cref<OpenGL_ESShader>(p_name, p_vertex_path, p_fragment_path);
 #else
       return nullptr;

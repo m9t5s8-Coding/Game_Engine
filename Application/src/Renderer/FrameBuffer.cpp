@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
   #include <Platform/OpenGL/OpenGLFrameBuffer.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESFrameBuffer.hpp>
 #endif
 
@@ -24,7 +24,7 @@ AG_ref<FrameBuffer> FrameBuffer::create(const FrameBufferSpecification& spec)
       return nullptr;
 #endif
     case RendererAPI::API::OpenGL_ES:
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       return AG_cref<OpenGL_ESFrameBuffer>(spec);
 #else
       return nullptr;

@@ -1,4 +1,4 @@
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <GLES3/gl3.h>
 
@@ -106,6 +106,11 @@ void OpenGL_ESFrameBuffer::invalidate()
       if (err != GL_NO_ERROR)
         AERO_CORE_ERROR("Color attachment {} error: 0x{:04x}", i, err);
     }
+
+    // Do not leave an attachment bound as a texture: binding this framebuffer
+    // for rendering while one of its attachments is still on a texture unit is
+    // a feedback loop on GLES3/WebGL2.
+    glBindTexture(GL_TEXTURE_2D, 0);
   }
 
   // ── Depth/stencil — use Renderbuffer (faster on mobile, no texture needed) ─
@@ -126,6 +131,8 @@ void OpenGL_ESFrameBuffer::invalidate()
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
       AERO_CORE_ERROR("Depth attachment error: 0x{:04x}", err);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
   }
 
   // ── Draw buffers for MRT ───────────────────────────────────────────────────
@@ -213,4 +220,4 @@ void OpenGL_ESFrameBuffer::clear_attachment(AG_uint attachment_index, int value)
 
 }  // namespace ag
 
-#endif  // PLATFORM_ANDROID
+#endif  // PLATFORM_ANDROID || PLATFORM_WEB

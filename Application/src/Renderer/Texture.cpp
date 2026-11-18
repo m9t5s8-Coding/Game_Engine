@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_WINDOWS)
   #include <Platform/OpenGL/OpenGLTexture.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESTexture.hpp>
 #endif
 
@@ -41,7 +41,7 @@ std::shared_ptr<Texture2D> Texture2D::create(const std::string& p_path,
     }
     case RendererAPI::API::OpenGL_ES:
     {
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
       if (!reload)
       {
         if (auto cached = s_texture_cache[p_path].lock())

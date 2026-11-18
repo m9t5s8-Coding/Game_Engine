@@ -7,6 +7,38 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 RESET='\033[0m'
 
+show_help() {
+  echo -e "${BLUE}========================================${RESET}"
+  echo -e "${GREEN}Game Engine Build Script${RESET}"
+  echo -e "${BLUE}========================================${RESET}"
+  echo ""
+  echo "Usage: ./build.sh [preset] [options]"
+  echo ""
+  echo "Presets:"
+  echo "  runtime         - Build only Sandbox"
+  echo "  editor          - Build only AeroEditor"
+  echo "  editor-runtime  - Build AeroEditor + Sandbox"
+  echo "  server          - Build only ServerSandbox"
+  echo "  tools           - Build only AssetPacker"
+  echo "  full            - Build everything"
+  echo "  web             - Build for Web/Emscripten"
+  echo ""
+  echo "Options:"
+  echo "  --target <name> - Build only this target (repeatable)"
+  echo "  --clean         - Clean build directory before building"
+  echo "  --configure     - Only configure, don't build"
+  echo "  --build         - Only build (after configuration)"
+  echo "  --verbose       - Verbose output"
+  echo "  --help          - Show this help"
+  echo ""
+  echo "Examples:"
+  echo "  ./build.sh runtime"
+  echo "  ./build.sh full --target AssetPacker"
+  echo "  ./build.sh editor --clean"
+  echo "  ./build.sh full --verbose"
+  echo ""
+}
+
 # Check if CMake is available
 if ! command -v cmake &>/dev/null; then
   echo -e "${RED}Error: CMake not found in PATH${RESET}"
@@ -21,32 +53,7 @@ fi
 
 # Show help if no arguments
 if [ $# -eq 0 ]; then
-  echo -e "${BLUE}========================================${RESET}"
-  echo -e "${GREEN}Game Engine Build Script${RESET}"
-  echo -e "${BLUE}========================================${RESET}"
-  echo ""
-  echo "Usage: ./build.sh [preset] [options]"
-  echo ""
-  echo "Presets:"
-  echo "  runtime         - Build only Sandbox"
-  echo "  editor          - Build only Editor"
-  echo "  editor-runtime  - Build Editor + Sandbox"
-  echo "  server          - Build only Server"
-  echo "  full            - Build everything"
-  echo "  web             - Build for Web/Emscripten"
-  echo ""
-  echo "Options:"
-  echo "  --clean         - Clean build directory before building"
-  echo "  --configure     - Only configure, don't build"
-  echo "  --build         - Only build (after configuration)"
-  echo "  --verbose       - Verbose output"
-  echo "  --help          - Show this help"
-  echo ""
-  echo "Examples:"
-  echo "  ./build.sh runtime"
-  echo "  ./build.sh editor --clean"
-  echo "  ./build.sh full --verbose"
-  echo ""
+  show_help
   exit 0
 fi
 
@@ -56,6 +63,7 @@ CLEAN=0
 CONFIGURE_ONLY=0
 BUILD_ONLY=0
 VERBOSE=0
+TARGETS=()
 shift
 
 while [ $# -gt 0 ]; do
@@ -72,9 +80,16 @@ while [ $# -gt 0 ]; do
   --verbose)
     VERBOSE=1
     ;;
+  --target)
+    if [ $# -lt 2 ] || [ -z "$2" ]; then
+      echo -e "${RED}Error: --target requires a target name${RESET}"
+      exit 1
+    fi
+    TARGETS+=("$2")
+    shift
+    ;;
   --help)
-    echo "Usage: ./build.sh [preset] [options]"
-    echo "Options: --clean, --configure, --build, --verbose, --help"
+    show_help
     exit 0
     ;;
   *)
@@ -86,7 +101,7 @@ while [ $# -gt 0 ]; do
 done
 
 # Validate preset
-VALID_PRESETS=("runtime" "editor" "editor-runtime" "server" "full" "web")
+VALID_PRESETS=("runtime" "editor" "editor-runtime" "server" "tools" "full" "web")
 IS_VALID=0
 for p in "${VALID_PRESETS[@]}"; do
   if [ "$p" = "$PRESET" ]; then
@@ -129,27 +144,36 @@ if [ $BUILD_ONLY -eq 0 ]; then
   echo -e "${BLUE}Configuring preset: $PRESET${RESET}"
 
   if [ "$PRESET" = "web" ]; then
-    emcmake cmake --preset "$PRESET"
+    if ! emcmake cmake --preset "$PRESET"; then
+      echo -e "${RED}Configuration failed!${RESET}"
+      exit 1
+    fi
   else
-    cmake --preset "$PRESET"
-  fi
-
-  if [ $? -ne 0 ]; then
-    echo -e "${RED}Configuration failed!${RESET}"
-    exit $?
+    if ! cmake --preset "$PRESET"; then
+      echo -e "${RED}Configuration failed!${RESET}"
+      exit 1
+    fi
   fi
   echo -e "${GREEN}Configuration successful${RESET}"
 fi
 
 # Build
 if [ $CONFIGURE_ONLY -eq 0 ]; then
-  echo -e "${BLUE}Building preset: $PRESET${RESET}"
-
-  if [ $VERBOSE -eq 1 ]; then
-    cmake --build "$BUILD_DIR" --verbose
+  if [ ${#TARGETS[@]} -gt 0 ]; then
+    echo -e "${BLUE}Building targets in preset '$PRESET': ${TARGETS[*]}${RESET}"
   else
-    cmake --build "$BUILD_DIR"
+    echo -e "${BLUE}Building preset: $PRESET${RESET}"
   fi
+
+  BUILD_ARGS=()
+  for target in "${TARGETS[@]}"; do
+    BUILD_ARGS+=(--target "$target")
+  done
+  if [ $VERBOSE -eq 1 ]; then
+    BUILD_ARGS+=(--verbose)
+  fi
+
+  cmake --build "$BUILD_DIR" "${BUILD_ARGS[@]}"
 
   if [ $? -ne 0 ]; then
     echo -e "${RED}Build failed!${RESET}"

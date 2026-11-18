@@ -1,4 +1,4 @@
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
 
   #include <Core/Time.hpp>
   #include <cstdint>
@@ -47,6 +47,30 @@ uint64_t Time::get_ticks()
 double Time::get_frequency()
 {
   return static_cast<double>(get_qpc_frequency().QuadPart);
+}
+}  // namespace ag
+
+  #elif defined(PLATFORM_WEB)
+    // WebAssembly implementation using Emscripten's high-resolution clock
+    #include <emscripten/emscripten.h>
+
+namespace ag
+{
+double Time::get_time()
+{
+  static double start_time = emscripten_get_now();
+  return (emscripten_get_now() - start_time) / 1000.0;
+}
+
+uint64_t Time::get_ticks()
+{
+  // Return microseconds as ticks
+  return static_cast<uint64_t>(emscripten_get_now() * 1000.0);
+}
+
+double Time::get_frequency()
+{
+  return 1000000.0;  // 1 MHz (microsecond precision)
 }
 }  // namespace ag
 

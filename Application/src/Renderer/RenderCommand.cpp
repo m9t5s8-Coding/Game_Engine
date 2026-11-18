@@ -3,14 +3,14 @@
 
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_WINDOWS)
   #include <Platform/OpenGL/OpenGLRendererAPI.hpp>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
   #include <Platform/OpenGL_ES/OpenGL_ESRendererAPI.hpp>
 #endif
 namespace ag
 {
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)
 RendererAPI* RenderCommand::s_renderAPI = new OpenGLRendererAPI();
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 RendererAPI* RenderCommand::s_renderAPI = new OpenGL_ESRendererAPI();
 #endif
 }  // namespace ag

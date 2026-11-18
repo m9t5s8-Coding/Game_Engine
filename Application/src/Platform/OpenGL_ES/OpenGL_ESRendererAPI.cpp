@@ -1,4 +1,4 @@
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <GLES3/gl3.h>
 
@@ -17,7 +17,24 @@ void OpenGL_ESRendererAPI::set_clear_color(const Color& p_clear_color)
 
 void OpenGL_ESRendererAPI::clear()
 {
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // glClear() is invalid in GLES3/WebGL2 when the draw buffers contain an
+  // integer color attachment (e.g. R32I used for entity picking): the
+  // floating-point clear color has no defined conversion to the integer
+  // format. Clear the primary color attachment and depth separately and let
+  // integer attachments be cleared explicitly via FrameBuffer::clear_attachment.
+  GLint bound_fbo = 0;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound_fbo);
+  if (bound_fbo != 0)
+  {
+    GLfloat clear_color[4];
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, clear_color);
+    glClearBufferfv(GL_COLOR, 0, clear_color);
+    glClear(GL_DEPTH_BUFFER_BIT);
+  }
+  else
+  {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  }
 }
 
 void OpenGL_ESRendererAPI::init()
@@ -73,4 +90,4 @@ void OpenGL_ESRendererAPI::disable_blend()
 
 }  // namespace ag
 
-#endif  // PLATFORM_ANDROID
+#endif  // PLATFORM_ANDROID || PLATFORM_WEB

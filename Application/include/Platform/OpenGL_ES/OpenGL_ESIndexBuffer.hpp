@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
 
   #include <Renderer/IndexBuffer.hpp>
 
@@ -29,4 +29,4 @@ private:
 
 }  // namespace ag
 
-#endif  // PLATFORM_ANDROID
+#endif  // PLATFORM_ANDROID || PLATFORM_WEB

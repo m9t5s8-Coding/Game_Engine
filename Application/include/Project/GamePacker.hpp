@@ -1,11 +1,16 @@
 #pragma once
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
+#include <system_error>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #ifdef PLATFORM_ANDROID
@@ -27,129 +32,340 @@ struct PackedEntry
 class GamePacker
 {
 public:
+  struct PackOptions
+  {
+    bool verbose        = true;
+    bool include_hidden = false;
+  };
+
   struct PackResult
   {
-    bool     success   = false;
-    uint32_t fileCount = 0;
-    uint64_t totalSize = 0;
+    bool        success   = false;
+    uint32_t    fileCount = 0;
+    uint64_t    totalSize = 0;
+    std::string error;
   };
 
   static PackResult pack(const std::string& project_root, const std::string& output_pak)
   {
+    return pack(project_root, output_pak, PackOptions{});
+  }
+
+  static PackResult pack(const std::string&   project_root,
+                         const std::string&   output_pak,
+                         const PackOptions&   options)
+  {
     namespace fs = std::filesystem;
+
+    static_assert(sizeof(uint32_t) == 4, "PAK format requires 32-bit integers");
+    static_assert(sizeof(uint64_t) == 8, "PAK format requires 64-bit integers");
+
     PackResult result;
 
-    if (!fs::exists(project_root))
+    auto fail = [&result](const std::string& message) -> PackResult
     {
-      std::cerr << "[Packer] ERROR: Project root does not exist: " << project_root << std::endl;
+      result.success = false;
+      result.error   = message;
+      std::cerr << "[Packer] ERROR: " << message << std::endl;
       return result;
-    }
-
-    // Collect all files
-    struct FileData
-    {
-      std::string          rel_path;
-      std::vector<uint8_t> data;
     };
 
-    std::vector<FileData> files;
-    uint64_t              total_data_size = 0;
-
-    std::cout << "[Packer] Scanning: " << project_root << std::endl;
-
-    for (auto& entry : fs::recursive_directory_iterator(project_root))
+    auto log = [&options](const std::string& message)
     {
-      if (entry.is_directory())
-        continue;
+      if (options.verbose)
+        std::cout << message << std::endl;
+    };
 
-      std::string rel = fs::relative(entry.path(), project_root).string();
-      std::replace(rel.begin(), rel.end(), '\\', '/');
+    // --- Resolve paths -----------------------------------------------------
+    std::error_code ec;
+    fs::path        root = fs::absolute(fs::path(project_root), ec);
+    if (ec)
+      return fail("Invalid input path '" + project_root + "': " + ec.message());
 
-      // Skip hidden files and temp files
-      if (rel.find("/.") != std::string::npos)
-        continue;
-      if (rel.find("\\.") != std::string::npos)
-        continue;
+    if (!fs::is_directory(root, ec) || ec)
+      return fail("Input folder does not exist or is not a directory: " + root.string());
 
-      std::ifstream in(entry.path(), std::ios::binary | std::ios::ate);
-      if (!in.is_open())
+    {
+      std::error_code canon_ec;
+      fs::path        canonical = fs::weakly_canonical(root, canon_ec);
+      if (!canon_ec)
+        root = std::move(canonical);
+    }
+
+    fs::path output = fs::absolute(fs::path(output_pak), ec);
+    if (ec)
+      return fail("Invalid output path '" + output_pak + "': " + ec.message());
+
+    if (output.has_parent_path())
+    {
+      fs::create_directories(output.parent_path(), ec);
+      if (ec)
+        return fail("Cannot create output folder '" + output.parent_path().string() +
+                    "': " + ec.message());
+    }
+
+    fs::path temp = output;
+    temp += ".tmp";
+
+    auto normalized = [](const fs::path& path)
+    {
+      std::error_code path_ec;
+      fs::path        canonical = fs::weakly_canonical(path, path_ec);
+      if (path_ec)
+        canonical = fs::absolute(path, path_ec);
+      return canonical.lexically_normal();
+    };
+
+    const fs::path output_norm = normalized(output);
+    const fs::path temp_norm   = normalized(temp);
+
+    auto discard_temp = [&temp]()
+    {
+      std::error_code remove_ec;
+      fs::remove(temp, remove_ec);
+    };
+
+    // --- Collect files -----------------------------------------------------
+    struct FileEntry
+    {
+      std::string rel_path;
+      fs::path    path;
+      uint64_t    size = 0;
+    };
+
+    std::vector<FileEntry> files;
+    uint64_t               total_data_size = 0;
+
+    log("[Packer] Scanning: " + root.string());
+
+    try
+    {
+      for (auto it = fs::recursive_directory_iterator(root);
+           it != fs::recursive_directory_iterator();
+           ++it)
       {
-        std::cerr << "[Packer] WARNING: Cannot read: " << entry.path() << std::endl;
-        continue;
+        const fs::directory_entry& entry = *it;
+        std::error_code            entry_ec;
+
+        if (entry.is_directory(entry_ec))
+        {
+          // Do not descend into hidden folders (.git, .cache, ...).
+          if (!options.include_hidden)
+          {
+            std::string name = entry.path().filename().string();
+            if (!name.empty() && name.front() == '.')
+              it.disable_recursion_pending();
+          }
+          continue;
+        }
+
+        if (!entry.is_regular_file(entry_ec))
+        {
+          if (entry_ec)
+            std::cerr << "[Packer] WARNING: Cannot inspect '" << entry.path().string()
+                      << "': " << entry_ec.message() << std::endl;
+          continue;
+        }
+
+        // Never pack the pak we are writing (or a leftover temp file).
+        const fs::path entry_norm = normalized(entry.path());
+        if (entry_norm == output_norm || entry_norm == temp_norm)
+          continue;
+
+        std::string rel = fs::relative(entry.path(), root, entry_ec).generic_string();
+        if (entry_ec || rel.empty())
+        {
+          std::cerr << "[Packer] WARNING: Skipping '" << entry.path().string()
+                    << "': " << entry_ec.message() << std::endl;
+          continue;
+        }
+
+        if (!options.include_hidden && has_hidden_component(rel))
+          continue;
+
+        uint64_t size = fs::file_size(entry.path(), entry_ec);
+        if (entry_ec)
+          return fail("Cannot read size of '" + entry.path().string() +
+                      "': " + entry_ec.message());
+
+        if (!checked_add(total_data_size, size, total_data_size))
+          return fail("Input is too large for a .pak file");
+
+        log("[Packer]   + " + rel + " (" + std::to_string(size) + " bytes)");
+        files.push_back(FileEntry{std::move(rel), entry.path(), size});
       }
-
-      uint64_t size = in.tellg();
-      in.seekg(0);
-
-      FileData fd;
-      fd.rel_path = rel;
-      fd.data.resize(size);
-      in.read((char*)fd.data.data(), size);
-      in.close();
-
-      total_data_size += size;
-      std::cout << "[Packer]   + " << rel << " (" << size << " bytes)" << std::endl;
-      files.push_back(std::move(fd));
+    }
+    catch (const fs::filesystem_error& error)
+    {
+      return fail(std::string("Scanning failed: ") + error.what());
     }
 
     if (files.empty())
+      return fail("No files found to pack in '" + root.string() + "'");
+
+    // Deterministic pak layout: same input always produces the same bytes.
+    std::sort(files.begin(), files.end(),
+              [](const FileEntry& a, const FileEntry& b) { return a.rel_path < b.rel_path; });
+
+    for (size_t i = 1; i < files.size(); ++i)
     {
-      std::cerr << "[Packer] ERROR: No files found to pack." << std::endl;
-      return result;
+      if (files[i].rel_path == files[i - 1].rel_path)
+        return fail("Duplicate path in pak: '" + files[i].rel_path + "'");
     }
 
-    // Calculate header size to know dataOffset
-    uint64_t header_size =
-        sizeof(PAK_MAGIC) + sizeof(PAK_VERSION) + sizeof(uint32_t) + sizeof(uint64_t);
-    for (auto& f : files)
-      header_size += sizeof(uint32_t) + f.rel_path.size() + sizeof(uint64_t) + sizeof(uint64_t);
+    if (files.size() > std::numeric_limits<uint32_t>::max())
+      return fail("Too many files for a .pak (maximum is 4294967295)");
 
-    uint64_t data_offset = header_size;
+    // --- Build the header --------------------------------------------------
+    uint64_t header_size = sizeof(PAK_MAGIC) + sizeof(PAK_VERSION) + sizeof(uint32_t) +
+                           sizeof(uint64_t);
 
-    // Write .pak
-    std::ofstream out(output_pak, std::ios::binary);
+    for (const FileEntry& file : files)
+    {
+      if (file.rel_path.size() > std::numeric_limits<uint32_t>::max())
+        return fail("Path is too long for a .pak: '" + file.rel_path + "'");
+
+      uint64_t entry_size = sizeof(uint32_t) + file.rel_path.size() + sizeof(uint64_t) +
+                            sizeof(uint64_t);
+      if (!checked_add(header_size, entry_size, header_size))
+        return fail("Pak header is too large");
+    }
+
+    const uint64_t data_offset = header_size;
+
+    uint64_t expected_size = data_offset;
+    if (!checked_add(expected_size, total_data_size, expected_size))
+      return fail("Input is too large for a .pak file");
+
+    // --- Write to a temp file, then atomically replace the output ----------
+    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
     if (!out.is_open())
+      return fail("Cannot create output file: " + temp.string());
+
+    auto fail_write = [&](const std::string& message) -> PackResult
     {
-      std::cerr << "[Packer] ERROR: Cannot create output file: " << output_pak << std::endl;
-      return result;
-    }
+      out.close();
+      discard_temp();
+      return fail(message);
+    };
 
-    // Header
-    uint32_t entryCount = (uint32_t)files.size();
-    out.write((char*)&PAK_MAGIC, sizeof(PAK_MAGIC));
-    out.write((char*)&PAK_VERSION, sizeof(PAK_VERSION));
-    out.write((char*)&entryCount, sizeof(entryCount));
-    out.write((char*)&data_offset, sizeof(data_offset));
+    auto write_bytes = [&out](const void* data, uint64_t size) -> bool
+    {
+      out.write(static_cast<const char*>(data), static_cast<std::streamsize>(size));
+      return static_cast<bool>(out);
+    };
 
-    // Entry table
+    const uint32_t entry_count = static_cast<uint32_t>(files.size());
+
+    if (!write_bytes(&PAK_MAGIC, sizeof(PAK_MAGIC)) ||
+        !write_bytes(&PAK_VERSION, sizeof(PAK_VERSION)) ||
+        !write_bytes(&entry_count, sizeof(entry_count)) ||
+        !write_bytes(&data_offset, sizeof(data_offset)))
+      return fail_write("Failed to write pak header to '" + temp.string() + "'");
+
     uint64_t current_offset = 0;
-    for (auto& f : files)
+    for (const FileEntry& file : files)
     {
-      uint32_t pathLen = (uint32_t)f.rel_path.size();
-      uint64_t size    = (uint64_t)f.data.size();
+      const uint32_t path_len = static_cast<uint32_t>(file.rel_path.size());
+      const uint64_t size     = file.size;
 
-      out.write((char*)&pathLen, sizeof(pathLen));
-      out.write(f.rel_path.data(), pathLen);
-      out.write((char*)&current_offset, sizeof(current_offset));
-      out.write((char*)&size, sizeof(size));
+      if (!write_bytes(&path_len, sizeof(path_len)) ||
+          !write_bytes(file.rel_path.data(), path_len) ||
+          !write_bytes(&current_offset, sizeof(current_offset)) ||
+          !write_bytes(&size, sizeof(size)))
+        return fail_write("Failed to write pak entry table to '" + temp.string() + "'");
 
       current_offset += size;
     }
 
-    // File data
-    for (auto& f : files)
-      out.write((char*)f.data.data(), f.data.size());
+    // Stream file contents instead of holding the whole pak in memory.
+    std::vector<char> buffer(64 * 1024);
+
+    for (const FileEntry& file : files)
+    {
+      std::ifstream in(file.path, std::ios::binary);
+      if (!in.is_open())
+        return fail_write("Cannot read '" + file.path.string() + "'");
+
+      uint64_t remaining = file.size;
+      while (remaining > 0)
+      {
+        const uint64_t chunk =
+            std::min<uint64_t>(remaining, static_cast<uint64_t>(buffer.size()));
+        in.read(buffer.data(), static_cast<std::streamsize>(chunk));
+        if (static_cast<uint64_t>(in.gcount()) != chunk)
+          return fail_write("File changed while packing: '" + file.path.string() + "'");
+
+        if (!write_bytes(buffer.data(), chunk))
+          return fail_write("Failed to write '" + file.path.string() + "' to the pak");
+
+        remaining -= chunk;
+      }
+    }
+
+    out.flush();
+    if (!out)
+      return fail_write("Failed to flush '" + temp.string() + "'");
 
     out.close();
+    if (out.fail())
+      return fail_write("Failed to close '" + temp.string() + "'");
+
+    const uint64_t actual_size = fs::file_size(temp, ec);
+    if (ec)
+      return fail_write("Cannot verify '" + temp.string() + "': " + ec.message());
+    if (actual_size != expected_size)
+      return fail_write("Unexpected pak size (expected " + std::to_string(expected_size) +
+                        " bytes, wrote " + std::to_string(actual_size) + " bytes)");
+
+    // Rename over the destination. On Windows an existing destination cannot
+    // always be replaced directly, so remove it and retry once.
+    fs::rename(temp, output, ec);
+    if (ec)
+    {
+      std::error_code remove_ec;
+      fs::remove(output, remove_ec);
+
+      ec.clear();
+      fs::rename(temp, output, ec);
+    }
+    if (ec)
+      return fail_write("Cannot replace '" + output.string() + "': " + ec.message());
 
     result.success   = true;
-    result.fileCount = entryCount;
+    result.fileCount = entry_count;
     result.totalSize = total_data_size;
 
-    std::cout << "[Packer] Done! Packed " << entryCount << " files (" << total_data_size
-              << " bytes) -> " << output_pak << std::endl;
+    log("[Packer] Done! Packed " + std::to_string(entry_count) + " files (" +
+        std::to_string(total_data_size) + " bytes) -> " + output.string());
 
     return result;
+  }
+
+private:
+  static bool has_hidden_component(const std::string& relative_path)
+  {
+    size_t start = 0;
+    while (start < relative_path.size())
+    {
+      size_t end = relative_path.find('/', start);
+      if (end == std::string::npos)
+        end = relative_path.size();
+
+      if (end > start && relative_path[start] == '.')
+        return true;
+
+      start = end + 1;
+    }
+    return false;
+  }
+
+  static bool checked_add(uint64_t a, uint64_t b, uint64_t& out)
+  {
+    if (a > std::numeric_limits<uint64_t>::max() - b)
+      return false;
+    out = a + b;
+    return true;
   }
 };
 
