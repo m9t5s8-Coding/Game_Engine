@@ -6,10 +6,12 @@ A cross-platform game engine with editor, Lua scripting, Box2D physics, OpenAL a
 
 - [Requirements](#requirements)
 - [Build Configurations](#build-configurations)
+- [Command Line Projects](#command-line-projects)
 - [Windows](#windows)
 - [Linux](#linux)
 - [Android](#android)
 - [Web (Emscripten)](#web-emscripten)
+- [Text Rendering](#text-rendering)
 - [Asset Packer](#asset-packer)
 - [Output Locations](#output-locations)
 
@@ -70,6 +72,33 @@ cmake --build --preset full --target AssetPacker
 
 Because all targets share one build tree, switching targets does not
 reconfigure or rebuild the other projects.
+
+## Command Line Projects
+
+Both `AeroEditor` and `Sandbox` accept a project as their first positional
+argument. The argument can be either the folder containing the `.aeroproj` file
+or the `.aeroproj` file itself:
+
+```bash
+./build/full/bin/AeroEditor /path/to/MyGame
+./build/full/bin/AeroEditor /path/to/MyGame/MyGame.aeroproj
+./build/full/bin/AeroEditor --project /path/to/MyGame
+./build/full/bin/AeroEditor --project=/path/to/MyGame/MyGame.aeroproj
+
+./build/full/bin/Sandbox /path/to/MyGame
+./build/full/bin/Sandbox /path/to/MyGame/MyGame.aeroproj
+```
+
+`AeroEditor` opens the project directly when a valid argument is supplied.
+With no argument (or an invalid one) it opens the project manager. Project
+Manager launches and the editor's **Project → Open Project...** /
+**Open Project Folder...** actions restart the editor with the selected path as
+an argument. **Run Default Scene** and **Run Current Scene** pass the active
+`.aeroproj` file to `Sandbox` the same way.
+
+The exported-game path is still supported: if `Sandbox` is started without an
+argument, it reads `settings.json` from `game.pak` (or the app-data folder in
+development builds).
 
 ```
 CMakeLists.txt                # options, module includes, orchestration
@@ -144,6 +173,25 @@ gradle wrapper
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+The Android host uses a black fullscreen theme and `FLAG_SECURE`, and the
+native runtime clears the EGL surface to black whenever the app is paused or
+its surface is destroyed. Recents/app-switcher previews therefore show a dark
+screen instead of a stale gameplay frame.
+
+Lua scripts on Android can use the same `Keyboard`, `Mouse`, `Draw`, and `Log`
+APIs as desktop builds, plus:
+
+- `Platform.name()`, `Platform.is_android()`, `Platform.is_mobile()`,
+  `Platform.is_active()`, `Platform.is_paused()`, `Platform.get_screen_size()`
+- `Touch.count()`, `Touch.is_down(index)`, `Touch.get_id(index)`,
+  `Touch.get_position(index)`, `Touch.get_viewport_position(index)`,
+  `Touch.get_world_position(index)`, `Touch.get_pinch_distance()`,
+  `Touch.is_pinching()`
+- `on_pause()` / `on_resume()` hooks in both global scripts and script nodes
+
+`Mouse.is_button_down(Button.Left)` still tracks the primary touch for
+compatibility with existing scripts.
+
 ---
 
 ## Web (Emscripten)
@@ -184,6 +232,40 @@ python3 -m http.server 8000
 ```
 
 Then open `http://localhost:8000/Sandbox.html` in a browser.
+
+---
+
+## Text Rendering
+
+Text is rendered from an MSDF font atlas (`Application/assets/textures/atlas.png`
++ `atlas.json`). Two paths are available:
+
+| Mode | Description |
+|------|-------------|
+| `Combined` (default) | The original path. Glyphs are appended to the same instanced batch as rectangles, circles, and sprites and drawn through the shared quad shader. |
+| `Independent` | Glyphs are collected in their own batch and drawn in a dedicated MSDF pass (`Text.glsl` / `TextES.glsl`) after the shape batch, using `fwidth`-based screen-space antialiasing and half-texel UV insets. |
+
+The default stays on `Combined`; at rotation 0 it remains visually compatible
+with the original text path. Switch per run without recompiling:
+
+```bash
+AERO_TEXT_RENDER=independent ./build/full/bin/Sandbox   # or: new, 1
+AERO_TEXT_RENDER=combined    ./build/full/bin/Sandbox   # default
+```
+
+Or from code:
+
+```cpp
+ag::Renderer2D::set_text_render_mode(ag::Renderer2D::TextRenderMode::Independent);
+```
+
+Because the dedicated pass runs after the shape batch of a flush, `Independent`
+draws text above shapes queued in the same batch. Use `Combined` if a shape must
+be able to cover text in the same frame, or flush between them.
+
+The atlas is loaded with `Filter_Mode::AG_LINEAR_NOMIPMAP`: mipmapping an MSDF
+atlas averages its distance channels and destroys glyph edges, so both modes
+benefit from that change.
 
 ---
 
