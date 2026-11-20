@@ -106,6 +106,9 @@ Node_Capability get_node_capabilities(NodeType type)
     case ag::NodeType::Scene2D:
       return Node_Capability::Transform;
 
+    case ag::NodeType::SceneInstance:
+      return Node_Capability::Transform | Node_Capability::Scriptable;
+
     case ag::NodeType::Button:
     case ag::NodeType::TextureButton:
       return Node_Capability::None;

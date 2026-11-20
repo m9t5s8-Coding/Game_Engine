@@ -53,6 +53,21 @@ Entity Scene::duplicate_entity(Entity original, Entity parent) {
 
 void Scene::destroy_entity(Entity entity) { m_to_delete_entity.push_back(entity); }
 
+Entity Scene::find_entity_by_index(AG_uint index) {
+  auto it = index_map.find(index);
+  if (it != index_map.end() && it->second && m_registry.valid((entt::entity)it->second.get_id()))
+    return it->second;
+
+  auto view = m_registry.view<Tag_Component>();
+  for (auto entity_id : view) {
+    Entity e(entity_id);
+    if (e.has_component<Tag_Component>() &&
+        e.get_component<Tag_Component>().index == index)
+      return e;
+  }
+  return Entity();
+}
+
 void Scene::on_update(TimeStamp ts) {
   if (m_root_available)
     root_update(ts);
@@ -160,6 +175,22 @@ void Scene::on_event(Event& event) {
   }
 }
 
+void Scene::on_pause() {
+  auto view = m_registry.view<Script_Component>();
+  for (auto entityID : view) {
+    Entity entity(entityID);
+    Script_Component::pause(entity);
+  }
+}
+
+void Scene::on_resume() {
+  auto view = m_registry.view<Script_Component>();
+  for (auto entityID : view) {
+    Entity entity(entityID);
+    Script_Component::resume(entity);
+  }
+}
+
 AG_ref<Scene> Scene::create(const std::string& name, const std::string& directory) {
   auto scene = AG_cref<Scene>();
 
@@ -188,6 +219,11 @@ void Scene::draw_entity(Entity entity) {
   auto it = NodeFactory::draw_map.find(entity.get_component<Tag_Component>().node_type);
   if (it != NodeFactory::draw_map.end())
     it->second(entity);
+
+  // Script-driven drawing runs after the node's own rendering so a script can
+  // overlay debug shapes without needing a custom node type.
+  if (entity.has_component<Script_Component>())
+    Script_Component::draw(entity);
 }
 
 void Scene::draw_entity_recursive(Entity entity) {

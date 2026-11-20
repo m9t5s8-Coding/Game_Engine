@@ -10,6 +10,7 @@ void ButtonNode::create_node(Entity entity) {
   Button_Component::add_component(entity);
   Transform_Component::add_component(entity);
   Text_Component::add_component(entity);
+  Font_Component::add_component(entity);
 }
 void ButtonNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
@@ -23,6 +24,7 @@ void ButtonNode::clone_node(Entity original, Entity clone) {
   Tween_Component::clone_entity(original, clone);
   Button_Component::clone_entity(original, clone);
   Text_Component::clone_entity(original, clone);
+  Font_Component::clone_entity(original, clone);
 }
 json ButtonNode::save_json(Entity entity) {
   json j;
@@ -32,6 +34,7 @@ json ButtonNode::save_json(Entity entity) {
   NodeHelper::save_component<ButtonState_Component>(entity, j);
   NodeHelper::save_component<Button_Component>(entity, j);
   NodeHelper::save_component<Text_Component>(entity, j);
+  NodeHelper::save_component<Font_Component>(entity, j);
   NodeHelper::save_component<Tween_Component>(entity, j);
 
   return j;
@@ -43,6 +46,7 @@ void ButtonNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<ButtonState_Component>(entity, j);
   NodeHelper::load_component<Button_Component>(entity, j);
   NodeHelper::load_component<Text_Component>(entity, j);
+  NodeHelper::load_component<Font_Component>(entity, j);
   NodeHelper::load_component<Tween_Component>(entity, j);
 }
 void ButtonNode::update(Entity entity, TimeStamp ts) {
@@ -115,6 +119,9 @@ void ButtonNode::draw(Entity entity) {
     text.v_allignment = props.layout.v_allignment;
     text.bounds       = rectangle.size * transform.scale;
     text.padding      = vec2f(0.0f, 0.0f);
+
+    if (entity.has_component<Font_Component>())
+      text.font_path = entity.get_component<Font_Component>().font_path;
   }
 
 #ifdef AERO_RUNTIME

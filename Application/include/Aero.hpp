@@ -46,4 +46,5 @@
 #include <Scene/Entity.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/SceneComponent.hpp>
+#include <Scripting/ScriptHooks.hpp>
 #include <Scripting/ScriptManager.hpp>

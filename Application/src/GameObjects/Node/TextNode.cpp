@@ -7,6 +7,7 @@ namespace ag {
 void TextNode::create_node(Entity entity) {
   Transform_Component::add_component(entity);
   Text_Component::add_component(entity);
+  Font_Component::add_component(entity);
 }
 void TextNode::delete_node(Entity entity) {
   Script_Component::destroy(entity);
@@ -15,6 +16,7 @@ void TextNode::delete_node(Entity entity) {
 void TextNode::clone_node(Entity original, Entity clone) {
   Transform_Component::clone_entity(original, clone);
   Text_Component::clone_entity(original, clone);
+  Font_Component::clone_entity(original, clone);
 
   FontStyle_Component::clone_entity(original, clone);
 
@@ -26,6 +28,7 @@ json TextNode::save_json(Entity entity) {
 
   NodeHelper::save_component<Transform_Component>(entity, j);
   NodeHelper::save_component<Text_Component>(entity, j);
+  NodeHelper::save_component<Font_Component>(entity, j);
   NodeHelper::save_component<FontStyle_Component>(entity, j);
   NodeHelper::save_component<UI_Component>(entity, j);
   NodeHelper::save_component<Script_Component>(entity, j);
@@ -35,6 +38,7 @@ json TextNode::save_json(Entity entity) {
 void TextNode::load_json(Entity entity, const json& j) {
   NodeHelper::load_component<Transform_Component>(entity, j);
   NodeHelper::load_component<Text_Component>(entity, j);
+  NodeHelper::load_component<Font_Component>(entity, j);
   NodeHelper::load_component<FontStyle_Component>(entity, j);
   NodeHelper::load_component<UI_Component>(entity, j);
   NodeHelper::load_component<Script_Component>(entity, j);
@@ -51,6 +55,9 @@ void TextNode::draw(Entity entity) {
     text.text      = comps.text;
     text.font_size = comps.font_size;
   }
+
+  if (entity.has_component<Font_Component>())
+    text.font_path = entity.get_component<Font_Component>().font_path;
 
   if (entity.has_component<FontStyle_Component>()) {
     const auto& style = entity.get_component<FontStyle_Component>();

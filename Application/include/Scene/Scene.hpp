@@ -17,6 +17,7 @@ enum class NodeType;
 class GroundContactListener;
 class Scene {
 public:
+  friend class EditorSerializer;
   Scene();
   ~Scene();
 
@@ -26,9 +27,12 @@ public:
 
   void destroy();
   void on_event(Event& event);
+  void on_pause();
+  void on_resume();
 
   Entity create_entity(const std::string& name, NodeType type, bool is_cloning = false);
   Entity duplicate_entity(Entity original, Entity parent);
+  Entity find_entity_by_index(AG_uint index);
 
   void               set_name(const std::string& name) { m_name = name; }
   const std::string& get_name() const { return m_name; }
@@ -101,6 +105,7 @@ private:
   friend class Entity;
   friend class ScenePanel;
   friend class SaveScene;
+  friend class SceneInstance;
   friend class EditorLayer;
 };
 }  // namespace ag

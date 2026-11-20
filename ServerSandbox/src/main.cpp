@@ -4,9 +4,14 @@
 
 static bool s_running = true;
 
-void on_signal(int) { s_running = false; }
+void
+on_signal(int) {
+  s_running = false;
+}
 
-int main(int argc, char** argv) {
+int
+main(int    argc,
+     char** argv) {
   ag::Log::init_simple();
 
   if (argc < 2) {
@@ -45,15 +50,15 @@ int main(int argc, char** argv) {
   ag::NetworkManager::set_server(&server);
 
   server.on_client_connected = [](int id) {
-    ag::ScriptManager::call("on_client_connected", id);
+    ag::ScriptManager::call(ag::script_hooks::OnClientConnected, id);
   };
 
   server.on_client_disconnected = [](int id) {
-    ag::ScriptManager::call("on_client_disconnected", id);
+    ag::ScriptManager::call(ag::script_hooks::OnClientDisconnected, id);
   };
 
   server.on_packet_received = [&](int id, const ag::Packet& packet) {
-    ag::ScriptManager::call("on_packet_received", id, packet);
+    ag::ScriptManager::call(ag::script_hooks::OnPacketReceived, id, packet);
   };
 
   if (!server.start(config.port)) {
@@ -61,7 +66,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  ag::ScriptManager::call("on_server_start");
+  ag::ScriptManager::call(ag::script_hooks::OnServerStart);
   AERO_SERVER_INFO("Server Running on Port: {0}", config.port);
 
   const auto tick      = std::chrono::milliseconds(1000 / config.tick_rate);
@@ -73,14 +78,14 @@ int main(int argc, char** argv) {
     last_time = now;
 
     server.update();
-    ag::ScriptManager::call("on_tick", dt);
+    ag::ScriptManager::call(ag::script_hooks::OnTick, dt);
 
     auto elapsed = std::chrono::steady_clock::now() - now;
     if (elapsed < tick)
       std::this_thread::sleep_for(tick - elapsed);
   }
 
-  ag::ScriptManager::call("on_server_stop");
+  ag::ScriptManager::call(ag::script_hooks::OnServerStop);
   server.stop();
 
   return 0;

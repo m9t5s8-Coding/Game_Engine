@@ -11,6 +11,10 @@
 
 namespace ag {
 
+namespace TextLoader {
+struct Font;
+}
+
 #define COMPONENT_NAME(T) #T
 
 template <typename T>
@@ -49,6 +53,10 @@ struct Tag_Component {
   AG_uint              parent_id = INVALID_ENTITY;
   std::vector<AG_uint> children_id;
 
+  // Set on entities expanded from a scene instance. The value is the stable
+  // Tag_Component::index of the owning instance root.
+  AG_uint instance_owner = INVALID_ENTITY;
+
   static void        add_component(Entity entity);
   static void        remove_component(Entity entity);
   static json        save_json(Entity entity);
@@ -61,6 +69,26 @@ struct Tag_Component {
   static bool        get_visibility(Entity entity);
   static bool        get_lock(Entity entity);
   static bool        is_parent(Entity child, Entity parent);
+};
+
+// Marks a node that instances another .aeroscene. The source scene is the only
+// mutable copy; children expanded from it are tagged with instance_owner and
+// are skipped when the host scene is serialized.
+struct SceneInstance_Component {
+  std::string source_scene;                // project-relative path under Scenes
+  std::string source_name;                 // display fallback
+  AG_uint     source_root  = 0;             // 0 = all roots of the source scene
+  bool        enabled      = true;          // disabled instances render as an empty node
+  AG_uint     instance_id  = 0;             // stable id of the instance root
+
+  static void        add_component(Entity entity);
+  static void        remove_component(Entity entity);
+  static json        save_json(Entity entity);
+  static void        load_json(Entity entity, const json& j);
+  static void        clone_entity(Entity original, Entity clone);
+  static bool        is_compatible(NodeType type);
+  static const char* get_name();
+  static void        imgui_render(Entity entity);
 };
 
 struct Transform_Component {
@@ -86,11 +114,14 @@ struct Script_Component {
   LuaEnv      env;
   LuaFunc     on_create;
   LuaFunc     on_update;
+  LuaFunc     on_draw;
   LuaFunc     on_destroy;
   LuaFunc     on_event;
   LuaFunc     on_packet_received;
   LuaFunc     on_connected;
   LuaFunc     on_disconnected;
+  LuaFunc     on_pause;
+  LuaFunc     on_resume;
 
   static void        add_component(Entity entity);
   static void        remove_component(Entity entity);
@@ -99,7 +130,10 @@ struct Script_Component {
   static void        clone_entity(Entity original, Entity clone);
   static void        create(Entity entity);
   static void        update(Entity entity, TimeStamp ts);
+  static void        draw(Entity entity);
   static void        destroy(Entity entity);
+  static void        pause(Entity entity);
+  static void        resume(Entity entity);
   static void        connected(Entity entity);
   static void        disconnected(Entity entity);
   static void        packet_received(Entity entity, const Packet& packet);
@@ -744,8 +778,23 @@ struct FontStyle_Component : Base_Component<FontStyle_Component> {
   static const char* get_name() { return "FontStyle"; }
 };
 
+// Selects the MSDF atlas used by Text rendering. An empty path means the
+// engine's built-in atlas.
+struct Font_Component : Base_Component<Font_Component> {
+  std::string font_path;
+
+  static json save_json(Entity entity);
+  static void load_json(Entity entity, const json& j);
+
+  static bool is_compatible(NodeType type);
+  static void imgui_render(Entity entity);
+
+  static const char* get_name() { return "Font"; }
+};
+
 struct Text {
   std::string                text;
+  std::string                font_path;
   float                      font_size    = 48;
   RenderMode                 mode         = RenderMode::World;
   Color                      text_color   = Color::White;
@@ -757,19 +806,23 @@ struct Text {
   vec2f                      padding     = {10, 10};
   bool                       draw_rect   = true;
 
-  static vec2f calc_longest_size(const Text& text, const vec2f& s);
-  static vec2f calc_line_text_size(const Text&  text,
-                                   const vec2f& s,
-                                   const vec2f& longest_size,
-                                   size_t       start_index,
-                                   size_t*      break_index);
+  static vec2f calc_longest_size(const Text&           text,
+                                 const vec2f&          s,
+                                 const TextLoader::Font* font = nullptr);
+  static vec2f calc_line_text_size(const Text&           text,
+                                   const vec2f&          s,
+                                   const vec2f&          longest_size,
+                                   size_t                start_index,
+                                   size_t*               break_index,
+                                   const TextLoader::Font* font = nullptr);
   static vec2f
   center_text(const Text& text, const Transform_Component& transform, const vec2f& longest_size);
   static vec2f center_single_line_text(const Text&                text,
                                        const Transform_Component& transform,
                                        const vec2f&               longest_size,
                                        size_t                     start_index,
-                                       size_t*                    break_index);
+                                       size_t*                    break_index,
+                                       const TextLoader::Font*     font = nullptr);
 };
 
 enum Button_State : uint8_t {
@@ -809,8 +862,6 @@ struct Button_Visual {
   static Button_Visual load_json(const json& j);
 
   static const char* get_name() { return "ButtonVisual"; }
-
-  static void imgui_render(Entity entity);
 
   static const char* to_string(Button_Visual_State state) {
     switch (state) {
@@ -877,8 +928,6 @@ struct Button_Layout {
   static Button_Layout load_json(const json& j);
 
   static const char* get_name() { return "ButtonLayout"; }
-
-  static void imgui_render(Entity entity);
 };
 
 struct Button_Component : Base_Component<Button_Component> {

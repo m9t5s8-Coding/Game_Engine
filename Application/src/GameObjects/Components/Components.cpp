@@ -1,10 +1,12 @@
-﻿#include <GameObjects/Components/Components.hpp>
+﻿#include <Font/FontManager.hpp>
+#include <GameObjects/Components/Components.hpp>
 #include <GameObjects/GameObjects.hpp>
 #include <Helper.hpp>
 #include <Networking/Packet.hpp>
 #include <Project/Assetmanager.hpp>
 #include <Renderer/Renderer2D.hpp>
 #include <Renderer/ViewController.hpp>
+#include <Scripting/ScriptHooks.hpp>
 
 namespace ag {
 
@@ -17,8 +19,10 @@ json Tag_Component::save_json(Entity entity) {
   Helper::save_json(j, "Name", tag.name, std::string(""));
   Helper::save_json(j, "NodeType", (int)tag.node_type, (int)NodeType::None);
   Helper::save_json(j, "Visible", tag.visible, true);
-  Helper::load_json(j, "Locked", tag.locked, false);
+  Helper::save_json(j, "Locked", tag.locked, false);
   Helper::save_json(j, "ID", tag.index, (AG_uint)0);
+  if (tag.instance_owner != INVALID_ENTITY)
+    Helper::save_json(j, "InstanceOwner", tag.instance_owner, (AG_uint)INVALID_ENTITY);
 
   if (tag.parent.get_id() != INVALID_ENTITY) {
     auto parent_index = tag.parent.get_component<Tag_Component>().index;
@@ -43,6 +47,7 @@ void Tag_Component::load_json(Entity entity, const json& j) {
   Helper::load_json(j, "Visible", tag.visible, true);
   Helper::load_json(j, "Locked", tag.locked, false);
   Helper::load_json(j, "Parent", tag.parent_id, (AG_uint)INVALID_ENTITY);
+  Helper::load_json(j, "InstanceOwner", tag.instance_owner, (AG_uint)INVALID_ENTITY);
 
   if (j.contains("Children") && j["Children"].is_array()) {
     auto& child_array = j["Children"];
@@ -75,6 +80,8 @@ void Tag_Component::clone_entity(Entity original, Entity duplicate, Entity paren
   const auto& original_tag  = original.get_component<Tag_Component>();
   auto&       duplicate_tag = duplicate.get_component<Tag_Component>();
   duplicate_tag.visible     = original_tag.visible;
+  // A clone is a new, independent object even when the original was generated.
+  duplicate_tag.instance_owner = INVALID_ENTITY;
   if (parent.get_id() != INVALID_ENTITY) {
     duplicate_tag.parent = parent;
     auto& parent_tag     = parent.get_component<Tag_Component>();
@@ -142,6 +149,47 @@ bool Tag_Component::is_parent(Entity child, Entity parent) {
 
   return false;
 }
+
+void SceneInstance_Component::add_component(Entity entity) {
+  if (!entity.has_component<SceneInstance_Component>())
+    entity.add_component<SceneInstance_Component>();
+}
+void SceneInstance_Component::remove_component(Entity entity) {
+  if (entity.has_component<SceneInstance_Component>())
+    entity.remove_component<SceneInstance_Component>();
+}
+json SceneInstance_Component::save_json(Entity entity) {
+  json j;
+  if (!entity.has_component<SceneInstance_Component>())
+    return j;
+
+  const auto& comp = entity.get_component<SceneInstance_Component>();
+  Helper::save_json(j, "SourceScene", comp.source_scene, std::string(""));
+  Helper::save_json(j, "SourceName", comp.source_name, std::string(""));
+  Helper::save_json(j, "SourceRoot", comp.source_root, (AG_uint)0);
+  Helper::save_json(j, "Enabled", comp.enabled, true);
+  Helper::save_json(j, "InstanceID", comp.instance_id, (AG_uint)0);
+  return j;
+}
+void SceneInstance_Component::load_json(Entity entity, const json& j) {
+  if (!entity.has_component<SceneInstance_Component>())
+    entity.add_component<SceneInstance_Component>();
+
+  auto& comp = entity.get_component<SceneInstance_Component>();
+  Helper::load_json(j, "SourceScene", comp.source_scene, std::string(""));
+  Helper::load_json(j, "SourceName", comp.source_name, std::string(""));
+  Helper::load_json(j, "SourceRoot", comp.source_root, (AG_uint)0);
+  Helper::load_json(j, "Enabled", comp.enabled, true);
+  Helper::load_json(j, "InstanceID", comp.instance_id, (AG_uint)0);
+}
+void SceneInstance_Component::clone_entity(Entity original, Entity clone) {
+  if (!original.has_component<SceneInstance_Component>())
+    return;
+  clone.add_component<SceneInstance_Component>(
+      original.get_component<SceneInstance_Component>());
+}
+bool        SceneInstance_Component::is_compatible(NodeType type) { return type == NodeType::SceneInstance; }
+const char* SceneInstance_Component::get_name() { return "SceneInstance"; }
 
 void Transform_Component::add_component(Entity entity) {
   entity.add_component<Transform_Component>();
@@ -215,11 +263,14 @@ void Script_Component::remove_component(Entity entity) {
   comp.env.get().clear();
   comp.on_create          = LuaFunc();
   comp.on_update          = LuaFunc();
+  comp.on_draw            = LuaFunc();
   comp.on_destroy         = LuaFunc();
   comp.on_event           = LuaFunc();
   comp.on_connected       = LuaFunc();
   comp.on_disconnected    = LuaFunc();
   comp.on_packet_received = LuaFunc();
+  comp.on_pause           = LuaFunc();
+  comp.on_resume          = LuaFunc();
 
   entity.remove_component<Script_Component>();
 }
@@ -271,6 +322,18 @@ void Script_Component::update(Entity entity, TimeStamp ts) {
   if (comp.on_update.is_valid()) {
     comp.on_update.call(ts.get_seconds());
   }
+}
+
+void Script_Component::draw(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+  if (comp.on_draw.is_valid())
+    comp.on_draw.call();
 }
 
 void Script_Component::connected(Entity entity) {
@@ -329,12 +392,40 @@ void Script_Component::destroy(Entity entity) {
   comp.env.get().clear();
   comp.on_create          = LuaFunc();
   comp.on_update          = LuaFunc();
+  comp.on_draw            = LuaFunc();
   comp.on_destroy         = LuaFunc();
   comp.on_event           = LuaFunc();
   comp.on_connected       = LuaFunc();
   comp.on_disconnected    = LuaFunc();
   comp.on_packet_received = LuaFunc();
+  comp.on_pause           = LuaFunc();
+  comp.on_resume          = LuaFunc();
 }
+
+void Script_Component::pause(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+  if (comp.on_pause.is_valid())
+    comp.on_pause.call();
+}
+
+void Script_Component::resume(Entity entity) {
+#ifdef AERO_EDITOR
+  return;
+#endif
+  if (!entity.has_component<Script_Component>())
+    return;
+
+  auto& comp = entity.get_component<Script_Component>();
+  if (comp.on_resume.is_valid())
+    comp.on_resume.call();
+}
+
 bool Script_Component::event(Entity entity, Event& e) {
 #ifdef AERO_EDITOR
   return false;
@@ -382,13 +473,16 @@ void Script_Component::load_scripts(Entity entity) {
     ScriptManager::load_script(full_path, comp.env);
   }
 
-  comp.on_create.set_function(comp.env, "on_create");
-  comp.on_update.set_function(comp.env, "on_update");
-  comp.on_destroy.set_function(comp.env, "on_destroy");
-  comp.on_event.set_function(comp.env, "on_event");
-  comp.on_connected.set_function(comp.env, "on_connected");
-  comp.on_disconnected.set_function(comp.env, "on_disconnected");
-  comp.on_packet_received.set_function(comp.env, "on_packet_received");
+  comp.on_create.set_function(comp.env, script_hooks::OnCreate);
+  comp.on_update.set_function(comp.env, script_hooks::OnUpdate);
+  comp.on_draw.set_function(comp.env, script_hooks::OnDraw);
+  comp.on_destroy.set_function(comp.env, script_hooks::OnDestroy);
+  comp.on_event.set_function(comp.env, script_hooks::OnEvent);
+  comp.on_connected.set_function(comp.env, script_hooks::OnConnected);
+  comp.on_disconnected.set_function(comp.env, script_hooks::OnDisconnected);
+  comp.on_packet_received.set_function(comp.env, script_hooks::OnPacketReceived);
+  comp.on_pause.set_function(comp.env, script_hooks::OnPause);
+  comp.on_resume.set_function(comp.env, script_hooks::OnResume);
   create(entity);
 }
 bool        Script_Component::is_compatible(NodeType type) { return true; }
@@ -2051,13 +2145,48 @@ bool FontStyle_Component::is_compatible(NodeType type) {
   return NodeHelper::has_capability(caps, Node_Capability::Text);
 }
 
+json Font_Component::save_json(Entity entity) {
+  json j;
+
+  const auto& props = entity.get_component<Font_Component>();
+  Helper::save_json(j, "Font Path", props.font_path, std::string(""));
+
+  return j;
+}
+void Font_Component::load_json(Entity entity, const json& j) {
+  if (!entity.has_component<Font_Component>())
+    entity.add_component<Font_Component>();
+
+  auto& props = entity.get_component<Font_Component>();
+  Helper::load_json(j, "Font Path", props.font_path, std::string(""));
+}
+bool Font_Component::is_compatible(NodeType type) {
+  auto caps = NodeHelper::get_node_capabilities(type);
+  return NodeHelper::has_capability(caps, Node_Capability::Text);
+}
+
+namespace
+{
+const TextLoader::Font& resolve_text_font(const Text& text, const TextLoader::Font* font)
+{
+  if (font)
+    return *font;
+
+  auto loaded = FontManager::get(text.font_path);
+  return loaded && loaded->metrics ? *loaded->metrics : *FontManager::get_default()->metrics;
+}
+}  // namespace
+
 constexpr float TEXT_EPSILON = 0.10f;
 // calculate the longest text_size
-vec2f Text::calc_longest_size(const Text& text, const vec2f& s) {
-  const vec2f scale = s * text.font_size / TextLoader::font.em_size;
-  vec2f       size  = {0, 0};
-  const float line_height =
-      TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
+vec2f Text::calc_longest_size(const Text&           text,
+                              const vec2f&          s,
+                              const TextLoader::Font* font) {
+  const TextLoader::Font& metrics = resolve_text_font(text, font);
+  const vec2f             scale   = s * text.font_size / metrics.em_size;
+  vec2f                   size    = {0, 0};
+  const float             line_height =
+      metrics.line_height * metrics.em_size * scale.y * text.line_height;
 
   if (text.bounds.x != 0 && text.bounds.y != 0) {
     float max_height = std::max((float)text.bounds.y, line_height);
@@ -2075,15 +2204,15 @@ vec2f Text::calc_longest_size(const Text& text, const vec2f& s) {
       continue;
     }
     if (c == '\t') {
-      auto it = TextLoader::font.glyphs.find(' ');
-      if (it != TextLoader::font.glyphs.end()) {
+      auto it = metrics.glyphs.find(' ');
+      if (it != metrics.glyphs.end()) {
         float length = (it->second.advance * scale.x) * 4.0f;
         width += length;
       }
       continue;
     }
-    auto it = TextLoader::font.glyphs.find(c);
-    if (it != TextLoader::font.glyphs.end()) {
+    auto it = metrics.glyphs.find(c);
+    if (it != metrics.glyphs.end()) {
       width += it->second.advance * scale.x;
       if (width >= text.bounds.x && text.bounds.x != 0) {
         width -= it->second.advance * scale.x;
@@ -2098,20 +2227,22 @@ vec2f Text::calc_longest_size(const Text& text, const vec2f& s) {
   return size;
 }
 
-vec2f Text::calc_line_text_size(const Text&  text,
-                                const vec2f& s,
-                                const vec2f& longest_size,
-                                size_t       start_index,
-                                size_t*      break_index) {
-  vec2f scale = s * (text.font_size / TextLoader::font.em_size);
+vec2f Text::calc_line_text_size(const Text&           text,
+                                const vec2f&          s,
+                                const vec2f&          longest_size,
+                                size_t                start_index,
+                                size_t*               break_index,
+                                const TextLoader::Font* font) {
+  const TextLoader::Font& metrics = resolve_text_font(text, font);
+  vec2f                   scale   = s * (text.font_size / metrics.em_size);
 
   const float line_height =
-      TextLoader::font.line_height * TextLoader::font.em_size * scale.y * text.line_height;
+      metrics.line_height * metrics.em_size * scale.y * text.line_height;
 
   float width       = 0.0f;
   float space_width = 0.0f;
 
-  if (auto it = TextLoader::font.glyphs.find(' '); it != TextLoader::font.glyphs.end()) {
+  if (auto it = metrics.glyphs.find(' '); it != metrics.glyphs.end()) {
     space_width = it->second.advance * scale.x;
   }
 
@@ -2147,8 +2278,8 @@ vec2f Text::calc_line_text_size(const Text&  text,
         continue;
       }
 
-      auto it = TextLoader::font.glyphs.find(c);
-      if (it != TextLoader::font.glyphs.end()) {
+      auto it = metrics.glyphs.find(c);
+      if (it != metrics.glyphs.end()) {
         float char_width = it->second.advance * scale.x;
 
         if (word_width + char_width > longest_size.x) {
@@ -2200,25 +2331,26 @@ vec2f Text::center_single_line_text(const Text&                text,
                                     const Transform_Component& transform,
                                     const vec2f&               longest_size,
                                     size_t                     start_index,
-                                    size_t*                    break_index) {
+                                    size_t*                    break_index,
+                                    const TextLoader::Font*     font) {
   vec2f position;
   switch (text.h_allignment) {
     case Text_Allignment_Horizontal::Left: {
-      calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+      calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.x = transform.position.x;
       break;
     }
 
     case Text_Allignment_Horizontal::Center: {
       vec2f size =
-          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.x = transform.position.x + (longest_size * 0.5).x - (size * 0.5f).x;
       break;
     }
 
     case Text_Allignment_Horizontal::Right: {
       vec2f size =
-          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.x = transform.position.x + longest_size.x - size.x;
       break;
     }
@@ -2226,21 +2358,21 @@ vec2f Text::center_single_line_text(const Text&                text,
 
   switch (text.v_allignment) {
     case Text_Allignment_Vertical::Top: {
-      calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+      calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.y = transform.position.y;
       break;
     }
 
     case Text_Allignment_Vertical::Center: {
       vec2f size =
-          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.y = transform.position.y + (longest_size * 0.5).y - (size * 0.5f).y;
       break;
     }
 
     case Text_Allignment_Vertical::Bottom: {
       vec2f size =
-          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index);
+          calc_line_text_size(text, transform.scale, longest_size, start_index, break_index, font);
       position.y = transform.position.y + longest_size.y - size.y;
       break;
     }
@@ -2309,7 +2441,9 @@ json Button_Component::save_json(Entity entity) {
 
   j["Visual"] = json::object();
 
-  comps.overrides[comps.current_state] = comps.base;
+  // The base style is always persisted as the Normal override. The editor's
+  // current_state is only a UI selection and must not create a new override.
+  comps.overrides[Button_Visual_State::Normal] = comps.base;
 
   for (const auto& [state, visual] : comps.overrides) {
     j["Visual"][Button_Visual::to_string(state)] = Button_Visual::save_json(visual);
@@ -2349,7 +2483,8 @@ json Textured_Button_Component::save_json(Entity entity) {
   auto& comps = entity.get_component<Textured_Button_Component>();
   j["Visual"] = json::object();
 
-  comps.overrides[comps.current_state] = comps.base_rect;
+  // Keep the editor state out of the saved data; Normal always holds the base.
+  comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
   for (const auto& [state, rect] : comps.overrides) {
     Helper::save_json(j["Visual"], Button_Visual::to_string(state), rect, uint_rect(0, 0, 0, 0));
   }

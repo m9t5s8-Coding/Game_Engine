@@ -1,11 +1,15 @@
 ﻿#include <Project/Assetmanager.hpp>
 #include <Sandbox2D.hpp>
 
-namespace ag {
-Sandbox2D::Sandbox2D()
-  : Layer("Sandbox2D") {}
+#include <filesystem>
+#include <utility>
 
-void Sandbox2D::on_attach() {
+namespace ag {
+Sandbox2D::Sandbox2D(std::string project_path)
+    : Layer("Sandbox2D"), m_project_path(std::move(project_path)) {}
+
+void
+Sandbox2D::on_attach() {
   m_window_size = Application::get().get_window().get_size();
 
   m_view_controller = ViewController::create(m_window_size, m_window_size / 2);
@@ -71,21 +75,38 @@ void Sandbox2D::on_attach() {
   };
 
   if (!m_client.connect(config.server_IP, config.port)) {
-    AERO_CORE_ERROR("[Client] Failed to Connect to the Server: {0}:{1}",
-                    config.server_IP,
-                    config.port);
+    AERO_CORE_ERROR("[Client] Failed to Connect to the Server: {0}:{1}", config.server_IP, config.port);
     return;
   }
 
   NetworkManager::set_client(&m_client);
 }
 
-void Sandbox2D::on_detach() {
+void
+Sandbox2D::on_detach() {
   if (m_networking_enabled)
     m_client.disconnect();
 }
 
-vec2f Sandbox2D::calculate_viewport(const vec2f& screen, const vec2f& view) {
+void
+Sandbox2D::on_app_pause() {
+  if (auto project = Project::get_active_project())
+    project->get_global_scripts_manager().on_pause();
+  if (m_scene)
+    m_scene->on_pause();
+}
+
+void
+Sandbox2D::on_app_resume() {
+  if (auto project = Project::get_active_project())
+    project->get_global_scripts_manager().on_resume();
+  if (m_scene)
+    m_scene->on_resume();
+}
+
+vec2f
+Sandbox2D::calculate_viewport(const vec2f& screen,
+                              const vec2f& view) {
   float screen_aspect = screen.x / screen.y;
   float view_aspect   = view.x / view.y;
   vec2f viewport;
@@ -100,20 +121,32 @@ vec2f Sandbox2D::calculate_viewport(const vec2f& screen, const vec2f& view) {
   return viewport;
 }
 
-void Sandbox2D::on_update(ag::TimeStamp ts) {
+void
+Sandbox2D::on_update(ag::TimeStamp ts) {
+  auto project = Project::get_active_project();
+  if (!project || !m_scene)
+    return;
+
   if (m_networking_enabled)
     m_client.update();
 
+  const vec2f framebuffer_size = m_framebuffer->get_specification().size;
+  Mouse::set_viewport({m_window_size, m_viewport_size, framebuffer_size});
+
   ViewController::set_mouse_position();
+  m_view_controller->set_viewport_size(framebuffer_size);
+  m_view_controller->set_viewport_mouse(Mouse::get_mouse_viewport_position());
   m_view_controller->on_update(ts);
 
   vec2f view_size = m_view_controller->get_view().get_size();
-  Project::get_active_project()->get_global_scripts_manager().on_update(ts);
+  project->get_global_scripts_manager().on_update(ts);
   m_framebuffer->bind();
   RenderCommand::set_clear_color(ag::Color(38, 45, 42));
   RenderCommand::clear();
   m_framebuffer->clear_attachment(1, -1);
   Renderer2D::begin_scene(m_view_controller->get_view(), view_size);
+  // Global draw commands are queued in the same renderer scene as entities.
+  project->get_global_scripts_manager().on_draw();
   m_scene->on_update(ts);
   Renderer2D::end_scene();
   entity_selection();
@@ -123,21 +156,23 @@ void Sandbox2D::on_update(ag::TimeStamp ts) {
   RenderCommand::clear();
   Renderer2D::begin_scene();
 
-  Renderer2D::draw_fullscreen_quad(m_framebuffer->get_colorattachment_id(),
-                                   m_window_size,
-                                   m_viewport_size);
+  Renderer2D::draw_fullscreen_quad(m_framebuffer->get_colorattachment_id(), m_window_size, m_viewport_size);
   Renderer2D::end_scene();
 }
 
-void Sandbox2D::on_event(Event& event) {
-  m_scene->on_event(event);
+void
+Sandbox2D::on_event(Event& event) {
+  if (Project::get_active_project() && m_scene)
+    m_scene->on_event(event);
+
   EventDispatcher dispatcher(event);
   dispatcher.Dispatch<MouseButtonPressedEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_mouse_pressed));
   dispatcher.Dispatch<WindowResizeEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_window_resize));
   dispatcher.Dispatch<WindowCloseEvent>(AERO_BIND_EVENT_FN(Sandbox2D::on_window_close));
 }
 
-std::string Sandbox2D::get_appdata_path() {
+std::string
+Sandbox2D::get_appdata_path() {
 #ifdef PLATFORM_WINDOWS
   const char* appdata = std::getenv("APPDATA");
   if (appdata)
@@ -154,10 +189,18 @@ std::string Sandbox2D::get_appdata_path() {
   return ".";
 }
 
-void Sandbox2D::entity_selection() {
-  vec2i mouse_position = Mouse::get_mouse_position();
-  if (mouse_position.x >= 0 && mouse_position.y >= 0) {
-    int pixel_data = m_framebuffer->read_pixel(1, mouse_position);
+void
+Sandbox2D::entity_selection() {
+  const vec2f viewport_mouse = Mouse::get_mouse_viewport_position();
+  const vec2u framebuffer_size = m_framebuffer->get_specification().size;
+
+  const int mouse_x = static_cast<int>(viewport_mouse.x);
+  const int mouse_y = static_cast<int>(viewport_mouse.y);
+
+  if (mouse_x >= 0 && mouse_y >= 0 &&
+      mouse_x < static_cast<int>(framebuffer_size.x) &&
+      mouse_y < static_cast<int>(framebuffer_size.y)) {
+    int pixel_data = m_framebuffer->read_pixel(1, {mouse_x, mouse_y});
     if (pixel_data >= 0) {
       Entity e((entt::entity)(pixel_data));
       m_hover_entity = e;
@@ -168,10 +211,13 @@ void Sandbox2D::entity_selection() {
     } else {
       m_hover_entity = Entity();
     }
+  } else {
+    m_hover_entity = Entity();
   }
 }
 
-bool Sandbox2D::on_mouse_pressed(MouseButtonPressedEvent& e) {
+bool
+Sandbox2D::on_mouse_pressed(MouseButtonPressedEvent& e) {
   if (e.get_mouse_button() == Button::ButtonLeft) {
     if (!m_hover_entity)
       return false;
@@ -184,7 +230,8 @@ bool Sandbox2D::on_mouse_pressed(MouseButtonPressedEvent& e) {
   return false;
 }
 
-bool Sandbox2D::on_window_resize(WindowResizeEvent& e) {
+bool
+Sandbox2D::on_window_resize(WindowResizeEvent& e) {
   vec2f view_size = m_view_controller->get_view().get_size();
   m_window_size   = e.get_size();
   m_viewport_size = calculate_viewport(m_window_size, view_size);
@@ -192,12 +239,14 @@ bool Sandbox2D::on_window_resize(WindowResizeEvent& e) {
   return false;
 }
 
-bool Sandbox2D::on_window_close(WindowCloseEvent& e) {
+bool
+Sandbox2D::on_window_close(WindowCloseEvent& e) {
   Application::get().m_running = false;
   return false;
 }
 
-void Sandbox2D::load_project_data() {
+void
+Sandbox2D::load_project_data() {
   std::string exe_dir  = Application::get_exe_directory();
   std::string pak_path = exe_dir + "/game.pak";
 
@@ -208,43 +257,83 @@ void Sandbox2D::load_project_data() {
 
   AssetManager::init_project(pak_path, fallback_base);
 
-  json j;
-  if (AssetManager::is_packed(AssetManager::Domain::Project)) {
-    j = AssetManager::read_json("settings.json", AssetManager::Domain::Project);
-  } else {
-    std::string setting_path = get_appdata_path() + "/AEROEngine/settings.json";
-    Helper::normalize_path(setting_path);
-    Helper::makefile_read_only(setting_path, false);
-    std::ifstream file(setting_path);
+  namespace fs = std::filesystem;
 
-    if (!file.is_open()) {
-      AERO_CORE_ERROR("Failed to Open File: {0}", setting_path);
+  auto set_project_fallback = [](const fs::path& path)
+  {
+    std::error_code ec;
+    fs::path        base = fs::is_directory(path, ec) ? path : path.parent_path();
+    if (ec)
+      return;
+
+    std::string fallback = base.string();
+    Helper::normalize_path(fallback);
+    if (!fallback.empty())
+      AssetManager::set_fallback_path(fallback, AssetManager::Domain::Project);
+  };
+
+  json        j;
+  std::string project_path = m_project_path;
+
+  if (!project_path.empty())
+  {
+    std::error_code ec;
+    fs::path        cli_path(project_path);
+    if (fs::exists(cli_path, ec) && !ec)
+    {
+      // A CLI project is always a real path on disk, even when game.pak is
+      // present next to the executable.
+      AssetManager::use_filesystem(AssetManager::Domain::Project);
+      fs::path absolute = fs::absolute(cli_path, ec);
+      project_path      = ec ? cli_path.string() : absolute.string();
+      Helper::normalize_path(project_path);
+      set_project_fallback(cli_path);
+      AERO_CORE_INFO("Loading project from command line: {0}", project_path);
+    }
+    else
+    {
+      AERO_CORE_ERROR("Command line project does not exist: {0}", project_path);
       return;
     }
-    file >> j;
-    file.close();
-    Helper::makefile_read_only(setting_path);
   }
-  if (j.is_null()) {
-    AERO_CORE_ERROR("Failed to load settings.json");
+  else
+  {
+    if (AssetManager::is_packed(AssetManager::Domain::Project)) {
+      j = AssetManager::read_json("settings.json", AssetManager::Domain::Project);
+    } else {
+      std::string setting_path = get_appdata_path() + "/AEROEngine/settings.json";
+      Helper::normalize_path(setting_path);
+      Helper::makefile_read_only(setting_path, false);
+      std::ifstream file(setting_path);
+
+      if (!file.is_open()) {
+        AERO_CORE_ERROR("Failed to Open File: {0}", setting_path);
+        return;
+      }
+      file >> j;
+      file.close();
+      Helper::makefile_read_only(setting_path);
+    }
+    if (j.is_null()) {
+      AERO_CORE_ERROR("Failed to load settings.json");
+      return;
+    }
+
+    Helper::load_json(j["Project"], "File Path", project_path, std::string(""));
+    if (project_path.empty()) {
+      AERO_CORE_ERROR("No project path in settings.json");
+      return;
+    }
+
+    if (!AssetManager::is_packed(AssetManager::Domain::Project))
+      set_project_fallback(fs::path(project_path));
+  }
+
+  auto loaded_project = Project::load_project(project_path);
+  if (!loaded_project || !loaded_project->m_project_loaded)
+  {
+    AERO_CORE_ERROR("Failed to load project: {0}", project_path);
     return;
-  }
-
-  std::string project_path;
-  Helper::load_json(j["Project"], "File Path", project_path, std::string(""));
-  if (!AssetManager::is_packed(AssetManager::Domain::Project)) {
-    AssetManager::set_fallback_path(project_path, AssetManager::Domain::Project);
-  }
-
-  if (project_path.empty()) {
-    AERO_CORE_ERROR("No project path in settings.json");
-    return;
-  }
-
-  if (AssetManager::is_packed(AssetManager::Domain::Project)) {
-    Project::load_project(project_path);
-  } else {
-    Project::load_project(project_path);
   }
 
   auto project = Project::get_active_project();
@@ -259,7 +348,7 @@ void Sandbox2D::load_project_data() {
 
   if (AssetManager::is_packed(AssetManager::Domain::Project)) {
     std::string proj_file_path = project->get_project_file_directory();
-    json        proj_json = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
+    json        proj_json      = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
     Helper::load_json(proj_json["Scene"], "Default Path", scene_path, std::string(""));
     AERO_CORE_INFO("Default Path:{0}", scene_path);
   } else {
@@ -282,9 +371,8 @@ void Sandbox2D::load_project_data() {
     return;
   }
 
-  std::string full_scene_path =
-      project->get_directory() + project->get_scene_directory() + scene_path;
-  m_scene = SaveScene::load_scene(full_scene_path);
+  std::string full_scene_path = project->get_directory() + project->get_scene_directory() + scene_path;
+  m_scene                     = SaveScene::load_scene(full_scene_path);
 
   if (!m_scene) {
     AERO_CORE_ERROR("Failed to load scene: {0}", scene_path);
@@ -313,11 +401,13 @@ void Sandbox2D::load_project_data() {
 }
 
 #ifdef PLATFORM_ANDROID
-void Sandbox2D::load_project_data_android() {
+void
+Sandbox2D::load_project_data_android() {
   AssetManager::init_project("game.pak", "");
 
   auto files = AssetManager::list_files(AssetManager::Domain::Project);
-  for (auto& f : files) AERO_CORE_INFO("PAK contains: {}", f);
+  for (auto& f : files)
+    AERO_CORE_INFO("PAK contains: {}", f);
   json j;
   j = AssetManager::read_json("settings.json", AssetManager::Domain::Project);
   if (j.is_null()) {
@@ -346,7 +436,7 @@ void Sandbox2D::load_project_data_android() {
 
   {
     std::string proj_file_path = project->get_project_file_directory();
-    json        proj_json = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
+    json        proj_json      = AssetManager::read_json(proj_file_path, AssetManager::Domain::Project);
     Helper::load_json(proj_json["Scene"], "Default Path", scene_path, std::string(""));
     AERO_CORE_INFO("Default Path:{0}", scene_path);
   }
@@ -356,9 +446,8 @@ void Sandbox2D::load_project_data_android() {
     return;
   }
 
-  std::string full_scene_path =
-      project->get_directory() + project->get_scene_directory() + scene_path;
-  m_scene = SaveScene::load_scene(full_scene_path);
+  std::string full_scene_path = project->get_directory() + project->get_scene_directory() + scene_path;
+  m_scene                     = SaveScene::load_scene(full_scene_path);
 
   if (!m_scene) {
     AERO_CORE_ERROR("Failed to load scene: {0}", scene_path);
@@ -380,4 +469,4 @@ void Sandbox2D::load_project_data_android() {
 }
 #endif
 
-}  // namespace ag
+} // namespace ag
