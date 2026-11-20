@@ -10,8 +10,11 @@ namespace ag
 {
 enum Filter_Mode
 {
-  AG_NEAREST = 0,
-  AG_LINEAR  = 1
+  AG_NEAREST          = 0,
+  AG_LINEAR           = 1,
+  // Bilinear filtering without mipmaps. Required for MSDF font atlases, where
+  // averaging the distance channels across mip levels destroys the glyph edges.
+  AG_LINEAR_NOMIPMAP  = 2
 };
 
 class Texture

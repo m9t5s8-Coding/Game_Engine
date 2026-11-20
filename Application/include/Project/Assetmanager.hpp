@@ -79,6 +79,15 @@ public:
     mount(d).base_path = fallback_path;
   }
 
+  // Force a mounted domain to read from disk. Used when the command line
+  // overrides a packed project with a real .aeroproj file on disk.
+  static void use_filesystem(Domain d)
+  {
+    PakMount& m = mount(d);
+    m.pak.reset();
+    m.using_pak = false;
+  }
+
   static bool is_packed(Domain d)
   {
     return mount(d).using_pak;

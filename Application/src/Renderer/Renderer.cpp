@@ -51,9 +51,11 @@ void Renderer::submit_instanced(const AG_ref<Shader>&      p_shader,
   p_shader->set_int("u_texture1", 1);
   p_shader->set_int("u_texture2", 2);
 #else
-  int samplers[3];
-  for (int i = 0; i < 3; i++) samplers[i] = i;
-  p_shader->set_int_array("u_textures", samplers, 3);
+  // Quad.glsl declares u_textures[2]: slot 0 is the MSDF atlas and slot 1 is
+  // the sprite texture. Sending a third sampler is out of bounds.
+  int samplers[2];
+  for (int i = 0; i < 2; i++) samplers[i] = i;
+  p_shader->set_int_array("u_textures", samplers, 2);
 #endif
 
   p_shader->set_mat3("u_view_matrix", s_scenedata->view_matrix);

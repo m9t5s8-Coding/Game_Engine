@@ -105,6 +105,10 @@ OpenGL_ESTexture2D::OpenGL_ESTexture2D(const std::string& p_path,
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       break;
+    case AG_LINEAR_NOMIPMAP:
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      break;
     case AG_LINEAR:
     default:
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -123,14 +127,17 @@ OpenGL_ESTexture2D::OpenGL_ESTexture2D(const std::string& p_path,
     return;
   }
 
-  glGenerateMipmap(GL_TEXTURE_2D);
-  if (glGetError() != GL_NO_ERROR)
+  if (filter_mode != AG_LINEAR_NOMIPMAP)
   {
-    AERO_CORE_ERROR("glGenerateMipmap failed: {}", p_path);
-  }
+    glGenerateMipmap(GL_TEXTURE_2D);
+    if (glGetError() != GL_NO_ERROR)
+    {
+      AERO_CORE_ERROR("glGenerateMipmap failed: {}", p_path);
+    }
 
-  if (filter_mode == AG_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    if (filter_mode == AG_LINEAR)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  }
 
   // Check for OpenGL errors
   GLenum error = glGetError();

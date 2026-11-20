@@ -25,7 +25,7 @@ void main()
 
 #type fragment
 #version 300 es
-precision mediump float;
+precision highp float;
 
 in vec2 tex_coord;
 

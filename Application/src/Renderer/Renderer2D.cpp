@@ -1,6 +1,9 @@
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <Core/Application.hpp>
+#include <Font/FontManager.hpp>
 #include <GameObjects/Components/Components.hpp>
 #include <glm/glm.hpp>
 #include <Math/Math.hpp>
@@ -67,7 +70,12 @@ struct Renderer2D_Data
   AG_ref<VertexArray>  quad_vertex_array;
   AG_ref<VertexBuffer> quad_instanced_buffer;
   AG_ref<Shader>       quad_shader;
+  AG_ref<Shader>       text_shader;
   AG_ref<Texture>      quad_texture, text_texture;
+  std::string          active_font_path;
+  AG_ref<Texture>      active_font_texture;
+
+  std::atomic<int> text_render_mode{static_cast<int>(Renderer2D::TextRenderMode::Combined)};
 
   AG_ref<VertexArray>  fullscreen_vertex_array;
   AG_ref<VertexBuffer> fullscreen_instanced_buffer;
@@ -96,6 +104,17 @@ void Renderer2D::init()
 {
   s_data               = new Renderer2D_Data();
   s_data->max_shape    = 100000;
+
+  // Optional runtime override so both text paths can be tried without code
+  // changes: AERO_TEXT_RENDER=combined (default) or independent.
+  if (const char* text_mode = std::getenv("AERO_TEXT_RENDER"))
+  {
+    const std::string mode(text_mode);
+    if (mode == "independent" || mode == "new" || mode == "1")
+    {
+      s_data->text_render_mode.store(static_cast<int>(TextRenderMode::Independent));
+    }
+  }
   s_data->max_vertices = s_data->max_shape * 4;
   s_data->max_indices  = s_data->max_shape * 6;
   s_data->slots        = 3;
@@ -155,30 +174,48 @@ void Renderer2D::init()
     s_data->quad_vertex_array->add_vertex_buffer(s_data->quad_instanced_buffer, true);
     s_data->quad_vertex_array->set_index_buffer(indexbuffer);
     if (Renderer::get_API() == RendererAPI::API::OpenGL_ES)
+    {
       s_data->quad_shader = ag::Shader::create("shaders/QuadES.glsl");
+      s_data->text_shader = ag::Shader::create("shaders/TextES.glsl");
+    }
     else
+    {
       s_data->quad_shader = ag::Shader::create("shaders/Quad.glsl");
+      s_data->text_shader = ag::Shader::create("shaders/Text.glsl");
+    }
 
     s_data->quad_texture =
         ag::Texture2D::create("textures/default.png", true, Filter_Mode::AG_NEAREST, true);
-    s_data->text_texture =
-        ag::Texture2D::create("textures/atlas.png", true, Filter_Mode::AG_LINEAR, true);
-    TextLoader::loadGlyph("textures/atlas.json");
+    // MSDF atlases must not be mipmapped: averaging the RGB distance channels
+    // blurs neighbouring glyphs together at minification.
+    FontManager::init();
+    auto default_font = FontManager::get_default();
+    s_data->text_texture = default_font ? default_font->texture : nullptr;
+    s_data->active_font_texture = s_data->text_texture;
+    s_data->active_font_path.clear();
   }
 
   s_data->async_data = std::make_unique<AsyncData>();
 
-  auto alloc_batch = [&](ProcessedBatch& b)
+  auto alloc_instances = [&](Quad_Instance*& instances)
   {
 #ifdef _MSC_VER
-    b.instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
+    instances = (Quad_Instance*)_aligned_malloc(sizeof(Quad_Instance) * s_data->max_shape, 64);
 #elif defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-    b.instances = (Quad_Instance*)memalign(64, sizeof(Quad_Instance) * s_data->max_shape);
+    instances = (Quad_Instance*)memalign(64, sizeof(Quad_Instance) * s_data->max_shape);
 #else
-    b.instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
+    instances = (Quad_Instance*)aligned_alloc(64, sizeof(Quad_Instance) * s_data->max_shape);
 #endif
-    b.capacity = s_data->max_shape;
-    b.count    = 0;
+  };
+
+  auto alloc_batch = [&](ProcessedBatch& b)
+  {
+    alloc_instances(b.instances);
+    alloc_instances(b.text_instances);
+    b.capacity      = s_data->max_shape;
+    b.count         = 0;
+    b.text_capacity = s_data->max_shape;
+    b.text_count    = 0;
   };
 
   alloc_batch(s_data->async_data->batch_a);
@@ -207,12 +244,18 @@ void Renderer2D::shut_down()
 
 #ifdef _MSC_VER
     _aligned_free(s_data->async_data->batch_a.instances);
+    _aligned_free(s_data->async_data->batch_a.text_instances);
     _aligned_free(s_data->async_data->batch_b.instances);
+    _aligned_free(s_data->async_data->batch_b.text_instances);
 #else
     free(s_data->async_data->batch_a.instances);
+    free(s_data->async_data->batch_a.text_instances);
     free(s_data->async_data->batch_b.instances);
+    free(s_data->async_data->batch_b.text_instances);
 #endif
   }
+
+  FontManager::shut_down();
 
   delete s_data;
   s_data = nullptr;
@@ -248,6 +291,20 @@ void Renderer2D::set_texture(const AG_ref<Texture>& texture)
     return;
   flush();
   s_data->quad_texture = texture;
+}
+
+void Renderer2D::set_text_render_mode(TextRenderMode mode)
+{
+  if (!s_data)
+    return;
+  s_data->text_render_mode.store(static_cast<int>(mode));
+}
+
+Renderer2D::TextRenderMode Renderer2D::get_text_render_mode()
+{
+  if (!s_data)
+    return TextRenderMode::Combined;
+  return static_cast<TextRenderMode>(s_data->text_render_mode.load());
 }
 
 void Renderer2D::draw_fullscreen_quad(AG_uint id, const vec2f& viewport, const vec2f& size)
@@ -310,11 +367,25 @@ void Renderer2D::draw_text(const Text&                text_string,
                            const Transform_Component& transform,
                            int                        entity_id)
 {
+  auto font = FontManager::get(text_string.font_path);
+  if (!font || !font->texture || !font->metrics)
+    return;
+
+  // The renderer has one glyph texture slot. Finish the current batch before
+  // switching atlases so every instance in that batch samples the right PNG.
+  if (font->path != s_data->active_font_path)
+  {
+    flush();
+    s_data->active_font_path    = font->path;
+    s_data->active_font_texture = font->texture;
+  }
+
   TextCommand cmd;
   cmd.text          = text_string;
   cmd.transform     = transform;
   cmd.entity_id     = entity_id;
-  cmd.longest_size  = Text::calc_longest_size(text_string, transform.scale);
+  cmd.font          = font;
+  cmd.longest_size  = Text::calc_longest_size(text_string, transform.scale, font->metrics.get());
   cmd.viewport_size = s_data->viewport_size;
   cmd.view          = s_data->view;
 
@@ -476,6 +547,9 @@ void Renderer2D::worker_thread_function()
 
 void Renderer2D::process_rectangle(const RectangleCommand& cmd, ProcessedBatch& batch)
 {
+  if (batch.count >= batch.capacity)
+    return;
+
   Quad_Instance* __restrict inst = &batch.instances[batch.count++];
 
   const vec2f scaled = cmd.rect.size * cmd.transform.scale;
@@ -496,6 +570,9 @@ void Renderer2D::process_rectangle(const RectangleCommand& cmd, ProcessedBatch& 
 
 void Renderer2D::process_circle(const CircleCommand& cmd, ProcessedBatch& batch)
 {
+  if (batch.count >= batch.capacity)
+    return;
+
   Quad_Instance* __restrict inst = &batch.instances[batch.count++];
 
   const vec2f scaled = cmd.circle.size * cmd.transform.scale;
@@ -515,6 +592,9 @@ void Renderer2D::process_circle(const CircleCommand& cmd, ProcessedBatch& batch)
 
 void Renderer2D::process_sprite(const SpriteCommand& cmd, ProcessedBatch& batch)
 {
+  if (batch.count >= batch.capacity)
+    return;
+
   Quad_Instance* __restrict inst = &batch.instances[batch.count++];
 
   const vec2f scaled = cmd.sprite.size * cmd.transform.scale;
@@ -543,6 +623,24 @@ void Renderer2D::process_sprite(const SpriteCommand& cmd, ProcessedBatch& batch)
 
 void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
 {
+  if (cmd.font && cmd.font->texture)
+  {
+    batch.font_texture = cmd.font->texture;
+    batch.font_path    = cmd.font->path;
+  }
+
+  if (s_data->text_render_mode.load() == static_cast<int>(TextRenderMode::Independent))
+    process_text_independent(cmd, batch);
+  else
+    process_text_combined(cmd, batch);
+}
+
+void Renderer2D::process_text_combined(const TextCommand& cmd, ProcessedBatch& batch)
+{
+  const TextLoader::Font& metrics = cmd.font && cmd.font->metrics
+                                        ? *cmd.font->metrics
+                                        : *FontManager::get_default()->metrics;
+
   size_t index       = 0;
   size_t break_index = 0;
 
@@ -551,30 +649,43 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
   trans.scale    = cmd.transform.scale;
   trans.rotation = cmd.transform.rotation;
 
-  const float scale_x = trans.scale.x * cmd.text.font_size / TextLoader::font.em_size;
-  const float scale_y = trans.scale.y * cmd.text.font_size / TextLoader::font.em_size;
+  const float scale_x = trans.scale.x * cmd.text.font_size / metrics.em_size;
+  const float scale_y = trans.scale.y * cmd.text.font_size / metrics.em_size;
   const vec2f scale_vec(scale_x, scale_y);
 
   vec2f starting_pos =
-      Text::center_single_line_text(cmd.text, trans, cmd.longest_size, index, &break_index);
+      Text::center_single_line_text(cmd.text, trans, cmd.longest_size, index, &break_index, &metrics);
   const vec2f padding = cmd.text.padding * scale_vec;
   starting_pos += padding;
 
-  const float ascender = TextLoader::font.ascender * TextLoader::font.em_size * scale_y;
+  const float ascender = metrics.ascender * metrics.em_size * scale_y;
   const float line_height =
-      TextLoader::font.line_height * TextLoader::font.em_size * scale_y * cmd.text.line_height;
+      metrics.line_height * metrics.em_size * scale_y * cmd.text.line_height;
 
   starting_pos.y += ascender;
   float base_line = starting_pos.y;
 
-  auto space_it = TextLoader::font.glyphs.find(' ');
-  if (space_it == TextLoader::font.glyphs.end())
+  auto space_it = metrics.glyphs.find(' ');
+  if (space_it == metrics.glyphs.end())
     return;
 
   const float tab_advance = space_it->second.advance * scale_x * 4.0f;
 
   vec4f norm_color;
   cmd.text.text_color.normalize_color(norm_color);
+
+  const float angle           = Math::to_radians(cmd.transform.rotation);
+  const vec2f rotation_center = cmd.transform.position;
+  const float cos_angle       = std::cos(angle);
+  const float sin_angle       = std::sin(angle);
+
+  auto rotate_point = [&](const vec2f& point)
+  {
+    const vec2f local = point - rotation_center;
+    return vec2f(local.x * cos_angle - local.y * sin_angle,
+                 local.x * sin_angle + local.y * cos_angle) +
+           rotation_center;
+  };
 
   if (cmd.text.draw_rect)
   {
@@ -589,7 +700,8 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     rect.border_thickness = one_px.x;
 
     Transform_Component rt;
-    rt.position = trans.position + rect.size * 0.5f;
+    rt.position = rotate_point(trans.position + rect.size * 0.5f);
+    rt.rotation = cmd.transform.rotation;
 
     process_rectangle(RectangleCommand{rect, rt, cmd.entity_id}, batch);
   }
@@ -603,7 +715,7 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == index)
     {
       vec2f csz  = {6.0f * scale_x,
-                    TextLoader::font.line_height * TextLoader::font.em_size * scale_y};
+                    metrics.line_height * metrics.em_size * scale_y};
       vec2f cpos = {starting_pos.x, base_line - ascender + csz.y * 0.5f};
 
       Rectangle cr;
@@ -613,7 +725,8 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
       cr.size       = {ws.x, csz.y};
 
       Transform_Component ct;
-      ct.position = {cpos.x + cr.size.x * 0.5f, cpos.y};
+      ct.position = rotate_point({cpos.x + cr.size.x * 0.5f, cpos.y});
+      ct.rotation = cmd.transform.rotation;
 
       process_rectangle(RectangleCommand{cr, ct, cmd.entity_id}, batch);
     }
@@ -622,7 +735,7 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     {
       size_t ni = index + 1;
       starting_pos =
-          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index);
+          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index, &metrics);
       starting_pos += padding;
       starting_pos.y += ascender;
       starting_pos.y += line_height;
@@ -636,8 +749,8 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
       continue;
     }
 
-    auto it = TextLoader::font.glyphs.find(c);
-    if (it == TextLoader::font.glyphs.end())
+    auto it = metrics.glyphs.find(c);
+    if (it == metrics.glyphs.end())
       continue;
 
     const TextLoader::Glyph& g = it->second;
@@ -646,7 +759,7 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     {
       size_t ni = index;
       starting_pos =
-          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index);
+          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index, &metrics);
       starting_pos += padding;
       starting_pos.y += ascender;
       starting_pos.y += line_height;
@@ -656,15 +769,26 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
         continue;
     }
 
+    if (batch.count >= batch.capacity)
+      break;
+
     Quad_Instance* __restrict inst = &batch.instances[batch.count++];
-    inst->texture_size             = s_data->text_texture->get_size();
+    inst->texture_size             = cmd.font->texture->get_size();
     inst->size                     = g.texture_rect.size * scale_vec;
-    inst->origin                   = inst->size * 0.5f;
+    // Combined text keeps a_position at the glyph's top-left corner. Use the
+    // node position as the pivot so rotating the line spins all glyphs around
+    // the text origin instead of around individual glyph centres.
+    inst->origin                   = rotation_center;
+    inst->rotation                 = angle;
+    inst->border_thickness         = 0.0f;
+    inst->border_color             = {0.0f, 0.0f, 0.0f, 0.0f};
+    inst->corner_radius            = 0.0f;
     g.texture_rect.to_vec4(inst->texture_rect);
     inst->fill_color   = norm_color;
     inst->mode         = static_cast<int>(cmd.text.mode);
     inst->quad_mode    = static_cast<int>(Quad_Type::Text);
     inst->texture_slot = TEXTURE_TEXT;
+    inst->flip         = {1.0f, 1.0f};
     inst->position.x   = starting_pos.x + g.plane_left * scale_x;
     inst->position.y   = starting_pos.y - (g.plane_top * scale_y);
     inst->entity_id    = cmd.entity_id;
@@ -674,7 +798,7 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
 
   if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == text_length)
   {
-    vec2f csz = {6.0f * scale_x, TextLoader::font.line_height * TextLoader::font.em_size * scale_y};
+    vec2f csz = {6.0f * scale_x, metrics.line_height * metrics.em_size * scale_y};
     vec2f cpos = {starting_pos.x, base_line - ascender + csz.y * 0.5f};
 
     Rectangle cr;
@@ -684,7 +808,202 @@ void Renderer2D::process_text(const TextCommand& cmd, ProcessedBatch& batch)
     cr.size       = {ws.x, csz.y};
 
     Transform_Component ct;
-    ct.position = {cpos.x + cr.size.x * 0.5f, cpos.y};
+    ct.position = rotate_point({cpos.x + cr.size.x * 0.5f, cpos.y});
+    ct.rotation = cmd.transform.rotation;
+
+    process_rectangle(RectangleCommand{cr, ct, cmd.entity_id}, batch);
+  }
+}
+
+void Renderer2D::process_text_independent(const TextCommand& cmd, ProcessedBatch& batch)
+{
+  if (!batch.text_instances)
+    return;
+
+  const TextLoader::Font& metrics = cmd.font && cmd.font->metrics
+                                        ? *cmd.font->metrics
+                                        : *FontManager::get_default()->metrics;
+
+  size_t index       = 0;
+  size_t break_index = 0;
+
+  Transform_Component trans;
+  trans.position = cmd.transform.position - (cmd.longest_size * 0.5);
+  trans.scale    = cmd.transform.scale;
+  trans.rotation = cmd.transform.rotation;
+
+  const float scale_x = trans.scale.x * cmd.text.font_size / metrics.em_size;
+  const float scale_y = trans.scale.y * cmd.text.font_size / metrics.em_size;
+  const vec2f scale_vec(scale_x, scale_y);
+
+  vec2f starting_pos =
+      Text::center_single_line_text(cmd.text, trans, cmd.longest_size, index, &break_index, &metrics);
+  const vec2f padding = cmd.text.padding * scale_vec;
+  starting_pos += padding;
+
+  const float ascender = metrics.ascender * metrics.em_size * scale_y;
+  const float line_height =
+      metrics.line_height * metrics.em_size * scale_y * cmd.text.line_height;
+
+  starting_pos.y += ascender;
+  float base_line = starting_pos.y;
+
+  auto space_it = metrics.glyphs.find(' ');
+  if (space_it == metrics.glyphs.end())
+    return;
+
+  const float tab_advance = space_it->second.advance * scale_x * 4.0f;
+
+  vec4f norm_color;
+  cmd.text.text_color.normalize_color(norm_color);
+
+  // Glyphs are placed in unrotated text space first, then the whole line is
+  // rotated around the entity position so rotation matches every other node.
+  const float angle           = Math::to_radians(cmd.transform.rotation);
+  const vec2f rotation_center = cmd.transform.position;
+  const float cos_angle       = std::cos(angle);
+  const float sin_angle       = std::sin(angle);
+
+  auto rotate_point = [&](const vec2f& point)
+  {
+    const vec2f local = point - rotation_center;
+    return vec2f(local.x * cos_angle - local.y * sin_angle,
+                 local.x * sin_angle + local.y * cos_angle) +
+           rotation_center;
+  };
+
+  if (cmd.text.draw_rect)
+  {
+    Rectangle rect;
+    rect.size         = cmd.longest_size + (padding * 2);
+    rect.fill_color   = Color::Transparent;
+    rect.mode         = cmd.text.mode;
+    rect.border_color = cmd.text.text_color;
+
+    vec2f one_px =
+        Math::screen_size_to_world_size({1.f, 1.f}, cmd.view.get_size(), cmd.viewport_size);
+    rect.border_thickness = one_px.x;
+
+    Transform_Component rt;
+    rt.position = rotate_point(trans.position + rect.size * 0.5f);
+    rt.rotation = cmd.transform.rotation;
+
+    process_rectangle(RectangleCommand{rect, rt, cmd.entity_id}, batch);
+  }
+
+  const size_t text_length = cmd.text.text.size();
+
+  for (; index < text_length; ++index)
+  {
+    const char c = cmd.text.text[index];
+
+    if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == index)
+    {
+      vec2f csz  = {6.0f * scale_x,
+                    metrics.line_height * metrics.em_size * scale_y};
+      vec2f cpos = {starting_pos.x, base_line - ascender + csz.y * 0.5f};
+
+      Rectangle cr;
+      cr.mode       = cmd.text.mode;
+      cr.fill_color = cmd.text.text_color;
+      vec2f ws      = Math::screen_size_to_world_size(csz, cmd.view.get_size(), cmd.viewport_size);
+      cr.size       = {ws.x, csz.y};
+
+      Transform_Component ct;
+      ct.position = rotate_point({cpos.x + cr.size.x * 0.5f, cpos.y});
+      ct.rotation = cmd.transform.rotation;
+
+      process_rectangle(RectangleCommand{cr, ct, cmd.entity_id}, batch);
+    }
+
+    if (c == '\n')
+    {
+      size_t ni = index + 1;
+      starting_pos =
+          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index, &metrics);
+      starting_pos += padding;
+      starting_pos.y += ascender;
+      starting_pos.y += line_height;
+      base_line += line_height;
+      continue;
+    }
+
+    if (c == '\t')
+    {
+      starting_pos.x += tab_advance;
+      continue;
+    }
+
+    auto it = metrics.glyphs.find(c);
+    if (it == metrics.glyphs.end())
+      continue;
+
+    const TextLoader::Glyph& g = it->second;
+
+    if (cmd.longest_size.x > 0 && index == break_index && break_index != 0)
+    {
+      size_t ni = index;
+      starting_pos =
+          Text::center_single_line_text(cmd.text, trans, cmd.longest_size, ni, &break_index, &metrics);
+      starting_pos += padding;
+      starting_pos.y += ascender;
+      starting_pos.y += line_height;
+      base_line += line_height;
+
+      if (c == ' ')
+        continue;
+    }
+
+    if (batch.text_count >= batch.text_capacity)
+      break;
+
+    Quad_Instance* __restrict inst = &batch.text_instances[batch.text_count++];
+
+    inst->texture_size = cmd.font->texture->get_size();
+    inst->size         = g.texture_rect.size * scale_vec;
+    inst->origin       = inst->size * 0.5f;
+    inst->rotation     = angle;
+    inst->mode         = static_cast<int>(cmd.text.mode);
+    inst->quad_mode    = static_cast<int>(Quad_Type::Text);
+    inst->texture_slot = TEXTURE_TEXT;
+
+    // Keep UVs half a texel inside the glyph cell. With linear filtering this
+    // stops adjacent atlas glyphs from bleeding into each other.
+    constexpr float uv_inset = 0.5f;
+    vec4f           uv;
+    g.texture_rect.to_vec4(uv);
+    uv.z = std::max(uv.z - uv_inset * 2.0f, 0.0f);
+    uv.w = std::max(uv.w - uv_inset * 2.0f, 0.0f);
+    inst->texture_rect = {uv.x + uv_inset, uv.y + uv_inset, uv.z, uv.w};
+
+    inst->border_thickness = 0.0f;
+    inst->fill_color       = norm_color;
+    inst->border_color     = {0.0f, 0.0f, 0.0f, 0.0f};
+    inst->corner_radius    = 0.0f;
+    inst->flip             = {1.0f, 1.0f};
+
+    const vec2f glyph_corner = {starting_pos.x + g.plane_left * scale_x,
+                                starting_pos.y - (g.plane_top * scale_y)};
+    inst->position           = rotate_point(glyph_corner + inst->size * 0.5f);
+    inst->entity_id          = cmd.entity_id;
+
+    starting_pos.x += g.advance * scale_x;
+  }
+
+  if (cmd.has_cursor && cmd.cursor_visible && cmd.caret_index == text_length)
+  {
+    vec2f csz = {6.0f * scale_x, metrics.line_height * metrics.em_size * scale_y};
+    vec2f cpos = {starting_pos.x, base_line - ascender + csz.y * 0.5f};
+
+    Rectangle cr;
+    cr.mode       = cmd.text.mode;
+    cr.fill_color = cmd.text.text_color;
+    vec2f ws      = Math::screen_size_to_world_size(csz, cmd.view.get_size(), cmd.viewport_size);
+    cr.size       = {ws.x, csz.y};
+
+    Transform_Component ct;
+    ct.position = rotate_point({cpos.x + cr.size.x * 0.5f, cpos.y});
+    ct.rotation = cmd.transform.rotation;
 
     process_rectangle(RectangleCommand{cr, ct, cmd.entity_id}, batch);
   }
@@ -695,25 +1014,46 @@ void Renderer2D::flush_internal(ProcessedBatch* batch)
   if (!batch || batch->is_empty())
     return;
 
-  s_data->text_texture->bind(TEXTURE_TEXT);
-  if (s_data->quad_texture)
-    s_data->quad_texture->bind(TEXTURE_SPRITE);
-
-  constexpr size_t MAX_PER_DRAW = 65536;
-  size_t           remaining    = batch->count;
-  size_t           offset       = 0;
-
-  while (remaining > 0)
+  auto draw_instances = [](Quad_Instance* instances, size_t count, const AG_ref<Shader>& shader)
   {
-    const size_t draw_count = std::min(remaining, MAX_PER_DRAW);
-    const size_t data_size  = draw_count * sizeof(Quad_Instance);
+    constexpr size_t MAX_PER_DRAW = 65536;
+    size_t           remaining    = count;
+    size_t           offset       = 0;
 
-    s_data->quad_instanced_buffer->set_data(&batch->instances[offset], data_size);
+    while (remaining > 0)
+    {
+      const size_t draw_count = std::min(remaining, MAX_PER_DRAW);
+      const size_t data_size  = draw_count * sizeof(Quad_Instance);
 
-    Renderer::submit_instanced(s_data->quad_shader, s_data->quad_vertex_array, draw_count);
+      s_data->quad_instanced_buffer->set_data(&instances[offset], data_size);
 
-    offset += draw_count;
-    remaining -= draw_count;
+      Renderer::submit_instanced(shader, s_data->quad_vertex_array, draw_count);
+
+      offset += draw_count;
+      remaining -= draw_count;
+    }
+  };
+
+  const AG_ref<Texture> font_texture =
+      batch->font_texture ? batch->font_texture : s_data->text_texture;
+
+  // Shape / sprite batch (and, in Combined mode, text glyphs too).
+  if (batch->count > 0)
+  {
+    if (font_texture)
+      font_texture->bind(TEXTURE_TEXT);
+    if (s_data->quad_texture)
+      s_data->quad_texture->bind(TEXTURE_SPRITE);
+
+    draw_instances(batch->instances, batch->count, s_data->quad_shader);
+  }
+
+  // Dedicated MSDF text pass used by Independent mode.
+  if (batch->text_count > 0)
+  {
+    if (font_texture)
+      font_texture->bind(TEXTURE_TEXT);
+    draw_instances(batch->text_instances, batch->text_count, s_data->text_shader);
   }
 }
 }  // namespace ag

@@ -3,6 +3,7 @@ file(
   APP_CORE_SRC
   "${CMAKE_SOURCE_DIR}/Application/src/Audio/*.cpp"
   "${CMAKE_SOURCE_DIR}/Application/src/Core/*.cpp"
+  "${CMAKE_SOURCE_DIR}/Application/src/Font/*.cpp"
   "${CMAKE_SOURCE_DIR}/Application/src/GameObjects/*.cpp"
   "${CMAKE_SOURCE_DIR}/Application/src/ImGui/*.cpp"
   "${CMAKE_SOURCE_DIR}/Application/src/Layers/*.cpp"
