@@ -1,6 +1,27 @@
 plugins {
     id 'com.android.application'
 }
+
+// The editor passes -PaeroGamePak=<path> when it builds from the active
+// project. Keep that generated pak in the build directory so automatic builds
+// never modify the checked-in assets (including the Sandbox payload).
+def aeroGamePak = providers.gradleProperty('aeroGamePak').orNull
+def aeroStaticAssetsDir = file('src/main/assets')
+def aeroGeneratedAssetsDir = layout.buildDirectory.dir('generated/aero_assets')
+
+tasks.register('prepareAeroAssets', Sync) {
+    // Gradle keeps the first copy of duplicate asset names. List the generated
+    // pak first so an editor build overrides the checked-in game.pak.
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    if (aeroGamePak) {
+        from(file(aeroGamePak)) {
+            rename { 'game.pak' }
+        }
+    }
+    from(aeroStaticAssetsDir)
+    into(aeroGeneratedAssetsDir)
+}
+
 android {
     namespace "com.yourname.aeroengine"
     compileSdk 34
@@ -21,6 +42,11 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
     buildTypes {
         debug {
             debuggable true
@@ -36,10 +62,18 @@ android {
         }
     }
 
-    // Point to your assets folder
+    // Assets are staged into the build directory first. Automatic editor builds
+    // replace only game.pak there; all other shipped assets stay untouched.
     sourceSets {
         main {
-            assets.srcDirs = ['../../android/app/src/main/assets']
+            assets.srcDirs = [aeroGeneratedAssetsDir.get().asFile]
         }
     }
+}
+
+tasks.matching {
+    (it.name.startsWith('merge') && it.name.endsWith('Assets')) ||
+    it.name.toLowerCase().contains('lint')
+}.configureEach {
+    dependsOn 'prepareAeroAssets'
 }
