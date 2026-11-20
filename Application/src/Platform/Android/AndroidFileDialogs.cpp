@@ -6,20 +6,20 @@
 namespace ag
 {
 
-std::string FileDialogs::open_file(const char* filter)
+std::string FileDialogs::open_file(const char* filter, const std::string& initial_directory)
 {
   // Android uses system file picker via Java/JNI — not supported from C++ directly
   AERO_CORE_WARN("FileDialogs::open_file not supported on Android");
   return "";
 }
 
-std::string FileDialogs::save_file(const char* filter)
+std::string FileDialogs::save_file(const char* filter, const std::string& initial_directory)
 {
   AERO_CORE_WARN("FileDialogs::save_file not supported on Android");
   return "";
 }
 
-std::string FileDialogs::select_folder(const char* title)
+std::string FileDialogs::select_folder(const char* title, const std::string& initial_directory)
 {
   AERO_CORE_WARN("FileDialogs::select_folder not supported on Android");
   return "";

@@ -14,6 +14,8 @@
 #include <Layers/LayerStack.hpp>
 #include <Renderer/View.hpp>
 #include <Scripting/ScriptBinding/SignalManager.hpp>
+#include <string>
+#include <vector>
 
 #ifdef PLATFORM_ANDROID
   #include <android_native_app_glue.h>
@@ -24,6 +26,10 @@ class Application {
 public:
   Application();
   virtual ~Application();
+
+  // Command line values are captured by EntryPoint before create_application().
+  static void set_command_line(int argc, char** argv);
+  static std::string get_project_path_argument();
 
   void init(const WindowProps& props);
   // main loop
@@ -50,6 +56,13 @@ public:
 #endif
 
   bool is_minimized() const { return m_minimized; }
+  // Android pauses the engine when the surface is gone or the app is in the
+  // background. Desktop builds stay active unless a minimize event arrives.
+  bool is_app_active() const { return m_app_active && !m_minimized; }
+
+  void set_app_active(bool active) { m_app_active = active; }
+  void on_app_pause();
+  void on_app_resume();
 
   // bool is_window_close() const { return  }
 
@@ -57,7 +70,7 @@ public:
   bool  m_is_closing = false;
   float delta_time   = 0.0f;
 
-  void minimize_application(bool minimized) { m_minimized = true; }
+  void minimize_application(bool minimized) { m_minimized = minimized; }
 
 protected:
   AG_scope<Window>       m_Window;
@@ -68,7 +81,8 @@ private:
   bool on_window_resize(WindowResizeEvent& e);
   bool on_key_pressed(KeyPressedEvent& e);
 
-  bool m_minimized = false;
+  bool m_minimized  = false;
+  bool m_app_active = true;
 
 #ifdef AERO_EDITOR
   ImGuiLayer* m_imgui_layer = nullptr;
@@ -80,7 +94,8 @@ private:
   Signal_Manager m_manager;
 
 private:
-  static Application* s_Instance;
+  static Application*         s_Instance;
+  static std::vector<std::string> s_command_line;
   inline static vec2f s_mouse_position;
 };
 

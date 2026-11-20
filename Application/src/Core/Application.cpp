@@ -1,7 +1,9 @@
 #include <Core/Application.hpp>
 #include <Core/Core.hpp>
 #include <Core/Time.hpp>
+#include <filesystem>
 #include <GameObjects/NodeFactory.hpp>
+#include <Helper.hpp>
 #include <Project/Assetmanager.hpp>
 #include <Renderer/BufferLayout.hpp>
 #include <Renderer/Renderer.hpp>
@@ -23,6 +25,61 @@
 namespace ag {
 
 Application* Application::s_Instance = nullptr;
+std::vector<std::string> Application::s_command_line;
+
+void Application::set_command_line(int argc, char** argv) {
+  s_command_line.clear();
+  for (int i = 1; i < argc; ++i)
+  {
+    if (argv[i])
+      s_command_line.emplace_back(argv[i]);
+  }
+}
+
+std::string Application::get_project_path_argument() {
+  namespace fs = std::filesystem;
+  const std::string prefixed = "--project=";
+
+  for (size_t i = 0; i < s_command_line.size(); ++i)
+  {
+    std::string candidate;
+    const std::string& arg = s_command_line[i];
+
+    if (arg == "--project" || arg == "-p")
+    {
+      if (i + 1 >= s_command_line.size())
+        continue;
+      candidate = s_command_line[++i];
+    }
+    else if (arg.rfind(prefixed, 0) == 0)
+    {
+      candidate = arg.substr(prefixed.size());
+    }
+    else
+    {
+      candidate = arg;
+    }
+
+    if (candidate.empty() || candidate[0] == '-')
+      continue;
+
+    std::error_code ec;
+    fs::path        path(candidate);
+    if (!fs::exists(path, ec) || ec)
+      continue;
+
+    const bool is_project = fs::is_directory(path, ec) || path.extension() == ".aeroproj";
+    if (ec || !is_project)
+      continue;
+
+    fs::path    absolute = fs::absolute(path, ec);
+    std::string result   = ec ? path.string() : absolute.string();
+    Helper::normalize_path(result);
+    return result;
+  }
+
+  return std::string();
+}
 
 Application::Application() {
   s_Instance = this;
@@ -72,7 +129,7 @@ void Application::run() {
     delta_time          = timestamp.get_seconds();
     m_last_frametime    = time;
 
-    if (!m_minimized) {
+    if (!m_minimized && m_app_active) {
       for (Layer* layer : m_layerstack) layer->on_update(timestamp);
     }
 #ifdef AERO_EDITOR
@@ -93,14 +150,18 @@ void Application::run() {
 
 void Application::run_frame() {
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+  // A suspended Android app has already had its surface cleared to black by
+  // AndroidWindow. Skipping the frame here keeps the screen dark and avoids a
+  // huge delta time spike when the app returns from the background.
+  if (!is_app_active())
+    return;
+
   float     time      = static_cast<float>(Time::get_time());
   TimeStamp timestamp = time - m_last_frametime;
   delta_time          = timestamp.get_seconds();
   m_last_frametime    = time;
 
-  if (!m_minimized) {
-    for (Layer* layer : m_layerstack) layer->on_update(timestamp);
-  }
+  for (Layer* layer : m_layerstack) layer->on_update(timestamp);
   m_Window->on_update();
 
 #ifdef PLATFORM_WEB
@@ -143,6 +204,19 @@ void Application::on_event(Event& e) {
     if (e.Handled)
       break;
   }
+}
+
+void Application::on_app_pause() {
+  for (auto it = m_layerstack.end(); it != m_layerstack.begin();) {
+    (*--it)->on_app_pause();
+  }
+}
+
+void Application::on_app_resume() {
+  // Reset time so scripted animations do not jump after a long pause.
+  m_last_frametime = static_cast<float>(Time::get_time());
+  delta_time       = 0.0f;
+  for (Layer* layer : m_layerstack) layer->on_app_resume();
 }
 
 bool Application::on_window_close(WindowCloseEvent& e) {

@@ -40,6 +40,8 @@ void android_main(struct android_app* app)
     ALooper_pollAll(-1, nullptr, &events, (void**)&source);
     if (source)
       source->process(app, source);
+    if (app->destroyRequested)
+      return;
 
     usleep(10000);
   }
@@ -49,6 +51,8 @@ void android_main(struct android_app* app)
   if (!engine)
     return;
 
+  // Stay suspended until Android reports both a valid surface and RESUME.
+  engine->set_app_active(false);
   engine->init(ag::WindowProps("AeroEngine", {1280, 720}));
 
   engine->on_create();
@@ -58,17 +62,20 @@ void android_main(struct android_app* app)
     int                         events;
     struct android_poll_source* source;
 
-    while (ALooper_pollAll(0, nullptr, &events, (void**)&source) >= 0)
+    // Block while suspended: minimizing the app must not spin the CPU, and the
+    // last presented frame remains black until Android hands us a surface.
+    const int timeout = engine->is_app_active() ? 16 : -1;
+    ALooper_pollAll(timeout, nullptr, &events, (void**)&source);
+
+    if (source)
+      source->process(app, source);
+    if (app->destroyRequested)
     {
-      if (source)
-        source->process(app, source);
-      if (app->destroyRequested)
-      {
-        goto shutdown;
-      }
+      goto shutdown;
     }
 
-    engine->run_frame();
+    if (engine->is_app_active())
+      engine->run_frame();
   }
 
 shutdown:

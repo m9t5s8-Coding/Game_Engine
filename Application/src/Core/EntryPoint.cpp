@@ -10,6 +10,7 @@ int main(int args, char** argv) {
   ag::Log::init_simple();
     #endif
 
+  ag::Application::set_command_line(args, argv);
   const auto app = ag::create_application();
   app->run();
   delete app;

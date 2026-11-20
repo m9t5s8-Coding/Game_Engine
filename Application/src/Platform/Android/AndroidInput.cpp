@@ -15,12 +15,12 @@ static AndroidWindow& get_android_window()
 }
 bool Keyboard::is_key_pressed(const KeyCode key)
 {
-  return false;
+  return get_android_window().is_key_down(key);
 }
 
 bool Keyboard::is_key_released(const KeyCode key)
 {
-  return false;
+  return !get_android_window().is_key_down(key);
 }
 
 bool Mouse::is_mouse_pressed(const MouseCode button)
@@ -45,36 +45,6 @@ vec2f Mouse::get_mouse_position()
 vec2f Mouse::get_mouse_screen_position()
 {
   return get_mouse_position();
-}
-
-vec2f Mouse::get_mouse_world_position(const View& view)
-{
-  vec2f mouse_pos = get_mouse_position();
-  return get_mouse_world_position(mouse_pos, view);
-}
-
-vec2f Mouse::get_mouse_world_position(const vec2f& mouse_position, const View& view)
-{
-  auto& window      = Application::get().get_window();
-  vec2u window_size = window.get_size();
-  return get_mouse_world_position(mouse_position, view, window_size);
-}
-
-vec2f Mouse::get_mouse_world_position(const vec2f& mouse_position,
-                                      const View&  view,
-                                      const vec2f& viewport_size)
-{
-  vec2f view_size   = view.get_size();
-  vec2f view_center = view.get_center();
-
-  vec2f ndc;
-  ndc.x = (mouse_position.x / viewport_size.x) * 2.0f - 1.0f;
-  ndc.y = (mouse_position.y / viewport_size.y) * 2.0f - 1.0f;
-
-  vec2f world;
-  world.x = ndc.x * (view_size.x / 2.0f) + view_center.x;
-  world.y = ndc.y * (view_size.y / 2.0f) + view_center.y;
-  return world;
 }
 }  // namespace ag
 
