@@ -18,6 +18,7 @@ struct PopUpModel
   std::function<void()> on_close;
   std::function<void()> on_confirm;
   vec2f                 window_size;
+  bool                  auto_resize = false;
 };
 struct PopUpSettings
 {
@@ -55,6 +56,14 @@ struct Extra_Settings
   button_control_callback button_controls;
 };
 
+// Single shared renderer for every modal popup in the editor.
+// Opens the popup (if needed), draws the standard title bar and close button,
+// then calls model.draw_content.
+struct PopUp
+{
+  static void draw(PopUpModel& model);
+};
+
 struct Texture_PopUp
 {
   static void draw_popup(PopUpModel& model, Extra_Settings& extra_settings, Entity entity);
@@ -75,10 +84,5 @@ struct Texture_PopUp
                              const vec2f&    button_size,
                              const vec2f&    scale,
                              Extra_Settings& settings);
-};
-
-struct Create_Open_Popup
-{
-  static void draw_popup(PopUpModel& model);
 };
 }  // namespace ag

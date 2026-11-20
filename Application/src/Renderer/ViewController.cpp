@@ -36,10 +36,9 @@ namespace ag
 
   void ViewController::set_mouse_position()
   {
-    auto view_rect = ViewController::get_view_floatrect();
-    auto mouse_pos = Mouse::get_mouse_position();
-    auto size = Application::get().get_window().get_size();
-    s_mouse_position = Math::screen_to_world(mouse_pos, view_rect, size);
+    s_mouse_position = Math::screen_to_world(Mouse::get_mouse_viewport_position(),
+                                             get_view_floatrect(),
+                                             Mouse::get_viewport().framebuffer_size);
   }
 
   void ViewController::on_update(TimeStamp ts)

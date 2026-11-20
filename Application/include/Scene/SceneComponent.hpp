@@ -41,6 +41,7 @@ enum class NodeType {
   TextureButton    = 9,
   CollisionShape   = 10,
   Audio            = 11,
+  SceneInstance    = 12,
 };
 
 enum class Node_Capability : uint32_t {

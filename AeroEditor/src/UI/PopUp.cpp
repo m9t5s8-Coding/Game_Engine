@@ -5,32 +5,51 @@
 
 namespace ag
 {
-void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings, Entity entity)
+void PopUp::draw(PopUpModel& model)
 {
-  if (model.window_size.x == 0 || model.window_size.y == 0)
+  if (model.id.empty())
+    return;
+
+  if (!ImGui::IsPopupOpen(model.id.c_str()))
+    ImGui::OpenPopup(model.id.c_str());
+
+  if (!model.auto_resize && (model.window_size.x == 0 || model.window_size.y == 0))
   {
-    model.window_size = {Application::get().get_window().get_size().x * 0.7f,
-                         Application::get().get_window().get_size().y * 0.8f};
+    vec2f window_size = Application::get().get_window().get_size();
+    model.window_size = {window_size.x * 0.7f, window_size.y * 0.8f};
   }
 
-  ImGui::OpenPopup(model.id.c_str());
-  static PopUpSettings s_settings;
-
-  ImGuiWindowFlags flag =
+  ImGuiWindowFlags flags =
       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-  ImVec4 original_dim_color = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
-  ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
-  ImVec2 center                                       = ImGui::GetMainViewport()->GetCenter();
-  ImGui::SetNextWindowPos(
-      ImVec2(center.x - model.window_size.x * 0.5f, center.y - model.window_size.y * 0.5f),
-      ImGuiCond_Appearing);
-  ImGui::SetNextWindowSize(model.window_size.to_imvec2(), ImGuiCond_Appearing);
+  if (model.auto_resize)
+    flags |= ImGuiWindowFlags_AlwaysAutoResize;
+
+  ImGuiStyle& style                       = ImGui::GetStyle();
+  ImVec4      original_dim_color          = style.Colors[ImGuiCol_ModalWindowDimBg];
+  style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
+
+  ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+  if (model.auto_resize)
+  {
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 0.0f), ImVec2(4096.0f, 4096.0f));
+  }
+  else
+  {
+    ImGui::SetNextWindowPos(
+        ImVec2(center.x - model.window_size.x * 0.5f, center.y - model.window_size.y * 0.5f),
+        ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(model.window_size.to_imvec2(), ImGuiCond_Appearing);
+  }
 
   ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
   ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
 
-  if (ImGui::BeginPopupModal(model.id.c_str(), NULL, flag))
+  if (ImGui::BeginPopupModal(model.id.c_str(), nullptr, flags))
   {
+    if (model.on_open && ImGui::IsWindowAppearing())
+      model.on_open();
+
     ImVec2      window_pos       = ImGui::GetWindowPos();
     ImVec2      window_size      = ImGui::GetWindowSize();
     ImDrawList* draw_list        = ImGui::GetWindowDrawList();
@@ -44,10 +63,6 @@ void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings
     ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
     ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", model.name.c_str());
 
-    float close_button_size = title_bar_height - 10;
-    ImGui::SetCursorPos(ImVec2(window_size.x - close_button_size - 5,
-                               (title_bar_height - close_button_size) * 0.5f));
-
     ImGui::SetCursorPos(ImVec2(window_size.x - 60, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
@@ -55,7 +70,9 @@ void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings
 
     if (ImGui::Button(ICON_FA_X, ImVec2(60, 40)))
     {
-      model.on_close();
+      if (model.on_close)
+        model.on_close();
+      ImGui::CloseCurrentPopup();
     }
     ImGui::SetWindowFontScale(1.0f);
     ImGui::PopStyleColor(3);
@@ -63,16 +80,27 @@ void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings
     ImGui::SetCursorPosY(title_bar_height + 5);
     ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
-    {
-      draw_content(model, s_settings, extra_settings, entity);
-    }
+    if (model.draw_content)
+      model.draw_content();
 
     ImGui::EndPopup();
   }
 
   ImGui::PopStyleColor(2);
 
-  ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
+  style.Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
+}
+
+void Texture_PopUp::draw_popup(PopUpModel& model, Extra_Settings& extra_settings, Entity entity)
+{
+  static PopUpSettings s_settings;
+
+  model.draw_content = [&]()
+  {
+    draw_content(model, s_settings, extra_settings, entity);
+  };
+
+  PopUp::draw(model);
 }
 
 void Texture_PopUp::draw_content(PopUpModel&     model,
@@ -315,75 +343,6 @@ void Texture_PopUp::create_buttons(const vec2f&    screen_pos,
       }
     }
   }
-}
-
-void Create_Open_Popup::draw_popup(PopUpModel& model)
-{
-  if (model.window_size.x == 0 || model.window_size.y == 0)
-  {
-    model.window_size = {Application::get().get_window().get_size().x * 0.7f,
-                         Application::get().get_window().get_size().y * 0.8f};
-  }
-
-  ImGui::OpenPopup(model.id.c_str());
-
-  ImGuiWindowFlags flag =
-      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-  ImVec4 original_dim_color = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
-  ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
-  ImVec2 center                                       = ImGui::GetMainViewport()->GetCenter();
-  ImGui::SetNextWindowPos(
-      ImVec2(center.x - model.window_size.x * 0.5f, center.y - model.window_size.y * 0.5f),
-      ImGuiCond_Appearing);
-  ImGui::SetNextWindowSize(model.window_size.to_imvec2(), ImGuiCond_Appearing);
-
-  ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-  ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
-
-  if (ImGui::BeginPopupModal(model.id.c_str(), NULL, flag))
-  {
-    ImVec2      window_pos       = ImGui::GetWindowPos();
-    ImVec2      window_size      = ImGui::GetWindowSize();
-    ImDrawList* draw_list        = ImGui::GetWindowDrawList();
-    float       title_bar_height = 40.0f;
-    ImU32       title_bar_color  = IM_COL32(50, 50, 50, 255);
-    draw_list->AddRectFilled(window_pos,
-                             ImVec2(window_pos.x + window_size.x, window_pos.y + title_bar_height),
-                             title_bar_color);
-
-    ImGui::SetWindowFontScale(1.1f);
-    ImGui::SetCursorPos(ImVec2(10, (title_bar_height - ImGui::GetFontSize()) * 0.5f));
-    ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", model.name.c_str());
-
-    float close_button_size = title_bar_height - 10;
-    ImGui::SetCursorPos(ImVec2(window_size.x - close_button_size - 5,
-                               (title_bar_height - close_button_size) * 0.5f));
-
-    ImGui::SetCursorPos(ImVec2(window_size.x - 60, 0));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-
-    if (ImGui::Button(" X ", ImVec2(60, 40)))
-    {
-      model.on_close();
-    }
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::PopStyleColor(3);
-
-    ImGui::SetCursorPosY(title_bar_height + 5);
-    ImGui::Dummy(ImVec2(0.0f, 0.0f));
-
-    {
-      model.draw_content();
-    }
-
-    ImGui::EndPopup();
-  }
-
-  ImGui::PopStyleColor(2);
-
-  ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = original_dim_color;
 }
 
 }  // namespace ag

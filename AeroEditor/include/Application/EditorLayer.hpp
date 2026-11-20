@@ -5,6 +5,7 @@
 #include <Aero.hpp>
 #include <Panels/Exportpanel.hpp>
 #include <Panels/ScenePanel.hpp>
+#include <functional>
 #include <unordered_map>
 
 namespace ag {
@@ -31,6 +32,12 @@ public:
   vec2f      get_viewport_size() { return m_viewport_size; }
 
   View& get_view() { return m_view_controller->get_view(); }
+  AG_ref<ViewController> get_view_controller() { return m_view_controller; }
+
+  AG_ref<Scene>      get_scene() { return m_scene; }
+  AG_ref<ScenePanel> get_panel() { return m_panel; }
+  void               activate_scene(AG_ref<Scene> scene) { set_active_scene(scene); }
+  const std::unordered_map<std::string, AG_ref<Scene>>& get_scenes() const { return m_scenes; }
 
   void set_remove_scene(const std::string& remove_scene) { m_scene_to_remove = remove_scene; }
   std::string get_remove_scene() const { return m_scene_to_remove; }
@@ -42,7 +49,9 @@ public:
     m_panel->set_scene(scene);
   }
   void        create_new_scene(const std::string& path);
-  void        create_new_script(const std::string& path);
+  // Bypasses the unsaved-changes prompt; used when replaying an undo/redo action.
+  void        create_new_scene_internal(const std::string& path);
+  void        create_new_script(const std::string& path, Entity entity);
   std::string get_script_path(const std::string& path);
   void        open_scene();
   void        open_scene(std::string& path);
@@ -51,6 +60,20 @@ public:
   void        save_scene_as_default();
   void        save_all_scene();
   void        try_exit();
+
+  void undo();
+  void redo();
+
+  void check_for_recovery();
+  void recover_autosaves();
+  void discard_autosaves();
+  void autosave_dirty_scenes(TimeStamp ts);
+
+  void request_scene_action(const std::string& description, std::function<void()> action);
+  bool has_pending_scene_action() const { return static_cast<bool>(m_pending_scene_action); }
+  const std::string& get_pending_scene_description() const { return m_pending_scene_description; }
+  void apply_pending_scene_action(bool save_first);
+  void cancel_pending_scene_action();
 
   void load_texture(Entity entity);
 
@@ -63,6 +86,8 @@ public:
 
   void render_export_panel();
   void open_export_panel();
+  void open_android_build_panel();
+  void render_recovery_prompt();
 
 private:
   AG_ref<ViewController>                         m_view_controller;
@@ -84,6 +109,12 @@ private:
   bool                m_entity_selected = false;
   std::array<bool, 3> axis_constraints  = {false, false};
   bool                m_minimized       = false;
+
+  float m_autosave_timer = 0.0f;
+  bool  m_recovery_available = false;
+
+  std::function<void()> m_pending_scene_action;
+  std::string           m_pending_scene_description;
 
   static EditorLayer* s_instance;
 
@@ -126,6 +157,8 @@ private:
   bool begin_viewport_window();
   void end_viewport_window();
   void set_active_scene(AG_ref<Scene> scene);
+  void refresh_instance_dependents(const std::string& source_scene);
+  void open_scene_internal(const std::string& path);
   void update_mouse_position();
 
   bool on_mouse_clicked(MouseButtonPressedEvent& e);

@@ -155,7 +155,7 @@ ImFont* ImGuiLayer::load_font(const std::string& path,
 }
 void ImGuiLayer::set_engine_theme()
 {
-  set_ocean_blue_theme();
+  set_unity_dark_theme();
 }
 
 void ImGuiLayer::on_imgui_render()
@@ -1851,9 +1851,28 @@ void ImGuiLayer::set_unity_dark_theme()
   colors[ImGuiCol_NavCursor]             = Color(65, 140, 235).to_imvec4();
   colors[ImGuiCol_NavWindowingHighlight] = Color(255, 255, 255, 180).to_imvec4();
   colors[ImGuiCol_NavWindowingDimBg]     = Color(80, 80, 80, 150).to_imvec4();
-  colors[ImGuiCol_ModalWindowDimBg]      = Color(80, 80, 80, 180).to_imvec4();
+  colors[ImGuiCol_ModalWindowDimBg]      = Color(24, 24, 24, 200).to_imvec4();
 
   apply_default_style_settings(style);
+
+  // Unity's editor chrome is square and compact. Keep these tweaks local to
+  // this theme so the other selectable themes keep their own character.
+  style.WindowRounding           = 0.0f;
+  style.ChildRounding            = 0.0f;
+  style.FrameRounding            = 2.0f;
+  style.GrabRounding             = 2.0f;
+  style.PopupRounding            = 2.0f;
+  style.TabRounding              = 0.0f;
+  style.ScrollbarRounding        = 2.0f;
+  style.WindowMenuButtonPosition = ImGuiDir_Left;
+  style.WindowPadding            = ImVec2(8.0f, 6.0f);
+  style.FramePadding             = ImVec2(7.0f, 4.0f);
+  style.ItemSpacing              = ImVec2(8.0f, 4.0f);
+  style.ItemInnerSpacing         = ImVec2(5.0f, 4.0f);
+  style.IndentSpacing            = 18.0f;
+  style.DockingSeparatorSize     = 2.0f;
+  style.WindowBorderSize         = 1.0f;
+  style.FrameBorderSize          = 0.0f;
 }
 void ImGuiLayer::set_unity_light_theme()
 {

@@ -36,6 +36,8 @@ struct Panels
   bool tilemap_register       = false;
   bool auto_tiling_register   = false;
   bool save_changes_panel     = false;
+  bool dirty_action_panel     = false;
+  bool recovery_panel         = false;
   bool create_new_scene       = false;
   bool create_new_script      = false;
   bool project_settings_panel = false;
@@ -53,6 +55,7 @@ class UI
 {
 public:
   static void draw_texture(Entity entity);
+  static void draw_font_selector(Entity entity);
   static void draw_window();
   static void draw_animation(Entity entity);
   static void draw_frame_selector(Entity entity, const std::string& current_animation);
@@ -72,7 +75,7 @@ public:
   static void draw_script_actions(Entity entity, Script_Component& props, bool has_script);
   static void open_in_vscode(const std::string& script_path);
   static void show_in_explorer(const std::string& file_path);
-  static void script_drag_drop(std::string& path);
+  static void script_drag_drop(std::string& path, Entity entity);
 
   static bool
   draw_tilemap_selector(Entity entity, vec2u& id, std::string& set_name, bool& use_autotile);
@@ -80,17 +83,27 @@ public:
   static void create_new_scene();
   static void create_new_script(Entity entity);
   static void save_changes();
+  static void dirty_action();
+  static void crash_recovery();
   static void popup_functions();
   static void project_settings();
 
-  static void draw_project_settings_general();
-  static void draw_project_settings_graphics();
+  static void draw_project_settings_application();
+  static void draw_project_settings_window();
+  static void draw_project_settings_rendering();
   static void draw_project_settings_audio();
+  static void draw_project_settings_input();
   static void draw_project_settings_physics();
+  static void draw_project_settings_time();
   static void draw_project_settings_scripting();
+  static void draw_project_settings_assets();
+  static void draw_project_settings_layers();
   static void draw_project_settings_networking();
+  static void draw_project_settings_build();
+  static void draw_project_settings_editor();
 
   static void draw_settings_title(const char* title);
+  static void draw_settings_section(const char* label, const char* description = nullptr);
 
   static bool draw_button(const GUI_Button& btn);
   static void test_popup(Entity entity);

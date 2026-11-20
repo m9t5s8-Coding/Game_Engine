@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <Application/EditorLayer.hpp>
+#include <Editor/Autosave.hpp>
+#include <Editor/UndoRedo.hpp>
+#include <Project/SceneInstance.hpp>
 #include <UI/StyleScope.hpp>
 #include <UI/UI.hpp>
 
@@ -42,6 +45,8 @@ void EditorLayer::on_attach()
 
   // todo
   m_scenes[m_scene->get_name()] = m_scene;
+
+  check_for_recovery();
 }
 
 void EditorLayer::on_detach()
@@ -50,6 +55,8 @@ void EditorLayer::on_detach()
 
 void EditorLayer::on_update(TimeStamp ts)
 {
+  autosave_dirty_scenes(ts);
+
   {
     update_mouse_position();
     Application::set_mouse_position(m_current_mouse_pos);
@@ -76,7 +83,8 @@ void EditorLayer::on_update(TimeStamp ts)
   }
 
   m_framebuffer->bind();
-  RenderCommand::set_clear_color(ag::Color(56, 56, 56));
+  // Match the editor's Unity-dark theme so the viewport blends with the UI.
+  RenderCommand::set_clear_color(ag::Color(36, 36, 38));
   RenderCommand::clear();
 
   m_framebuffer->clear_attachment(1, -1);
@@ -91,10 +99,11 @@ void EditorLayer::on_update(TimeStamp ts)
   Renderer2D::start_batch();
   entity_selection();
 
-  // m_panel->draw_selected_text();
+  // Draw selection and editor overlays after picking so the outline is always
+  // visible and interactive feedback is clear to the user.
+  m_panel->draw_selection_box();
   m_panel->draw_collision_shapes();
   m_panel->draw_tilemap_ghosts();
-  // m_panel->draw_selection_box();
 
   Renderer2D::end_scene();
 
@@ -118,6 +127,8 @@ void EditorLayer::on_imgui_render()
     m_panel->on_imgui_render();
   }
   end_dockspace_window();
+
+  render_recovery_prompt();
 }
 
 bool EditorLayer::begin_dockspace_window()
@@ -610,6 +621,10 @@ void EditorLayer::handle_scene_deletion(const std::string& scene_name)
 
 void EditorLayer::set_active_scene(AG_ref<Scene> scene)
 {
+  // Snapshot commands are scene-bound; a different scene starts a fresh history.
+  if (m_scene != scene)
+    UndoRedoManager::get().clear();
+
   m_scene = scene;
   if (m_scene)
   {
@@ -617,6 +632,48 @@ void EditorLayer::set_active_scene(AG_ref<Scene> scene)
     AERO_CORE_INFO("Active Scene: {0}", scene->get_name());
   }
   m_panel->set_scene(scene);
+}
+
+void EditorLayer::refresh_instance_dependents(const std::string& source_scene)
+{
+  const std::string source = SceneInstance::normalize_source_path(source_scene);
+  if (source.empty())
+    return;
+
+  Entity selected_before;
+  Entity properties_before;
+  Entity selected_instance_root;
+  Entity properties_instance_root;
+  if (m_panel)
+  {
+    selected_before  = m_panel->get_selected_entity();
+    properties_before = m_panel->get_properties_entity();
+    if (SceneInstance::is_read_only(selected_before))
+      selected_instance_root = SceneInstance::get_instance_root(selected_before);
+    if (SceneInstance::is_read_only(properties_before))
+      properties_instance_root = SceneInstance::get_instance_root(properties_before);
+  }
+
+  auto previous_active = Scene::get_active_scene();
+  for (auto& [name, scene] : m_scenes)
+  {
+    (void)name;
+    if (!scene || SceneInstance::normalize_source_path(scene->get_directory()) == source)
+      continue;
+
+    Scene::set_active_scene(scene);
+    SceneInstance::refresh_source(scene, source, false);
+  }
+  if (previous_active)
+    Scene::set_active_scene(previous_active);
+
+  if (m_panel)
+  {
+    if (selected_instance_root && selected_instance_root.has_component<Tag_Component>())
+      m_panel->set_selected_entity(selected_instance_root);
+    if (properties_instance_root && properties_instance_root.has_component<Tag_Component>())
+      m_panel->set_properties_entity(properties_instance_root);
+  }
 }
 
 void EditorLayer::render_viewport_content()
@@ -644,11 +701,30 @@ void EditorLayer::render_viewport_content()
       {
         const char* dropped_path = (const char*)payload->Data;
 
-        std::filesystem::path path(dropped_path);
-        if (path.extension() == ".aeroscene")
+        std::string dropped = dropped_path ? dropped_path : "";
+        Helper::normalize_path(dropped);
+        std::filesystem::path path(dropped);
+        std::string           extension = path.extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+        if (extension == ".aeroscene")
         {
           std::string path_string = path.string();
           open_scene(path_string);
+        }
+        else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+                 extension == ".bmp" || extension == ".tga" || extension == ".hdr")
+        {
+          std::string relative_path =
+              Project::to_active_relative_path(path.string(), ProjectDirectory::Assets);
+          if (relative_path.empty())
+          {
+            AERO_CORE_ERROR("Texture \"{0}\" is outside the project Assets folder.", path.string());
+          }
+          else if (m_panel)
+          {
+            m_panel->create_sprite_from_asset(relative_path, m_current_mouse_pos);
+          }
         }
       }
       ImGui::EndDragDropTarget();
@@ -707,33 +783,51 @@ void EditorLayer::entity_selection()
 {
   if (m_entity_selected)
   {
-    if (m_mouse_position.x >= 0 && m_mouse_position.y >= 0)
+    // Only pick inside the viewport image and within framebuffer bounds.
+    if (m_viewport_hovered && m_framebuffer && m_mouse_position.x >= 0 && m_mouse_position.y >= 0 &&
+        m_mouse_position.x < static_cast<int>(m_viewport_size.x) &&
+        m_mouse_position.y < static_cast<int>(m_viewport_size.y))
     {
       int pixel_data = m_framebuffer->read_pixel(1, m_mouse_position);
       if (pixel_data >= 0)
       {
         Entity e((entt::entity)(pixel_data));
-        if (m_panel->has_selected_entity())
+        if (m_scene && m_scene->m_registry.valid((entt::entity)pixel_data))
         {
-          if ((m_panel->get_selected_entity().get_id() != e.get_id() ||
-               m_panel->get_selected_entity().has_component<Text_Editor_State>()) &&
-              m_panel->get_transform_setting() == TransformSetting::None)
+          // Generated instance children cannot be edited directly; select the
+          // instance root instead, like Godot does for inherited nodes.
+          if (SceneInstance::is_read_only(e))
+          {
+            Entity instance_root = SceneInstance::get_instance_root(e);
+            if (instance_root)
+              e = instance_root;
+          }
+
+          if (m_panel->has_selected_entity())
+          {
+            if ((m_panel->get_selected_entity().get_id() != e.get_id() ||
+                 m_panel->get_selected_entity().has_component<Text_Editor_State>()) &&
+                m_panel->get_transform_setting() == TransformSetting::None)
+            {
+              m_panel->set_selected_entity(e);
+              m_panel->set_properties_entity(e);
+            }
+          }
+          else
           {
             m_panel->set_selected_entity(e);
             m_panel->set_properties_entity(e);
           }
         }
-        else
-        {
-          m_panel->set_selected_entity(e);
-          m_panel->set_properties_entity(e);
-        }
       }
       else
       {
+        // Clicking empty space in the viewport clears selection when not
+        // actively transforming, making it clear nothing is selected.
         if (m_panel->get_transform_setting() == TransformSetting::None)
         {
           m_panel->set_selected_entity(Entity());
+          m_panel->set_properties_entity(Entity());
         }
       }
     }
@@ -768,6 +862,21 @@ bool EditorLayer::on_key_pressed(KeyPressedEvent& e)
     {
       open_scene();
     }
+
+    if (e.get_key_code() == Key::Z)
+    {
+      if (shift)
+        redo();
+      else
+        undo();
+      return true;
+    }
+
+    if (e.get_key_code() == Key::Y)
+    {
+      redo();
+      return true;
+    }
     return false;
   }
   return false;
@@ -777,6 +886,10 @@ bool EditorLayer::on_mouse_clicked(MouseButtonPressedEvent& e)
 {
   if (e.get_mouse_button() == Button::ButtonLeft)
   {
+    // Only attempt entity picking when the cursor is over the viewport image.
+    if (!m_viewport_hovered)
+      return false;
+
     if (m_panel->has_selected_entity())
     {
       if (NodeHelper::get_nodetype(m_panel->get_selected_entity()) != NodeType::TileMap)
@@ -800,26 +913,33 @@ bool EditorLayer::on_text_input(TextInputEvent& e)
 
 void EditorLayer::create_new_scene(const std::string& path)
 {
+  request_scene_action("Create a new scene", [this, path]() { create_new_scene_internal(path); });
+}
+
+void EditorLayer::create_new_scene_internal(const std::string& path)
+{
+  auto project = Project::get_active_project();
+  if (!project)
+    return;
+
   std::string full_path = path;
-  auto        project   = Project::get_active_project();
   Helper::normalize_path(full_path);
 
-  std::string project_dir = project->get_directory();
-  std::string scene_dir   = project->get_scene_directory();
+  std::string scene_path = project->to_project_relative(full_path, ProjectDirectory::Scenes);
+  if (scene_path.empty())
+  {
+    AERO_CORE_ERROR("Scene \"{0}\" is outside the project Scenes folder ({1}); nothing was created.",
+                    full_path,
+                    project->get_directory_path(ProjectDirectory::Scenes));
+    return;
+  }
 
-  std::string base_path = project_dir + scene_dir + "/";
+  std::error_code ec;
+  std::filesystem::create_directories(std::filesystem::path(full_path).parent_path(), ec);
 
-  std::string relative_path = full_path;
-  if (relative_path.find(base_path) == 0)
-    relative_path = relative_path.substr(base_path.size());
-
-  Helper::normalize_path(relative_path);
-
-  std::filesystem::path p(full_path);
-  std::string           scene_name = p.stem().string();
-  std::string           scene_path = "/" + relative_path;
-
-  m_scene = Scene::create(scene_name, scene_path);
+  std::string           scene_name = std::filesystem::path(full_path).stem().string();
+  UndoRedoManager::get().clear();
+  m_scene                          = Scene::create(scene_name, scene_path);
   SaveScene::save_scene(m_scene, full_path);
   Scene::set_active_scene(m_scene);
 
@@ -829,8 +949,9 @@ void EditorLayer::create_new_scene(const std::string& path)
 
 void EditorLayer::open_scene()
 {
-  auto full_path =
-      FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0All Files (*.*)\0*.*\0");
+  auto full_path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0"
+                                          "All Files (*.*)\0*.*\0",
+                                          Project::get_dialog_directory(ProjectDirectory::Scenes));
   if (full_path.empty())
     return;
 
@@ -839,16 +960,25 @@ void EditorLayer::open_scene()
 
 void EditorLayer::open_scene(std::string& path)
 {
-  Helper::normalize_path(path);
-  auto scene = SaveScene::load_scene(path);
-  Scene::set_active_scene(scene);
+  const std::string target = path;
+  request_scene_action("Open another scene", [this, target]() { open_scene_internal(target); });
+}
+
+void EditorLayer::open_scene_internal(const std::string& path)
+{
+  std::string normalized = path;
+  Helper::normalize_path(normalized);
+  if (!Project::is_path_in_active_directory(normalized, ProjectDirectory::Scenes))
   {
-    auto it = m_scenes.find(scene->get_name());
-    if (it != m_scenes.end())
-    {
-      save_scene();
-    }
+    AERO_CORE_ERROR("Cannot open scene \"{0}\": it is outside the project Scenes folder ({1}).",
+                    normalized,
+                    Project::get_active_directory_path(ProjectDirectory::Scenes));
+    return;
   }
+
+  auto scene = SaveScene::load_scene(normalized);
+  UndoRedoManager::get().clear();
+  Scene::set_active_scene(scene);
   m_scene                       = scene;
   m_scenes[m_scene->get_name()] = m_scene;
   m_panel->set_scene(m_scene);
@@ -856,10 +986,23 @@ void EditorLayer::open_scene(std::string& path)
 
 void EditorLayer::save_scene()
 {
-  auto        project = Project::get_active_project();
+  auto project = Project::get_active_project();
+  if (!project || !m_scene)
+    return;
+
   std::string scene_path =
-      project->get_directory() + project->get_scene_directory() + m_scene->get_directory();
+      project->resolve_relative_path(m_scene->get_directory(), ProjectDirectory::Scenes);
+  if (scene_path.empty())
+  {
+    AERO_CORE_ERROR("Cannot save scene \"{0}\" outside the project Scenes folder.",
+                    m_scene->get_name());
+    return;
+  }
+
+  const std::string source_scene = m_scene->get_directory();
   SaveScene::save_scene(m_scene, scene_path);
+  EditorAutosave::remove_scene(m_scene->get_name());
+  refresh_instance_dependents(source_scene);
 }
 
 void EditorLayer::run_runtime()
@@ -922,11 +1065,20 @@ void EditorLayer::save_all_scene()
       continue;
 
     std::string scene_path =
-        project->get_directory() + project->get_scene_directory() + scene->get_directory();
+        project->resolve_relative_path(scene->get_directory(), ProjectDirectory::Scenes);
+    if (scene_path.empty())
+    {
+      AERO_CORE_ERROR("Cannot save scene \"{0}\" outside the project Scenes folder.",
+                      scene->get_name());
+      continue;
+    }
 
     try
     {
+      const std::string source_scene = scene->get_directory();
       SaveScene::save_scene(scene, scene_path);
+      EditorAutosave::remove_scene(scene->get_name());
+      refresh_instance_dependents(source_scene);
     }
     catch (const std::exception& e)
     {
@@ -937,31 +1089,28 @@ void EditorLayer::save_all_scene()
 
 std::string EditorLayer::get_script_path(const std::string& path)
 {
-  auto        project   = Project::get_active_project();
+  auto project = Project::get_active_project();
+  if (!project)
+    return {};
+
   std::string full_path = path;
   Helper::normalize_path(full_path);
 
-  std::string project_dir = project->get_directory();
-  std::string script_dir  = project->get_scripts_directory();
-
-  std::string base_path = project_dir + script_dir + "/";
-
-  std::string relative_path = full_path;
-  if (relative_path.find(base_path) == 0)
-    relative_path = relative_path.substr(base_path.size());
-
-  Helper::normalize_path(relative_path);
-
-  std::filesystem::path p(full_path);
-  std::string           script_path = "/" + relative_path;
-
+  std::string script_path = project->to_project_relative(full_path, ProjectDirectory::Scripts);
+  if (script_path.empty())
+  {
+    AERO_CORE_ERROR("Script \"{0}\" is outside the project Scripts folder ({1}).",
+                    full_path,
+                    project->get_directory_path(ProjectDirectory::Scripts));
+  }
   return script_path;
 }
 
-void EditorLayer::create_new_script(const std::string& path)
+void EditorLayer::create_new_script(const std::string& path, Entity entity)
 {
   auto script_path = get_script_path(path);
-  auto entity      = m_panel->get_selected_entity();
+  if (script_path.empty() || !entity)
+    return;
 
   if (!entity.has_component<Script_Component>())
   {
@@ -974,11 +1123,14 @@ void EditorLayer::create_new_script(const std::string& path)
     auto& comp = entity.get_component<Script_Component>();
     comp.path  = script_path;
   }
+
+  Script_Component::load_scripts(entity);
+  Scene::get_active_scene()->set_save_required();
 }
 
 void EditorLayer::try_exit()
 {
-  Application::get().m_is_closing = true;
+  request_scene_action("Exit editor", []() { Application::get().m_is_closing = true; });
 }
 
 void EditorLayer::print_scene_name(bool all_scene)
@@ -1029,7 +1181,7 @@ void EditorLayer::editor_things()
     Renderer2D::draw_rectangle(x_axis, x_axis_transform);
   }
 
-  // Transformation axix
+  // Transformation gizmo
   {
     Entity e = m_panel->get_selected_entity();
     if (e)
@@ -1047,6 +1199,7 @@ void EditorLayer::editor_things()
         }
         case ag::TransformSetting::Rotate:
         {
+          draw_transform_settings(e);
           break;
         }
         case ag::TransformSetting::Move:
@@ -1131,23 +1284,59 @@ void EditorLayer::draw_transform_settings(Entity e)
   const auto&   view   = m_view_controller->get_view();
   TransformAxis t_axis = m_panel->get_transform_axis();
 
-  Rectangle           x_axis, y_axis;
-  Transform_Component x_axis_transform, y_axis_transform;
-
-  // Axis visual properties
-  x_axis.fill_color = Color(255, 107, 107, 180);
-  y_axis.fill_color = Color(78, 205, 196, 180);
-
-  x_axis.size = vec2f(m_viewport_size.x, 1);
-  y_axis.size = vec2f(1, m_viewport_size.y);
-
-  x_axis.mode = RenderMode::Screen;
-  y_axis.mode = RenderMode::Screen;
-
   if (!e.has_component<Transform_Component>())
     return;
 
   const auto& transform = Transform_Component::get_world_transform(e);
+  TransformSetting mode = m_panel ? m_panel->get_transform_setting() : TransformSetting::None;
+
+  // Draw a rotation gizmo: a circle around the entity to indicate interactive rotation.
+  if (mode == TransformSetting::Rotate)
+  {
+    float radius = 60.0f;
+    if (e.has_component<Render2D_Component>())
+    {
+      const auto& r = e.get_component<Render2D_Component>();
+      radius = std::max(r.size.x * transform.scale.x, r.size.y * transform.scale.y) * 0.65f;
+      radius = std::max(radius, 40.0f);
+    }
+
+    Circle ring;
+    ring.size             = {radius * 2.0f, radius * 2.0f};
+    ring.fill_color       = Color(255, 170, 40, 20);
+    ring.border_thickness = 2.5f;
+    ring.border_color     = Color(255, 170, 40, 220);
+
+    Transform_Component ring_transform;
+    ring_transform.position = transform.position;
+    Renderer2D::draw_circle(ring, ring_transform, -1);
+
+    // Show the current rotation as a small marker on the ring.
+    float angle_rad = Math::to_radians(transform.rotation);
+    vec2f marker_pos = transform.position + vec2f(std::cos(angle_rad), std::sin(angle_rad)) * radius;
+    Circle marker;
+    marker.size       = {10.0f, 10.0f};
+    marker.fill_color = Color(255, 220, 80, 240);
+    Transform_Component marker_t;
+    marker_t.position = marker_pos;
+    Renderer2D::draw_circle(marker, marker_t, -1);
+    return;
+  }
+
+  Rectangle           x_axis, y_axis;
+  Transform_Component x_axis_transform, y_axis_transform;
+
+  // Axis visual properties (move = arrows/lines, scale = thicker guides)
+  const bool scaling = (mode == TransformSetting::Scale);
+  x_axis.fill_color = scaling ? Color(255, 90, 90, 220) : Color(255, 107, 107, 180);
+  y_axis.fill_color = scaling ? Color(90, 220, 210, 220) : Color(78, 205, 196, 180);
+
+  const float line_thickness = scaling ? 2.0f : 1.0f;
+  x_axis.size = vec2f(m_viewport_size.x, line_thickness);
+  y_axis.size = vec2f(line_thickness, m_viewport_size.y);
+
+  x_axis.mode = RenderMode::Screen;
+  y_axis.mode = RenderMode::Screen;
 
   vec2i x_pos = vec2i(view.get_center().x, transform.position.y);
   vec2i y_pos = vec2i(transform.position.x, view.get_center().y);
@@ -1160,37 +1349,206 @@ void EditorLayer::draw_transform_settings(Entity e)
 
   if (t_axis == TransformAxis::None || t_axis == TransformAxis::Y)
     Renderer2D::draw_rectangle(y_axis, y_axis_transform);
+
+  // Draw a small handle at the entity origin for clearer interactivity.
+  if (mode == TransformSetting::Move || mode == TransformSetting::Scale)
+  {
+    Circle center_handle;
+    center_handle.size       = {12.0f, 12.0f};
+    center_handle.fill_color = Color(255, 255, 255, 230);
+    center_handle.border_thickness = 1.5f;
+    center_handle.border_color = Color(40, 40, 40, 220);
+    Transform_Component ht;
+    ht.position = transform.position;
+    Renderer2D::draw_circle(center_handle, ht, -1);
+
+    // Axis direction handles
+    float handle_offset = 45.0f;
+    if (e.has_component<Render2D_Component>())
+    {
+      const auto& r = e.get_component<Render2D_Component>();
+      handle_offset = std::max({30.0f,
+                                r.size.x * transform.scale.x * 0.5f + 20.0f,
+                                r.size.y * transform.scale.y * 0.5f + 20.0f});
+      handle_offset = std::min(handle_offset, 120.0f);
+    }
+
+    if (t_axis == TransformAxis::None || t_axis == TransformAxis::X)
+    {
+      Circle xh;
+      xh.size       = {10.0f, 10.0f};
+      xh.fill_color = x_axis.fill_color;
+      Transform_Component xt;
+      xt.position = transform.position + vec2f(handle_offset, 0.0f);
+      Renderer2D::draw_circle(xh, xt, -1);
+    }
+    if (t_axis == TransformAxis::None || t_axis == TransformAxis::Y)
+    {
+      Circle yh;
+      yh.size       = {10.0f, 10.0f};
+      yh.fill_color = y_axis.fill_color;
+      Transform_Component yt;
+      yt.position = transform.position + vec2f(0.0f, handle_offset);
+      Renderer2D::draw_circle(yh, yt, -1);
+    }
+  }
 }
 
 void EditorLayer::load_texture(Entity entity)
 {
-  std::string selected_path =
-      FileDialogs::open_file("Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0All Files\0*.*\0");
-  auto& props = entity.get_component<Texture_Component>();
+  std::string selected_path = FileDialogs::open_file(
+      "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga)\0*.png;*.jpg;*.jpeg;*.bmp;*.tga\0"
+      "All Files (*.*)\0*.*\0",
+      Project::get_dialog_directory(ProjectDirectory::Assets));
 
-  if (!selected_path.empty())
+  if (selected_path.empty())
+    return;
+
+  std::string relative_path =
+      Project::to_active_relative_path(selected_path, ProjectDirectory::Assets);
+  if (relative_path.empty())
   {
-    try
+    AERO_CORE_ERROR("Image \"{0}\" is outside the project Assets folder.", selected_path);
+    return;
+  }
+
+  auto& props = entity.get_component<Texture_Component>();
+  try
+  {
+    props.path    = relative_path;
+    props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
+    if (entity.has_component<Render2D_Component>())
     {
-      props.path    = selected_path;
-      props.texture = NodeHelper::load_texture(props.path, true, props.filter_mode);
-      if (entity.has_component<Render2D_Component>())
-      {
-        auto& render = entity.get_component<Render2D_Component>();
-        render.size  = props.texture->get_size();
-      }
+      auto& render = entity.get_component<Render2D_Component>();
+      render.size  = props.texture->get_size();
     }
-    catch (const std::exception& e)
-    {
-      props.texture.reset();
-      props.path.clear();
-    }
+  }
+  catch (const std::exception& e)
+  {
+    props.texture.reset();
+    props.path.clear();
   }
 }
 
 void EditorLayer::open_export_panel()
 {
   m_export_panel.open();
+}
+
+void EditorLayer::open_android_build_panel()
+{
+  m_export_panel.open_android();
+}
+
+void EditorLayer::undo()
+{
+  UndoRedoManager::get().undo();
+}
+
+void EditorLayer::redo()
+{
+  UndoRedoManager::get().redo();
+}
+
+void EditorLayer::check_for_recovery()
+{
+  m_recovery_available = EditorAutosave::has_recovery_data();
+  if (m_recovery_available)
+    UI::get_uistate_panels().recovery_panel = true;
+}
+
+void EditorLayer::recover_autosaves()
+{
+  for (const auto& file : EditorAutosave::list_files())
+  {
+    auto scene = EditorAutosave::load_recovery(file);
+    if (!scene)
+      continue;
+
+    m_scenes[scene->get_name()] = scene;
+    Scene::set_active_scene(scene);
+    set_active_scene(scene);
+  }
+  m_recovery_available = false;
+  UI::get_uistate_panels().recovery_panel = false;
+}
+
+void EditorLayer::discard_autosaves()
+{
+  EditorAutosave::clear_all();
+  m_recovery_available = false;
+  UI::get_uistate_panels().recovery_panel = false;
+}
+
+void EditorLayer::autosave_dirty_scenes(TimeStamp ts)
+{
+  m_autosave_timer += ts.get_seconds();
+  if (m_autosave_timer < 30.0f)
+    return;
+  m_autosave_timer = 0.0f;
+
+  for (const auto& [name, scene] : m_scenes)
+  {
+    (void)name;
+    if (scene && scene->is_save_required())
+    {
+      if (EditorAutosave::write_scene(scene))
+        AERO_CORE_INFO("Autosaved scene: {0}", scene->get_name());
+    }
+  }
+}
+
+void EditorLayer::request_scene_action(const std::string& description, std::function<void()> action)
+{
+  // If there are no dirty scenes the action can run immediately.
+  bool dirty = false;
+  for (const auto& [name, scene] : m_scenes)
+  {
+    (void)name;
+    if (scene && scene->is_save_required())
+    {
+      dirty = true;
+      break;
+    }
+  }
+
+  if (!dirty)
+  {
+    if (action) action();
+    return;
+  }
+
+  m_pending_scene_action        = std::move(action);
+  m_pending_scene_description   = description;
+  UI::get_uistate_panels().dirty_action_panel = true;
+}
+
+void EditorLayer::apply_pending_scene_action(bool save_first)
+{
+  if (!m_pending_scene_action)
+    return;
+
+  if (save_first)
+    save_all_scene();
+
+  auto action = std::move(m_pending_scene_action);
+  m_pending_scene_action = nullptr;
+  m_pending_scene_description.clear();
+  UI::get_uistate_panels().dirty_action_panel = false;
+  if (action) action();
+}
+
+void EditorLayer::cancel_pending_scene_action()
+{
+  m_pending_scene_action = nullptr;
+  m_pending_scene_description.clear();
+  UI::get_uistate_panels().dirty_action_panel = false;
+}
+
+void EditorLayer::render_recovery_prompt()
+{
+  // Recovery UI is rendered from UI::popup_functions() so it participates in
+  // the editor's popup lifecycle. This hook is intentionally a no-op.
 }
 
 void EditorLayer::render_export_panel()
