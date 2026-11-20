@@ -2,8 +2,19 @@
 #include "imgui.h"
 
 #include <Aero.hpp>
+#include <Application/EditorLayer.hpp>
 #include <Node/NodeProperties.hpp>
+#include <Project/SceneInstance.hpp>
+#include <UI/PopUp.hpp>
 #include <UI/UI.hpp>
+
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <vector>
 
 namespace ag
 {
@@ -14,6 +25,76 @@ namespace ag
                    [](Entity e) { T::imgui_render(e); }})
 
 inline static ImVec2 spacing = ImVec2(0, 3);
+
+namespace
+{
+std::string script_full_path(const std::string& relative_path)
+{
+  if (relative_path.empty())
+    return {};
+
+  auto project = Project::get_active_project();
+  if (!project)
+    return {};
+
+  std::string full_path = project->get_directory() + project->get_scripts_directory() +
+                          relative_path;
+  Helper::normalize_path(full_path);
+  return full_path;
+}
+
+std::vector<std::string> read_defined_hooks(const std::string& relative_path)
+{
+  std::vector<std::string> defined;
+  const std::string        full_path = script_full_path(relative_path);
+  if (full_path.empty())
+    return defined;
+
+  std::ifstream file(full_path);
+  if (!file.is_open())
+    return defined;
+
+  std::string line;
+  while (std::getline(file, line))
+  {
+    const std::size_t function_pos = line.find("function ");
+    if (function_pos == std::string::npos)
+      continue;
+
+    std::size_t name_start = function_pos + std::string("function ").size();
+    std::size_t name_end   = line.find('(', name_start);
+    if (name_end == std::string::npos)
+      continue;
+
+    std::string name = line.substr(name_start, name_end - name_start);
+    name.erase(std::remove_if(name.begin(),
+                              name.end(),
+                              [](unsigned char c) { return std::isspace(c); }),
+               name.end());
+
+    if (!name.empty() &&
+        std::find_if(defined.begin(), defined.end(), [&](const std::string& existing) {
+          return existing == name;
+        }) == defined.end())
+    {
+      defined.push_back(name);
+    }
+  }
+
+  return defined;
+}
+
+void draw_hook_status(const std::vector<std::string>& defined, const char* hook)
+{
+  const bool present = std::find(defined.begin(), defined.end(), hook) != defined.end();
+
+  ImGui::PushStyleColor(ImGuiCol_Text,
+                        present ? ImVec4(0.35f, 0.85f, 0.45f, 1.0f)
+                                : ImVec4(0.55f, 0.55f, 0.6f, 1.0f));
+  ImGui::BulletText("%s  %s", present ? ICON_FA_CHECK : ICON_FA_MINUS, hook);
+  ImGui::PopStyleColor();
+}
+}  // namespace
 
 void NodeProperties::register_components()
 {
@@ -35,6 +116,7 @@ void NodeProperties::register_components()
   REGISTER_COMPONENT(Tween_Component);
 
   REGISTER_COMPONENT(FontStyle_Component);
+  REGISTER_COMPONENT(Font_Component);
   REGISTER_COMPONENT(UI_Component);
 
   REGISTER_COMPONENT(PhysicsBody_Component);
@@ -214,6 +296,39 @@ void TextureFlip_Component::imgui_render(Entity entity)
       },
       true);
 }
+void SceneInstance_Component::imgui_render(Entity entity)
+{
+  if (!entity.has_component<SceneInstance_Component>())
+    return;
+
+  auto&       comp    = entity.get_component<SceneInstance_Component>();
+  auto        panel   = EditorLayer::get().get_panel();
+  const bool  is_root = SceneInstance::is_instance_root(entity);
+
+  ImGui::PushID("SceneInstanceComponent");
+  ImGui::SeparatorText("Scene Instance");
+
+  ImGui::Text("Source: %s", comp.source_name.empty() ? "<unnamed>" : comp.source_name.c_str());
+  ImGui::TextWrapped("Path: %s", comp.source_scene.empty() ? "<none>" : comp.source_scene.c_str());
+  ImGui::Text("Enabled: %s", comp.enabled ? "Yes" : "No");
+
+  ImGui::Spacing();
+  if (is_root && panel)
+  {
+    if (ImGui::Button(ICON_FA_FOLDER_OPEN "  Open Source"))
+      panel->open_scene_instance_source(entity);
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_ROTATE "  Reload"))
+      panel->reload_scene_instance(entity);
+    if (ImGui::Button(ICON_FA_ARROWS_ROTATE "  Replace Source..."))
+      panel->replace_scene_instance_source(entity);
+  }
+
+  ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.75f, 1.0f),
+                     "Instance contents are read-only here. Edit the source scene to change them.");
+  ImGui::PopID();
+}
+
 void Transform_Component::imgui_render(Entity entity)
 {
   NodeProperties::draw_component_node<Transform_Component>(
@@ -243,9 +358,30 @@ void Tag_Component::imgui_render(Entity entity)
 void Script_Component::imgui_render(Entity entity)
 {
   NodeProperties::draw_component_node<Script_Component>(
-      "Scirpt Component",
+      "Script Component",
       entity,
-      [entity](Script_Component& props) mutable { UI::draw_script_selector(entity); },
+      [entity](Script_Component& props) mutable
+      {
+        UI::draw_script_selector(entity);
+
+        ImGui::Spacing();
+        ImGui::SeparatorText("Script Hooks");
+
+        const std::vector<std::string> defined_hooks = read_defined_hooks(props.path);
+
+        if (props.path.empty())
+        {
+          ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.6f, 1.0f),
+                             "Assign a script to see which hooks it implements.");
+        }
+
+        for (const char* hook : script_hooks::component)
+        {
+          draw_hook_status(defined_hooks, hook);
+        }
+        // Draw is bound separately so it does not alter the generated hook list.
+        draw_hook_status(defined_hooks, script_hooks::OnDraw);
+      },
       true);
 }
 
@@ -633,7 +769,8 @@ void CollisionShape_Component::imgui_render(Entity entity)
         options.push_back("Rectangle");
         options.push_back("Circle");
 
-        static char new_shape_name[128] = "";
+        static char new_shape_name[128]    = "";
+        static bool show_shape_name_exists = false;
         ImGui::InputTextWithHint("##NewShapeName",
                                  "Create New Shape",
                                  new_shape_name,
@@ -650,19 +787,35 @@ void CollisionShape_Component::imgui_render(Entity entity)
           }
           else
           {
-            ImGui::OpenPopup("ShapeName Exists");
+            show_shape_name_exists = true;
           }
         }
 
         ImGui::Dummy(ImVec2(0.0f, 2.0f));
-        if (ImGui::BeginPopupModal("ShapeName Exists", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        if (show_shape_name_exists)
         {
-          ImGui::Text("An shape with that name already exists!");
-          if (ImGui::Button("OK"))
+          PopUpModel model;
+          model.id          = "ShapeName Exists";
+          model.name        = "Shape Name Exists";
+          model.auto_resize = true;
+
+          model.draw_content = []()
           {
+            ImGui::Text("A shape with that name already exists!");
+            if (ImGui::Button("OK"))
+            {
+              show_shape_name_exists = false;
+              ImGui::CloseCurrentPopup();
+            }
+          };
+
+          model.on_close = []()
+          {
+            show_shape_name_exists = false;
             ImGui::CloseCurrentPopup();
-          }
-          ImGui::EndPopup();
+          };
+
+          PopUp::draw(model);
         }
 
         std::vector<std::string> shapes_names;
@@ -838,6 +991,14 @@ void Text_Component::imgui_render(Entity entity)
       },
       false);
 }
+void Font_Component::imgui_render(Entity entity)
+{
+  NodeProperties::draw_component_node<Font_Component>(
+      "Font Component",
+      entity,
+      [entity](Font_Component&) mutable { UI::draw_font_selector(entity); },
+      true);
+}
 void FontStyle_Component::imgui_render(Entity entity)
 {
   NodeProperties::draw_component_node<FontStyle_Component>(
@@ -861,94 +1022,145 @@ void FontStyle_Component::imgui_render(Entity entity)
       },
       true);
 }
-void Button_Visual::imgui_render(Entity entity)
+namespace
 {
-  NodeProperties::draw_component_node<Button_Component>(
-      "Button_Visual",
-      entity,
-      [entity](Button_Component& comps) mutable
-      {
-        bool changed = false;
-        changed      = UI::draw_color("Background", comps.base.background);
-        changed      = UI::draw_color("Border", comps.base.border);
-        changed      = UI::draw_color("Text", comps.base.text);
-        changed      = UI::draw_value("Thickness", comps.base.border_thickness);
-        float size   = comps.layout.size.y;
-        changed      = UI::draw_value("Corner", comps.base.corner, 0.0f, size * 0.5f);
-        if (changed)
-        {
-          comps.overrides[comps.current_state] = comps.base;
-        }
-      },
-      false);
-}
-void Button_Layout::imgui_render(Entity entity)
+void draw_button_visual(Button_Component&     comps,
+                        Button_Visual_State   state,
+                        const Button_Visual&  visual,
+                        bool                  editable)
 {
-  NodeProperties::draw_component_node<Button_Component>(
-      "Button_Layout",
-      entity,
-      [entity](Button_Component& comps) mutable
-      {
-        UI::draw_vec2("Size", comps.layout.size);
-        std::vector<std::string> allignment;
-        allignment.push_back("Left");
-        allignment.push_back("Center");
-        allignment.push_back("Right");
-        UI::draw_enum("Horizontal", comps.layout.h_allignment, allignment);
-        allignment.clear();
-        allignment.push_back("Top");
-        allignment.push_back("Center");
-        allignment.push_back("Bottom");
-        UI::draw_enum("Vertical", comps.layout.v_allignment, allignment);
-        UI::draw_bool("Uniform", comps.layout.uniform);
-      },
-      false);
+  ImGui::BeginDisabled(!editable);
+
+  Button_Visual edited = visual;
+  bool          changed = false;
+
+  changed |= UI::draw_color("Background", edited.background);
+  changed |= UI::draw_color("Border", edited.border);
+  changed |= UI::draw_color("Text", edited.text);
+  changed |= UI::draw_value("Thickness", edited.border_thickness);
+
+  const float max_corner = static_cast<float>(std::min(comps.layout.size.x,
+                                                       comps.layout.size.y)) *
+                           0.5f;
+  changed |= UI::draw_value("Corner", edited.corner, 0.0f, max_corner);
+
+  if (changed)
+  {
+    if (state == Button_Visual_State::Normal)
+    {
+      comps.base                          = edited;
+      comps.overrides[Button_Visual_State::Normal] = edited;
+    }
+    else
+    {
+      comps.overrides[state] = edited;
+    }
+  }
+
+  ImGui::EndDisabled();
 }
+
+void draw_button_layout(Button_Component& comps)
+{
+  UI::draw_vec2("Size", comps.layout.size);
+
+  std::vector<std::string> horizontal = {"Left", "Center", "Right"};
+  UI::draw_enum("Horizontal", comps.layout.h_allignment, horizontal);
+
+  std::vector<std::string> vertical = {"Top", "Center", "Bottom"};
+  UI::draw_enum("Vertical", comps.layout.v_allignment, vertical);
+
+  UI::draw_bool("Uniform", comps.layout.uniform);
+}
+
+void draw_button_state_controls(Button_Component& comps)
+{
+  const std::vector<std::string> states = Button_Visual::all_states();
+  UI::draw_enum("Edit State", comps.current_state, states);
+
+  const bool is_normal = comps.current_state == Button_Visual_State::Normal;
+  const auto it        = comps.overrides.find(comps.current_state);
+  const bool has_override = it != comps.overrides.end();
+
+  ImGui::SameLine();
+  ImGui::PushStyleColor(ImGuiCol_Text,
+                        is_normal || has_override ? ImVec4(0.35f, 0.85f, 0.45f, 1.0f)
+                                                  : ImVec4(0.55f, 0.55f, 0.6f, 1.0f));
+  ImGui::Text("%s", is_normal ? "Base" : (has_override ? "Override" : "Uses Base"));
+  ImGui::PopStyleColor();
+
+  if (!has_override && is_normal)
+  {
+    comps.overrides[Button_Visual_State::Normal] = comps.base;
+  }
+
+  const float spacing       = 10.0f;
+  const float button_width  = (ImGui::GetContentRegionAvail().x - spacing) * 0.5f;
+
+  GUI_Button create_button;
+  create_button.label   = is_normal ? "Reset Base" : "Create Override";
+  create_button.size    = {button_width, 32.0f};
+  create_button.enabled = is_normal || !has_override;
+
+  if (UI::draw_button(create_button))
+  {
+    if (is_normal)
+    {
+      comps.base                          = Button_Visual();
+      comps.overrides[Button_Visual_State::Normal] = comps.base;
+    }
+    else
+    {
+      comps.overrides[comps.current_state] = comps.base;
+    }
+    Scene::get_active_scene()->set_save_required();
+  }
+
+  ImGui::SameLine(0, spacing);
+
+  GUI_Button delete_button;
+  delete_button.label   = "Delete Override";
+  delete_button.size    = {button_width, 32.0f};
+  delete_button.enabled = !is_normal && has_override;
+
+  if (UI::draw_button(delete_button))
+  {
+    comps.overrides.erase(comps.current_state);
+    comps.current_state = Button_Visual_State::Normal;
+    Scene::get_active_scene()->set_save_required();
+  }
+
+  if (!is_normal && !has_override)
+  {
+    ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.6f, 1.0f),
+                       "This state uses the base style. Create an override to customize it.");
+  }
+}
+}  // namespace
+
 void Button_Component::imgui_render(Entity entity)
 {
   NodeProperties::draw_component_node<Button_Component>(
       "Button Component",
       entity,
-      [entity](Button_Component& comps) mutable
+      [](Button_Component& comps)
       {
-        std::vector<std::string> visual_states = Button_Visual::all_states();
-        bool                     exists        = false;
-        if (UI::draw_enum("State", comps.current_state, visual_states))
-        {
-          auto it = comps.overrides.find(comps.current_state);
-          if (it != comps.overrides.end())
-            comps.base = it->second;
-        }
+        draw_button_state_controls(comps);
 
-        auto it = comps.overrides.find(comps.current_state);
-        if (it != comps.overrides.end())
-          exists = true;
-        else
-          exists = false;
+        ImGui::Spacing();
+        ImGui::SeparatorText("Layout");
+        draw_button_layout(comps);
 
-        float      total_width    = ImGui::GetContentRegionAvail().x;
-        float      button_spacing = 10.0f;
-        GUI_Button button;
-        button.size    = {(total_width - button_spacing) * 0.5f, 35.0f};
-        button.label   = "Create New";
-        button.enabled = !exists;
-        if (UI::draw_button(button))
-        {
-          comps.overrides[comps.current_state] = comps.base;
-        }
-
-        ImGui::SameLine(0, button_spacing);
-
-        button.label   = "Delete";
-        button.enabled = exists;
-        if (UI::draw_button(button))
-        {
-          if (comps.current_state != Button_Visual_State::Normal)
-          {
-            comps.overrides.erase(comps.current_state);
-            comps.current_state = Button_Visual_State::Normal;
-          }
-        }
+        ImGui::Spacing();
+        ImGui::SeparatorText("Visual");
+        const auto it = comps.overrides.find(comps.current_state);
+        const bool can_edit = comps.current_state == Button_Visual_State::Normal ||
+                              it != comps.overrides.end();
+        draw_button_visual(comps,
+                           comps.current_state,
+                           can_edit ? (it != comps.overrides.end() ? it->second : comps.base)
+                                    : comps.base,
+                           can_edit);
       },
       false);
 }
@@ -959,53 +1171,94 @@ void Textured_Button_Component::imgui_render(Entity entity)
       entity,
       [entity](Textured_Button_Component& comps) mutable
       {
-        std::vector<std::string> visual_states = Button_Visual::all_states();
-        bool                     exists        = false;
-        if (UI::draw_enum("State", comps.current_state, visual_states))
+        const std::vector<std::string> states = Button_Visual::all_states();
+        UI::draw_enum("Edit State", comps.current_state, states);
+
+        bool is_normal = comps.current_state == Button_Visual_State::Normal;
+        auto it        = comps.overrides.find(comps.current_state);
+        bool has_override = it != comps.overrides.end();
+
+        if (!has_override && is_normal)
         {
-          auto it = comps.overrides.find(comps.current_state);
-          if (it != comps.overrides.end())
+          comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
+          it = comps.overrides.find(Button_Visual_State::Normal);
+        }
+
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text,
+                              is_normal || has_override ? ImVec4(0.35f, 0.85f, 0.45f, 1.0f)
+                                                        : ImVec4(0.55f, 0.55f, 0.6f, 1.0f));
+        ImGui::Text("%s", is_normal ? "Base" : (has_override ? "Override" : "Uses Base"));
+        ImGui::PopStyleColor();
+
+        const float spacing      = 10.0f;
+        const float button_width = (ImGui::GetContentRegionAvail().x - spacing) * 0.5f;
+
+        GUI_Button create_button;
+        create_button.label   = is_normal ? "Reset Base" : "Create Override";
+        create_button.size    = {button_width, 32.0f};
+        create_button.enabled = is_normal || !has_override;
+
+        if (UI::draw_button(create_button))
+        {
+          if (is_normal)
           {
-            comps.base_rect = it->second;
-            if (entity.has_component<TextureRect_Component>())
-            {
-              auto& props = entity.get_component<TextureRect_Component>();
-              props.rect  = comps.base_rect;
-            }
+            comps.base_rect                          = uint_rect();
+            comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
+          }
+          else
+          {
+            comps.overrides[comps.current_state] = comps.base_rect;
+          }
+          Scene::get_active_scene()->set_save_required();
+        }
+
+        ImGui::SameLine(0, spacing);
+
+        GUI_Button delete_button;
+        delete_button.label   = "Delete Override";
+        delete_button.size    = {button_width, 32.0f};
+        delete_button.enabled = !is_normal && has_override;
+
+        if (UI::draw_button(delete_button))
+        {
+          comps.overrides.erase(comps.current_state);
+          comps.current_state = Button_Visual_State::Normal;
+          Scene::get_active_scene()->set_save_required();
+        }
+
+        is_normal    = comps.current_state == Button_Visual_State::Normal;
+        it           = comps.overrides.find(comps.current_state);
+        has_override = it != comps.overrides.end();
+        if (!has_override && is_normal)
+          comps.overrides[Button_Visual_State::Normal] = comps.base_rect;
+
+        const bool editable = is_normal || has_override;
+        uint_rect  rect     = editable && it != comps.overrides.end() ? it->second
+                                                                     : comps.base_rect;
+
+        ImGui::BeginDisabled(!editable);
+        const bool changed_position = UI::draw_vec2("Position", rect.position);
+        const bool changed_size     = UI::draw_vec2("Size", rect.size);
+        ImGui::EndDisabled();
+
+        if (changed_position || changed_size)
+        {
+          if (is_normal)
+          {
+            comps.base_rect                          = rect;
+            comps.overrides[Button_Visual_State::Normal] = rect;
+          }
+          else
+          {
+            comps.overrides[comps.current_state] = rect;
           }
         }
 
-        auto it = comps.overrides.find(comps.current_state);
-        if (it != comps.overrides.end())
-          exists = true;
-        else
-          exists = false;
-
-        float total_width    = ImGui::GetContentRegionAvail().x;
-        float button_spacing = 10.0f;
-
-        GUI_Button button;
-
-        button.size = {(total_width - button_spacing) * 0.5f, 35.0f};
-
-        button.label   = "Create New";
-        button.enabled = !exists;
-        if (UI::draw_button(button))
+        if (!is_normal && !has_override)
         {
-          comps.overrides[comps.current_state] = comps.base_rect;
-        }
-
-        ImGui::SameLine(0, button_spacing);
-
-        button.label   = "Delete";
-        button.enabled = exists;
-        if (UI::draw_button(button))
-        {
-          if (comps.current_state != Button_Visual_State::Normal)
-          {
-            comps.overrides.erase(comps.current_state);
-            comps.current_state = Button_Visual_State::Normal;
-          }
+          ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.6f, 1.0f),
+                             "This state uses the base texture rect.");
         }
       },
       false);
@@ -1068,13 +1321,25 @@ void Audio_Component::imgui_render(Entity entity)
 
         if (UI::draw_button(button))
         {
-          auto full_path =
-              FileDialogs::open_file("Audio Files\0*.mp3;*.wav;*.ogg;*.flac\0All Files\0*.*\0");
+          auto full_path = FileDialogs::open_file(
+              "Audio Files (*.mp3;*.wav;*.ogg;*.flac)\0*.mp3;*.wav;*.ogg;*.flac\0"
+              "All Files (*.*)\0*.*\0",
+              Project::get_dialog_directory(ProjectDirectory::Assets));
           if (!full_path.empty())
           {
-            comps.path         = full_path;
-            comps.audio_buffer = NodeHelper::load_sound(comps.path);
-            comps.source->set_buffer(comps.audio_buffer);
+            std::string relative_path =
+                Project::to_active_relative_path(full_path, ProjectDirectory::Assets);
+            if (!relative_path.empty())
+            {
+              comps.path         = relative_path;
+              comps.audio_buffer = NodeHelper::load_sound(comps.path);
+              comps.source->set_buffer(comps.audio_buffer);
+            }
+            else
+            {
+              AERO_CORE_ERROR("Audio file \"{0}\" is outside the project Assets folder.",
+                              full_path);
+            }
           }
         }
 
@@ -1190,12 +1455,45 @@ void Audio_Component::imgui_render(Entity entity)
 
         if (ImGui::BeginDragDropTarget())
         {
+          auto assign_audio = [&](const std::string& full_path) {
+            std::string normalized = full_path;
+            normalized.erase(std::find(normalized.begin(), normalized.end(), '\0'), normalized.end());
+            normalized.erase(std::remove(normalized.begin(), normalized.end(), '\"'), normalized.end());
+            Helper::normalize_path(normalized);
+
+            std::filesystem::path path(normalized);
+            std::string           extension = path.extension().string();
+            std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+            static const std::vector<std::string> supported = {".mp3", ".wav", ".ogg", ".flac"};
+            if (std::find(supported.begin(), supported.end(), extension) == supported.end())
+            {
+              AERO_CORE_ERROR("Dropped file \"{0}\" is not a supported audio file.", normalized);
+              return;
+            }
+
+            std::string relative =
+                Project::to_active_relative_path(normalized, ProjectDirectory::Assets);
+            if (relative.empty())
+            {
+              AERO_CORE_ERROR("Audio file \"{0}\" is outside the project Assets folder.", normalized);
+              return;
+            }
+
+            comps.path         = relative;
+            comps.audio_buffer = NodeHelper::load_sound(comps.path);
+            comps.source->set_buffer(comps.audio_buffer);
+          };
+
+          if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+          {
+            const char* data = static_cast<const char*>(payload->Data);
+            assign_audio(std::string(data, payload->DataSize));
+          }
           if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("AUDIO_FILE"))
           {
-            const char* dropped_path = (const char*)payload->Data;
-            comps.path               = dropped_path;
-            comps.audio_buffer       = NodeHelper::load_sound(comps.path);
-            comps.source->set_buffer(comps.audio_buffer);
+            const char* data = static_cast<const char*>(payload->Data);
+            assign_audio(std::string(data, payload->DataSize));
           }
           ImGui::EndDragDropTarget();
         }
@@ -1218,10 +1516,9 @@ void NodeProperties::button_2D(Entity entity)
 {
   Tag_Component::imgui_render(entity);
   Transform_Component::imgui_render(entity);
-  Button_Layout::imgui_render(entity);
   Text_Component::imgui_render(entity);
+  Font_Component::add_component(entity);
   Button_Component::imgui_render(entity);
-  Button_Visual::imgui_render(entity);
 
   add_component(entity);
   draw_added_components(entity);
@@ -1269,6 +1566,59 @@ void NodeProperties::scene_2D(Entity entity)
   draw_added_components(entity);
 }
 
+void NodeProperties::scene_instance(Entity entity)
+{
+  if (!entity || !entity.has_component<SceneInstance_Component>())
+    return;
+
+  Tag_Component::imgui_render(entity);
+  Transform_Component::imgui_render(entity);
+  SceneInstance_Component::imgui_render(entity);
+
+  add_component(entity);
+  draw_added_components(entity);
+}
+
+void NodeProperties::readonly_instance_child(Entity entity)
+{
+  if (!entity || !entity.has_component<Tag_Component>())
+    return;
+
+  const auto&  tag  = entity.get_component<Tag_Component>();
+  auto         panel = EditorLayer::get().get_panel();
+  Entity       root = SceneInstance::get_instance_root(entity);
+
+  ImGui::PushID("ReadOnlyInstanceChild");
+  ImGui::SeparatorText("Read-only Instance Child");
+
+  ImGui::Text("Name: %s", tag.name.c_str());
+  ImGui::Text("Node: %s", NodeFactory::nodes.count(tag.node_type)
+                              ? NodeFactory::nodes.at(tag.node_type).c_str()
+                              : "Unknown");
+  ImGui::TextWrapped("This node is generated by a scene instance and cannot be edited in the host scene.");
+
+  if (root && root.has_component<SceneInstance_Component>())
+  {
+    const auto& comp = root.get_component<SceneInstance_Component>();
+    ImGui::Text("Instance: %s", comp.source_name.empty() ? "<unnamed>" : comp.source_name.c_str());
+    ImGui::TextWrapped("Source: %s", comp.source_scene.empty() ? "<none>" : comp.source_scene.c_str());
+  }
+
+  ImGui::Spacing();
+  if (panel)
+  {
+    if (ImGui::Button(ICON_FA_OBJECT_GROUP "  Select Instance") && root)
+    {
+      panel->set_selected_entity(root);
+      panel->set_properties_entity(root);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_FOLDER_OPEN "  Open Source"))
+      panel->open_scene_instance_source(entity);
+  }
+  ImGui::PopID();
+}
+
 void NodeProperties::sprite_2D(Entity entity)
 {
   Tag_Component::imgui_render(entity);
@@ -1286,6 +1636,7 @@ void NodeProperties::text_2D(Entity entity)
   Transform_Component::imgui_render(entity);
   // Render2D_Component::imgui_render(entity);
   Text_Component::imgui_render(entity);
+  Font_Component::add_component(entity);
 
   add_component(entity);
   draw_added_components(entity);

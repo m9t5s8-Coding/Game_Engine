@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Aero.hpp>
+#include <nlohmann/json.hpp>
 
 namespace ag
 {
@@ -75,6 +76,11 @@ struct HierarchyState
   ImVec4                       selected_color     = ImVec4(0.26f, 0.59f, 0.98f, 0.3f);
   ImVec4                       disabled_color     = ImVec4(0.5f, 0.5f, 0.5f, 0.5f);
   ImVec4                       prefab_color       = ImVec4(0.8f, 0.6f, 0.2f, 1.0f);
+
+  // Inline/entity rename state for the hierarchy.
+  Entity rename_entity;
+  char   rename_buffer[256] = {};
+  bool   renaming           = false;
 };
 
 class ScenePanel
@@ -96,6 +102,7 @@ public:
   }
   void set_transform_setting(TransformSetting setting)
   {
+    discard_transform_edit();
     reset_transform_setting();
     m_current_transform_setting = setting;
   }
@@ -131,6 +138,17 @@ public:
     }
     return false;
   }
+
+  // Editor actions exposed for menu/toolbar integration.
+  void reset_transform_setting();
+  void duplicate_entity();
+  void delete_entity();
+  void make_root_entity();
+  void find_entity_in_project(Entity entity);
+  void begin_rename(Entity entity);
+  void copy_entity();
+  void paste_entity();
+  std::string get_entity_path(Entity entity);
   bool selected_has_transform()
   {
     if (has_selected_entity())
@@ -149,8 +167,21 @@ public:
   {
     m_properties_entity = entity;
   }
+  Entity get_properties_entity() const
+  {
+    return m_properties_entity;
+  }
 
   void create_selected_object(NodeType type);
+  // Creates a Sprite2D from a project-relative texture path at the given world position.
+  Entity create_sprite_from_asset(const std::string& texture_path, const vec2f& position);
+
+  // Godot-style scene instancing.
+  void instance_scene_from_path(const std::string& absolute_path);
+  void instance_scene_from_relative(const std::string& relative_path, Entity parent = Entity{});
+  void open_scene_instance_source(Entity entity);
+  void reload_scene_instance(Entity entity);
+  void replace_scene_instance_source(Entity entity);
 
   void draw_scene_hierarchy();
 
@@ -168,7 +199,6 @@ public:
   void move_transform_setting();
   void rotate_transform_setting();
   void scale_transform_setting();
-  void reset_transform_setting();
 
   void update_tilemap();
 
@@ -198,6 +228,8 @@ private:
   void        draw_hierarchy_filter();
   void        handle_entity_interactions(Entity entity);
   void        draw_entity_context_menu(Entity entity);
+  void        draw_instance_context_items(Entity entity);
+  void        handle_scene_drop_payload(Entity parent);
   void        draw_hierarchy_context_menu(Entity* entity);
   bool        draw_toolbar_button(const char* icon, const char* tooltip);
   void        push_entity_style(Entity entity, bool is_selected);
@@ -214,11 +246,6 @@ private:
   void insert_entity_as_last_child(EntityID dragged_id, EntityID parent_id);
   bool is_parent(Entity parent, Entity entity);
 
-  void duplicate_entity();
-  void delete_entity();
-  void make_root_entity();
-  void find_entity_in_project(Entity entity);
-
   void paint_eraser_tiles_helper(TileSet_Component& tile_set, const vec2i& pos);
   void solid_paint_erase_helper(SolidSet_Component& solid_set, const vec2i& position);
 
@@ -227,6 +254,13 @@ private:
   void erase_tiles(TileSet_Component& tile_set, const vec2i& pos);
 
   void update_neighbour(TileSet_Component& tile_set, const vec2i& pos);
+
+  void begin_transform_edit(const char* name);
+  void commit_transform_edit();
+  void discard_transform_edit();
+
+  void begin_tile_edit();
+  void commit_tile_edit();
 
   uint16_t calculate_bitmask(TileSet_Component& tile_set, const vec2i& pos);
   uint16_t resolve_mask(const std::unordered_map<uint16_t, vec2u>& table, uint16_t mask);
@@ -240,7 +274,13 @@ private:
   AG_ref<Scene> m_scene;
   Entity        m_selected_entity;
   Entity        m_properties_entity;
-  bool          m_show_create_panel = false;
+
+  // Serialized clipboard payload; entity handles cannot cross scene boundaries.
+  nlohmann::json m_copied_payload;
+  bool           m_has_copied_payload = false;
+  AG_uint        m_copied_index       = 0;
+
+  bool m_show_create_panel = false;
 
   HierarchyState    m_hierarchy_state;
   CreateObjectState m_state;
@@ -261,6 +301,11 @@ private:
   Transform_Component m_initial_transform;
   TransformSetting    m_current_transform_setting = TransformSetting::None;
   TransformAxis       m_current_transform_axis    = TransformAxis::None;
+
+  // Snapshots captured at gesture start for one undo step per gesture.
+  nlohmann::json m_transform_snapshot;
+  std::string    m_transform_action_name;
+  nlohmann::json m_tile_snapshot;
 
   TileMap_Paint_Settings m_paint_settings = TileMap_Paint_Settings::Paint;
   TileMap_Settings       m_settings       = TileMap_Settings::Paint,

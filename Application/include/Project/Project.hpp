@@ -28,6 +28,14 @@ struct Global_Scripts
   std::vector<std::string> global_scripts;
 };
 
+// The project-managed folders that the editor may read/write through its pickers.
+enum class ProjectDirectory
+{
+  Scenes,
+  Scripts,
+  Assets
+};
+
 class Project
 {
 public:
@@ -130,6 +138,33 @@ public:
   {
     return m_scripts_directory;
   }
+
+  // Absolute, normalized filesystem path of a managed project directory.
+  std::string get_directory_path(ProjectDirectory kind) const;
+  // Active-project variants return an empty string/false when no project is loaded.
+  static std::string get_active_directory_path(ProjectDirectory kind);
+
+  // An existing directory that can be used as the initial folder of a file dialog.
+  static std::string get_dialog_directory(ProjectDirectory kind);
+
+  // True when path is the managed directory itself or one of its descendants.
+  // Subfolders are allowed; ".." escapes are not.
+  bool is_path_in_directory(const std::string& path, ProjectDirectory kind) const;
+  static bool is_path_in_active_directory(const std::string& path, ProjectDirectory kind);
+
+  // Converts an absolute path inside a managed directory to the project-relative
+  // form used by scenes/scripts/assets (for example "/sub/name.lua").
+  // Returns an empty string when the path is outside the managed directory.
+  std::string to_project_relative(const std::string& path, ProjectDirectory kind) const;
+  static std::string to_active_relative_path(const std::string& path, ProjectDirectory kind);
+
+  // Converts a project-relative path (with or without a leading '/') back to an
+  // absolute filesystem path. Returns an empty string for paths that escape root.
+  std::string resolve_relative_path(const std::string& relative_path, ProjectDirectory kind) const;
+  static std::string resolve_active_relative_path(const std::string& relative_path,
+                                                  ProjectDirectory kind);
+
+  static const char* get_directory_name(ProjectDirectory kind);
 
   void save();
 

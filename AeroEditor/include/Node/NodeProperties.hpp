@@ -4,6 +4,7 @@
 #include <imgui.h>
 
 #include <functional>
+#include <Helper.hpp>
 #include <Scene/Entity.hpp>
 
 namespace ag {
@@ -27,6 +28,8 @@ public:
   static void circle_2D(Entity entity);
   static void rectangle_2D(Entity entity);
   static void scene_2D(Entity entity);
+  static void scene_instance(Entity entity);
+  static void readonly_instance_child(Entity entity);
   static void sprite_2D(Entity entity);
   static void text_2D(Entity entity);
   static void texture_button_2D(Entity entity);
@@ -53,19 +56,30 @@ public:
     bool remove = false;
 
     if (ImGui::BeginPopupContextItem("ComponentContextMenu")) {
-      if (can_remove && ImGui::MenuItem("Remove")) {
+      if (can_remove && ImGui::MenuItem(ICON_FA_TRASH "  Remove Component")) {
         remove = true;
       }
 
-      if (ImGui::MenuItem("Reset to Default")) {
+      if (ImGui::MenuItem(ICON_FA_COPY "  Copy Component")) {
+        json payload;
+        payload["component"] = T::get_name();
+        payload["data"]      = T::save_json(entity);
+        ImGui::SetClipboardText(payload.dump().c_str());
       }
 
-      if (ImGui::MenuItem("Copy Component")) {
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Properties...")) {
+      if (ImGui::MenuItem(ICON_FA_CLIPBOARD "  Paste Component")) {
+        const char* clipboard = ImGui::GetClipboardText();
+        if (clipboard) {
+          try {
+            json payload = json::parse(clipboard);
+            if (payload.value("component", std::string()) == T::get_name()) {
+              T::load_json(entity, payload.at("data"));
+              Scene::get_active_scene()->set_save_required();
+            }
+          } catch (const std::exception&) {
+            // Clipboard does not contain a component payload.
+          }
+        }
       }
 
       ImGui::EndPopup();

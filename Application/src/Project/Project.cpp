@@ -5,15 +5,198 @@
 #include <Project/GlobalScripts.hpp>
 #include <Project/Project.hpp>
 #include <Project/SaveScene.hpp>
+#include <filesystem>
+#include <system_error>
 
 namespace fs = std::filesystem;
 
 namespace ag
 {
+namespace
+{
+std::string normalize_directory(const std::string& path)
+{
+  std::string result = path;
+  Helper::normalize_path(result);
+  while (!result.empty() && (result.back() == '/' || result.back() == '\\'))
+    result.pop_back();
+  return result;
+}
+
+fs::path canonicalize_path(const std::string& value, std::error_code& ec)
+{
+  fs::path path(value);
+  if (path.is_relative())
+    path = fs::current_path(ec) / path;
+  if (ec)
+    return {};
+  return fs::weakly_canonical(path, ec);
+}
+
+bool is_inside_root(const fs::path& root, const fs::path& value)
+{
+  fs::path relative = value.lexically_relative(root);
+  if (relative.empty())
+    return false;
+  for (const auto& component : relative)
+  {
+    if (component == "..")
+      return false;
+  }
+  return true;
+}
+}  // namespace
 
 void Project::init()
 {
   m_global_script_manager = AG_cscope<GlobalScriptsManager>();
+}
+
+std::string Project::get_directory_path(ProjectDirectory kind) const
+{
+  const std::string* subdirectory = nullptr;
+  switch (kind)
+  {
+    case ProjectDirectory::Scenes:
+      subdirectory = &m_scenes_directory;
+      break;
+    case ProjectDirectory::Scripts:
+      subdirectory = &m_scripts_directory;
+      break;
+    case ProjectDirectory::Assets:
+      subdirectory = &m_assets_directory;
+      break;
+    default:
+      return {};
+  }
+
+  if (!subdirectory || subdirectory->empty())
+    return normalize_directory(m_directory);
+  return normalize_directory(m_directory + *subdirectory);
+}
+
+std::string Project::get_active_directory_path(ProjectDirectory kind)
+{
+  auto project = get_active_project();
+  return project ? project->get_directory_path(kind) : std::string();
+}
+
+std::string Project::get_dialog_directory(ProjectDirectory kind)
+{
+  std::string root = get_active_directory_path(kind);
+  if (root.empty())
+    return {};
+
+  std::error_code ec;
+  fs::create_directories(fs::path(root), ec);
+  return root;
+}
+
+bool Project::is_path_in_directory(const std::string& path, ProjectDirectory kind) const
+{
+  std::string root = get_directory_path(kind);
+  if (root.empty() || path.empty())
+    return false;
+
+  std::error_code ec;
+  fs::path root_path = fs::weakly_canonical(fs::path(root), ec);
+  if (ec)
+    return false;
+
+  fs::path absolute_path = canonicalize_path(path, ec);
+  if (ec || absolute_path.empty())
+    return false;
+
+  return is_inside_root(root_path, absolute_path);
+}
+
+bool Project::is_path_in_active_directory(const std::string& path, ProjectDirectory kind)
+{
+  auto project = get_active_project();
+  return project && project->is_path_in_directory(path, kind);
+}
+
+std::string Project::to_project_relative(const std::string& path, ProjectDirectory kind) const
+{
+  std::string root = get_directory_path(kind);
+  if (root.empty() || path.empty())
+    return {};
+
+  std::error_code ec;
+  fs::path root_path = fs::weakly_canonical(fs::path(root), ec);
+  if (ec)
+    return {};
+
+  fs::path absolute_path = canonicalize_path(path, ec);
+  if (ec || absolute_path.empty())
+    return {};
+
+  fs::path relative = absolute_path.lexically_relative(root_path);
+  if (relative.empty() || relative == fs::path(".") || !is_inside_root(root_path, absolute_path))
+    return {};
+
+  std::string result = relative.generic_string();
+  Helper::normalize_path(result);
+  while (!result.empty() && result.front() == '/')
+    result.erase(result.begin());
+  if (result.empty())
+    return {};
+
+  return "/" + result;
+}
+
+std::string Project::to_active_relative_path(const std::string& path, ProjectDirectory kind)
+{
+  auto project = get_active_project();
+  return project ? project->to_project_relative(path, kind) : std::string();
+}
+
+std::string Project::resolve_relative_path(const std::string& relative_path,
+                                           ProjectDirectory kind) const
+{
+  std::string root = get_directory_path(kind);
+  if (root.empty() || relative_path.empty())
+    return {};
+
+  std::string normalized = relative_path;
+  Helper::normalize_path(normalized);
+  while (!normalized.empty() && normalized.front() == '/')
+    normalized.erase(normalized.begin());
+  if (normalized.empty())
+    return root;
+
+  std::error_code ec;
+  fs::path resolved = fs::weakly_canonical(fs::path(root) / fs::path(normalized), ec);
+  if (ec)
+    return {};
+
+  std::string result = resolved.string();
+  Helper::normalize_path(result);
+  if (!is_path_in_directory(result, kind))
+    return {};
+  return result;
+}
+
+std::string Project::resolve_active_relative_path(const std::string& relative_path,
+                                                  ProjectDirectory kind)
+{
+  auto project = get_active_project();
+  return project ? project->resolve_relative_path(relative_path, kind) : std::string();
+}
+
+const char* Project::get_directory_name(ProjectDirectory kind)
+{
+  switch (kind)
+  {
+    case ProjectDirectory::Scenes:
+      return "Scenes";
+    case ProjectDirectory::Scripts:
+      return "Scripts";
+    case ProjectDirectory::Assets:
+      return "Assets";
+    default:
+      return "Project";
+  }
 }
 
 AG_ref<Project> Project::new_project(const std::string& path)
@@ -44,7 +227,12 @@ AG_ref<Project> Project::load_project(const std::string& path)
   auto project = AG_cref<Project>();
 
   json j;
-  if (AssetManager::is_packed(AssetManager::Domain::Project))
+  std::error_code fs_error;
+  // A command line can point at a real project even when a game.pak is next to
+  // the executable. Prefer the filesystem path in that case so CLI overrides
+  // keep working for exported/runtime builds.
+  const bool path_on_disk = fs::exists(path, fs_error) && !fs_error;
+  if (AssetManager::is_packed(AssetManager::Domain::Project) && !path_on_disk)
   {
     std::string project_file_path = path;
 
@@ -74,13 +262,25 @@ AG_ref<Project> Project::load_project(const std::string& path)
 
     if (std::filesystem::is_directory(file_path))
     {
-      for (const auto& entry : std::filesystem::directory_iterator(file_path))
+      // Prefer <folder>/<folder name>.aeroproj, then fall back to the first
+      // project file found in the folder.
+      fs::path preferred =
+          fs::path(file_path) / (fs::path(file_path).filename().string() + ".aeroproj");
+      if (fs::exists(preferred))
       {
-        if (entry.path().extension() == ".aeroproj")
+        file_path = preferred.string();
+        Helper::normalize_path(file_path);
+      }
+      else
+      {
+        for (const auto& entry : std::filesystem::directory_iterator(file_path))
         {
-          file_path = entry.path().string();
-          Helper::normalize_path(file_path);
-          break;
+          if (entry.path().extension() == ".aeroproj")
+          {
+            file_path = entry.path().string();
+            Helper::normalize_path(file_path);
+            break;
+          }
         }
       }
       if (file_path == p)

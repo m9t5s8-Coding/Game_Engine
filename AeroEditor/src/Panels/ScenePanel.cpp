@@ -1,8 +1,11 @@
 ﻿#include <icons.h>
 
 #include <Application/EditorLayer.hpp>
+#include <Editor/EditorSerializer.hpp>
+#include <Editor/SceneCommands.hpp>
 #include <Node/NodeProperties.hpp>
 #include <Panels/ScenePanel.hpp>
+#include <Project/SceneInstance.hpp>
 #include <queue>
 #include <Renderer/Color.hpp>
 #include <UI/PopUp.hpp>
@@ -47,6 +50,7 @@ ScenePanel::ScenePanel(const AG_ref<Scene>& scene)
   NodeFactory::properties_map[NodeType::Camera]           = NodeProperties::camera_2D;
   NodeFactory::properties_map[NodeType::TileMap]          = NodeProperties::tilemap_2D;
   NodeFactory::properties_map[NodeType::Scene2D]          = NodeProperties::scene_2D;
+  NodeFactory::properties_map[NodeType::SceneInstance]    = NodeProperties::scene_instance;
   NodeFactory::properties_map[NodeType::Text]             = NodeProperties::text_2D;
   NodeFactory::properties_map[NodeType::Button]           = NodeProperties::button_2D;
   NodeFactory::properties_map[NodeType::TextureButton]    = NodeProperties::texture_button_2D;
@@ -57,6 +61,9 @@ void ScenePanel::set_scene(const AG_ref<Scene>& scene)
 {
   if (m_scene == scene)
     return;
+
+  commit_transform_edit();
+  commit_tile_edit();
 
   m_scene             = scene;
   m_selected_entity   = Entity();
@@ -96,6 +103,9 @@ void ScenePanel::on_event(Event& e)
 
 void ScenePanel::set_selected_entity(Entity entity)
 {
+  if (m_selected_entity.get_id() != entity.get_id())
+    commit_transform_edit();
+
   if (has_selected_entity() && m_selected_entity.has_component<Text_Editor_State>())
   {
     auto& state  = m_selected_entity.get_component<Text_Editor_State>();
@@ -112,6 +122,47 @@ void ScenePanel::set_selected_entity(Entity entity)
 
   m_selected_entity = entity;
   reset_transform_setting();
+}
+
+void ScenePanel::begin_transform_edit(const char* name)
+{
+  if (!m_scene || !m_transform_snapshot.is_null())
+    return;
+  m_transform_snapshot     = EditorSerializer::snapshot_scene(m_scene);
+  m_transform_action_name  = name ? name : "Transform object";
+}
+
+void ScenePanel::commit_transform_edit()
+{
+  if (!m_scene || m_transform_snapshot.is_null())
+    return;
+  push_scene_action(m_scene, m_transform_action_name, std::move(m_transform_snapshot));
+  m_transform_snapshot    = nullptr;
+  m_transform_action_name.clear();
+}
+
+void ScenePanel::discard_transform_edit()
+{
+  // The drag cancellation path already restores the initial transform values.
+  m_transform_snapshot   = nullptr;
+  m_transform_action_name.clear();
+}
+
+void ScenePanel::begin_tile_edit()
+{
+  if (!m_scene || !m_tile_snapshot.is_null())
+    return;
+  m_tile_snapshot = EditorSerializer::snapshot_scene(m_scene);
+}
+
+void ScenePanel::commit_tile_edit()
+{
+  if (!m_scene || m_tile_snapshot.is_null())
+    return;
+  push_scene_action(m_scene,
+                    m_settings == TileMap_Settings::Paint ? "Paint tiles" : "Erase tiles",
+                    std::move(m_tile_snapshot));
+  m_tile_snapshot = nullptr;
 }
 
 void ScenePanel::on_imgui_render()
@@ -237,10 +288,44 @@ void ScenePanel::draw_create_object()
 
   model.draw_content = [this]()
   {
-    ImGui::BeginChild("##GameObjects", ImVec2(0, 500.0f));
+    constexpr float spacing       = 10.0f;
+    constexpr float button_height = 35.0f;
+
+    const float available_width = ImGui::GetContentRegionAvail().x;
+
+    // Leave room for the instance button above and the action buttons below.
+    // Placing buttons over the child window makes ImGui route clicks to the
+    // child, so only the exposed part of the button would respond.
+    float list_height = ImGui::GetContentRegionAvail().y - (button_height * 2.0f) -
+                        (spacing * 2.0f);
+    if (list_height < 0.0f)
+      list_height = 0.0f;
+
+    GUI_Button instance_button;
+    instance_button.label   = ICON_FA_FILE_IMPORT "  Instance Existing Scene...";
+    instance_button.size    = {available_width, button_height};
+    instance_button.enabled = true;
+    if (UI::draw_button(instance_button))
+    {
+      std::string path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\\0*.aeroscene\\0"
+                                               "All Files (*.*)\\0*.*\\0",
+                                               Project::get_dialog_directory(ProjectDirectory::Scenes));
+      if (!path.empty())
+        instance_scene_from_path(path);
+      this->m_state.should_close = true;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::Spacing();
+
+    ImGui::BeginChild("##GameObjects", ImVec2(0, list_height));
 
     for (const auto& [type, name] : NodeFactory::nodes)
     {
+      // Scene instances need a source scene and are created through the explicit
+      // action above (or by dragging a scene from the content browser).
+      if (type == NodeType::SceneInstance)
+        continue;
+
       ImGui::PushID(static_cast<int>(type));
 
       bool selected = m_state.selected_type == type;
@@ -273,15 +358,9 @@ void ScenePanel::draw_create_object()
     }
 
     ImGui::EndChild();
-    float available_width = ImGui::GetContentRegionAvail().x;
 
-    float spacing     = 10.0f;
-    vec2f button_size = {(available_width - (spacing * 3)) * 0.5f, 35.0f};
+    vec2f button_size = {(available_width - (spacing * 3)) * 0.5f, button_height};
 
-    float cursor_y =
-        ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - button_size.y - spacing;
-
-    ImGui::SetCursorPosY(cursor_y);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
 
     GUI_Button button;
@@ -308,7 +387,7 @@ void ScenePanel::draw_create_object()
     }
   };
 
-  Create_Open_Popup::draw_popup(model);
+  PopUp::draw(model);
 
   m_show_create_panel = !m_state.should_close;
 
@@ -428,14 +507,62 @@ void ScenePanel::draw_entity_node(Entity entity, int level)
 
   push_entity_style(entity, is_selected);
 
-  std::string name      = std::string(get_node_icon(entity)) + "  " + tag.name;
-  bool        node_open = ImGui::TreeNodeEx("##node", flags, "%s", name.c_str());
+  bool node_open = false;
+  if (m_hierarchy_state.renaming && m_hierarchy_state.rename_entity == entity)
+  {
+    // Inline rename: show an input field instead of the tree label.
+    const char* icon = m_hierarchy_state.show_icons ? get_node_icon(entity) : "";
+    if (icon && icon[0] != '\0')
+    {
+      ImGui::AlignTextToFramePadding();
+      ImGui::TextUnformatted(icon);
+      ImGui::SameLine();
+    }
+    ImGui::SetNextItemWidth(std::max(120.0f, ImGui::GetContentRegionAvail().x - 20.0f));
+    if (ImGui::IsWindowAppearing() || ImGui::IsItemDeactivated())
+      ImGui::SetKeyboardFocusHere();
+    ImGui::SetKeyboardFocusHere();
+    bool entered = ImGui::InputText("##rename_entity",
+                                    m_hierarchy_state.rename_buffer,
+                                    sizeof(m_hierarchy_state.rename_buffer),
+                                    ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue);
+    bool deactivated = ImGui::IsItemDeactivated();
+    if (entered || (deactivated && !ImGui::IsItemActive()))
+    {
+      std::string new_name = m_hierarchy_state.rename_buffer;
+      if (!new_name.empty())
+      {
+        record_scene_action(m_scene, "Rename entity", [&]()
+        {
+          tag.name = new_name;
+          m_scene->set_save_required(true);
+        });
+      }
+      m_hierarchy_state.renaming = false;
+      m_hierarchy_state.rename_entity = Entity{};
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+    {
+      m_hierarchy_state.renaming = false;
+      m_hierarchy_state.rename_entity = Entity{};
+    }
+    // Keep the node "open" state stable while renaming.
+    node_open = (m_hierarchy_state.expanded_nodes.find(entity_id) != m_hierarchy_state.expanded_nodes.end());
+  }
+  else
+  {
+    std::string name = tag.name;
+    if (m_hierarchy_state.show_icons)
+      name = std::string(get_node_icon(entity)) + "  " + tag.name;
+    node_open = ImGui::TreeNodeEx("##node", flags, "%s", name.c_str());
 
-  handle_entity_interactions(entity);
+    handle_entity_interactions(entity);
+  }
 
   bool should_start_drag = ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left);
+  const bool read_only   = SceneInstance::is_read_only(entity);
 
-  if (should_start_drag)
+  if (should_start_drag && !read_only)
   {
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
     {
@@ -456,13 +583,21 @@ void ScenePanel::draw_entity_node(Entity entity, int level)
   // make child
   if (ImGui::BeginDragDropTarget())
   {
-    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
+    if (!read_only)
     {
-      EntityID dragged_id = *(const EntityID*)payload->Data;
-      if (dragged_id != entity_id)
+      if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
       {
-        reparent_entity(dragged_id, entity_id);
+        EntityID dragged_id = *(const EntityID*)payload->Data;
+        if (dragged_id != entity_id && !SceneInstance::is_read_only(Entity(dragged_id)))
+        {
+          record_scene_action(m_scene, "Reparent entity", [&]()
+          {
+            reparent_entity(dragged_id, entity_id);
+            m_scene->set_save_required(true);
+          });
+        }
       }
+      handle_scene_drop_payload(entity);
     }
     ImGui::EndDragDropTarget();
   }
@@ -528,20 +663,28 @@ void ScenePanel::draw_drop_zone_between(Entity       entity,
     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_NODE"))
     {
       EntityID dragged_id = *(const EntityID*)payload->Data;
-      m_scene->set_save_required();
-      if (position == DropPosition::Before)
+      if (!SceneInstance::is_read_only(Entity(dragged_id)) && !SceneInstance::is_read_only(parent))
       {
-        insert_entity_before(dragged_id, entity.get_id());
-      }
-      else if (position == DropPosition::After)
-      {
-        insert_entity_after(dragged_id, entity.get_id());
-      }
-      else if (position == DropPosition::LastChild)
-      {
-        insert_entity_as_last_child(dragged_id, parent.get_id());
+        record_scene_action(m_scene, "Reorder entity", [&]()
+        {
+          m_scene->set_save_required();
+          if (position == DropPosition::Before)
+          {
+            insert_entity_before(dragged_id, entity.get_id());
+          }
+          else if (position == DropPosition::After)
+          {
+            insert_entity_after(dragged_id, entity.get_id());
+          }
+          else if (position == DropPosition::LastChild)
+          {
+            insert_entity_as_last_child(dragged_id, parent.get_id());
+          }
+        });
       }
     }
+    if (!SceneInstance::is_read_only(parent))
+      handle_scene_drop_payload(parent);
     ImGui::EndDragDropTarget();
   }
 
@@ -697,7 +840,7 @@ void ScenePanel::draw_hierarchy_toolbar()
     ImGui::BeginDisabled(!m_selected_entity);
     if (draw_toolbar_button(ICON_FA_TRASH, "Delete selected"))
     {
-      // delete_selected_entity();
+      delete_entity();
     }
     ImGui::EndDisabled();
 
@@ -707,7 +850,7 @@ void ScenePanel::draw_hierarchy_toolbar()
     ImGui::BeginDisabled(!m_selected_entity);
     if (draw_toolbar_button(ICON_FA_CLONE, "Duplicate selected"))
     {
-      // duplicate_selected_entity();
+      duplicate_entity();
     }
     ImGui::EndDisabled();
 
@@ -747,7 +890,11 @@ void ScenePanel::draw_hierarchy_toolbar()
       if (draw_toolbar_button(vis.visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH,
                               vis.visible ? "Hide object" : "Show object"))
       {
-        vis.visible = !vis.visible;
+        record_scene_action(m_scene, "Toggle visibility", [&]()
+        {
+          vis.visible = !vis.visible;
+          m_scene->set_save_required(true);
+        });
       }
     }
 
@@ -760,11 +907,13 @@ void ScenePanel::draw_hierarchy_toolbar()
       if (draw_toolbar_button(lock.locked ? ICON_FA_LOCK : ICON_FA_UNLOCK,
                               lock.locked ? "Unlock object" : "Lock object"))
       {
-        lock.locked = !lock.locked;
+        record_scene_action(m_scene, "Toggle lock", [&]()
+        {
+          lock.locked = !lock.locked;
+          m_scene->set_save_required(true);
+        });
       }
     }
-
-    // ImGui::PopStyleVar();
   }
   ImGui::EndChild();
 }
@@ -827,60 +976,102 @@ void ScenePanel::handle_entity_interactions(Entity entity)
   }
 }
 
+void ScenePanel::draw_instance_context_items(Entity entity)
+{
+  Entity root = SceneInstance::get_instance_root(entity);
+  if (!root || !root.has_component<SceneInstance_Component>())
+    return;
+
+  ImGui::Separator();
+  if (ImGui::MenuItem(ICON_FA_OBJECT_GROUP "  Open Source Scene"))
+    open_scene_instance_source(root);
+  if (ImGui::MenuItem(ICON_FA_ROTATE "  Reload Instance"))
+    reload_scene_instance(root);
+  if (ImGui::MenuItem(ICON_FA_ARROWS_ROTATE "  Replace Source Scene..."))
+    replace_scene_instance_source(root);
+  ImGui::Separator();
+}
+
 void ScenePanel::draw_entity_context_menu(Entity entity)
 {
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 6.0f));
+  const bool read_only = SceneInstance::is_read_only(entity);
+  draw_instance_context_items(entity);
+
+  ImGui::BeginDisabled(read_only);
   if (ImGui::MenuItem(ICON_FA_PEN "  Rename", "F2"))
   {
-    m_scene->set_save_required(true);
+    begin_rename(entity);
   }
 
   if (ImGui::MenuItem(ICON_FA_CLONE "  Duplicate", "Ctrl+D"))
   {
+    set_selected_entity(entity);
     duplicate_entity();
-    m_scene->set_save_required(true);
   }
+
+  if (ImGui::MenuItem(ICON_FA_COPY "  Copy", "Ctrl+C"))
+  {
+    set_selected_entity(entity);
+    copy_entity();
+  }
+
+  const bool can_paste = m_scene && m_has_copied_payload;
+  if (ImGui::MenuItem(ICON_FA_PASTE "  Paste As Child", "Ctrl+V", false, can_paste))
+  {
+    set_selected_entity(entity);
+    paste_entity();
+  }
+
+  ImGui::Separator();
 
   if (ImGui::MenuItem(ICON_FA_TRASH "  Delete", "Del"))
   {
+    set_selected_entity(entity);
     delete_entity();
-    m_scene->set_save_required(true);
   }
 
   if (ImGui::MenuItem(ICON_FA_DIAGRAM_PROJECT "  Make Root", "Ctrl+Shift+R"))
   {
+    set_selected_entity(entity);
     make_root_entity();
-    m_scene->set_save_required(true);
   }
 
   ImGui::Separator();
 
   if (ImGui::MenuItem(ICON_FA_PLUS "  Create Child"))
   {
+    set_selected_entity(entity);
     m_show_create_panel = true;
   }
+  ImGui::EndDisabled();
 
   ImGui::Separator();
 
   if (ImGui::MenuItem(ICON_FA_COPY "  Copy Path"))
   {
-    // copy_entity_path(entity);
+    const std::string path = get_entity_path(entity);
+    ImGui::SetClipboardText(path.c_str());
   }
 
-  if (ImGui::MenuItem(ICON_FA_MAGNIFYING_GLASS "  Find in Project"))
+  if (ImGui::MenuItem(ICON_FA_MAGNIFYING_GLASS "  Find in Viewport"))
   {
     find_entity_in_project(entity);
   }
 
   ImGui::Separator();
 
+  ImGui::BeginDisabled(read_only);
   if (entity.has_component<Tag_Component>())
   {
     auto& vis = entity.get_component<Tag_Component>();
     if (ImGui::MenuItem(vis.visible ? ICON_FA_EYE_SLASH "  Hide" : ICON_FA_EYE "  Show"))
     {
-      vis.visible = !vis.visible;
-      m_scene->set_save_required(true);
+      record_scene_action(m_scene, "Toggle visibility", [&]()
+      {
+        vis.visible = !vis.visible;
+        m_scene->set_save_required(true);
+      });
     }
   }
 
@@ -889,16 +1080,20 @@ void ScenePanel::draw_entity_context_menu(Entity entity)
     auto& lock = entity.get_component<Tag_Component>();
     if (ImGui::MenuItem(lock.locked ? ICON_FA_UNLOCK "  Unlock" : ICON_FA_LOCK "  Lock"))
     {
-      lock.locked = !lock.locked;
-      m_scene->set_save_required(true);
+      record_scene_action(m_scene, "Toggle lock", [&]()
+      {
+        lock.locked = !lock.locked;
+        m_scene->set_save_required(true);
+      });
     }
   }
+  ImGui::EndDisabled();
 
   ImGui::Separator();
 
   if (ImGui::MenuItem(ICON_FA_GEAR "  Properties", "Alt+Enter"))
   {
-    m_properties_entity = m_selected_entity;
+    m_properties_entity = entity;
   }
 
   ImGui::PopStyleVar();
@@ -906,48 +1101,67 @@ void ScenePanel::draw_entity_context_menu(Entity entity)
 
 void ScenePanel::draw_hierarchy_context_menu(Entity* entity)
 {
-  if (ImGui::MenuItem("Create Empty"))
+  (void)entity;
+  if (ImGui::MenuItem(ICON_FA_PLUS "  Create Empty"))
   {
-    /*Entity new_entity = m_scene->create_entity("Empty", NodeType::Empty);
-    m_selected_entity = new_entity;*/
-    m_scene->set_save_required(true);
+    // Scene2D is the most generic container/transform node for an "empty" object.
+    record_scene_action(m_scene, "Create empty object", [&]()
+    {
+      Entity new_entity = m_scene->create_entity("Empty", NodeType::Scene2D);
+      set_selected_entity(new_entity);
+      m_properties_entity = new_entity;
+      m_scene->set_save_required(true);
+    });
   }
 
-  if (ImGui::MenuItem("Create From Prefab..."))
+  if (ImGui::MenuItem(ICON_FA_OBJECT_GROUP "  Create 2D Nodes..."))
   {
-    // Open prefab browser
-    m_scene->set_save_required(true);
+    m_show_create_panel = true;
+  }
+
+  if (ImGui::MenuItem(ICON_FA_FILE_IMPORT "  Instance Existing Scene..."))
+  {
+    std::string path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0"
+                                              "All Files (*.*)\0*.*\0",
+                                              Project::get_dialog_directory(ProjectDirectory::Scenes));
+    if (!path.empty())
+      instance_scene_from_path(path);
   }
 
   ImGui::Separator();
 
-  // has_clipboard_entity()
-  if (ImGui::MenuItem("Paste", "Ctrl+V", false, false))
+  const bool can_paste = m_scene && m_has_copied_payload;
+  if (ImGui::MenuItem(ICON_FA_PASTE "  Paste", "Ctrl+V", false, can_paste))
   {
-    // paste_entity();
-    m_scene->set_save_required(true);
+    // Paste at root level.
+    Entity previous = m_selected_entity;
+    m_selected_entity = Entity{};
+    paste_entity();
+    if (!m_selected_entity)
+      m_selected_entity = previous;
   }
 
   ImGui::Separator();
 
-  if (ImGui::MenuItem("Expand All"))
+  if (ImGui::MenuItem(ICON_FA_CHEVRON_DOWN "  Expand All"))
   {
     expand_all_nodes();
   }
 
-  if (ImGui::MenuItem("Collapse All"))
+  if (ImGui::MenuItem(ICON_FA_CHEVRON_RIGHT "  Collapse All"))
   {
     collapse_all_nodes();
   }
 
   ImGui::Separator();
 
-  if (ImGui::MenuItem("Show Icons"))
+  if (ImGui::MenuItem(ICON_FA_ICONS "  Show Icons", nullptr, m_hierarchy_state.show_icons))
   {
     m_hierarchy_state.show_icons = !m_hierarchy_state.show_icons;
   }
 
-  if (ImGui::MenuItem("Auto-expand to Selection"))
+  if (ImGui::MenuItem(ICON_FA_LOCATION_CROSSHAIRS "  Auto-expand to Selection", nullptr,
+                      m_hierarchy_state.auto_expand_to_selection))
   {
     m_hierarchy_state.auto_expand_to_selection = !m_hierarchy_state.auto_expand_to_selection;
   }
@@ -985,6 +1199,13 @@ void ScenePanel::push_entity_style(Entity entity, bool is_selected)
 
     if (!tag.visible || tag.locked)
       text_color = style.Colors[ImGuiCol_TextDisabled];
+
+    if (entity.has_component<SceneInstance_Component>() ||
+        tag.instance_owner != INVALID_ENTITY)
+    {
+      // Distinguish scene instances and their generated children in the tree.
+      text_color = m_hierarchy_state.prefab_color;
+    }
   }
 
   ImGui::PushStyleColor(ImGuiCol_Text, text_color);
@@ -1024,6 +1245,8 @@ const char* ScenePanel::get_node_icon(Entity entity)
       return ICON_FA_BORDER_ALL;
     case NodeType::Audio:
       return ICON_FA_MUSIC;
+    case NodeType::SceneInstance:
+      return ICON_FA_OBJECT_GROUP;
     default:
       return ICON_FA_SQUARE;
   }
@@ -1060,7 +1283,8 @@ void ScenePanel::reparent_entity(EntityID child_id, EntityID new_parent_id)
   m_hierarchy_state.dragged_entity = Entity{};
   m_hierarchy_state.drop_target    = Entity{};
 
-  if (!child || !new_parent)
+  if (!child || !new_parent || SceneInstance::is_read_only(child) ||
+      SceneInstance::is_read_only(new_parent))
     return;
 
   auto& child_tag  = child.get_component<Tag_Component>();
@@ -1098,11 +1322,16 @@ void ScenePanel::reparent_entity(EntityID child_id, EntityID new_parent_id)
 
 void ScenePanel::make_root_entity()
 {
-  if (!m_selected_entity && m_selected_entity.get_id() == INVALID_ENTITY)
+  if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY ||
+      SceneInstance::is_read_only(m_selected_entity))
     return;
 
-  auto& tag             = m_selected_entity.get_component<Tag_Component>();
-  auto  child_transform = Transform_Component::get_world_transform(m_selected_entity);
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+
+  auto& tag = m_selected_entity.get_component<Tag_Component>();
+  Transform_Component child_transform;
+  if (m_selected_entity.has_component<Transform_Component>())
+    child_transform = Transform_Component::get_world_transform(m_selected_entity);
 
   if (tag.parent && tag.parent.get_id() != INVALID_ENTITY)
   {
@@ -1115,11 +1344,21 @@ void ScenePanel::make_root_entity()
     tag.parent = Entity{};
   }
 
+  // Move to root entities list so it becomes a top-level node in the hierarchy.
+  if (m_scene)
+  {
+    auto& roots = m_scene->get_root_entity();
+    if (std::find(roots.begin(), roots.end(), (EntityID)m_selected_entity.get_id()) == roots.end())
+      roots.push_back((EntityID)m_selected_entity.get_id());
+  }
+
   if (m_selected_entity.has_component<Transform_Component>())
   {
     auto& transform = m_selected_entity.get_component<Transform_Component>();
     transform       = child_transform;
   }
+  m_scene->set_save_required(true);
+  push_scene_action(m_scene, "Make root", std::move(before));
 }
 
 void ScenePanel::find_entity_in_project(Entity entity)
@@ -1133,6 +1372,9 @@ void ScenePanel::find_entity_in_project(Entity entity)
 
 void ScenePanel::create_selected_object(NodeType type)
 {
+  if (!m_scene || type == NodeType::SceneInstance)
+    return;
+
   auto it        = NodeFactory::nodes.find(type);
   auto create_it = NodeFactory::create_map.find(type);
 
@@ -1141,6 +1383,11 @@ void ScenePanel::create_selected_object(NodeType type)
     AERO_WARN("Cannot create object: type {} not registered", static_cast<int>(type));
     return;
   }
+
+  if (m_selected_entity && SceneInstance::is_read_only(m_selected_entity))
+    return;
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
 
   Entity new_entity = m_scene->create_entity(it->second, type);
   if (m_selected_entity)
@@ -1158,12 +1405,186 @@ void ScenePanel::create_selected_object(NodeType type)
 
   m_selected_entity   = new_entity;
   m_show_create_panel = false;
+  m_scene->set_save_required(true);
+  push_scene_action(m_scene, "Create object", std::move(before));
+}
+
+Entity ScenePanel::create_sprite_from_asset(const std::string& texture_path, const vec2f& position)
+{
+  if (!m_scene || texture_path.empty())
+    return {};
+
+  auto create_it = NodeFactory::create_map.find(NodeType::Sprite);
+  if (create_it == NodeFactory::create_map.end())
+  {
+    AERO_WARN("Cannot create sprite: Sprite2D node is not registered");
+    return {};
+  }
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+
+  Entity new_entity = m_scene->create_entity("Sprite2D", NodeType::Sprite);
+  create_it->second(new_entity);
+
+  auto& transform = new_entity.get_component<Transform_Component>();
+  transform.position = position;
+
+  std::string path = texture_path;
+  try
+  {
+    auto texture = NodeHelper::load_texture(path);
+    if (texture)
+    {
+      new_entity.get_component<Texture_Component>().texture = texture;
+      new_entity.get_component<Render2D_Component>().size  = texture->get_size();
+    }
+  }
+  catch (const std::exception& e)
+  {
+    AERO_CORE_ERROR("Failed to load dropped texture \"{0}\": {1}", texture_path, e.what());
+  }
+
+  m_scene->get_root_entity().push_back(new_entity.get_id());
+  m_selected_entity   = new_entity;
+  m_properties_entity = new_entity;
+  Scene::save_required();
+  push_scene_action(m_scene, "Create sprite", std::move(before));
+
+  return new_entity;
+}
+
+void ScenePanel::instance_scene_from_path(const std::string& absolute_path)
+{
+  std::string normalized = absolute_path;
+  Helper::normalize_path(normalized);
+
+  std::string extension = std::filesystem::path(normalized).extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+  if (extension != ".aeroscene")
+  {
+    AERO_CORE_ERROR("Only .aeroscene files can be instanced: {0}", normalized);
+    return;
+  }
+
+  const std::string relative = Project::to_active_relative_path(normalized, ProjectDirectory::Scenes);
+  if (relative.empty())
+  {
+    AERO_CORE_ERROR("Scene \"{0}\" is outside the project Scenes folder.", normalized);
+    return;
+  }
+  instance_scene_from_relative(relative);
+}
+
+void ScenePanel::instance_scene_from_relative(const std::string& relative_path, Entity parent)
+{
+  if (!m_scene || relative_path.empty())
+    return;
+  if (parent && SceneInstance::is_read_only(parent))
+    return;
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+  Entity instance = SceneInstance::create_instance(m_scene, relative_path, parent);
+  if (!instance)
+    return;
+
+  set_selected_entity(instance);
+  set_properties_entity(instance);
+  push_scene_action(m_scene, "Instance scene", std::move(before));
+}
+
+void ScenePanel::handle_scene_drop_payload(Entity parent)
+{
+  const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(
+      "CONTENT_BROWSER_ITEM", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+  if (!payload || !payload->Data || payload->DataSize == 0)
+    return;
+
+  std::string path(static_cast<const char*>(payload->Data), payload->DataSize);
+  if (!path.empty() && path.back() == '\0')
+    path.pop_back();
+  Helper::normalize_path(path);
+  std::string extension = std::filesystem::path(path).extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+  if (extension != ".aeroscene")
+    return;
+
+  const std::string relative = Project::to_active_relative_path(path, ProjectDirectory::Scenes);
+  if (!relative.empty())
+    instance_scene_from_relative(relative, parent);
+}
+
+void ScenePanel::open_scene_instance_source(Entity entity)
+{
+  Entity root = SceneInstance::get_instance_root(entity);
+  if (!root || !root.has_component<SceneInstance_Component>())
+    return;
+
+  const auto& comp = root.get_component<SceneInstance_Component>();
+  std::string path = SceneInstance::resolve_source_path(comp.source_scene);
+  if (path.empty())
+  {
+    AERO_CORE_ERROR("Cannot resolve source scene \"{0}\"", comp.source_scene);
+    return;
+  }
+  EditorLayer::get().open_scene(path);
+}
+
+void ScenePanel::reload_scene_instance(Entity entity)
+{
+  if (!m_scene)
+    return;
+  Entity root = SceneInstance::get_instance_root(entity);
+  if (!root || !root.has_component<SceneInstance_Component>())
+    return;
+
+  // Instance contents are derived state; reloading them does not change the
+  // host scene file and therefore does not mark it dirty.
+  SceneInstance::refresh_instance(m_scene, root, false);
+}
+
+void ScenePanel::replace_scene_instance_source(Entity entity)
+{
+  if (!m_scene)
+    return;
+  Entity root = SceneInstance::get_instance_root(entity);
+  if (!root || !root.has_component<SceneInstance_Component>())
+    return;
+
+  std::string path = FileDialogs::open_file("AeroScene Files (*.aeroscene)\0*.aeroscene\0"
+                                            "All Files (*.*)\0*.*\0",
+                                            Project::get_dialog_directory(ProjectDirectory::Scenes));
+  if (path.empty())
+    return;
+
+  Helper::normalize_path(path);
+  const std::string relative = Project::to_active_relative_path(path, ProjectDirectory::Scenes);
+  if (relative.empty())
+  {
+    AERO_CORE_ERROR("Scene \"{0}\" is outside the project Scenes folder.", path);
+    return;
+  }
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+  auto& comp = root.get_component<SceneInstance_Component>();
+  comp.source_scene = SceneInstance::normalize_source_path(relative);
+  SceneInstance::refresh_instance(m_scene, root, false);
+  m_scene->set_save_required(true);
+  push_scene_action(m_scene, "Replace scene instance source", std::move(before));
 }
 
 void ScenePanel::draw_properties_panel()
 {
+  // Inspector widgets mutate components in-place. Snapshotting around the
+  // property draw turns every committed widget change into an undo step without
+  // requiring each component-specific helper to know about the history system.
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+
   ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoScrollbar);
-  if (m_properties_entity)
+  if (m_properties_entity && SceneInstance::is_read_only(m_properties_entity))
+  {
+    NodeProperties::readonly_instance_child(m_properties_entity);
+  }
+  else if (m_properties_entity)
   {
     const auto& tag = m_properties_entity.get_component<Tag_Component>();
     auto        it  = NodeFactory::properties_map.find(tag.node_type);
@@ -1171,6 +1592,16 @@ void ScenePanel::draw_properties_panel()
       it->second(m_properties_entity);
   }
   ImGui::End();
+
+  if (m_scene)
+  {
+    nlohmann::json after = EditorSerializer::snapshot_scene(m_scene);
+    if (before != after)
+    {
+      UndoRedoManager::get().push(std::make_unique<SceneSnapshotCommand>(
+          m_scene, "Inspector edit", std::move(before), std::move(after)));
+    }
+  }
 }
 
 void ScenePanel::draw_selected_text()
@@ -1289,7 +1720,7 @@ void ScenePanel::draw_collision_shapes()
 void ScenePanel::update_transform_settings()
 {
   if (!m_selected_entity || !m_selected_entity.has_component<Transform_Component>() ||
-      !EditorLayer::get().is_viewport_hovered())
+      !EditorLayer::get().is_viewport_hovered() || SceneInstance::is_read_only(m_selected_entity))
     return;
 
   static bool was_left_pressed  = false;
@@ -1298,36 +1729,64 @@ void ScenePanel::update_transform_settings()
   bool is_left_pressed  = Mouse::is_mouse_pressed(Button::ButtonLeft);
   bool is_right_pressed = Mouse::is_mouse_pressed(Button::ButtonRight);
 
-  bool left_clicked  = !was_left_pressed && is_left_pressed;
+  bool left_released  = was_left_pressed && !is_left_pressed;
   bool right_clicked = !was_right_pressed && is_right_pressed;
 
-  bool left_released  = was_left_pressed && !is_left_pressed;
-  bool right_released = was_right_pressed && !is_right_pressed;
+  auto finish_drag = [&]()
+  {
+    commit_transform_edit();
+    m_move_flag   = false;
+    m_scale_flag  = false;
+    m_rotate_flag = false;
+    m_delta       = {0, 0};
+    // Keep the transform tool active (Unity-style) so the user can adjust again.
+    if (m_selected_entity.has_component<Transform_Component>())
+      m_initial_transform = m_selected_entity.get_component<Transform_Component>();
+  };
+
+  auto cancel_drag = [&]()
+  {
+    discard_transform_edit();
+    if (m_selected_entity.has_component<Transform_Component>())
+    {
+      auto& transform = m_selected_entity.get_component<Transform_Component>();
+      if (m_move_flag)
+        transform.position = m_initial_transform.position;
+      if (m_scale_flag)
+        transform.scale = m_initial_transform.scale;
+      if (m_rotate_flag)
+        transform.rotation = m_initial_transform.rotation;
+    }
+    m_move_flag   = false;
+    m_scale_flag  = false;
+    m_rotate_flag = false;
+    m_delta       = {0, 0};
+    reset_transform_setting();
+  };
 
   switch (m_current_transform_setting)
   {
     case ag::TransformSetting::None:
-    {
       break;
-    }
     case ag::TransformSetting::Scale:
     {
       if (is_left_pressed)
       {
+        begin_transform_edit("Scale object");
         scale_transform_setting();
         m_scene->set_save_required(true);
       }
-      else if (left_released)
+      else if (left_released && m_scale_flag)
       {
-        m_initial_transform.scale = m_selected_entity.get_component<Transform_Component>().scale;
-        reset_transform_setting();
+        finish_drag();
       }
 
       if (right_clicked)
       {
-        auto& scale = m_selected_entity.get_component<Transform_Component>().scale;
-        scale       = m_initial_transform.scale;
-        reset_transform_setting();
+        if (m_scale_flag)
+          cancel_drag();
+        else
+          reset_transform_setting();
       }
       break;
     }
@@ -1335,21 +1794,21 @@ void ScenePanel::update_transform_settings()
     {
       if (is_left_pressed)
       {
+        begin_transform_edit("Rotate object");
         rotate_transform_setting();
         m_scene->set_save_required(true);
       }
-      else if (left_released)
+      else if (left_released && m_rotate_flag)
       {
-        reset_transform_setting();
-        m_initial_transform.rotation =
-            m_selected_entity.get_component<Transform_Component>().rotation;
+        finish_drag();
       }
 
       if (right_clicked)
       {
-        auto& rotation = m_selected_entity.get_component<Transform_Component>().rotation;
-        rotation       = m_initial_transform.rotation;
-        reset_transform_setting();
+        if (m_rotate_flag)
+          cancel_drag();
+        else
+          reset_transform_setting();
       }
       break;
     }
@@ -1357,26 +1816,26 @@ void ScenePanel::update_transform_settings()
     {
       if (is_left_pressed)
       {
+        begin_transform_edit("Move object");
         move_transform_setting();
         m_scene->set_save_required(true);
       }
-      else if (left_released)
+      else if (left_released && m_move_flag)
       {
-        m_initial_transform.position =
-            m_selected_entity.get_component<Transform_Component>().position;
-        reset_transform_setting();
+        finish_drag();
       }
 
       if (right_clicked)
       {
-        auto& position = m_selected_entity.get_component<Transform_Component>().position;
-        position       = m_initial_transform.position;
-        reset_transform_setting();
+        if (m_move_flag)
+          cancel_drag();
+        else
+          reset_transform_setting();
       }
       break;
     }
     default:
-      AERO_CORE_ERROR("No sucn Transform_Component Setting!");
+      AERO_CORE_ERROR("No such Transform_Component Setting!");
       break;
   }
   was_left_pressed  = is_left_pressed;
@@ -1494,51 +1953,207 @@ void ScenePanel::draw_selection_box()
   if (m_selected_entity.get_id() == INVALID_ENTITY)
     return;
 
-  if (m_selected_entity.has_component<Render2D_Component>() &&
-      m_selected_entity.has_component<Transform_Component>())
+  if (!m_selected_entity.has_component<Transform_Component>())
+    return;
+
+  Transform_Component transform = Transform_Component::get_world_transform(m_selected_entity);
+  vec2f               size      = {48.0f, 48.0f};
+  bool                has_size  = false;
+
+  if (m_selected_entity.has_component<Render2D_Component>())
   {
-    const auto&         render2d  = m_selected_entity.get_component<Render2D_Component>();
-    Transform_Component transform = Transform_Component::get_world_transform(m_selected_entity);
+    size     = m_selected_entity.get_component<Render2D_Component>().size;
+    has_size = true;
+  }
+  else if (m_selected_entity.has_component<Camera_Component>())
+  {
+    size     = m_selected_entity.get_component<Camera_Component>().size;
+    has_size = true;
+  }
 
-    int entity_id = (int)(m_selected_entity.get_id());
+  // Draw a clear, interactive selection outline so the user can see which
+  // entity is currently selected in the viewport.
+  const Color outline = Color(255, 170, 40, 255);
+  const Color fill    = Color(255, 170, 40, 28);
+  const float t       = 2.0f;
 
-    Rectangle rect;
-    rect.size       = render2d.size;
-    rect.fill_color = Color(100, 100, 250, 80);
+  if (has_size)
+  {
+    // Subtle fill
+    Rectangle fill_rect;
+    fill_rect.size       = size;
+    fill_rect.fill_color = fill;
+    Renderer2D::draw_rectangle(fill_rect, transform, -1);
 
-    Renderer2D::draw_rectangle(rect, transform, entity_id);
+    const float half_w = size.x * transform.scale.x * 0.5f;
+    const float half_h = size.y * transform.scale.y * 0.5f;
+    const vec2f center = transform.position;
+
+    auto draw_edge = [&](const vec2f& pos, const vec2f& edge_size)
+    {
+      Rectangle edge;
+      edge.size       = edge_size;
+      edge.fill_color = outline;
+      Transform_Component et;
+      et.position = pos;
+      Renderer2D::draw_rectangle(edge, et, -1);
+    };
+
+    // Top / bottom / left / right edges (world-aligned outline)
+    draw_edge({center.x, center.y - half_h}, {size.x * transform.scale.x, t});
+    draw_edge({center.x, center.y + half_h}, {size.x * transform.scale.x, t});
+    draw_edge({center.x - half_w, center.y}, {t, size.y * transform.scale.y});
+    draw_edge({center.x + half_w, center.y}, {t, size.y * transform.scale.y});
+  }
+  else
+  {
+    // Fallback marker for transform-only entities (Scene2D, empty nodes, etc.)
+    Circle marker;
+    marker.size       = {14.0f, 14.0f};
+    marker.fill_color = fill;
+    marker.border_thickness = 2.0f;
+    marker.border_color = outline;
+    Transform_Component mt;
+    mt.position = transform.position;
+    Renderer2D::draw_circle(marker, mt, -1);
+
+    Rectangle h, v;
+    h.size = {28.0f, 2.0f};
+    v.size = {2.0f, 28.0f};
+    h.fill_color = outline;
+    v.fill_color = outline;
+    Renderer2D::draw_rectangle(h, mt, -1);
+    Renderer2D::draw_rectangle(v, mt, -1);
   }
 }
 
 void ScenePanel::duplicate_entity()
 {
-  if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY)
+  if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY ||
+      SceneInstance::is_read_only(m_selected_entity))
     return;
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
 
   auto& parent     = m_selected_entity.get_component<Tag_Component>().parent;
   auto  new_entity = m_scene->duplicate_entity(m_selected_entity, parent);
 
-  m_selected_entity = new_entity;
+  set_selected_entity(new_entity);
+  m_properties_entity = new_entity;
   m_scene->set_save_required(true);
+  push_scene_action(m_scene, "Duplicate entity", std::move(before));
 }
+
 void ScenePanel::delete_entity()
 {
-  m_scene->destroy_entity(m_selected_entity);
+  if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY ||
+      SceneInstance::is_read_only(m_selected_entity))
+    return;
+
+  nlohmann::json before   = EditorSerializer::snapshot_scene(m_scene);
+  Entity         to_delete = m_selected_entity;
+
+  m_scene->destroy_entity(to_delete);
+  // Flush the deferred deletion now so the "after" snapshot really omits it.
+  m_scene->clear_destroyed_entity();
+
   if (m_selected_entity == m_properties_entity)
     m_properties_entity = Entity();
+  if (m_hierarchy_state.rename_entity == to_delete)
+  {
+    m_hierarchy_state.renaming = false;
+    m_hierarchy_state.rename_entity = Entity{};
+  }
   m_selected_entity = Entity();
   m_scene->set_save_required(true);
+  push_scene_action(m_scene, "Delete entity", std::move(before));
+}
+
+void ScenePanel::begin_rename(Entity entity)
+{
+  if (!entity || !entity.has_component<Tag_Component>() || SceneInstance::is_read_only(entity))
+    return;
+  auto& tag = entity.get_component<Tag_Component>();
+  m_hierarchy_state.renaming = true;
+  m_hierarchy_state.rename_entity = entity;
+  std::snprintf(m_hierarchy_state.rename_buffer, sizeof(m_hierarchy_state.rename_buffer), "%s", tag.name.c_str());
+  set_selected_entity(entity);
+}
+
+void ScenePanel::copy_entity()
+{
+  if (!m_selected_entity || m_selected_entity.get_id() == INVALID_ENTITY ||
+      SceneInstance::is_read_only(m_selected_entity))
+    return;
+
+  // Store a self-contained payload rather than an Entity handle so copied
+  // objects remain valid after switching scenes or deleting the source.
+  m_copied_payload = EditorSerializer::serialize_entity_subtree(m_selected_entity);
+  m_has_copied_payload = m_copied_payload.is_object() &&
+                         m_copied_payload.contains("entities") &&
+                         m_copied_payload["entities"].is_array() &&
+                         !m_copied_payload["entities"].empty();
+  m_copied_index = m_has_copied_payload ? m_copied_payload.value("root", (AG_uint)0) : (AG_uint)0;
+}
+
+void ScenePanel::paste_entity()
+{
+  if (!m_scene || !m_has_copied_payload)
+    return;
+
+  // Paste as a child of the selected entity, or at root if none selected.
+  Entity parent = Entity{};
+  if (m_selected_entity && m_selected_entity.get_id() != INVALID_ENTITY)
+  {
+    if (SceneInstance::is_read_only(m_selected_entity))
+      return;
+    parent = m_selected_entity;
+  }
+
+  nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+  Entity new_entity = EditorSerializer::instantiate_entity_subtree(m_scene, m_copied_payload, parent);
+  if (new_entity)
+  {
+    set_selected_entity(new_entity);
+    m_properties_entity = new_entity;
+    m_scene->set_save_required(true);
+    push_scene_action(m_scene, "Paste entity", std::move(before));
+  }
+}
+
+std::string ScenePanel::get_entity_path(Entity entity)
+{
+  if (!entity || !entity.has_component<Tag_Component>())
+    return {};
+
+  std::vector<std::string> parts;
+  Entity current = entity;
+  while (current && current.has_component<Tag_Component>())
+  {
+    parts.push_back(current.get_component<Tag_Component>().name);
+    current = current.get_component<Tag_Component>().parent;
+  }
+  std::reverse(parts.begin(), parts.end());
+  std::string path;
+  for (size_t i = 0; i < parts.size(); ++i)
+  {
+    if (i > 0)
+      path += "/";
+    path += parts[i];
+  }
+  return path;
 }
 
 void ScenePanel::reset_transform_setting()
 {
+  // This only resets editor tool state; changing the active tool must not make
+  // the scene dirty.
   m_current_transform_setting = TransformSetting::None;
   m_current_transform_axis    = TransformAxis::None;
   m_move_flag                 = false;
   m_scale_flag                = false;
   m_rotate_flag               = false;
   m_delta                     = {0, 0};
-  m_scene->set_save_required(true);
 }
 
 void ScenePanel::update_tilemap()
@@ -1593,6 +2208,14 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
     auto& state = m_selected_entity.get_component<Text_Editor_State>();
     auto& props = m_selected_entity.get_component<Text_Component>();
 
+    auto record_text_edit = [&](auto&& edit)
+    {
+      nlohmann::json before = EditorSerializer::snapshot_scene(m_scene);
+      edit();
+      m_scene->set_save_required(true);
+      push_scene_action(m_scene, "Edit text", std::move(before));
+    };
+
     if (e.get_key_code() == Key::Left && state.caret_index > 0)
     {
       state.caret_index--;
@@ -1607,42 +2230,51 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
     }
     else if (e.get_key_code() == Key::Backspace)
     {
-      if (control)
+      record_text_edit([&]()
       {
-        if (state.caret_index == 0)
-          return true;
+        if (control)
+        {
+          if (state.caret_index == 0)
+            return;
 
-        size_t delete_start = state.caret_index;
-        while (delete_start > 0 && props.text[delete_start - 1] == ' ')
-          delete_start--;
+          size_t delete_start = state.caret_index;
+          while (delete_start > 0 && props.text[delete_start - 1] == ' ')
+            delete_start--;
 
-        while (delete_start > 0 && props.text[delete_start - 1] != ' ')
-          delete_start--;
+          while (delete_start > 0 && props.text[delete_start - 1] != ' ')
+            delete_start--;
 
-        props.text.erase(props.text.begin() + delete_start, props.text.begin() + state.caret_index);
+          props.text.erase(props.text.begin() + delete_start, props.text.begin() + state.caret_index);
 
-        state.caret_index = delete_start;
-      }
-      if (state.caret_index > 0)
-      {
-        props.text.erase(props.text.begin() + state.caret_index - 1);
-        state.blink_timer = 0.0f;
-        state.caret_index--;
-      }
+          state.caret_index = delete_start;
+        }
+        if (state.caret_index > 0)
+        {
+          props.text.erase(props.text.begin() + state.caret_index - 1);
+          state.blink_timer = 0.0f;
+          state.caret_index--;
+        }
+      });
       return true;
     }
     else if (e.get_key_code() == Key::Enter)
     {
-      props.text.insert(props.text.begin() + state.caret_index, '\n');
-      state.blink_timer = 0.0f;
-      state.caret_index++;
+      record_text_edit([&]()
+      {
+        props.text.insert(props.text.begin() + state.caret_index, '\n');
+        state.blink_timer = 0.0f;
+        state.caret_index++;
+      });
       return true;
     }
     else if (e.get_key_code() == Key::Tab)
     {
-      props.text.insert(props.text.begin() + state.caret_index, '\t');
-      state.blink_timer = 0.0f;
-      state.caret_index++;
+      record_text_edit([&]()
+      {
+        props.text.insert(props.text.begin() + state.caret_index, '\t');
+        state.blink_timer = 0.0f;
+        state.caret_index++;
+      });
       return true;
     }
     else if (e.get_key_code() == Key::Escape)
@@ -1655,12 +2287,15 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
     {
       if (control)
       {
-        std::string clipboard_text = Application::get().get_window().get_clipboard_string();
-        props.text.insert(props.text.begin() + state.caret_index,
-                          clipboard_text.begin(),
-                          clipboard_text.end());
-        state.blink_timer = 0.0f;
-        state.caret_index += clipboard_text.size();
+        record_text_edit([&]()
+        {
+          std::string clipboard_text = Application::get().get_window().get_clipboard_string();
+          props.text.insert(props.text.begin() + state.caret_index,
+                            clipboard_text.begin(),
+                            clipboard_text.end());
+          state.blink_timer = 0.0f;
+          state.caret_index += clipboard_text.size();
+        });
       }
     }
     return false;
@@ -1671,7 +2306,18 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
     if (e.get_key_code() == Key::D)
     {
       duplicate_entity();
-      m_scene->set_save_required(true);
+      return true;
+    }
+
+    if (e.get_key_code() == Key::C)
+    {
+      copy_entity();
+      return true;
+    }
+
+    if (e.get_key_code() == Key::V)
+    {
+      paste_entity();
       return true;
     }
 
@@ -1679,7 +2325,6 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
     if (e.get_key_code() == Key::R && shift)
     {
       make_root_entity();
-      m_scene->set_save_required();
       return true;
     }
     return false;
@@ -1687,6 +2332,13 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
 
   switch (e.get_key_code())
   {
+    case Key::F2:
+      if (!m_selected_entity.has_component<Text_Editor_State>())
+      {
+        begin_rename(m_selected_entity);
+        return true;
+      }
+      break;
     case Key::G:
       reset_transform_setting();
       m_current_transform_setting = TransformSetting::Move;
@@ -1700,10 +2352,10 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
       m_current_transform_setting = TransformSetting::Rotate;
       return true;
     case Key::X:
-      m_current_transform_axis = TransformAxis::X;
+      m_current_transform_axis = (m_current_transform_axis == TransformAxis::X) ? TransformAxis::None : TransformAxis::X;
       return true;
     case Key::Y:
-      m_current_transform_axis = TransformAxis::Y;
+      m_current_transform_axis = (m_current_transform_axis == TransformAxis::Y) ? TransformAxis::None : TransformAxis::Y;
       return true;
     case Key::Escape:
     {
@@ -1717,10 +2369,12 @@ bool ScenePanel::on_key_pressed(KeyPressedEvent& e)
       if (!m_selected_entity.has_component<Text_Editor_State>())
       {
         delete_entity();
-        m_scene->set_save_required();
         return true;
       }
+      break;
     }
+    default:
+      break;
   }
 
   return false;
@@ -1747,10 +2401,13 @@ bool ScenePanel::on_text_input(TextInputEvent& e)
     auto& state = m_selected_entity.get_component<Text_Editor_State>();
     auto& text  = m_selected_entity.get_component<Text_Component>();
 
-    text.text.insert(text.text.begin() + state.caret_index, e.get_character());
-
-    state.caret_index++;
-    state.blink_timer = 0.0f;
+    record_scene_action(m_scene, "Edit text", [&]()
+    {
+      text.text.insert(text.text.begin() + state.caret_index, e.get_character());
+      state.caret_index++;
+      state.blink_timer = 0.0f;
+      m_scene->set_save_required(true);
+    });
     return true;
   }
 
@@ -1856,6 +2513,7 @@ void ScenePanel::tile_map_draw()
           paint_eraser_tiles_helper(*tile_set, position);
       }
     }
+    commit_tile_edit();
     dragging = false;
     temp_tiles.clear();
     previous_tile = {std::numeric_limits<int>::max(), std::numeric_limits<int>::max()};
@@ -1871,6 +2529,7 @@ void ScenePanel::tile_map_draw()
 
   if (is_left && !is_right)
   {
+    begin_tile_edit();
     m_settings = TileMap_Settings::Paint;
     if (!dragging && (m_paint_settings == TileMap_Paint_Settings::Rectangle ||
                       m_paint_settings == TileMap_Paint_Settings::Line ||
@@ -1882,6 +2541,7 @@ void ScenePanel::tile_map_draw()
   }
   else if (is_right && !is_left)
   {
+    begin_tile_edit();
     m_settings = TileMap_Settings::Eraser;
     if (!dragging && (m_paint_settings == TileMap_Paint_Settings::Rectangle ||
                       m_paint_settings == TileMap_Paint_Settings::Line ||
