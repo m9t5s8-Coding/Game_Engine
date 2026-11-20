@@ -2,8 +2,7 @@
 #include <GameObjects/NodeFactory.hpp>
 #include <Scene/SceneComponent.hpp>
 
-namespace ag
-{
+namespace ag {
 std::unordered_map<NodeType, std::function<void(Entity)>>            NodeFactory::create_map;
 std::unordered_map<NodeType, std::function<void(Entity)>>            NodeFactory::draw_map;
 std::unordered_map<NodeType, std::function<void(Entity, TimeStamp)>> NodeFactory::update_map;
@@ -14,8 +13,8 @@ std::unordered_map<NodeType, std::function<void(Entity, json&)>>     NodeFactory
 std::unordered_map<NodeType, std::function<void(Entity)>>            NodeFactory::clear_map;
 std::unordered_map<NodeType, std::string>                            NodeFactory::nodes;
 
-void NodeFactory::init()
-{
+void
+NodeFactory::init() {
   // Create Node Function
   create_map[NodeType::Rectangle]        = RectangleNode::create_node;
   create_map[NodeType::Circle]           = CircleNode::create_node;
@@ -28,6 +27,7 @@ void NodeFactory::init()
   create_map[NodeType::Button]           = ButtonNode::create_node;
   create_map[NodeType::TextureButton]    = TextureButtonNode::create_node;
   create_map[NodeType::Audio]            = AudioNode::create_node;
+  create_map[NodeType::SceneInstance]    = SceneInstanceNode::create_node;
 
   // Draw Function
   draw_map[NodeType::Rectangle]        = RectangleNode::draw;
@@ -41,6 +41,7 @@ void NodeFactory::init()
   draw_map[NodeType::Button]           = ButtonNode::draw;
   draw_map[NodeType::TextureButton]    = TextureButtonNode::draw;
   draw_map[NodeType::Audio]            = AudioNode::draw;
+  draw_map[NodeType::SceneInstance]    = SceneInstanceNode::draw;
 
   update_map[NodeType::Rectangle]        = RectangleNode::update;
   update_map[NodeType::Circle]           = CircleNode::update;
@@ -53,6 +54,7 @@ void NodeFactory::init()
   update_map[NodeType::Button]           = ButtonNode::update;
   update_map[NodeType::TextureButton]    = TextureButtonNode::update;
   update_map[NodeType::Audio]            = AudioNode::update;
+  update_map[NodeType::SceneInstance]    = SceneInstanceNode::update;
 
   clone_map[NodeType::Rectangle]        = RectangleNode::clone_node;
   clone_map[NodeType::Circle]           = CircleNode::clone_node;
@@ -65,6 +67,7 @@ void NodeFactory::init()
   clone_map[NodeType::Button]           = ButtonNode::clone_node;
   clone_map[NodeType::TextureButton]    = TextureButtonNode::clone_node;
   clone_map[NodeType::Audio]            = AudioNode::clone_node;
+  clone_map[NodeType::SceneInstance]    = SceneInstanceNode::clone_node;
 
   save_map[NodeType::Rectangle]        = RectangleNode::save_json;
   save_map[NodeType::Circle]           = CircleNode::save_json;
@@ -77,6 +80,7 @@ void NodeFactory::init()
   save_map[NodeType::Button]           = ButtonNode::save_json;
   save_map[NodeType::TextureButton]    = TextureButtonNode::save_json;
   save_map[NodeType::Audio]            = AudioNode::save_json;
+  save_map[NodeType::SceneInstance]    = SceneInstanceNode::save_json;
 
   load_map[NodeType::Rectangle]        = RectangleNode::load_json;
   load_map[NodeType::Circle]           = CircleNode::load_json;
@@ -89,6 +93,7 @@ void NodeFactory::init()
   load_map[NodeType::Button]           = ButtonNode::load_json;
   load_map[NodeType::TextureButton]    = TextureButtonNode::load_json;
   load_map[NodeType::Audio]            = AudioNode::load_json;
+  load_map[NodeType::SceneInstance]    = SceneInstanceNode::load_json;
 
   clear_map[NodeType::Rectangle]        = RectangleNode::delete_node;
   clear_map[NodeType::Circle]           = CircleNode::delete_node;
@@ -101,6 +106,7 @@ void NodeFactory::init()
   clear_map[NodeType::Button]           = ButtonNode::delete_node;
   clear_map[NodeType::TextureButton]    = TextureButtonNode::delete_node;
   clear_map[NodeType::Audio]            = AudioNode::delete_node;
+  clear_map[NodeType::SceneInstance]    = SceneInstanceNode::delete_node;
 
   nodes[NodeType::Rectangle]        = "Rectangle2D";
   nodes[NodeType::Circle]           = "Circle2D";
@@ -113,10 +119,11 @@ void NodeFactory::init()
   nodes[NodeType::Button]           = "Button2D";
   nodes[NodeType::TextureButton]    = "TextureButton2D";
   nodes[NodeType::Audio]            = "Audio2D";
+  nodes[NodeType::SceneInstance]    = "Scene Instance";
 }
 
-void NodeFactory::shut_down()
-{
+void
+NodeFactory::shut_down() {
   create_map.clear();
   draw_map.clear();
   properties_map.clear();
@@ -125,4 +132,4 @@ void NodeFactory::shut_down()
   load_map.clear();
   nodes.clear();
 }
-}  // namespace ag
+} // namespace ag

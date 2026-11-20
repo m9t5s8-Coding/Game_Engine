@@ -4,6 +4,7 @@
 #include <Helper.hpp>
 #include <Project/Assetmanager.hpp>
 #include <Project/SaveScene.hpp>
+#include <Project/SceneInstance.hpp>
 #include <Scene/Entity.hpp>
 #include <Scene/SceneComponent.hpp>
 
@@ -22,12 +23,29 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path) {
 
   j["Scene"]["Entities"] = json::array();
 
+  // Scene-instance contents are derived from their source scene and must never
+  // be baked into the host scene file.
+  std::unordered_set<AG_uint> generated_indices;
+  auto all_tags = scene->m_registry.view<Tag_Component>();
+  for (auto entity_id : all_tags) {
+    Entity e(entity_id);
+    if (!e.has_component<Tag_Component>())
+      continue;
+    const auto& tag = e.get_component<Tag_Component>();
+    if (tag.instance_owner != INVALID_ENTITY)
+      generated_indices.insert(tag.index);
+  }
+
   {
     json  root_json = json::array();
     auto& roots     = scene->get_root_entity();
     for (auto id : roots) {
       Entity e(id);
-      auto   index = e.get_component<Tag_Component>().index;
+      if (!e || !e.has_component<Tag_Component>())
+        continue;
+      auto index = e.get_component<Tag_Component>().index;
+      if (generated_indices.count(index))
+        continue;
       root_json.push_back(index);
     }
     j["Scene"]["Roots"] = root_json;
@@ -45,9 +63,24 @@ void SaveScene::save_scene(AG_ref<Scene>& scene, const std::string& path) {
         continue;
 
       const auto& tag        = e.get_component<Tag_Component>();
-      json        entityjson = Tag_Component::save_json(e);
+      if (tag.instance_owner != INVALID_ENTITY)
+        continue;
+
+      json entityjson = Tag_Component::save_json(e);
       if (!entityjson.is_object()) {
         entityjson = json::object();
+      }
+
+      // Children generated from a source scene are not part of this file.
+      if (entityjson.contains("Children") && entityjson["Children"].is_array()) {
+        json kept = json::array();
+        for (const auto& child : entityjson["Children"]) {
+          if (!generated_indices.count(child.get<AG_uint>()))
+            kept.push_back(child);
+        }
+        entityjson["Children"] = kept;
+        if (kept.empty())
+          entityjson.erase("Children");
       }
 
       auto it = NodeFactory::save_map.find(tag.node_type);
@@ -159,6 +192,10 @@ AG_ref<Scene> SaveScene::load_scene(const std::string& path, bool load_scripts) 
       it->second(e, entityjson);
     }
   }
+
+  // Expand scene instances after their components are loaded and before
+  // scripts are bound, so generated children are part of the normal scene tree.
+  SceneInstance::refresh_all(scene, false);
 
   // Make Roots Entities
   if (j["Scene"].contains("Roots") && j["Scene"]["Roots"].is_array()) {
