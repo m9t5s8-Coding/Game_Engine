@@ -1,4 +1,4 @@
-  # Game Engine
+# Game Engine
 
 A cross-platform game engine with editor, Lua scripting, Box2D physics, OpenAL audio, and OpenGL rendering — targeting Windows, Linux, Android, and the Web.
 
@@ -46,7 +46,7 @@ Every project has its own `CMakeLists.txt`, so you can configure and build just
 the piece you are working on. The presets select which projects are enabled:
 
 | Preset | Targets | Output |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | `runtime` | Sandbox | `build/runtime/bin/Sandbox` |
 | `editor` | AeroEditor | `build/editor/bin/AeroEditor` |
 | `editor-runtime` | AeroEditor + Sandbox | `build/editor-runtime/bin/` |
@@ -238,7 +238,7 @@ Then open `http://localhost:8000/Sandbox.html` in a browser.
 ## Text Rendering
 
 Text is rendered from an MSDF font atlas (`Application/assets/textures/atlas.png`
-+ `atlas.json`). Two paths are available:
+- `atlas.json`). Two paths are available:
 
 | Mode | Description |
 |------|-------------|
@@ -283,7 +283,7 @@ build/full/bin/AssetPacker Application/assets build/full/assets.pak
 ```
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `-h`, `--help` | Show usage |
 | `-q`, `--quiet` | Hide the per-file listing |
 | `-v`, `--verbose` | List every packed file (default) |
@@ -299,7 +299,7 @@ successful write.
 ## Output Locations
 
 | Platform | Artifact |
-|----------|----------|
+| ---------- | ---------- |
 | Windows / Linux | `build/<preset>/bin/` (executables: `Sandbox`, `AeroEditor`, `ServerSandbox`, `AssetPacker`). Multi-config generators add a config folder: `build/<preset>/<Config>/bin/`. |
 | Android | `android/app/build/outputs/apk/debug/app-debug.apk`<br>`android/app/build/outputs/apk/release/app-release.apk` |
 | Web | `build/web/` (preset) or `build-web/`: `Sandbox.html`, `*.js`, `*.wasm`, `assets.pak`, `game.pak` |
@@ -308,7 +308,3 @@ Installers are produced with CPack from the build tree (`cd build/<preset> && cp
 `.zip`/`.exe` (NSIS) on Windows, `.deb`/`.rpm`/`.tar.gz` on Linux.
 
 ---
-
-## License
-
-Add your license here.
