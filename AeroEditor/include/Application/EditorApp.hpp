@@ -6,7 +6,7 @@
 namespace ag {
 class EditorApp final : public Application {
 public:
-  EditorApp();
+  explicit EditorApp(std::string project_path = std::string());
   virtual ~EditorApp() override {}
 
   virtual void on_create() override;
@@ -15,5 +15,7 @@ public:
 private:
   void save_json();
   void load_project_data();
+
+  std::string m_project_path;
 };
 }  // namespace ag

@@ -1,10 +1,12 @@
 #include "Core/Log.hpp"
 
 #include <Application/AppSettings.hpp>
+#include <Core/Application.hpp>
 #include <Core/Core.hpp>
 #include <filesystem>
 #include <Helper.hpp>
 #include <nlohmann/json.hpp>
+#include <Project/FileDialogs.hpp>
 using json = nlohmann::json;
 
 #ifdef PLATFORM_WINDOWS
@@ -14,8 +16,13 @@ using json = nlohmann::json;
   #include <unistd.h>
 #endif
 
+#if (defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)) && !defined(PLATFORM_ANDROID)
+  #include <GLFW/glfw3.h>
+#endif
+
 namespace ag {
 AppSettings::Mode AppSettings::s_mode                 = AppSettings::Mode::ProjectManager;
+WindowState       AppSettings::s_window_state         = WindowState{};
 std::string       AppSettings::s_settings_path        = std::string("");
 std::string       AppSettings::s_recent_projects_path = std::string("");
 bool              AppSettings::s_loaded               = false;
@@ -156,6 +163,26 @@ void AppSettings::create_load_settings() {
       Helper::load_json(j, "Mode", mode, (int)Mode::ProjectManager);
       s_mode = static_cast<Mode>(mode);
       AERO_CORE_INFO("Settings loaded, mode: {}", mode);
+
+      if (j.contains("Window"))
+      {
+        const json& window = j["Window"];
+        if (window.contains("Width") && window.contains("Height"))
+        {
+          Helper::load_json(window, "Width", s_window_state.width, 1280);
+          Helper::load_json(window, "Height", s_window_state.height, 720);
+          s_window_state.has_size = s_window_state.width > 0 && s_window_state.height > 0;
+        }
+        if (window.contains("X") && window.contains("Y"))
+        {
+          Helper::load_json(window, "X", s_window_state.x, 0);
+          Helper::load_json(window, "Y", s_window_state.y, 0);
+          s_window_state.has_position = true;
+        }
+        Helper::load_json(window, "FullScreen", s_window_state.fullscreen, false);
+        Helper::load_json(window, "Maximized", s_window_state.maximized, false);
+        Helper::load_json(window, "Vsync", s_window_state.vsync, true);
+      }
     } catch (const std::exception& e) {
       AERO_CORE_ERROR("Exception loading settings: {}", e.what());
     }
@@ -187,7 +214,122 @@ void AppSettings::create_load_recent_projects() {
   }
 }
 
+WindowState AppSettings::get_window_state() {
+  ensure_loaded();
+  return s_window_state;
+}
+
+void AppSettings::save_window_state(const WindowState& state) {
+  ensure_loaded();
+  s_window_state = state;
+
+  Helper::makefile_read_only(s_settings_path, false);
+
+  json j;
+  std::ifstream in_file(s_settings_path);
+  if (in_file.is_open())
+  {
+    try
+    {
+      in_file >> j;
+    }
+    catch (const std::exception&)
+    {
+      j = json::object();
+    }
+    in_file.close();
+  }
+  if (!j.is_object())
+    j = json::object();
+
+  if (state.has_size && state.width > 0 && state.height > 0)
+  {
+    j["Window"]["Width"]  = state.width;
+    j["Window"]["Height"] = state.height;
+  }
+  if (state.has_position)
+  {
+    j["Window"]["X"] = state.x;
+    j["Window"]["Y"] = state.y;
+  }
+  j["Window"]["FullScreen"] = state.fullscreen;
+  j["Window"]["Maximized"]  = state.maximized;
+  j["Window"]["Vsync"]      = state.vsync;
+
+  std::ofstream out_file(s_settings_path);
+  if (out_file.is_open())
+  {
+    out_file << j.dump(4);
+    out_file.close();
+  }
+  else
+  {
+    AERO_CORE_ERROR("Failed to save settings: {0}", s_settings_path);
+  }
+
+  Helper::makefile_read_only(s_settings_path);
+}
+
+void AppSettings::save_current_window_state() {
+  WindowState state = s_window_state;
+  Window&     window = Application::get().get_window();
+
+  const vec2u size = window.get_size();
+  if (size.x > 0 && size.y > 0)
+  {
+    state.width    = static_cast<int>(size.x);
+    state.height   = static_cast<int>(size.y);
+    state.has_size = true;
+  }
+
+  state.fullscreen = window.is_full_screen();
+  state.vsync      = window.is_vsync();
+
+#if (defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)) && !defined(PLATFORM_ANDROID)
+  GLFWwindow* glfw_window = static_cast<GLFWwindow*>(window.get_native_window());
+  if (glfw_window)
+  {
+    state.maximized = glfwGetWindowAttrib(glfw_window, GLFW_MAXIMIZED) != 0;
+    const vec2u position = window.get_position();
+    state.x           = static_cast<int>(position.x);
+    state.y           = static_cast<int>(position.y);
+    state.has_position = true;
+  }
+#endif
+
+  save_window_state(state);
+}
+
+void AppSettings::restore_window_state() {
+  ensure_loaded();
+  Window& window = Application::get().get_window();
+
+  if (s_window_state.has_size)
+    window.set_size({static_cast<AG_uint>(s_window_state.width),
+                     static_cast<AG_uint>(s_window_state.height)});
+
+  if (s_window_state.has_position && !s_window_state.fullscreen && !s_window_state.maximized)
+    window.set_position({s_window_state.x, s_window_state.y});
+
+  window.set_vsync(s_window_state.vsync);
+
+#if (defined(PLATFORM_WINDOWS) || defined(PLATFORM_LINUX)) && !defined(PLATFORM_ANDROID)
+  GLFWwindow* glfw_window = static_cast<GLFWwindow*>(window.get_native_window());
+  if (glfw_window && s_window_state.maximized)
+    glfwSetWindowAttrib(glfw_window, GLFW_MAXIMIZED, GLFW_TRUE);
+  else if (s_window_state.fullscreen && !window.is_full_screen())
+    window.set_full_screen();
+#else
+  if (s_window_state.fullscreen && !window.is_full_screen())
+    window.set_full_screen();
+#endif
+}
+
 void AppSettings::reload_app() {
+  reload_app(std::string());
+}
+
+void AppSettings::reload_app(const std::string& project_path) {
   std::string exePath = get_exe_path();
 
   if (exePath.empty()) {
@@ -195,36 +337,13 @@ void AppSettings::reload_app() {
     return;
   }
 
-#ifdef PLATFORM_WINDOWS
-  STARTUPINFOA        si = {sizeof(si)};
-  PROCESS_INFORMATION pi;
-
-  if (CreateProcessA(exePath.c_str(),
-                     nullptr,
-                     nullptr,
-                     nullptr,
-                     FALSE,
-                     0,
-                     nullptr,
-                     nullptr,
-                     &si,
-                     &pi)) {
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
+  std::wstring exe(exePath.begin(), exePath.end());
+  if (project_path.empty()) {
+    FileDialogs::run_exe(exe);
+  } else {
+    std::wstring arg(project_path.begin(), project_path.end());
+    FileDialogs::run_exe(exe, arg);
   }
-#elif defined(PLATFORM_LINUX) && !defined(PLATFORM_ANDROID)
-  pid_t pid = fork();
-  if (pid == 0) {
-    // Child process
-    execl(exePath.c_str(), exePath.c_str(), nullptr);
-    // If execl returns, it failed
-    AERO_CORE_ERROR("Failed to restart application");
-    exit(1);
-  } else if (pid < 0) {
-    AERO_CORE_ERROR("Failed to fork process");
-  }
-
-#endif
 
   exit(0);
 }

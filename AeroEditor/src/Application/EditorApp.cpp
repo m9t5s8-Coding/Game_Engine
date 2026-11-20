@@ -1,7 +1,9 @@
 #include <Application/EditorApp.hpp>
 
+#include <utility>
+
 namespace ag {
-EditorApp::EditorApp() {}
+EditorApp::EditorApp(std::string project_path) : m_project_path(std::move(project_path)) {}
 
 void EditorApp::on_create() {
   NodeFactory::init();
@@ -15,6 +17,8 @@ void EditorApp::on_create() {
 void EditorApp::on_destroy() {
   Project::save_project();
   save_json();
+
+  AppSettings::save_current_window_state();
 
   Renderer2D::shut_down();
   NodeFactory::shut_down();
@@ -68,22 +72,29 @@ void EditorApp::save_json() {
 }
 
 void EditorApp::load_project_data() {
-  json j;
-  Helper::makefile_read_only(AppSettings::get_settings_path(), false);
-  std::ifstream in_file(AppSettings::get_settings_path());
+  json        j;
+  std::string project_path = m_project_path;
 
-  if (!in_file.is_open()) {
-    AERO_CORE_INFO("Cannot Open File!");
-    return;
+  // The command line is authoritative. The settings fallback is kept only for
+  // direct EditorApp construction (for example, internal tooling).
+  if (project_path.empty())
+  {
+    Helper::makefile_read_only(AppSettings::get_settings_path(), false);
+    std::ifstream in_file(AppSettings::get_settings_path());
+
+    if (!in_file.is_open()) {
+      AERO_CORE_INFO("Cannot Open File!");
+      return;
+    }
+    in_file >> j;
+    in_file.close();
+    Helper::makefile_read_only(AppSettings::get_settings_path());
+
+    Helper::load_json(j["Project"], "Directory", project_path, std::string(""));
   }
-  in_file >> j;
-  in_file.close();
-  Helper::makefile_read_only(AppSettings::get_settings_path());
 
-  std::string project_path;
-  Helper::load_json(j["Project"], "Directory", project_path, std::string(""));
   auto project = Project::load_project(project_path);
-  if (!project->m_project_loaded) {
+  if (!project || !project->m_project_loaded) {
     Helper::makefile_read_only(AppSettings::get_settings_path(), false);
     std::ifstream in_file(AppSettings::get_settings_path());
     if (in_file.is_open())
@@ -102,6 +113,8 @@ void EditorApp::load_project_data() {
     return;
   }
 
+  m_project_path = project->get_project_file_directory();
+
   Helper::makefile_read_only(project->get_project_file_directory(), false);
   std::ifstream in_proj_file(project->get_project_file_directory());
   if (!in_proj_file.is_open()) {
@@ -116,38 +129,14 @@ void EditorApp::load_project_data() {
   {
     WindowProps props;
     Helper::load_json(j["Window"], "Title", props.Title, std::string("AeroEngine"));
-    props.Size = {1280, 720};
-    init(props);
 
-    /*auto& window = Application::get().get_window();
-    {
-      bool fullscreen;
-      Helper::load_json(j["Window"], "FullScreen", fullscreen);
-      if (fullscreen)
-        window.set_full_screen();
-    }
-    {
-      bool center_window;
-      Helper::load_json(j["Window"], "Center", center_window);
-      if (center_window)
-        window.center_window();
-      else
-      {
-        vec2i position;
-        Helper::load_json(j["Window"], "Position", position);
-        window.set_position(position);
-      }
-    }
-    {
-      bool is_vsync;
-      Helper::load_json(j["Window"], "Vsync", is_vsync);
-      window.set_vsync(is_vsync);
-    }
-    {
-      vec2u window_size;
-      Helper::load_json(j["Window"], "Size", window_size);
-      window.set_size(window_size);
-    }*/
+    const WindowState window_state = AppSettings::get_window_state();
+    if (window_state.has_size)
+      props.Size = {static_cast<AG_uint>(window_state.width),
+                    static_cast<AG_uint>(window_state.height)};
+
+    init(props);
+    AppSettings::restore_window_state();
   }
 
   {

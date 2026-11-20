@@ -6,33 +6,26 @@
 #include <Application/ProjectManagerLayer.hpp>
 #include <fstream>
 
-namespace ag
-{
-ProjectManagerLayer::ProjectManagerLayer()
-  : Layer("ProjectManagerLayer")
-{
-}
+namespace ag {
+ProjectManagerLayer::ProjectManagerLayer() : Layer("ProjectManagerLayer") {}
 
-void ProjectManagerLayer::on_attach()
-{
+void
+ProjectManagerLayer::on_attach() {
   load_projects();
 }
 
-void ProjectManagerLayer::on_detach()
-{
-}
+void
+ProjectManagerLayer::on_detach() {}
 
-void ProjectManagerLayer::on_update(ag::TimeStamp ts)
-{
-}
+void
+ProjectManagerLayer::on_update(ag::TimeStamp ts) {}
 
-void ProjectManagerLayer::load_projects()
-{
+void
+ProjectManagerLayer::load_projects() {
   m_projects.clear();
   m_projects_file_path = AppSettings::get_recent_projects_path();
 
-  if (!std::filesystem::exists(m_projects_file_path))
-  {
+  if (!std::filesystem::exists(m_projects_file_path)) {
     AERO_CORE_INFO("No recent projects file found, starting with empty list");
     return;
   }
@@ -40,19 +33,15 @@ void ProjectManagerLayer::load_projects()
   Helper::makefile_read_only(m_projects_file_path, false);
   std::ifstream file(m_projects_file_path);
 
-  if (!file.is_open())
-  {
+  if (!file.is_open()) {
     AERO_CORE_ERROR("Failed to open recent projects file: {0}", m_projects_file_path);
     return;
   }
-  try
-  {
+  try {
     json j;
     file >> j;
-    if (j.contains("Projects"))
-    {
-      for (const auto& proj : j["Projects"])
-      {
+    if (j.contains("Projects")) {
+      for (const auto& proj : j["Projects"]) {
         ProjectEntry entry;
         Helper::load_json(proj, "Name", entry.name, std::string(""));
         Helper::load_json(proj, "File Path", entry.path, std::string(""));
@@ -70,9 +59,7 @@ void ProjectManagerLayer::load_projects()
       }
     }
     file.close();
-  }
-  catch (const std::exception& e)
-  {
+  } catch (const std::exception& e) {
     AERO_CORE_ERROR("Error Loading the Projects:{0}", e.what());
     m_projects.clear();
   }
@@ -80,27 +67,22 @@ void ProjectManagerLayer::load_projects()
   AERO_CORE_INFO("Project Loaded from Recent Projects");
 }
 
-void ProjectManagerLayer::save_projects()
-{
-  if (m_projects_file_path.empty())
-  {
+void
+ProjectManagerLayer::save_projects() {
+  if (m_projects_file_path.empty()) {
     AERO_CORE_ERROR("Cannot save projects: file path is empty");
     return;
   }
 
-  try
-  {
+  try {
     std::filesystem::path file_path(m_projects_file_path);
     std::filesystem::path parent_dir = file_path.parent_path();
 
-    if (!parent_dir.empty() && !std::filesystem::exists(parent_dir))
-    {
+    if (!parent_dir.empty() && !std::filesystem::exists(parent_dir)) {
       AERO_CORE_INFO("Creating directory: {0}", parent_dir.string());
       std::filesystem::create_directories(parent_dir);
     }
-  }
-  catch (const std::exception& e)
-  {
+  } catch (const std::exception& e) {
     AERO_CORE_ERROR("Failed to create directory: {0}", e.what());
     return;
   }
@@ -108,8 +90,7 @@ void ProjectManagerLayer::save_projects()
   json j;
   j["Projects"] = json::array();
 
-  for (const auto& proj : m_projects)
-  {
+  for (const auto& proj : m_projects) {
     std::time_t        time = std::chrono::system_clock::to_time_t(proj.timestamp);
     std::tm            tm   = *std::localtime(&time);
     std::ostringstream oss;
@@ -127,36 +108,30 @@ void ProjectManagerLayer::save_projects()
 
   std::ofstream file(m_projects_file_path);
 
-  if (!file.is_open())
-  {
+  if (!file.is_open()) {
     AERO_CORE_ERROR("Failed to open file for writing: {0}", m_projects_file_path);
     AERO_CORE_ERROR("Error: {0}", strerror(errno));
     return;
   }
 
-  try
-  {
+  try {
     file << j.dump(4);
     file.close();
     Helper::makefile_read_only(m_projects_file_path);
-    AERO_CORE_INFO("Successfully saved {0} projects to: {1}",
-                   m_projects.size(),
-                   m_projects_file_path);
-  }
-  catch (const std::exception& e)
-  {
+    AERO_CORE_INFO("Successfully saved {0} projects to: {1}", m_projects.size(), m_projects_file_path);
+  } catch (const std::exception& e) {
     AERO_CORE_ERROR("Failed to write to file: {0}", e.what());
     file.close();
     Helper::makefile_read_only(m_projects_file_path);
   }
 }
 
-void ProjectManagerLayer::add_recent_project(const std::string name, std::string path)
-{
-  m_projects.erase(std::remove_if(m_projects.begin(),
-                                  m_projects.end(),
-                                  [&path](const ProjectEntry& p) { return p.path == path; }),
-                   m_projects.end());
+void
+ProjectManagerLayer::add_recent_project(const std::string name,
+                                        std::string       path) {
+  m_projects.erase(
+      std::remove_if(m_projects.begin(), m_projects.end(), [&path](const ProjectEntry& p) { return p.path == path; }),
+      m_projects.end());
 
   ProjectEntry entry;
   entry.name          = name;
@@ -172,8 +147,8 @@ void ProjectManagerLayer::add_recent_project(const std::string name, std::string
   save_projects();
 }
 
-std::string ProjectManagerLayer::format_date_time(const std::chrono::system_clock::time_point& time)
-{
+std::string
+ProjectManagerLayer::format_date_time(const std::chrono::system_clock::time_point& time) {
   auto now      = std::chrono::system_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - time);
 
@@ -199,16 +174,15 @@ std::string ProjectManagerLayer::format_date_time(const std::chrono::system_cloc
     return "Over a month ago";
 }
 
-void ProjectManagerLayer::on_imgui_render()
-{
+void
+ProjectManagerLayer::on_imgui_render() {
   ag::vec2u window_size = ag::Application::get().get_window().get_size();
   ag::vec2f window_pos  = ag::Application::get().get_window().get_position();
 
-  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                                  ImGuiWindowFlags_NoBringToFrontOnFocus |
-                                  ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar |
-                                  ImGuiWindowFlags_NoScrollWithMouse;
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                                  | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus
+                                  | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar
+                                  | ImGuiWindowFlags_NoScrollWithMouse;
 
   ImGui::SetNextWindowPos({window_pos.x, window_pos.y});
   ImGui::SetNextWindowSize({(float)window_size.x, (float)window_size.y});
@@ -239,13 +213,11 @@ void ProjectManagerLayer::on_imgui_render()
   ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5));
 
-  if (ImGui::Button("Create", ImVec2(80, 35)))
-  {
+  if (ImGui::Button("Create", ImVec2(80, 35))) {
     create_new_project();
   }
   ImGui::SameLine(0, 5);
-  if (ImGui::Button("Import", ImVec2(80, 35)))
-  {
+  if (ImGui::Button("Import", ImVec2(80, 35))) {
     open_existing_project();
   }
 
@@ -254,10 +226,7 @@ void ProjectManagerLayer::on_imgui_render()
 
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
   ImGui::SetNextItemWidth(420);
-  ImGui::InputTextWithHint("##SearchProjects",
-                           "Search Projects...",
-                           search_buffer,
-                           IM_ARRAYSIZE(search_buffer));
+  ImGui::InputTextWithHint("##SearchProjects", "Search Projects...", search_buffer, IM_ARRAYSIZE(search_buffer));
 
   ImGui::PopStyleVar();
 
@@ -280,10 +249,8 @@ void ProjectManagerLayer::on_imgui_render()
   ImGui::Spacing();
 
   ImVec2 box_size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
-  ImGui::BeginChild("RecentProjectsBox",
-                    box_size,
-                    false,
-                    ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoScrollbar);
+  ImGui::BeginChild(
+      "RecentProjectsBox", box_size, false, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoScrollbar);
 
   float item_width  = ImGui::GetContentRegionAvail().x - 5.0f;
   float item_height = 70.0f;
@@ -292,20 +259,14 @@ void ProjectManagerLayer::on_imgui_render()
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f, 15.0f));
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 10.0f));
 
-  for (int i = 0; i < m_projects.size(); i++)
-  {
+  for (int i = 0; i < m_projects.size(); i++) {
     ImGui::PushID(i);
 
     ImVec2 item_size(item_width, item_height);
 
     bool selected = false;
-    if (ImGui::Selectable("##ProjectItem",
-                          &selected,
-                          ImGuiSelectableFlags_AllowDoubleClick,
-                          item_size))
-    {
-      if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-      {
+    if (ImGui::Selectable("##ProjectItem", &selected, ImGuiSelectableFlags_AllowDoubleClick, item_size)) {
+      if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         AERO_CORE_INFO("Opening Project: {0}", m_projects[i].path);
         open_project(m_projects[i].path);
       }
@@ -321,17 +282,13 @@ void ProjectManagerLayer::on_imgui_render()
 
     draw_list->AddRect(min, max, border_color, 0.0f, 0, border_thickness);
 
-    if (ImGui::BeginPopupContextItem())
-    {
-      if (ImGui::MenuItem("Open"))
-      {
+    if (ImGui::BeginPopupContextItem()) {
+      if (ImGui::MenuItem("Open")) {
         open_project(m_projects[i].path);
       }
-      if (ImGui::MenuItem("Remove from list"))
-      {
+      if (ImGui::MenuItem("Remove from list")) {
       }
-      if (ImGui::MenuItem("Show in Explorer"))
-      {
+      if (ImGui::MenuItem("Show in Explorer")) {
         if (m_projects[i].path.empty())
           return;
 
@@ -380,8 +337,7 @@ void ProjectManagerLayer::on_imgui_render()
 
   ImGui::PopStyleVar(3);
 
-  if (m_projects.size() == 0)
-  {
+  if (m_projects.size() == 0) {
     float empty_text_width = ImGui::CalcTextSize("No recent projects").x;
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - empty_text_width) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50.0f);
@@ -393,8 +349,7 @@ void ProjectManagerLayer::on_imgui_render()
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0f) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
 
-    if (ImGui::Button("Create Your First Project", ImVec2(200.0f, 40.0f)))
-    {
+    if (ImGui::Button("Create Your First Project", ImVec2(200.0f, 40.0f))) {
       create_new_project();
     }
   }
@@ -405,21 +360,21 @@ void ProjectManagerLayer::on_imgui_render()
   ImGui::PopStyleVar();
 }
 
-void ProjectManagerLayer::on_event(ag::Event& e)
-{
+void
+ProjectManagerLayer::on_event(ag::Event& e) {
   EventDispatcher dispatcher(e);
   dispatcher.Dispatch<WindowCloseEvent>(AERO_BIND_EVENT_FN(ProjectManagerLayer::on_window_close));
 }
 
-bool ProjectManagerLayer::on_window_close(WindowCloseEvent& e)
-{
+bool
+ProjectManagerLayer::on_window_close(WindowCloseEvent& e) {
   Application::get().m_running = false;
 
   return true;
 }
 
-void ProjectManagerLayer::create_new_project()
-{
+void
+ProjectManagerLayer::create_new_project() {
   std::string newPath = ag::FileDialogs::select_folder("Select Folder for a new project");
   if (newPath.empty())
     return;
@@ -435,14 +390,8 @@ void ProjectManagerLayer::create_new_project()
 
   Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
   Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
-  Helper::save_json(j["Project"],
-                    "File Path",
-                    project->get_project_file_directory(),
-                    std::string(""));
-  Helper::save_json(j,
-                    "Mode",
-                    (int)AppSettings::Mode::Editor,
-                    (int)AppSettings::Mode::ProjectManager);
+  Helper::save_json(j["Project"], "File Path", project->get_project_file_directory(), std::string(""));
+  Helper::save_json(j, "Mode", (int)AppSettings::Mode::Editor, (int)AppSettings::Mode::ProjectManager);
 
   AERO_CORE_INFO("Project File:{0}", project->get_project_file_directory());
   std::ofstream out_file(AppSettings::get_settings_path());
@@ -450,27 +399,22 @@ void ProjectManagerLayer::create_new_project()
   out_file.close();
   Helper::makefile_read_only(AppSettings::get_settings_path());
   add_recent_project(project->get_name(), project->get_directory());
-  AppSettings::reload_app();
+  AppSettings::reload_app(project->get_project_file_directory());
 }
-void ProjectManagerLayer::open_existing_project()
-{
+void
+ProjectManagerLayer::open_existing_project() {
   std::string path = ag::FileDialogs::select_folder("Select Your Project Folder");
-  if (!path.empty())
-  {
+  if (!path.empty()) {
     json j;
     auto project = ag::Project::load_project(path);
-    if (!project->m_project_loaded)
-    {
+    if (!project->m_project_loaded) {
       Helper::makefile_read_only(AppSettings::get_settings_path(), false);
       std::ifstream in_file(AppSettings::get_settings_path());
       if (in_file.is_open())
         in_file >> j;
 
       in_file.close();
-      Helper::save_json(j,
-                        "Mode",
-                        (int)AppSettings::Mode::ProjectManager,
-                        (int)AppSettings::Mode::ProjectManager);
+      Helper::save_json(j, "Mode", (int)AppSettings::Mode::ProjectManager, (int)AppSettings::Mode::ProjectManager);
       std::ofstream out_file(AppSettings::get_settings_path());
       out_file << j.dump(4);
       out_file.close();
@@ -488,14 +432,8 @@ void ProjectManagerLayer::open_existing_project()
 
     Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
     Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
-    Helper::save_json(j["Project"],
-                      "File Path",
-                      project->get_project_file_directory(),
-                      std::string(""));
-    Helper::save_json(j,
-                      "Mode",
-                      (int)AppSettings::Mode::Editor,
-                      (int)AppSettings::Mode::ProjectManager);
+    Helper::save_json(j["Project"], "File Path", project->get_project_file_directory(), std::string(""));
+    Helper::save_json(j, "Mode", (int)AppSettings::Mode::Editor, (int)AppSettings::Mode::ProjectManager);
 
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
@@ -503,30 +441,26 @@ void ProjectManagerLayer::open_existing_project()
 
     Helper::makefile_read_only(AppSettings::get_settings_path());
     add_recent_project(project->get_name(), project->get_directory());
-    AppSettings::reload_app();
+    AppSettings::reload_app(project->get_project_file_directory());
   }
 }
 
-void ProjectManagerLayer::open_project(const std::string path)
-{
+void
+ProjectManagerLayer::open_project(const std::string path) {
   AERO_CORE_INFO("Requested Load Path:{0}", path);
   std::string name = std::filesystem::path(path).filename().string();
   add_recent_project(name, path);
   json j;
   AERO_CORE_INFO("Actual Loaded Prpject Path:{0}", path);
   auto project = ag::Project::load_project(path);
-  if (!project->m_project_loaded)
-  {
+  if (!project->m_project_loaded) {
     Helper::makefile_read_only(AppSettings::get_settings_path(), false);
     std::ifstream in_file(AppSettings::get_settings_path());
     if (in_file.is_open())
       in_file >> j;
 
     in_file.close();
-    Helper::save_json(j,
-                      "Mode",
-                      (int)AppSettings::Mode::ProjectManager,
-                      (int)AppSettings::Mode::ProjectManager);
+    Helper::save_json(j, "Mode", (int)AppSettings::Mode::ProjectManager, (int)AppSettings::Mode::ProjectManager);
     std::ofstream out_file(AppSettings::get_settings_path());
     out_file << j.dump(4);
     out_file.close();
@@ -544,24 +478,17 @@ void ProjectManagerLayer::open_project(const std::string path)
 
   Helper::save_json(j["Project"], "Name", project->get_name(), std::string(""));
   Helper::save_json(j["Project"], "Directory", project->get_directory(), std::string(""));
-  Helper::save_json(j["Project"],
-                    "File Path",
-                    project->get_project_file_directory(),
-                    std::string(""));
-  Helper::save_json(j,
-                    "Mode",
-                    (int)AppSettings::Mode::Editor,
-                    (int)AppSettings::Mode::ProjectManager);
+  Helper::save_json(j["Project"], "File Path", project->get_project_file_directory(), std::string(""));
+  Helper::save_json(j, "Mode", (int)AppSettings::Mode::Editor, (int)AppSettings::Mode::ProjectManager);
 
-  AERO_CORE_INFO("Opening Project:{0}, Project FilePath:{1}",
-                 project->get_name(),
-                 project->get_project_file_directory());
+  AERO_CORE_INFO(
+      "Opening Project:{0}, Project FilePath:{1}", project->get_name(), project->get_project_file_directory());
 
   std::ofstream out_file(AppSettings::get_settings_path());
   out_file << j.dump(4);
   out_file.close();
 
   Helper::makefile_read_only(AppSettings::get_settings_path());
-  AppSettings::reload_app();
+  AppSettings::reload_app(project->get_project_file_directory());
 }
-}  // namespace ag
+} // namespace ag

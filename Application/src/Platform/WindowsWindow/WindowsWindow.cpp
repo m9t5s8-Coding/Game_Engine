@@ -271,12 +271,11 @@ vec2u WindowsWindow::get_position() const
 {
   vec2i window_pos = {0, 0};
 
-  #if defined(PLATFORM_LINUX) || defined(PLATFORM_WEB)
-  return window_pos;
-  #else
+  // ImGui positions full-window panels with this value. Returning (0,0) on
+  // Linux put the ImGui window at the screen origin while the GLFW window was
+  // elsewhere, so clicks landed on the wrong area.
   glfwGetWindowPos(m_Window, &window_pos.x, &window_pos.y);
   return window_pos;
-  #endif
 }
 
 void WindowsWindow::center_window()
